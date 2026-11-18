@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DmxBox", "DmxBox\DmxBox.csproj", "{167CE907-A97A-4EB6-B8B2-33340A5C9884}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DmxBox.Cli", "DmxBox.Cli\DmxBox.Cli.csproj", "{7B350CDD-7ED3-4F58-9E9D-386EEC2DA055}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DmxBox.Tests", "DmxBox.Tests\DmxBox.Tests.csproj", "{6AE95B9D-DBB1-47FF-82CD-981F5DDD0C56}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{167CE907-A97A-4EB6-B8B2-33340A5C9884}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{167CE907-A97A-4EB6-B8B2-33340A5C9884}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{167CE907-A97A-4EB6-B8B2-33340A5C9884}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{167CE907-A97A-4EB6-B8B2-33340A5C9884}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7B350CDD-7ED3-4F58-9E9D-386EEC2DA055}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7B350CDD-7ED3-4F58-9E9D-386EEC2DA055}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7B350CDD-7ED3-4F58-9E9D-386EEC2DA055}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7B350CDD-7ED3-4F58-9E9D-386EEC2DA055}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6AE95B9D-DBB1-47FF-82CD-981F5DDD0C56}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6AE95B9D-DBB1-47FF-82CD-981F5DDD0C56}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6AE95B9D-DBB1-47FF-82CD-981F5DDD0C56}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6AE95B9D-DBB1-47FF-82CD-981F5DDD0C56}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

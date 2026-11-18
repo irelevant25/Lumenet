@@ -1,0 +1,27 @@
+; DMX512 transmitter. PIO clock = 1 MHz, so 1 cycle = 1 us and 1 bit = 4 us (250 kbaud).
+;
+; The CPU starts a frame by forcing a jump to `frame_start` (pio_sm_exec),
+; then DMA streams the start code + channel bytes into the TX FIFO.
+; Between frames the SM sits stalled on `pull` with the line idle high (mark),
+; which is a legal "mark time between packets".
+;
+; The same pin is used for OUT (data bits) and side-set (break/start/stop).
+
+.program dmx_tx
+.side_set 1 opt
+
+public frame_start:
+    set x, 21           side 0        ; BREAK: line low
+break_loop:
+    jmp x-- break_loop        [7]     ; 22 x 8 us = 176 us
+    nop                 side 1 [7]    ; MARK AFTER BREAK: 8 us ...
+    nop                        [3]    ; ... + 4 us = 12 us
+public idle:
+.wrap_target
+    pull block          side 1        ; idle high until the next byte arrives
+    set x, 7            side 0 [3]    ; start bit, 4 us
+bit_loop:
+    out pins, 1                       ; data bit, LSB first
+    jmp x-- bit_loop           [2]    ; 4 us per bit
+    nop                 side 1 [7]    ; 2 stop bits, 8 us
+.wrap

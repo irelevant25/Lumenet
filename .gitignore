@@ -1,0 +1,21 @@
+# build output
+bin/
+obj/
+build/
+*.exe
+*.pdb
+*.obj
+.vs/
+TestResults/
+
+# written by the simulator
+presets.bin
+
+# Blender backup files
+*.blend1
+*.user
+
+FUTURE_PLANS.md
+
+# saved shop pages: they contain the customer number of the person who saved them
+tme/*.mhtml

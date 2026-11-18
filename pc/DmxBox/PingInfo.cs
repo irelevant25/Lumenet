@@ -1,0 +1,22 @@
+namespace DmxBox;
+
+/// <summary>The box's answer to <see cref="DmxBoxClient.Ping"/>: its version and current state.</summary>
+/// <param name="Firmware">Firmware version, for example "1.0".</param>
+/// <param name="ArtNetLive">True while Art-Net packets are arriving (the last one less than 3 seconds ago).</param>
+/// <param name="Blackout">True while blackout is on.</param>
+/// <param name="MergeMode">How the Art-Net layer and the cue layer are combined.</param>
+/// <param name="ArtNetHolding">True while the Art-Net layer holds a look, live or not.</param>
+/// <param name="Master">Master level, 0-255.</param>
+/// <param name="Uptime">Time since the box started.</param>
+/// <param name="Presets">Numbers of the preset slots that hold a look.</param>
+/// <param name="Channels">Number of DMX channels the box sends.</param>
+public sealed record PingInfo(
+    string Firmware,
+    bool ArtNetLive,
+    bool Blackout,
+    MergeMode MergeMode,
+    bool ArtNetHolding,
+    byte Master,
+    TimeSpan Uptime,
+    IReadOnlyList<int> Presets,
+    int Channels);

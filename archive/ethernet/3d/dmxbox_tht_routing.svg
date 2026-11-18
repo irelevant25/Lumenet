@@ -1,0 +1,889 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1278 2038" width="1278" height="2038" font-family="Arial, sans-serif">
+<style>.board{fill:#12201c;stroke:#4a5a55;stroke-width:1.5}.slot{fill:#fff}.hole{fill:#fff;stroke:#b08d2e;stroke-width:6}.iso{stroke:#f0c040;stroke-width:1;stroke-dasharray:6 5}.pad{fill:#d9a92f}.pad.nc{fill:#7d7046}.drill{fill:#12201c}.t{font-size:17px;font-weight:bold;fill:#222}.ref{font-size:11px;fill:#e8e8e0;text-anchor:middle}.pin{font-size:8.5px;fill:#c9d4cf}</style>
+<rect width="1278" height="2038" fill="#ffffff"/>
+<g transform="translate(0,20)">
+<text x="36" y="22" class="t">dmxbox through-hole carrier: both copper layers, seen from the top (red = top, blue = bottom)</text>
+<polygon class="board" points="36.0,630.0 1242.0,630.0 1242.0,328.5 985.5,328.5 985.5,36.0 571.5,36.0 571.5,364.5 36.0,364.5"/>
+<rect class="slot" x="875.7" y="400.5" width="12.6" height="72.0" rx="6.3"/>
+<rect class="slot" x="875.7" y="81.0" width="12.6" height="220.5" rx="6.3"/>
+<line class="iso" x1="882.0" y1="36.0" x2="882.0" y2="630.0"/>
+<circle class="hole" cx="67.5" cy="580.5" r="14.4"/>
+<circle class="hole" cx="607.5" cy="67.5" r="14.4"/>
+<circle class="hole" cx="945.0" cy="67.5" r="14.4"/>
+<circle class="hole" cx="1206.0" cy="598.5" r="14.4"/>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="666.0,143.3 585.9,143.3 580.5,148.7 580.5,369.0 575.1,374.4 481.1,374.4 475.7,379.8 475.6,437.5"><title>GND</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="666.0,166.1 594.0,166.1 588.6,171.5 588.6,377.1 583.2,382.5 526.8,382.5 521.4,387.9 521.4,437.5"><title>ENC_RST</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" points="688.9,189.0 677.4,177.6 602.1,177.6 596.7,183.0 596.7,385.2 591.3,390.6 549.6,390.6 544.2,396.0 544.2,437.5"><title>ENC_SI</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="666.0,189.0 610.2,189.0 604.8,194.4 604.8,393.3 599.4,398.7 572.5,398.7 567.1,404.1 567.1,437.5"><title>ENC_SCK</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" points="688.9,166.1 696.6,166.1 701.1,170.6 701.1,195.9 696.6,200.4 618.2,200.4 612.8,205.8 612.8,437.5"><title>ENC_CS</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="666.0,211.9 641.1,211.9 635.7,217.3 635.7,437.5"><title>ENC_SO</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="735.8,126.0 721.8,126.0 716.4,131.4 716.4,242.1 711.0,247.5 657.9,247.5 652.5,252.9 652.5,567.0 647.1,572.4 618.2,572.4 612.8,577.8 612.8,597.5"><title>BTN1</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="735.8,256.5 666.0,256.5 660.6,261.9 660.6,576.0 655.2,581.4 641.1,581.4 635.7,586.8 635.7,597.5"><title>BTN2</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="666.0,143.3 666.0,86.4 671.4,81.0 735.8,81.0 848.2,81.0"><title>GND</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="748.8,81.0 754.2,86.4 754.2,206.1 748.8,211.5"><title>GND</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="735.8,211.5 748.8,211.5 830.7,211.5 848.2,211.5"><title>GND</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="830.7,211.5 830.7,353.7"><title>GND</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="787.5,373.5 787.5,359.1 792.9,353.7 830.7,353.7 842.3,353.7 847.7,359.1 847.7,369.0"><title>GND</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="590.0,597.5 589.9,613.8 595.4,619.2 777.6,619.2 783.0,613.8 783.0,378.0 787.5,373.5"><title>GND</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="5.40" stroke-linecap="round" stroke-linejoin="round" points="76.5,479.7 76.5,513.9 81.9,519.3 100.8,519.3 247.1,519.3 361.3,519.3 475.7,519.3 589.9,519.3"><title>GND</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="247.1,437.5 247.1,519.3 247.1,597.5"><title>GND</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="361.3,437.5 361.3,519.3 361.4,597.5"><title>GND</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="475.6,437.5 475.7,519.3 475.7,597.5"><title>GND</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="589.9,437.5 589.9,519.3 590.0,597.5"><title>GND</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="893.4,369.0 911.4,351.0 939.6,351.0 974.7,351.0 1017.0,351.0 1044.0,351.0 1156.3,351.0 1161.7,356.4 1161.7,378.0"><title>GND2</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="939.6,351.0 939.6,474.6"><title>GND2</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="974.7,351.0 974.7,400.5"><title>GND2</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="1017.0,351.0 1017.0,359.6"><title>GND2</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="1044.0,351.0 1044.0,406.0"><title>GND2</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="1161.7,378.0 1161.7,500.2 1161.7,551.9 1124.1,589.5"><title>GND2</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="1161.7,500.2 1189.4,472.5"><title>GND2</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="916.3,565.3 916.3,584.1 921.7,589.5 1076.6,589.5 1124.1,589.5 1137.6,589.5 1143.0,594.9 1143.0,611.0"><title>GND2</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="1076.6,589.5 1076.6,542.4"><title>GND2</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="5.40" stroke-linecap="round" stroke-linejoin="round" points="131.4,477.9 131.4,410.4 135.0,405.0 135.0,393.8"><title>5V_IN</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="5.40" stroke-linecap="round" stroke-linejoin="round" points="226.4,393.8 226.4,410.4 224.2,415.8 224.2,437.5 224.2,468.9 229.6,474.3 827.1,474.3 832.5,468.9 832.5,390.6 837.9,385.2 865.2,385.2 870.6,379.8 870.6,369.0"><title>VSYS</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="5.40" stroke-linecap="round" stroke-linejoin="round" points="832.5,392.4 824.4,392.4 805.5,373.5"><title>VSYS</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="5.40" stroke-linecap="round" stroke-linejoin="round" points="292.8,437.5 292.8,458.1 298.2,463.5 701.1,463.5 706.5,458.1 706.5,148.7 701.1,143.3 688.9,143.3"><title>3V3</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="5.40" stroke-linecap="round" stroke-linejoin="round" points="706.5,428.1 814.5,428.1"><title>3V3</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="666.0,234.7 666.0,246.6 657.0,255.6 657.0,401.4 649.8,408.6 505.7,408.6 498.5,415.8 498.5,437.5"><title>ENC_INT</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="201.3,597.5 221.2,617.4 796.5,617.4 829.8,584.1 829.8,547.8 835.2,542.4 847.7,542.4"><title>DMX_TX</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="814.5,519.6 847.7,519.6"><title>OPTO_A</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="5.40" stroke-linecap="round" stroke-linejoin="round" points="916.3,369.0 916.3,496.7 916.3,519.6"><title>5V_ISO</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="5.40" stroke-linecap="round" stroke-linejoin="round" points="916.3,400.5 956.7,400.5"><title>5V_ISO</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="916.3,519.6 939.6,519.6"><title>5V_ISO</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="5.40" stroke-linecap="round" stroke-linejoin="round" points="916.3,451.0 967.5,451.0 990.0,451.0 1017.0,451.0 1044.0,451.0 1053.7,451.0 1076.6,473.8"><title>5V_ISO</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="990.0,451.0 990.0,496.7 990.0,519.6 1008.0,519.6"><title>5V_ISO</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="990.0,496.7 1008.0,496.7"><title>5V_ISO</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="916.3,542.4 967.5,542.4 1008.0,542.4"><title>OPTO_OUT</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="1076.6,496.7 1098.0,496.7 1098.0,472.5 1098.0,396.0 1116.0,378.0"><title>DMX_B</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="1076.6,519.6 1143.0,519.6 1188.0,519.6 1207.4,500.1 1207.4,378.0"><title>DMX_A</title></polyline>
+<circle class="pad" cx="201.3" cy="597.5" r="7.6"><title>U1.1: DMX_TX</title></circle>
+<circle class="drill" cx="201.3" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="224.2" cy="597.5" r="7.6"><title>U1.2: not connected</title></circle>
+<circle class="drill" cx="224.2" cy="597.5" r="3.8"/>
+<circle class="pad" cx="247.1" cy="597.5" r="7.6"><title>U1.3: GND</title></circle>
+<circle class="drill" cx="247.1" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="269.9" cy="597.5" r="7.6"><title>U1.4: not connected</title></circle>
+<circle class="drill" cx="269.9" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="292.8" cy="597.5" r="7.6"><title>U1.5: not connected</title></circle>
+<circle class="drill" cx="292.8" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="315.6" cy="597.5" r="7.6"><title>U1.6: not connected</title></circle>
+<circle class="drill" cx="315.6" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="338.5" cy="597.5" r="7.6"><title>U1.7: not connected</title></circle>
+<circle class="drill" cx="338.5" cy="597.5" r="3.8"/>
+<circle class="pad" cx="361.4" cy="597.5" r="7.6"><title>U1.8: GND</title></circle>
+<circle class="drill" cx="361.4" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="384.2" cy="597.5" r="7.6"><title>U1.9: not connected</title></circle>
+<circle class="drill" cx="384.2" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="407.1" cy="597.5" r="7.6"><title>U1.10: not connected</title></circle>
+<circle class="drill" cx="407.1" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="429.9" cy="597.5" r="7.6"><title>U1.11: not connected</title></circle>
+<circle class="drill" cx="429.9" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="452.8" cy="597.5" r="7.6"><title>U1.12: not connected</title></circle>
+<circle class="drill" cx="452.8" cy="597.5" r="3.8"/>
+<circle class="pad" cx="475.7" cy="597.5" r="7.6"><title>U1.13: GND</title></circle>
+<circle class="drill" cx="475.7" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="498.5" cy="597.5" r="7.6"><title>U1.14: not connected</title></circle>
+<circle class="drill" cx="498.5" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="521.4" cy="597.5" r="7.6"><title>U1.15: not connected</title></circle>
+<circle class="drill" cx="521.4" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="544.2" cy="597.5" r="7.6"><title>U1.16: not connected</title></circle>
+<circle class="drill" cx="544.2" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="567.1" cy="597.5" r="7.6"><title>U1.17: not connected</title></circle>
+<circle class="drill" cx="567.1" cy="597.5" r="3.8"/>
+<circle class="pad" cx="590.0" cy="597.5" r="7.6"><title>U1.18: GND</title></circle>
+<circle class="drill" cx="590.0" cy="597.5" r="3.8"/>
+<circle class="pad" cx="612.8" cy="597.5" r="7.6"><title>U1.19: BTN1</title></circle>
+<circle class="drill" cx="612.8" cy="597.5" r="3.8"/>
+<circle class="pad" cx="635.7" cy="597.5" r="7.6"><title>U1.20: BTN2</title></circle>
+<circle class="drill" cx="635.7" cy="597.5" r="3.8"/>
+<circle class="pad" cx="635.7" cy="437.5" r="7.6"><title>U1.21: ENC_SO</title></circle>
+<circle class="drill" cx="635.7" cy="437.5" r="3.8"/>
+<circle class="pad" cx="612.8" cy="437.5" r="7.6"><title>U1.22: ENC_CS</title></circle>
+<circle class="drill" cx="612.8" cy="437.5" r="3.8"/>
+<circle class="pad" cx="589.9" cy="437.5" r="7.6"><title>U1.23: GND</title></circle>
+<circle class="drill" cx="589.9" cy="437.5" r="3.8"/>
+<circle class="pad" cx="567.1" cy="437.5" r="7.6"><title>U1.24: ENC_SCK</title></circle>
+<circle class="drill" cx="567.1" cy="437.5" r="3.8"/>
+<circle class="pad" cx="544.2" cy="437.5" r="7.6"><title>U1.25: ENC_SI</title></circle>
+<circle class="drill" cx="544.2" cy="437.5" r="3.8"/>
+<circle class="pad" cx="521.4" cy="437.5" r="7.6"><title>U1.26: ENC_RST</title></circle>
+<circle class="drill" cx="521.4" cy="437.5" r="3.8"/>
+<circle class="pad" cx="498.5" cy="437.5" r="7.6"><title>U1.27: ENC_INT</title></circle>
+<circle class="drill" cx="498.5" cy="437.5" r="3.8"/>
+<circle class="pad" cx="475.6" cy="437.5" r="7.6"><title>U1.28: GND</title></circle>
+<circle class="drill" cx="475.6" cy="437.5" r="3.8"/>
+<circle class="pad nc" cx="452.8" cy="437.5" r="7.6"><title>U1.29: not connected</title></circle>
+<circle class="drill" cx="452.8" cy="437.5" r="3.8"/>
+<circle class="pad nc" cx="429.9" cy="437.5" r="7.6"><title>U1.30: not connected</title></circle>
+<circle class="drill" cx="429.9" cy="437.5" r="3.8"/>
+<circle class="pad nc" cx="407.1" cy="437.5" r="7.6"><title>U1.31: not connected</title></circle>
+<circle class="drill" cx="407.1" cy="437.5" r="3.8"/>
+<circle class="pad nc" cx="384.2" cy="437.5" r="7.6"><title>U1.32: not connected</title></circle>
+<circle class="drill" cx="384.2" cy="437.5" r="3.8"/>
+<circle class="pad" cx="361.3" cy="437.5" r="7.6"><title>U1.33: GND</title></circle>
+<circle class="drill" cx="361.3" cy="437.5" r="3.8"/>
+<circle class="pad nc" cx="338.5" cy="437.5" r="7.6"><title>U1.34: not connected</title></circle>
+<circle class="drill" cx="338.5" cy="437.5" r="3.8"/>
+<circle class="pad nc" cx="315.6" cy="437.5" r="7.6"><title>U1.35: not connected</title></circle>
+<circle class="drill" cx="315.6" cy="437.5" r="3.8"/>
+<circle class="pad" cx="292.8" cy="437.5" r="7.6"><title>U1.36: 3V3</title></circle>
+<circle class="drill" cx="292.8" cy="437.5" r="3.8"/>
+<circle class="pad nc" cx="269.9" cy="437.5" r="7.6"><title>U1.37: not connected</title></circle>
+<circle class="drill" cx="269.9" cy="437.5" r="3.8"/>
+<circle class="pad" cx="247.1" cy="437.5" r="7.6"><title>U1.38: GND</title></circle>
+<circle class="drill" cx="247.1" cy="437.5" r="3.8"/>
+<circle class="pad" cx="224.2" cy="437.5" r="7.6"><title>U1.39: VSYS</title></circle>
+<circle class="drill" cx="224.2" cy="437.5" r="3.8"/>
+<circle class="pad nc" cx="201.3" cy="437.5" r="7.6"><title>U1.40: not connected</title></circle>
+<circle class="drill" cx="201.3" cy="437.5" r="3.8"/>
+<circle class="pad" cx="666.0" cy="143.3" r="7.6"><title>J3.GND: GND</title></circle>
+<circle class="drill" cx="666.0" cy="143.3" r="3.8"/>
+<circle class="pad" cx="666.0" cy="166.1" r="7.6"><title>J3.RESET: ENC_RST</title></circle>
+<circle class="drill" cx="666.0" cy="166.1" r="3.8"/>
+<circle class="pad" cx="666.0" cy="189.0" r="7.6"><title>J3.SCK: ENC_SCK</title></circle>
+<circle class="drill" cx="666.0" cy="189.0" r="3.8"/>
+<circle class="pad" cx="666.0" cy="211.9" r="7.6"><title>J3.SO: ENC_SO</title></circle>
+<circle class="drill" cx="666.0" cy="211.9" r="3.8"/>
+<circle class="pad" cx="666.0" cy="234.7" r="7.6"><title>J3.INT: ENC_INT</title></circle>
+<circle class="drill" cx="666.0" cy="234.7" r="3.8"/>
+<circle class="pad" cx="688.9" cy="143.3" r="7.6"><title>J3.VCC: 3V3</title></circle>
+<circle class="drill" cx="688.9" cy="143.3" r="3.8"/>
+<circle class="pad" cx="688.9" cy="166.1" r="7.6"><title>J3.CS: ENC_CS</title></circle>
+<circle class="drill" cx="688.9" cy="166.1" r="3.8"/>
+<circle class="pad" cx="688.9" cy="189.0" r="7.6"><title>J3.SI: ENC_SI</title></circle>
+<circle class="drill" cx="688.9" cy="189.0" r="3.8"/>
+<circle class="pad nc" cx="688.9" cy="211.9" r="7.6"><title>J3.WOL: not connected</title></circle>
+<circle class="drill" cx="688.9" cy="211.9" r="3.8"/>
+<circle class="pad nc" cx="688.9" cy="234.7" r="7.6"><title>J3.CLKOUT: not connected</title></circle>
+<circle class="drill" cx="688.9" cy="234.7" r="3.8"/>
+<circle class="pad" cx="131.4" cy="477.9" r="15.3"><title>J2.+: 5V_IN</title></circle>
+<circle class="drill" cx="131.4" cy="477.9" r="3.8"/>
+<circle class="pad" cx="76.5" cy="479.7" r="15.3"><title>J2.GND: GND</title></circle>
+<circle class="drill" cx="76.5" cy="479.7" r="3.8"/>
+<circle class="pad" cx="100.8" cy="519.3" r="15.3"><title>J2.SW: GND</title></circle>
+<circle class="drill" cx="100.8" cy="519.3" r="3.8"/>
+<circle class="pad" cx="135.0" cy="393.8" r="10.3"><title>D2.A: 5V_IN</title></circle>
+<circle class="drill" cx="135.0" cy="393.8" r="3.8"/>
+<circle class="pad" cx="226.4" cy="393.8" r="10.3"><title>D2.K: VSYS</title></circle>
+<circle class="drill" cx="226.4" cy="393.8" r="3.8"/>
+<circle class="pad" cx="735.8" cy="81.0" r="10.8"><title>SW1.G1: GND</title></circle>
+<circle class="drill" cx="735.8" cy="81.0" r="3.8"/>
+<circle class="pad" cx="848.2" cy="81.0" r="10.8"><title>SW1.G2: GND</title></circle>
+<circle class="drill" cx="848.2" cy="81.0" r="3.8"/>
+<circle class="pad" cx="735.8" cy="126.0" r="10.8"><title>SW1.S1: BTN1</title></circle>
+<circle class="drill" cx="735.8" cy="126.0" r="3.8"/>
+<circle class="pad nc" cx="848.2" cy="126.0" r="10.8"><title>SW1.S2: not connected</title></circle>
+<circle class="drill" cx="848.2" cy="126.0" r="3.8"/>
+<circle class="pad" cx="735.8" cy="211.5" r="10.8"><title>SW2.G1: GND</title></circle>
+<circle class="drill" cx="735.8" cy="211.5" r="3.8"/>
+<circle class="pad" cx="848.2" cy="211.5" r="10.8"><title>SW2.G2: GND</title></circle>
+<circle class="drill" cx="848.2" cy="211.5" r="3.8"/>
+<circle class="pad" cx="735.8" cy="256.5" r="10.8"><title>SW2.S1: BTN2</title></circle>
+<circle class="drill" cx="735.8" cy="256.5" r="3.8"/>
+<circle class="pad nc" cx="848.2" cy="256.5" r="10.8"><title>SW2.S2: not connected</title></circle>
+<circle class="drill" cx="848.2" cy="256.5" r="3.8"/>
+<circle class="pad" cx="814.5" cy="519.6" r="10.3"><title>R3.A: OPTO_A</title></circle>
+<circle class="drill" cx="814.5" cy="519.6" r="3.8"/>
+<circle class="pad" cx="814.5" cy="428.1" r="10.3"><title>R3.B: 3V3</title></circle>
+<circle class="drill" cx="814.5" cy="428.1" r="3.8"/>
+<circle class="pad" cx="805.5" cy="373.5" r="7.2"><title>C4.+: VSYS</title></circle>
+<circle class="drill" cx="805.5" cy="373.5" r="3.8"/>
+<circle class="pad" cx="787.5" cy="373.5" r="7.2"><title>C4.-: GND</title></circle>
+<circle class="drill" cx="787.5" cy="373.5" r="3.8"/>
+<circle class="pad nc" cx="847.7" cy="496.7" r="7.6"><title>U3.1: not connected</title></circle>
+<circle class="drill" cx="847.7" cy="496.7" r="3.8"/>
+<circle class="pad" cx="847.7" cy="519.6" r="7.6"><title>U3.2: OPTO_A</title></circle>
+<circle class="drill" cx="847.7" cy="519.6" r="3.8"/>
+<circle class="pad" cx="847.7" cy="542.4" r="7.6"><title>U3.3: DMX_TX</title></circle>
+<circle class="drill" cx="847.7" cy="542.4" r="3.8"/>
+<circle class="pad nc" cx="847.7" cy="565.3" r="7.6"><title>U3.4: not connected</title></circle>
+<circle class="drill" cx="847.7" cy="565.3" r="3.8"/>
+<circle class="pad" cx="916.3" cy="565.3" r="7.6"><title>U3.5: GND2</title></circle>
+<circle class="drill" cx="916.3" cy="565.3" r="3.8"/>
+<circle class="pad" cx="916.3" cy="542.4" r="7.6"><title>U3.6: OPTO_OUT</title></circle>
+<circle class="drill" cx="916.3" cy="542.4" r="3.8"/>
+<circle class="pad" cx="916.3" cy="519.6" r="7.6"><title>U3.7: 5V_ISO</title></circle>
+<circle class="drill" cx="916.3" cy="519.6" r="3.8"/>
+<circle class="pad" cx="916.3" cy="496.7" r="7.6"><title>U3.8: 5V_ISO</title></circle>
+<circle class="drill" cx="916.3" cy="496.7" r="3.8"/>
+<circle class="pad" cx="847.7" cy="369.0" r="7.6"><title>U4.1: GND</title></circle>
+<circle class="drill" cx="847.7" cy="369.0" r="3.8"/>
+<circle class="pad" cx="870.6" cy="369.0" r="7.6"><title>U4.2: VSYS</title></circle>
+<circle class="drill" cx="870.6" cy="369.0" r="3.8"/>
+<circle class="pad" cx="893.4" cy="369.0" r="7.6"><title>U4.3: GND2</title></circle>
+<circle class="drill" cx="893.4" cy="369.0" r="3.8"/>
+<circle class="pad" cx="916.3" cy="369.0" r="7.6"><title>U4.4: 5V_ISO</title></circle>
+<circle class="drill" cx="916.3" cy="369.0" r="3.8"/>
+<circle class="pad nc" cx="1008.0" cy="473.8" r="7.6"><title>U5.1: not connected</title></circle>
+<circle class="drill" cx="1008.0" cy="473.8" r="3.8"/>
+<circle class="pad" cx="1008.0" cy="496.7" r="7.6"><title>U5.2: 5V_ISO</title></circle>
+<circle class="drill" cx="1008.0" cy="496.7" r="3.8"/>
+<circle class="pad" cx="1008.0" cy="519.6" r="7.6"><title>U5.3: 5V_ISO</title></circle>
+<circle class="drill" cx="1008.0" cy="519.6" r="3.8"/>
+<circle class="pad" cx="1008.0" cy="542.4" r="7.6"><title>U5.4: OPTO_OUT</title></circle>
+<circle class="drill" cx="1008.0" cy="542.4" r="3.8"/>
+<circle class="pad" cx="1076.6" cy="542.4" r="7.6"><title>U5.5: GND2</title></circle>
+<circle class="drill" cx="1076.6" cy="542.4" r="3.8"/>
+<circle class="pad" cx="1076.6" cy="519.6" r="7.6"><title>U5.6: DMX_A</title></circle>
+<circle class="drill" cx="1076.6" cy="519.6" r="3.8"/>
+<circle class="pad" cx="1076.6" cy="496.7" r="7.6"><title>U5.7: DMX_B</title></circle>
+<circle class="drill" cx="1076.6" cy="496.7" r="3.8"/>
+<circle class="pad" cx="1076.6" cy="473.8" r="7.6"><title>U5.8: 5V_ISO</title></circle>
+<circle class="drill" cx="1076.6" cy="473.8" r="3.8"/>
+<circle class="pad" cx="956.7" cy="400.5" r="7.2"><title>C3.+: 5V_ISO</title></circle>
+<circle class="drill" cx="956.7" cy="400.5" r="3.8"/>
+<circle class="pad" cx="974.7" cy="400.5" r="7.2"><title>C3.-: GND2</title></circle>
+<circle class="drill" cx="974.7" cy="400.5" r="3.8"/>
+<circle class="pad" cx="939.6" cy="519.6" r="10.3"><title>C1.A: 5V_ISO</title></circle>
+<circle class="drill" cx="939.6" cy="519.6" r="3.8"/>
+<circle class="pad" cx="939.6" cy="474.6" r="10.3"><title>C1.B: GND2</title></circle>
+<circle class="drill" cx="939.6" cy="474.6" r="3.8"/>
+<circle class="pad" cx="967.5" cy="542.4" r="10.3"><title>R4.A: OPTO_OUT</title></circle>
+<circle class="drill" cx="967.5" cy="542.4" r="3.8"/>
+<circle class="pad" cx="967.5" cy="451.0" r="10.3"><title>R4.B: 5V_ISO</title></circle>
+<circle class="drill" cx="967.5" cy="451.0" r="3.8"/>
+<circle class="pad" cx="1017.0" cy="451.0" r="10.3"><title>R2.A: 5V_ISO</title></circle>
+<circle class="drill" cx="1017.0" cy="451.0" r="3.8"/>
+<circle class="pad" cx="1017.0" cy="359.6" r="10.3"><title>R2.B: GND2</title></circle>
+<circle class="drill" cx="1017.0" cy="359.6" r="3.8"/>
+<circle class="pad" cx="1044.0" cy="451.0" r="10.3"><title>C2.A: 5V_ISO</title></circle>
+<circle class="drill" cx="1044.0" cy="451.0" r="3.8"/>
+<circle class="pad" cx="1044.0" cy="406.0" r="10.3"><title>C2.B: GND2</title></circle>
+<circle class="drill" cx="1044.0" cy="406.0" r="3.8"/>
+<circle class="pad" cx="1098.0" cy="472.5" r="10.8"><title>D3.A: DMX_B</title></circle>
+<circle class="drill" cx="1098.0" cy="472.5" r="3.8"/>
+<circle class="pad" cx="1189.4" cy="472.5" r="10.8"><title>D3.B: GND2</title></circle>
+<circle class="drill" cx="1189.4" cy="472.5" r="3.8"/>
+<circle class="pad" cx="1143.0" cy="519.6" r="10.8"><title>D1.A: DMX_A</title></circle>
+<circle class="drill" cx="1143.0" cy="519.6" r="3.8"/>
+<circle class="pad" cx="1143.0" cy="611.0" r="10.8"><title>D1.B: GND2</title></circle>
+<circle class="drill" cx="1143.0" cy="611.0" r="3.8"/>
+<circle class="pad" cx="1116.0" cy="378.0" r="11.7"><title>J1.2: DMX_B</title></circle>
+<circle class="drill" cx="1116.0" cy="378.0" r="3.8"/>
+<circle class="pad" cx="1161.7" cy="378.0" r="11.7"><title>J1.1: GND2</title></circle>
+<circle class="drill" cx="1161.7" cy="378.0" r="3.8"/>
+<circle class="pad" cx="1207.4" cy="378.0" r="11.7"><title>J1.3: DMX_A</title></circle>
+<circle class="drill" cx="1207.4" cy="378.0" r="3.8"/>
+<text x="418.5" y="536.4" class="ref">U1  Raspberry Pi Pico (socketed)</text>
+<text x="72.0" y="416.7" class="ref">J2  5 V DC</text>
+<text x="180.0" y="377.1" class="ref">D2</text>
+<text x="677.7" y="108.0" class="ref">J3  to ENC28J60</text>
+<text x="792.0" y="103.5" class="ref">SW1</text>
+<text x="792.0" y="234.0" class="ref">SW2</text>
+<text x="796.5" y="397.8" class="ref">C4</text>
+<text x="797.4" y="490.5" class="ref">R3</text>
+<text x="882.0" y="581.4" class="ref">U3</text>
+<text x="882.0" y="389.7" class="ref">U4</text>
+<text x="965.7" y="421.2" class="ref">C3</text>
+<text x="956.7" y="496.8" class="ref">C1</text>
+<text x="983.7" y="561.6" class="ref">R4</text>
+<text x="1000.8" y="387.0" class="ref">R2</text>
+<text x="1061.1" y="428.4" class="ref">C2</text>
+<text x="1042.2" y="561.6" class="ref">U5</text>
+<text x="1143.9" y="454.5" class="ref">D3</text>
+<text x="1124.1" y="565.2" class="ref">D1</text>
+<text x="1161.9" y="408.6" class="ref">J1  DMX</text>
+<text x="654.3" y="146.3" class="pin" text-anchor="end">GND</text>
+<text x="654.3" y="169.1" class="pin" text-anchor="end">RST</text>
+<text x="654.3" y="192.0" class="pin" text-anchor="end">SCK</text>
+<text x="654.3" y="214.9" class="pin" text-anchor="end">SO</text>
+<text x="654.3" y="237.7" class="pin" text-anchor="end">INT</text>
+<text x="700.6" y="146.3" class="pin" text-anchor="start">3V3</text>
+<text x="700.6" y="169.1" class="pin" text-anchor="start">CS</text>
+<text x="700.6" y="192.0" class="pin" text-anchor="start">SI</text>
+<text x="700.6" y="214.9" class="pin" text-anchor="start">WOL</text>
+<text x="700.6" y="237.7" class="pin" text-anchor="start">CLK</text>
+<text x="1116.0" y="356.4" class="pin" text-anchor="middle">2 D-</text>
+<text x="1161.7" y="356.4" class="pin" text-anchor="middle">1 COM</text>
+<text x="1207.4" y="356.4" class="pin" text-anchor="middle">3 D+</text>
+<text x="201.3" y="617.6" class="pin" text-anchor="middle">GP0</text>
+<text x="612.8" y="617.6" class="pin" text-anchor="middle">GP14</text>
+<text x="635.7" y="617.6" class="pin" text-anchor="middle">GP15</text>
+<text x="635.7" y="423.4" class="pin" text-anchor="middle">GP16</text>
+<text x="612.8" y="423.4" class="pin" text-anchor="middle">GP17</text>
+<text x="567.1" y="423.4" class="pin" text-anchor="middle">GP18</text>
+<text x="544.2" y="423.4" class="pin" text-anchor="middle">GP19</text>
+<text x="521.4" y="423.4" class="pin" text-anchor="middle">GP20</text>
+<text x="498.5" y="423.4" class="pin" text-anchor="middle">GP21</text>
+<text x="292.8" y="423.4" class="pin" text-anchor="middle">3V3</text>
+<text x="224.2" y="423.4" class="pin" text-anchor="middle">VSYS</text>
+<text x="201.3" y="423.4" class="pin" text-anchor="middle">VBUS</text>
+<text x="855.0" y="30.0" class="pin" text-anchor="end">logic side</text>
+<text x="909.0" y="30.0" class="pin">isolated DMX side</text>
+</g>
+<g transform="translate(0,686)">
+<text x="36" y="22" class="t">Top copper only</text>
+<polygon class="board" points="36.0,630.0 1242.0,630.0 1242.0,328.5 985.5,328.5 985.5,36.0 571.5,36.0 571.5,364.5 36.0,364.5"/>
+<rect class="slot" x="875.7" y="400.5" width="12.6" height="72.0" rx="6.3"/>
+<rect class="slot" x="875.7" y="81.0" width="12.6" height="220.5" rx="6.3"/>
+<line class="iso" x1="882.0" y1="36.0" x2="882.0" y2="630.0"/>
+<circle class="hole" cx="67.5" cy="580.5" r="14.4"/>
+<circle class="hole" cx="607.5" cy="67.5" r="14.4"/>
+<circle class="hole" cx="945.0" cy="67.5" r="14.4"/>
+<circle class="hole" cx="1206.0" cy="598.5" r="14.4"/>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="5.40" stroke-linecap="round" stroke-linejoin="round" points="131.4,477.9 131.4,410.4 135.0,405.0 135.0,393.8"><title>5V_IN</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="5.40" stroke-linecap="round" stroke-linejoin="round" points="226.4,393.8 226.4,410.4 224.2,415.8 224.2,437.5 224.2,468.9 229.6,474.3 827.1,474.3 832.5,468.9 832.5,390.6 837.9,385.2 865.2,385.2 870.6,379.8 870.6,369.0"><title>VSYS</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="5.40" stroke-linecap="round" stroke-linejoin="round" points="832.5,392.4 824.4,392.4 805.5,373.5"><title>VSYS</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="5.40" stroke-linecap="round" stroke-linejoin="round" points="292.8,437.5 292.8,458.1 298.2,463.5 701.1,463.5 706.5,458.1 706.5,148.7 701.1,143.3 688.9,143.3"><title>3V3</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="5.40" stroke-linecap="round" stroke-linejoin="round" points="706.5,428.1 814.5,428.1"><title>3V3</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="666.0,234.7 666.0,246.6 657.0,255.6 657.0,401.4 649.8,408.6 505.7,408.6 498.5,415.8 498.5,437.5"><title>ENC_INT</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="201.3,597.5 221.2,617.4 796.5,617.4 829.8,584.1 829.8,547.8 835.2,542.4 847.7,542.4"><title>DMX_TX</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="814.5,519.6 847.7,519.6"><title>OPTO_A</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="5.40" stroke-linecap="round" stroke-linejoin="round" points="916.3,369.0 916.3,496.7 916.3,519.6"><title>5V_ISO</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="5.40" stroke-linecap="round" stroke-linejoin="round" points="916.3,400.5 956.7,400.5"><title>5V_ISO</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="916.3,519.6 939.6,519.6"><title>5V_ISO</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="5.40" stroke-linecap="round" stroke-linejoin="round" points="916.3,451.0 967.5,451.0 990.0,451.0 1017.0,451.0 1044.0,451.0 1053.7,451.0 1076.6,473.8"><title>5V_ISO</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="990.0,451.0 990.0,496.7 990.0,519.6 1008.0,519.6"><title>5V_ISO</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="990.0,496.7 1008.0,496.7"><title>5V_ISO</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="916.3,542.4 967.5,542.4 1008.0,542.4"><title>OPTO_OUT</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="1076.6,496.7 1098.0,496.7 1098.0,472.5 1098.0,396.0 1116.0,378.0"><title>DMX_B</title></polyline>
+<polyline fill="none" stroke="#d6453d" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="1076.6,519.6 1143.0,519.6 1188.0,519.6 1207.4,500.1 1207.4,378.0"><title>DMX_A</title></polyline>
+<circle class="pad" cx="201.3" cy="597.5" r="7.6"><title>U1.1: DMX_TX</title></circle>
+<circle class="drill" cx="201.3" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="224.2" cy="597.5" r="7.6"><title>U1.2: not connected</title></circle>
+<circle class="drill" cx="224.2" cy="597.5" r="3.8"/>
+<circle class="pad" cx="247.1" cy="597.5" r="7.6"><title>U1.3: GND</title></circle>
+<circle class="drill" cx="247.1" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="269.9" cy="597.5" r="7.6"><title>U1.4: not connected</title></circle>
+<circle class="drill" cx="269.9" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="292.8" cy="597.5" r="7.6"><title>U1.5: not connected</title></circle>
+<circle class="drill" cx="292.8" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="315.6" cy="597.5" r="7.6"><title>U1.6: not connected</title></circle>
+<circle class="drill" cx="315.6" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="338.5" cy="597.5" r="7.6"><title>U1.7: not connected</title></circle>
+<circle class="drill" cx="338.5" cy="597.5" r="3.8"/>
+<circle class="pad" cx="361.4" cy="597.5" r="7.6"><title>U1.8: GND</title></circle>
+<circle class="drill" cx="361.4" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="384.2" cy="597.5" r="7.6"><title>U1.9: not connected</title></circle>
+<circle class="drill" cx="384.2" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="407.1" cy="597.5" r="7.6"><title>U1.10: not connected</title></circle>
+<circle class="drill" cx="407.1" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="429.9" cy="597.5" r="7.6"><title>U1.11: not connected</title></circle>
+<circle class="drill" cx="429.9" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="452.8" cy="597.5" r="7.6"><title>U1.12: not connected</title></circle>
+<circle class="drill" cx="452.8" cy="597.5" r="3.8"/>
+<circle class="pad" cx="475.7" cy="597.5" r="7.6"><title>U1.13: GND</title></circle>
+<circle class="drill" cx="475.7" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="498.5" cy="597.5" r="7.6"><title>U1.14: not connected</title></circle>
+<circle class="drill" cx="498.5" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="521.4" cy="597.5" r="7.6"><title>U1.15: not connected</title></circle>
+<circle class="drill" cx="521.4" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="544.2" cy="597.5" r="7.6"><title>U1.16: not connected</title></circle>
+<circle class="drill" cx="544.2" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="567.1" cy="597.5" r="7.6"><title>U1.17: not connected</title></circle>
+<circle class="drill" cx="567.1" cy="597.5" r="3.8"/>
+<circle class="pad" cx="590.0" cy="597.5" r="7.6"><title>U1.18: GND</title></circle>
+<circle class="drill" cx="590.0" cy="597.5" r="3.8"/>
+<circle class="pad" cx="612.8" cy="597.5" r="7.6"><title>U1.19: BTN1</title></circle>
+<circle class="drill" cx="612.8" cy="597.5" r="3.8"/>
+<circle class="pad" cx="635.7" cy="597.5" r="7.6"><title>U1.20: BTN2</title></circle>
+<circle class="drill" cx="635.7" cy="597.5" r="3.8"/>
+<circle class="pad" cx="635.7" cy="437.5" r="7.6"><title>U1.21: ENC_SO</title></circle>
+<circle class="drill" cx="635.7" cy="437.5" r="3.8"/>
+<circle class="pad" cx="612.8" cy="437.5" r="7.6"><title>U1.22: ENC_CS</title></circle>
+<circle class="drill" cx="612.8" cy="437.5" r="3.8"/>
+<circle class="pad" cx="589.9" cy="437.5" r="7.6"><title>U1.23: GND</title></circle>
+<circle class="drill" cx="589.9" cy="437.5" r="3.8"/>
+<circle class="pad" cx="567.1" cy="437.5" r="7.6"><title>U1.24: ENC_SCK</title></circle>
+<circle class="drill" cx="567.1" cy="437.5" r="3.8"/>
+<circle class="pad" cx="544.2" cy="437.5" r="7.6"><title>U1.25: ENC_SI</title></circle>
+<circle class="drill" cx="544.2" cy="437.5" r="3.8"/>
+<circle class="pad" cx="521.4" cy="437.5" r="7.6"><title>U1.26: ENC_RST</title></circle>
+<circle class="drill" cx="521.4" cy="437.5" r="3.8"/>
+<circle class="pad" cx="498.5" cy="437.5" r="7.6"><title>U1.27: ENC_INT</title></circle>
+<circle class="drill" cx="498.5" cy="437.5" r="3.8"/>
+<circle class="pad" cx="475.6" cy="437.5" r="7.6"><title>U1.28: GND</title></circle>
+<circle class="drill" cx="475.6" cy="437.5" r="3.8"/>
+<circle class="pad nc" cx="452.8" cy="437.5" r="7.6"><title>U1.29: not connected</title></circle>
+<circle class="drill" cx="452.8" cy="437.5" r="3.8"/>
+<circle class="pad nc" cx="429.9" cy="437.5" r="7.6"><title>U1.30: not connected</title></circle>
+<circle class="drill" cx="429.9" cy="437.5" r="3.8"/>
+<circle class="pad nc" cx="407.1" cy="437.5" r="7.6"><title>U1.31: not connected</title></circle>
+<circle class="drill" cx="407.1" cy="437.5" r="3.8"/>
+<circle class="pad nc" cx="384.2" cy="437.5" r="7.6"><title>U1.32: not connected</title></circle>
+<circle class="drill" cx="384.2" cy="437.5" r="3.8"/>
+<circle class="pad" cx="361.3" cy="437.5" r="7.6"><title>U1.33: GND</title></circle>
+<circle class="drill" cx="361.3" cy="437.5" r="3.8"/>
+<circle class="pad nc" cx="338.5" cy="437.5" r="7.6"><title>U1.34: not connected</title></circle>
+<circle class="drill" cx="338.5" cy="437.5" r="3.8"/>
+<circle class="pad nc" cx="315.6" cy="437.5" r="7.6"><title>U1.35: not connected</title></circle>
+<circle class="drill" cx="315.6" cy="437.5" r="3.8"/>
+<circle class="pad" cx="292.8" cy="437.5" r="7.6"><title>U1.36: 3V3</title></circle>
+<circle class="drill" cx="292.8" cy="437.5" r="3.8"/>
+<circle class="pad nc" cx="269.9" cy="437.5" r="7.6"><title>U1.37: not connected</title></circle>
+<circle class="drill" cx="269.9" cy="437.5" r="3.8"/>
+<circle class="pad" cx="247.1" cy="437.5" r="7.6"><title>U1.38: GND</title></circle>
+<circle class="drill" cx="247.1" cy="437.5" r="3.8"/>
+<circle class="pad" cx="224.2" cy="437.5" r="7.6"><title>U1.39: VSYS</title></circle>
+<circle class="drill" cx="224.2" cy="437.5" r="3.8"/>
+<circle class="pad nc" cx="201.3" cy="437.5" r="7.6"><title>U1.40: not connected</title></circle>
+<circle class="drill" cx="201.3" cy="437.5" r="3.8"/>
+<circle class="pad" cx="666.0" cy="143.3" r="7.6"><title>J3.GND: GND</title></circle>
+<circle class="drill" cx="666.0" cy="143.3" r="3.8"/>
+<circle class="pad" cx="666.0" cy="166.1" r="7.6"><title>J3.RESET: ENC_RST</title></circle>
+<circle class="drill" cx="666.0" cy="166.1" r="3.8"/>
+<circle class="pad" cx="666.0" cy="189.0" r="7.6"><title>J3.SCK: ENC_SCK</title></circle>
+<circle class="drill" cx="666.0" cy="189.0" r="3.8"/>
+<circle class="pad" cx="666.0" cy="211.9" r="7.6"><title>J3.SO: ENC_SO</title></circle>
+<circle class="drill" cx="666.0" cy="211.9" r="3.8"/>
+<circle class="pad" cx="666.0" cy="234.7" r="7.6"><title>J3.INT: ENC_INT</title></circle>
+<circle class="drill" cx="666.0" cy="234.7" r="3.8"/>
+<circle class="pad" cx="688.9" cy="143.3" r="7.6"><title>J3.VCC: 3V3</title></circle>
+<circle class="drill" cx="688.9" cy="143.3" r="3.8"/>
+<circle class="pad" cx="688.9" cy="166.1" r="7.6"><title>J3.CS: ENC_CS</title></circle>
+<circle class="drill" cx="688.9" cy="166.1" r="3.8"/>
+<circle class="pad" cx="688.9" cy="189.0" r="7.6"><title>J3.SI: ENC_SI</title></circle>
+<circle class="drill" cx="688.9" cy="189.0" r="3.8"/>
+<circle class="pad nc" cx="688.9" cy="211.9" r="7.6"><title>J3.WOL: not connected</title></circle>
+<circle class="drill" cx="688.9" cy="211.9" r="3.8"/>
+<circle class="pad nc" cx="688.9" cy="234.7" r="7.6"><title>J3.CLKOUT: not connected</title></circle>
+<circle class="drill" cx="688.9" cy="234.7" r="3.8"/>
+<circle class="pad" cx="131.4" cy="477.9" r="15.3"><title>J2.+: 5V_IN</title></circle>
+<circle class="drill" cx="131.4" cy="477.9" r="3.8"/>
+<circle class="pad" cx="76.5" cy="479.7" r="15.3"><title>J2.GND: GND</title></circle>
+<circle class="drill" cx="76.5" cy="479.7" r="3.8"/>
+<circle class="pad" cx="100.8" cy="519.3" r="15.3"><title>J2.SW: GND</title></circle>
+<circle class="drill" cx="100.8" cy="519.3" r="3.8"/>
+<circle class="pad" cx="135.0" cy="393.8" r="10.3"><title>D2.A: 5V_IN</title></circle>
+<circle class="drill" cx="135.0" cy="393.8" r="3.8"/>
+<circle class="pad" cx="226.4" cy="393.8" r="10.3"><title>D2.K: VSYS</title></circle>
+<circle class="drill" cx="226.4" cy="393.8" r="3.8"/>
+<circle class="pad" cx="735.8" cy="81.0" r="10.8"><title>SW1.G1: GND</title></circle>
+<circle class="drill" cx="735.8" cy="81.0" r="3.8"/>
+<circle class="pad" cx="848.2" cy="81.0" r="10.8"><title>SW1.G2: GND</title></circle>
+<circle class="drill" cx="848.2" cy="81.0" r="3.8"/>
+<circle class="pad" cx="735.8" cy="126.0" r="10.8"><title>SW1.S1: BTN1</title></circle>
+<circle class="drill" cx="735.8" cy="126.0" r="3.8"/>
+<circle class="pad nc" cx="848.2" cy="126.0" r="10.8"><title>SW1.S2: not connected</title></circle>
+<circle class="drill" cx="848.2" cy="126.0" r="3.8"/>
+<circle class="pad" cx="735.8" cy="211.5" r="10.8"><title>SW2.G1: GND</title></circle>
+<circle class="drill" cx="735.8" cy="211.5" r="3.8"/>
+<circle class="pad" cx="848.2" cy="211.5" r="10.8"><title>SW2.G2: GND</title></circle>
+<circle class="drill" cx="848.2" cy="211.5" r="3.8"/>
+<circle class="pad" cx="735.8" cy="256.5" r="10.8"><title>SW2.S1: BTN2</title></circle>
+<circle class="drill" cx="735.8" cy="256.5" r="3.8"/>
+<circle class="pad nc" cx="848.2" cy="256.5" r="10.8"><title>SW2.S2: not connected</title></circle>
+<circle class="drill" cx="848.2" cy="256.5" r="3.8"/>
+<circle class="pad" cx="814.5" cy="519.6" r="10.3"><title>R3.A: OPTO_A</title></circle>
+<circle class="drill" cx="814.5" cy="519.6" r="3.8"/>
+<circle class="pad" cx="814.5" cy="428.1" r="10.3"><title>R3.B: 3V3</title></circle>
+<circle class="drill" cx="814.5" cy="428.1" r="3.8"/>
+<circle class="pad" cx="805.5" cy="373.5" r="7.2"><title>C4.+: VSYS</title></circle>
+<circle class="drill" cx="805.5" cy="373.5" r="3.8"/>
+<circle class="pad" cx="787.5" cy="373.5" r="7.2"><title>C4.-: GND</title></circle>
+<circle class="drill" cx="787.5" cy="373.5" r="3.8"/>
+<circle class="pad nc" cx="847.7" cy="496.7" r="7.6"><title>U3.1: not connected</title></circle>
+<circle class="drill" cx="847.7" cy="496.7" r="3.8"/>
+<circle class="pad" cx="847.7" cy="519.6" r="7.6"><title>U3.2: OPTO_A</title></circle>
+<circle class="drill" cx="847.7" cy="519.6" r="3.8"/>
+<circle class="pad" cx="847.7" cy="542.4" r="7.6"><title>U3.3: DMX_TX</title></circle>
+<circle class="drill" cx="847.7" cy="542.4" r="3.8"/>
+<circle class="pad nc" cx="847.7" cy="565.3" r="7.6"><title>U3.4: not connected</title></circle>
+<circle class="drill" cx="847.7" cy="565.3" r="3.8"/>
+<circle class="pad" cx="916.3" cy="565.3" r="7.6"><title>U3.5: GND2</title></circle>
+<circle class="drill" cx="916.3" cy="565.3" r="3.8"/>
+<circle class="pad" cx="916.3" cy="542.4" r="7.6"><title>U3.6: OPTO_OUT</title></circle>
+<circle class="drill" cx="916.3" cy="542.4" r="3.8"/>
+<circle class="pad" cx="916.3" cy="519.6" r="7.6"><title>U3.7: 5V_ISO</title></circle>
+<circle class="drill" cx="916.3" cy="519.6" r="3.8"/>
+<circle class="pad" cx="916.3" cy="496.7" r="7.6"><title>U3.8: 5V_ISO</title></circle>
+<circle class="drill" cx="916.3" cy="496.7" r="3.8"/>
+<circle class="pad" cx="847.7" cy="369.0" r="7.6"><title>U4.1: GND</title></circle>
+<circle class="drill" cx="847.7" cy="369.0" r="3.8"/>
+<circle class="pad" cx="870.6" cy="369.0" r="7.6"><title>U4.2: VSYS</title></circle>
+<circle class="drill" cx="870.6" cy="369.0" r="3.8"/>
+<circle class="pad" cx="893.4" cy="369.0" r="7.6"><title>U4.3: GND2</title></circle>
+<circle class="drill" cx="893.4" cy="369.0" r="3.8"/>
+<circle class="pad" cx="916.3" cy="369.0" r="7.6"><title>U4.4: 5V_ISO</title></circle>
+<circle class="drill" cx="916.3" cy="369.0" r="3.8"/>
+<circle class="pad nc" cx="1008.0" cy="473.8" r="7.6"><title>U5.1: not connected</title></circle>
+<circle class="drill" cx="1008.0" cy="473.8" r="3.8"/>
+<circle class="pad" cx="1008.0" cy="496.7" r="7.6"><title>U5.2: 5V_ISO</title></circle>
+<circle class="drill" cx="1008.0" cy="496.7" r="3.8"/>
+<circle class="pad" cx="1008.0" cy="519.6" r="7.6"><title>U5.3: 5V_ISO</title></circle>
+<circle class="drill" cx="1008.0" cy="519.6" r="3.8"/>
+<circle class="pad" cx="1008.0" cy="542.4" r="7.6"><title>U5.4: OPTO_OUT</title></circle>
+<circle class="drill" cx="1008.0" cy="542.4" r="3.8"/>
+<circle class="pad" cx="1076.6" cy="542.4" r="7.6"><title>U5.5: GND2</title></circle>
+<circle class="drill" cx="1076.6" cy="542.4" r="3.8"/>
+<circle class="pad" cx="1076.6" cy="519.6" r="7.6"><title>U5.6: DMX_A</title></circle>
+<circle class="drill" cx="1076.6" cy="519.6" r="3.8"/>
+<circle class="pad" cx="1076.6" cy="496.7" r="7.6"><title>U5.7: DMX_B</title></circle>
+<circle class="drill" cx="1076.6" cy="496.7" r="3.8"/>
+<circle class="pad" cx="1076.6" cy="473.8" r="7.6"><title>U5.8: 5V_ISO</title></circle>
+<circle class="drill" cx="1076.6" cy="473.8" r="3.8"/>
+<circle class="pad" cx="956.7" cy="400.5" r="7.2"><title>C3.+: 5V_ISO</title></circle>
+<circle class="drill" cx="956.7" cy="400.5" r="3.8"/>
+<circle class="pad" cx="974.7" cy="400.5" r="7.2"><title>C3.-: GND2</title></circle>
+<circle class="drill" cx="974.7" cy="400.5" r="3.8"/>
+<circle class="pad" cx="939.6" cy="519.6" r="10.3"><title>C1.A: 5V_ISO</title></circle>
+<circle class="drill" cx="939.6" cy="519.6" r="3.8"/>
+<circle class="pad" cx="939.6" cy="474.6" r="10.3"><title>C1.B: GND2</title></circle>
+<circle class="drill" cx="939.6" cy="474.6" r="3.8"/>
+<circle class="pad" cx="967.5" cy="542.4" r="10.3"><title>R4.A: OPTO_OUT</title></circle>
+<circle class="drill" cx="967.5" cy="542.4" r="3.8"/>
+<circle class="pad" cx="967.5" cy="451.0" r="10.3"><title>R4.B: 5V_ISO</title></circle>
+<circle class="drill" cx="967.5" cy="451.0" r="3.8"/>
+<circle class="pad" cx="1017.0" cy="451.0" r="10.3"><title>R2.A: 5V_ISO</title></circle>
+<circle class="drill" cx="1017.0" cy="451.0" r="3.8"/>
+<circle class="pad" cx="1017.0" cy="359.6" r="10.3"><title>R2.B: GND2</title></circle>
+<circle class="drill" cx="1017.0" cy="359.6" r="3.8"/>
+<circle class="pad" cx="1044.0" cy="451.0" r="10.3"><title>C2.A: 5V_ISO</title></circle>
+<circle class="drill" cx="1044.0" cy="451.0" r="3.8"/>
+<circle class="pad" cx="1044.0" cy="406.0" r="10.3"><title>C2.B: GND2</title></circle>
+<circle class="drill" cx="1044.0" cy="406.0" r="3.8"/>
+<circle class="pad" cx="1098.0" cy="472.5" r="10.8"><title>D3.A: DMX_B</title></circle>
+<circle class="drill" cx="1098.0" cy="472.5" r="3.8"/>
+<circle class="pad" cx="1189.4" cy="472.5" r="10.8"><title>D3.B: GND2</title></circle>
+<circle class="drill" cx="1189.4" cy="472.5" r="3.8"/>
+<circle class="pad" cx="1143.0" cy="519.6" r="10.8"><title>D1.A: DMX_A</title></circle>
+<circle class="drill" cx="1143.0" cy="519.6" r="3.8"/>
+<circle class="pad" cx="1143.0" cy="611.0" r="10.8"><title>D1.B: GND2</title></circle>
+<circle class="drill" cx="1143.0" cy="611.0" r="3.8"/>
+<circle class="pad" cx="1116.0" cy="378.0" r="11.7"><title>J1.2: DMX_B</title></circle>
+<circle class="drill" cx="1116.0" cy="378.0" r="3.8"/>
+<circle class="pad" cx="1161.7" cy="378.0" r="11.7"><title>J1.1: GND2</title></circle>
+<circle class="drill" cx="1161.7" cy="378.0" r="3.8"/>
+<circle class="pad" cx="1207.4" cy="378.0" r="11.7"><title>J1.3: DMX_A</title></circle>
+<circle class="drill" cx="1207.4" cy="378.0" r="3.8"/>
+<text x="418.5" y="536.4" class="ref">U1  Raspberry Pi Pico (socketed)</text>
+<text x="72.0" y="416.7" class="ref">J2  5 V DC</text>
+<text x="180.0" y="377.1" class="ref">D2</text>
+<text x="677.7" y="108.0" class="ref">J3  to ENC28J60</text>
+<text x="792.0" y="103.5" class="ref">SW1</text>
+<text x="792.0" y="234.0" class="ref">SW2</text>
+<text x="796.5" y="397.8" class="ref">C4</text>
+<text x="797.4" y="490.5" class="ref">R3</text>
+<text x="882.0" y="581.4" class="ref">U3</text>
+<text x="882.0" y="389.7" class="ref">U4</text>
+<text x="965.7" y="421.2" class="ref">C3</text>
+<text x="956.7" y="496.8" class="ref">C1</text>
+<text x="983.7" y="561.6" class="ref">R4</text>
+<text x="1000.8" y="387.0" class="ref">R2</text>
+<text x="1061.1" y="428.4" class="ref">C2</text>
+<text x="1042.2" y="561.6" class="ref">U5</text>
+<text x="1143.9" y="454.5" class="ref">D3</text>
+<text x="1124.1" y="565.2" class="ref">D1</text>
+<text x="1161.9" y="408.6" class="ref">J1  DMX</text>
+<text x="654.3" y="146.3" class="pin" text-anchor="end">GND</text>
+<text x="654.3" y="169.1" class="pin" text-anchor="end">RST</text>
+<text x="654.3" y="192.0" class="pin" text-anchor="end">SCK</text>
+<text x="654.3" y="214.9" class="pin" text-anchor="end">SO</text>
+<text x="654.3" y="237.7" class="pin" text-anchor="end">INT</text>
+<text x="700.6" y="146.3" class="pin" text-anchor="start">3V3</text>
+<text x="700.6" y="169.1" class="pin" text-anchor="start">CS</text>
+<text x="700.6" y="192.0" class="pin" text-anchor="start">SI</text>
+<text x="700.6" y="214.9" class="pin" text-anchor="start">WOL</text>
+<text x="700.6" y="237.7" class="pin" text-anchor="start">CLK</text>
+<text x="1116.0" y="356.4" class="pin" text-anchor="middle">2 D-</text>
+<text x="1161.7" y="356.4" class="pin" text-anchor="middle">1 COM</text>
+<text x="1207.4" y="356.4" class="pin" text-anchor="middle">3 D+</text>
+<text x="201.3" y="617.6" class="pin" text-anchor="middle">GP0</text>
+<text x="612.8" y="617.6" class="pin" text-anchor="middle">GP14</text>
+<text x="635.7" y="617.6" class="pin" text-anchor="middle">GP15</text>
+<text x="635.7" y="423.4" class="pin" text-anchor="middle">GP16</text>
+<text x="612.8" y="423.4" class="pin" text-anchor="middle">GP17</text>
+<text x="567.1" y="423.4" class="pin" text-anchor="middle">GP18</text>
+<text x="544.2" y="423.4" class="pin" text-anchor="middle">GP19</text>
+<text x="521.4" y="423.4" class="pin" text-anchor="middle">GP20</text>
+<text x="498.5" y="423.4" class="pin" text-anchor="middle">GP21</text>
+<text x="292.8" y="423.4" class="pin" text-anchor="middle">3V3</text>
+<text x="224.2" y="423.4" class="pin" text-anchor="middle">VSYS</text>
+<text x="201.3" y="423.4" class="pin" text-anchor="middle">VBUS</text>
+<text x="855.0" y="30.0" class="pin" text-anchor="end">logic side</text>
+<text x="909.0" y="30.0" class="pin">isolated DMX side</text>
+</g>
+<g transform="translate(0,1352)">
+<text x="36" y="22" class="t">Bottom copper only (still seen from the top, through the board)</text>
+<polygon class="board" points="36.0,630.0 1242.0,630.0 1242.0,328.5 985.5,328.5 985.5,36.0 571.5,36.0 571.5,364.5 36.0,364.5"/>
+<rect class="slot" x="875.7" y="400.5" width="12.6" height="72.0" rx="6.3"/>
+<rect class="slot" x="875.7" y="81.0" width="12.6" height="220.5" rx="6.3"/>
+<line class="iso" x1="882.0" y1="36.0" x2="882.0" y2="630.0"/>
+<circle class="hole" cx="67.5" cy="580.5" r="14.4"/>
+<circle class="hole" cx="607.5" cy="67.5" r="14.4"/>
+<circle class="hole" cx="945.0" cy="67.5" r="14.4"/>
+<circle class="hole" cx="1206.0" cy="598.5" r="14.4"/>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="666.0,143.3 585.9,143.3 580.5,148.7 580.5,369.0 575.1,374.4 481.1,374.4 475.7,379.8 475.6,437.5"><title>GND</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="666.0,166.1 594.0,166.1 588.6,171.5 588.6,377.1 583.2,382.5 526.8,382.5 521.4,387.9 521.4,437.5"><title>ENC_RST</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" points="688.9,189.0 677.4,177.6 602.1,177.6 596.7,183.0 596.7,385.2 591.3,390.6 549.6,390.6 544.2,396.0 544.2,437.5"><title>ENC_SI</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="666.0,189.0 610.2,189.0 604.8,194.4 604.8,393.3 599.4,398.7 572.5,398.7 567.1,404.1 567.1,437.5"><title>ENC_SCK</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" points="688.9,166.1 696.6,166.1 701.1,170.6 701.1,195.9 696.6,200.4 618.2,200.4 612.8,205.8 612.8,437.5"><title>ENC_CS</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="666.0,211.9 641.1,211.9 635.7,217.3 635.7,437.5"><title>ENC_SO</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="735.8,126.0 721.8,126.0 716.4,131.4 716.4,242.1 711.0,247.5 657.9,247.5 652.5,252.9 652.5,567.0 647.1,572.4 618.2,572.4 612.8,577.8 612.8,597.5"><title>BTN1</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="2.70" stroke-linecap="round" stroke-linejoin="round" points="735.8,256.5 666.0,256.5 660.6,261.9 660.6,576.0 655.2,581.4 641.1,581.4 635.7,586.8 635.7,597.5"><title>BTN2</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="666.0,143.3 666.0,86.4 671.4,81.0 735.8,81.0 848.2,81.0"><title>GND</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="748.8,81.0 754.2,86.4 754.2,206.1 748.8,211.5"><title>GND</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="735.8,211.5 748.8,211.5 830.7,211.5 848.2,211.5"><title>GND</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="830.7,211.5 830.7,353.7"><title>GND</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="787.5,373.5 787.5,359.1 792.9,353.7 830.7,353.7 842.3,353.7 847.7,359.1 847.7,369.0"><title>GND</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="590.0,597.5 589.9,613.8 595.4,619.2 777.6,619.2 783.0,613.8 783.0,378.0 787.5,373.5"><title>GND</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="5.40" stroke-linecap="round" stroke-linejoin="round" points="76.5,479.7 76.5,513.9 81.9,519.3 100.8,519.3 247.1,519.3 361.3,519.3 475.7,519.3 589.9,519.3"><title>GND</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="247.1,437.5 247.1,519.3 247.1,597.5"><title>GND</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="361.3,437.5 361.3,519.3 361.4,597.5"><title>GND</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="475.6,437.5 475.7,519.3 475.7,597.5"><title>GND</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="589.9,437.5 589.9,519.3 590.0,597.5"><title>GND</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="893.4,369.0 911.4,351.0 939.6,351.0 974.7,351.0 1017.0,351.0 1044.0,351.0 1156.3,351.0 1161.7,356.4 1161.7,378.0"><title>GND2</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="939.6,351.0 939.6,474.6"><title>GND2</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="974.7,351.0 974.7,400.5"><title>GND2</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="1017.0,351.0 1017.0,359.6"><title>GND2</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="1044.0,351.0 1044.0,406.0"><title>GND2</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="1161.7,378.0 1161.7,500.2 1161.7,551.9 1124.1,589.5"><title>GND2</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="1161.7,500.2 1189.4,472.5"><title>GND2</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="916.3,565.3 916.3,584.1 921.7,589.5 1076.6,589.5 1124.1,589.5 1137.6,589.5 1143.0,594.9 1143.0,611.0"><title>GND2</title></polyline>
+<polyline fill="none" stroke="#2f6fd6" stroke-opacity="0.9" stroke-width="4.50" stroke-linecap="round" stroke-linejoin="round" points="1076.6,589.5 1076.6,542.4"><title>GND2</title></polyline>
+<circle class="pad" cx="201.3" cy="597.5" r="7.6"><title>U1.1: DMX_TX</title></circle>
+<circle class="drill" cx="201.3" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="224.2" cy="597.5" r="7.6"><title>U1.2: not connected</title></circle>
+<circle class="drill" cx="224.2" cy="597.5" r="3.8"/>
+<circle class="pad" cx="247.1" cy="597.5" r="7.6"><title>U1.3: GND</title></circle>
+<circle class="drill" cx="247.1" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="269.9" cy="597.5" r="7.6"><title>U1.4: not connected</title></circle>
+<circle class="drill" cx="269.9" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="292.8" cy="597.5" r="7.6"><title>U1.5: not connected</title></circle>
+<circle class="drill" cx="292.8" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="315.6" cy="597.5" r="7.6"><title>U1.6: not connected</title></circle>
+<circle class="drill" cx="315.6" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="338.5" cy="597.5" r="7.6"><title>U1.7: not connected</title></circle>
+<circle class="drill" cx="338.5" cy="597.5" r="3.8"/>
+<circle class="pad" cx="361.4" cy="597.5" r="7.6"><title>U1.8: GND</title></circle>
+<circle class="drill" cx="361.4" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="384.2" cy="597.5" r="7.6"><title>U1.9: not connected</title></circle>
+<circle class="drill" cx="384.2" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="407.1" cy="597.5" r="7.6"><title>U1.10: not connected</title></circle>
+<circle class="drill" cx="407.1" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="429.9" cy="597.5" r="7.6"><title>U1.11: not connected</title></circle>
+<circle class="drill" cx="429.9" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="452.8" cy="597.5" r="7.6"><title>U1.12: not connected</title></circle>
+<circle class="drill" cx="452.8" cy="597.5" r="3.8"/>
+<circle class="pad" cx="475.7" cy="597.5" r="7.6"><title>U1.13: GND</title></circle>
+<circle class="drill" cx="475.7" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="498.5" cy="597.5" r="7.6"><title>U1.14: not connected</title></circle>
+<circle class="drill" cx="498.5" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="521.4" cy="597.5" r="7.6"><title>U1.15: not connected</title></circle>
+<circle class="drill" cx="521.4" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="544.2" cy="597.5" r="7.6"><title>U1.16: not connected</title></circle>
+<circle class="drill" cx="544.2" cy="597.5" r="3.8"/>
+<circle class="pad nc" cx="567.1" cy="597.5" r="7.6"><title>U1.17: not connected</title></circle>
+<circle class="drill" cx="567.1" cy="597.5" r="3.8"/>
+<circle class="pad" cx="590.0" cy="597.5" r="7.6"><title>U1.18: GND</title></circle>
+<circle class="drill" cx="590.0" cy="597.5" r="3.8"/>
+<circle class="pad" cx="612.8" cy="597.5" r="7.6"><title>U1.19: BTN1</title></circle>
+<circle class="drill" cx="612.8" cy="597.5" r="3.8"/>
+<circle class="pad" cx="635.7" cy="597.5" r="7.6"><title>U1.20: BTN2</title></circle>
+<circle class="drill" cx="635.7" cy="597.5" r="3.8"/>
+<circle class="pad" cx="635.7" cy="437.5" r="7.6"><title>U1.21: ENC_SO</title></circle>
+<circle class="drill" cx="635.7" cy="437.5" r="3.8"/>
+<circle class="pad" cx="612.8" cy="437.5" r="7.6"><title>U1.22: ENC_CS</title></circle>
+<circle class="drill" cx="612.8" cy="437.5" r="3.8"/>
+<circle class="pad" cx="589.9" cy="437.5" r="7.6"><title>U1.23: GND</title></circle>
+<circle class="drill" cx="589.9" cy="437.5" r="3.8"/>
+<circle class="pad" cx="567.1" cy="437.5" r="7.6"><title>U1.24: ENC_SCK</title></circle>
+<circle class="drill" cx="567.1" cy="437.5" r="3.8"/>
+<circle class="pad" cx="544.2" cy="437.5" r="7.6"><title>U1.25: ENC_SI</title></circle>
+<circle class="drill" cx="544.2" cy="437.5" r="3.8"/>
+<circle class="pad" cx="521.4" cy="437.5" r="7.6"><title>U1.26: ENC_RST</title></circle>
+<circle class="drill" cx="521.4" cy="437.5" r="3.8"/>
+<circle class="pad" cx="498.5" cy="437.5" r="7.6"><title>U1.27: ENC_INT</title></circle>
+<circle class="drill" cx="498.5" cy="437.5" r="3.8"/>
+<circle class="pad" cx="475.6" cy="437.5" r="7.6"><title>U1.28: GND</title></circle>
+<circle class="drill" cx="475.6" cy="437.5" r="3.8"/>
+<circle class="pad nc" cx="452.8" cy="437.5" r="7.6"><title>U1.29: not connected</title></circle>
+<circle class="drill" cx="452.8" cy="437.5" r="3.8"/>
+<circle class="pad nc" cx="429.9" cy="437.5" r="7.6"><title>U1.30: not connected</title></circle>
+<circle class="drill" cx="429.9" cy="437.5" r="3.8"/>
+<circle class="pad nc" cx="407.1" cy="437.5" r="7.6"><title>U1.31: not connected</title></circle>
+<circle class="drill" cx="407.1" cy="437.5" r="3.8"/>
+<circle class="pad nc" cx="384.2" cy="437.5" r="7.6"><title>U1.32: not connected</title></circle>
+<circle class="drill" cx="384.2" cy="437.5" r="3.8"/>
+<circle class="pad" cx="361.3" cy="437.5" r="7.6"><title>U1.33: GND</title></circle>
+<circle class="drill" cx="361.3" cy="437.5" r="3.8"/>
+<circle class="pad nc" cx="338.5" cy="437.5" r="7.6"><title>U1.34: not connected</title></circle>
+<circle class="drill" cx="338.5" cy="437.5" r="3.8"/>
+<circle class="pad nc" cx="315.6" cy="437.5" r="7.6"><title>U1.35: not connected</title></circle>
+<circle class="drill" cx="315.6" cy="437.5" r="3.8"/>
+<circle class="pad" cx="292.8" cy="437.5" r="7.6"><title>U1.36: 3V3</title></circle>
+<circle class="drill" cx="292.8" cy="437.5" r="3.8"/>
+<circle class="pad nc" cx="269.9" cy="437.5" r="7.6"><title>U1.37: not connected</title></circle>
+<circle class="drill" cx="269.9" cy="437.5" r="3.8"/>
+<circle class="pad" cx="247.1" cy="437.5" r="7.6"><title>U1.38: GND</title></circle>
+<circle class="drill" cx="247.1" cy="437.5" r="3.8"/>
+<circle class="pad" cx="224.2" cy="437.5" r="7.6"><title>U1.39: VSYS</title></circle>
+<circle class="drill" cx="224.2" cy="437.5" r="3.8"/>
+<circle class="pad nc" cx="201.3" cy="437.5" r="7.6"><title>U1.40: not connected</title></circle>
+<circle class="drill" cx="201.3" cy="437.5" r="3.8"/>
+<circle class="pad" cx="666.0" cy="143.3" r="7.6"><title>J3.GND: GND</title></circle>
+<circle class="drill" cx="666.0" cy="143.3" r="3.8"/>
+<circle class="pad" cx="666.0" cy="166.1" r="7.6"><title>J3.RESET: ENC_RST</title></circle>
+<circle class="drill" cx="666.0" cy="166.1" r="3.8"/>
+<circle class="pad" cx="666.0" cy="189.0" r="7.6"><title>J3.SCK: ENC_SCK</title></circle>
+<circle class="drill" cx="666.0" cy="189.0" r="3.8"/>
+<circle class="pad" cx="666.0" cy="211.9" r="7.6"><title>J3.SO: ENC_SO</title></circle>
+<circle class="drill" cx="666.0" cy="211.9" r="3.8"/>
+<circle class="pad" cx="666.0" cy="234.7" r="7.6"><title>J3.INT: ENC_INT</title></circle>
+<circle class="drill" cx="666.0" cy="234.7" r="3.8"/>
+<circle class="pad" cx="688.9" cy="143.3" r="7.6"><title>J3.VCC: 3V3</title></circle>
+<circle class="drill" cx="688.9" cy="143.3" r="3.8"/>
+<circle class="pad" cx="688.9" cy="166.1" r="7.6"><title>J3.CS: ENC_CS</title></circle>
+<circle class="drill" cx="688.9" cy="166.1" r="3.8"/>
+<circle class="pad" cx="688.9" cy="189.0" r="7.6"><title>J3.SI: ENC_SI</title></circle>
+<circle class="drill" cx="688.9" cy="189.0" r="3.8"/>
+<circle class="pad nc" cx="688.9" cy="211.9" r="7.6"><title>J3.WOL: not connected</title></circle>
+<circle class="drill" cx="688.9" cy="211.9" r="3.8"/>
+<circle class="pad nc" cx="688.9" cy="234.7" r="7.6"><title>J3.CLKOUT: not connected</title></circle>
+<circle class="drill" cx="688.9" cy="234.7" r="3.8"/>
+<circle class="pad" cx="131.4" cy="477.9" r="15.3"><title>J2.+: 5V_IN</title></circle>
+<circle class="drill" cx="131.4" cy="477.9" r="3.8"/>
+<circle class="pad" cx="76.5" cy="479.7" r="15.3"><title>J2.GND: GND</title></circle>
+<circle class="drill" cx="76.5" cy="479.7" r="3.8"/>
+<circle class="pad" cx="100.8" cy="519.3" r="15.3"><title>J2.SW: GND</title></circle>
+<circle class="drill" cx="100.8" cy="519.3" r="3.8"/>
+<circle class="pad" cx="135.0" cy="393.8" r="10.3"><title>D2.A: 5V_IN</title></circle>
+<circle class="drill" cx="135.0" cy="393.8" r="3.8"/>
+<circle class="pad" cx="226.4" cy="393.8" r="10.3"><title>D2.K: VSYS</title></circle>
+<circle class="drill" cx="226.4" cy="393.8" r="3.8"/>
+<circle class="pad" cx="735.8" cy="81.0" r="10.8"><title>SW1.G1: GND</title></circle>
+<circle class="drill" cx="735.8" cy="81.0" r="3.8"/>
+<circle class="pad" cx="848.2" cy="81.0" r="10.8"><title>SW1.G2: GND</title></circle>
+<circle class="drill" cx="848.2" cy="81.0" r="3.8"/>
+<circle class="pad" cx="735.8" cy="126.0" r="10.8"><title>SW1.S1: BTN1</title></circle>
+<circle class="drill" cx="735.8" cy="126.0" r="3.8"/>
+<circle class="pad nc" cx="848.2" cy="126.0" r="10.8"><title>SW1.S2: not connected</title></circle>
+<circle class="drill" cx="848.2" cy="126.0" r="3.8"/>
+<circle class="pad" cx="735.8" cy="211.5" r="10.8"><title>SW2.G1: GND</title></circle>
+<circle class="drill" cx="735.8" cy="211.5" r="3.8"/>
+<circle class="pad" cx="848.2" cy="211.5" r="10.8"><title>SW2.G2: GND</title></circle>
+<circle class="drill" cx="848.2" cy="211.5" r="3.8"/>
+<circle class="pad" cx="735.8" cy="256.5" r="10.8"><title>SW2.S1: BTN2</title></circle>
+<circle class="drill" cx="735.8" cy="256.5" r="3.8"/>
+<circle class="pad nc" cx="848.2" cy="256.5" r="10.8"><title>SW2.S2: not connected</title></circle>
+<circle class="drill" cx="848.2" cy="256.5" r="3.8"/>
+<circle class="pad" cx="814.5" cy="519.6" r="10.3"><title>R3.A: OPTO_A</title></circle>
+<circle class="drill" cx="814.5" cy="519.6" r="3.8"/>
+<circle class="pad" cx="814.5" cy="428.1" r="10.3"><title>R3.B: 3V3</title></circle>
+<circle class="drill" cx="814.5" cy="428.1" r="3.8"/>
+<circle class="pad" cx="805.5" cy="373.5" r="7.2"><title>C4.+: VSYS</title></circle>
+<circle class="drill" cx="805.5" cy="373.5" r="3.8"/>
+<circle class="pad" cx="787.5" cy="373.5" r="7.2"><title>C4.-: GND</title></circle>
+<circle class="drill" cx="787.5" cy="373.5" r="3.8"/>
+<circle class="pad nc" cx="847.7" cy="496.7" r="7.6"><title>U3.1: not connected</title></circle>
+<circle class="drill" cx="847.7" cy="496.7" r="3.8"/>
+<circle class="pad" cx="847.7" cy="519.6" r="7.6"><title>U3.2: OPTO_A</title></circle>
+<circle class="drill" cx="847.7" cy="519.6" r="3.8"/>
+<circle class="pad" cx="847.7" cy="542.4" r="7.6"><title>U3.3: DMX_TX</title></circle>
+<circle class="drill" cx="847.7" cy="542.4" r="3.8"/>
+<circle class="pad nc" cx="847.7" cy="565.3" r="7.6"><title>U3.4: not connected</title></circle>
+<circle class="drill" cx="847.7" cy="565.3" r="3.8"/>
+<circle class="pad" cx="916.3" cy="565.3" r="7.6"><title>U3.5: GND2</title></circle>
+<circle class="drill" cx="916.3" cy="565.3" r="3.8"/>
+<circle class="pad" cx="916.3" cy="542.4" r="7.6"><title>U3.6: OPTO_OUT</title></circle>
+<circle class="drill" cx="916.3" cy="542.4" r="3.8"/>
+<circle class="pad" cx="916.3" cy="519.6" r="7.6"><title>U3.7: 5V_ISO</title></circle>
+<circle class="drill" cx="916.3" cy="519.6" r="3.8"/>
+<circle class="pad" cx="916.3" cy="496.7" r="7.6"><title>U3.8: 5V_ISO</title></circle>
+<circle class="drill" cx="916.3" cy="496.7" r="3.8"/>
+<circle class="pad" cx="847.7" cy="369.0" r="7.6"><title>U4.1: GND</title></circle>
+<circle class="drill" cx="847.7" cy="369.0" r="3.8"/>
+<circle class="pad" cx="870.6" cy="369.0" r="7.6"><title>U4.2: VSYS</title></circle>
+<circle class="drill" cx="870.6" cy="369.0" r="3.8"/>
+<circle class="pad" cx="893.4" cy="369.0" r="7.6"><title>U4.3: GND2</title></circle>
+<circle class="drill" cx="893.4" cy="369.0" r="3.8"/>
+<circle class="pad" cx="916.3" cy="369.0" r="7.6"><title>U4.4: 5V_ISO</title></circle>
+<circle class="drill" cx="916.3" cy="369.0" r="3.8"/>
+<circle class="pad nc" cx="1008.0" cy="473.8" r="7.6"><title>U5.1: not connected</title></circle>
+<circle class="drill" cx="1008.0" cy="473.8" r="3.8"/>
+<circle class="pad" cx="1008.0" cy="496.7" r="7.6"><title>U5.2: 5V_ISO</title></circle>
+<circle class="drill" cx="1008.0" cy="496.7" r="3.8"/>
+<circle class="pad" cx="1008.0" cy="519.6" r="7.6"><title>U5.3: 5V_ISO</title></circle>
+<circle class="drill" cx="1008.0" cy="519.6" r="3.8"/>
+<circle class="pad" cx="1008.0" cy="542.4" r="7.6"><title>U5.4: OPTO_OUT</title></circle>
+<circle class="drill" cx="1008.0" cy="542.4" r="3.8"/>
+<circle class="pad" cx="1076.6" cy="542.4" r="7.6"><title>U5.5: GND2</title></circle>
+<circle class="drill" cx="1076.6" cy="542.4" r="3.8"/>
+<circle class="pad" cx="1076.6" cy="519.6" r="7.6"><title>U5.6: DMX_A</title></circle>
+<circle class="drill" cx="1076.6" cy="519.6" r="3.8"/>
+<circle class="pad" cx="1076.6" cy="496.7" r="7.6"><title>U5.7: DMX_B</title></circle>
+<circle class="drill" cx="1076.6" cy="496.7" r="3.8"/>
+<circle class="pad" cx="1076.6" cy="473.8" r="7.6"><title>U5.8: 5V_ISO</title></circle>
+<circle class="drill" cx="1076.6" cy="473.8" r="3.8"/>
+<circle class="pad" cx="956.7" cy="400.5" r="7.2"><title>C3.+: 5V_ISO</title></circle>
+<circle class="drill" cx="956.7" cy="400.5" r="3.8"/>
+<circle class="pad" cx="974.7" cy="400.5" r="7.2"><title>C3.-: GND2</title></circle>
+<circle class="drill" cx="974.7" cy="400.5" r="3.8"/>
+<circle class="pad" cx="939.6" cy="519.6" r="10.3"><title>C1.A: 5V_ISO</title></circle>
+<circle class="drill" cx="939.6" cy="519.6" r="3.8"/>
+<circle class="pad" cx="939.6" cy="474.6" r="10.3"><title>C1.B: GND2</title></circle>
+<circle class="drill" cx="939.6" cy="474.6" r="3.8"/>
+<circle class="pad" cx="967.5" cy="542.4" r="10.3"><title>R4.A: OPTO_OUT</title></circle>
+<circle class="drill" cx="967.5" cy="542.4" r="3.8"/>
+<circle class="pad" cx="967.5" cy="451.0" r="10.3"><title>R4.B: 5V_ISO</title></circle>
+<circle class="drill" cx="967.5" cy="451.0" r="3.8"/>
+<circle class="pad" cx="1017.0" cy="451.0" r="10.3"><title>R2.A: 5V_ISO</title></circle>
+<circle class="drill" cx="1017.0" cy="451.0" r="3.8"/>
+<circle class="pad" cx="1017.0" cy="359.6" r="10.3"><title>R2.B: GND2</title></circle>
+<circle class="drill" cx="1017.0" cy="359.6" r="3.8"/>
+<circle class="pad" cx="1044.0" cy="451.0" r="10.3"><title>C2.A: 5V_ISO</title></circle>
+<circle class="drill" cx="1044.0" cy="451.0" r="3.8"/>
+<circle class="pad" cx="1044.0" cy="406.0" r="10.3"><title>C2.B: GND2</title></circle>
+<circle class="drill" cx="1044.0" cy="406.0" r="3.8"/>
+<circle class="pad" cx="1098.0" cy="472.5" r="10.8"><title>D3.A: DMX_B</title></circle>
+<circle class="drill" cx="1098.0" cy="472.5" r="3.8"/>
+<circle class="pad" cx="1189.4" cy="472.5" r="10.8"><title>D3.B: GND2</title></circle>
+<circle class="drill" cx="1189.4" cy="472.5" r="3.8"/>
+<circle class="pad" cx="1143.0" cy="519.6" r="10.8"><title>D1.A: DMX_A</title></circle>
+<circle class="drill" cx="1143.0" cy="519.6" r="3.8"/>
+<circle class="pad" cx="1143.0" cy="611.0" r="10.8"><title>D1.B: GND2</title></circle>
+<circle class="drill" cx="1143.0" cy="611.0" r="3.8"/>
+<circle class="pad" cx="1116.0" cy="378.0" r="11.7"><title>J1.2: DMX_B</title></circle>
+<circle class="drill" cx="1116.0" cy="378.0" r="3.8"/>
+<circle class="pad" cx="1161.7" cy="378.0" r="11.7"><title>J1.1: GND2</title></circle>
+<circle class="drill" cx="1161.7" cy="378.0" r="3.8"/>
+<circle class="pad" cx="1207.4" cy="378.0" r="11.7"><title>J1.3: DMX_A</title></circle>
+<circle class="drill" cx="1207.4" cy="378.0" r="3.8"/>
+<text x="418.5" y="536.4" class="ref">U1  Raspberry Pi Pico (socketed)</text>
+<text x="72.0" y="416.7" class="ref">J2  5 V DC</text>
+<text x="180.0" y="377.1" class="ref">D2</text>
+<text x="677.7" y="108.0" class="ref">J3  to ENC28J60</text>
+<text x="792.0" y="103.5" class="ref">SW1</text>
+<text x="792.0" y="234.0" class="ref">SW2</text>
+<text x="796.5" y="397.8" class="ref">C4</text>
+<text x="797.4" y="490.5" class="ref">R3</text>
+<text x="882.0" y="581.4" class="ref">U3</text>
+<text x="882.0" y="389.7" class="ref">U4</text>
+<text x="965.7" y="421.2" class="ref">C3</text>
+<text x="956.7" y="496.8" class="ref">C1</text>
+<text x="983.7" y="561.6" class="ref">R4</text>
+<text x="1000.8" y="387.0" class="ref">R2</text>
+<text x="1061.1" y="428.4" class="ref">C2</text>
+<text x="1042.2" y="561.6" class="ref">U5</text>
+<text x="1143.9" y="454.5" class="ref">D3</text>
+<text x="1124.1" y="565.2" class="ref">D1</text>
+<text x="1161.9" y="408.6" class="ref">J1  DMX</text>
+<text x="654.3" y="146.3" class="pin" text-anchor="end">GND</text>
+<text x="654.3" y="169.1" class="pin" text-anchor="end">RST</text>
+<text x="654.3" y="192.0" class="pin" text-anchor="end">SCK</text>
+<text x="654.3" y="214.9" class="pin" text-anchor="end">SO</text>
+<text x="654.3" y="237.7" class="pin" text-anchor="end">INT</text>
+<text x="700.6" y="146.3" class="pin" text-anchor="start">3V3</text>
+<text x="700.6" y="169.1" class="pin" text-anchor="start">CS</text>
+<text x="700.6" y="192.0" class="pin" text-anchor="start">SI</text>
+<text x="700.6" y="214.9" class="pin" text-anchor="start">WOL</text>
+<text x="700.6" y="237.7" class="pin" text-anchor="start">CLK</text>
+<text x="1116.0" y="356.4" class="pin" text-anchor="middle">2 D-</text>
+<text x="1161.7" y="356.4" class="pin" text-anchor="middle">1 COM</text>
+<text x="1207.4" y="356.4" class="pin" text-anchor="middle">3 D+</text>
+<text x="201.3" y="617.6" class="pin" text-anchor="middle">GP0</text>
+<text x="612.8" y="617.6" class="pin" text-anchor="middle">GP14</text>
+<text x="635.7" y="617.6" class="pin" text-anchor="middle">GP15</text>
+<text x="635.7" y="423.4" class="pin" text-anchor="middle">GP16</text>
+<text x="612.8" y="423.4" class="pin" text-anchor="middle">GP17</text>
+<text x="567.1" y="423.4" class="pin" text-anchor="middle">GP18</text>
+<text x="544.2" y="423.4" class="pin" text-anchor="middle">GP19</text>
+<text x="521.4" y="423.4" class="pin" text-anchor="middle">GP20</text>
+<text x="498.5" y="423.4" class="pin" text-anchor="middle">GP21</text>
+<text x="292.8" y="423.4" class="pin" text-anchor="middle">3V3</text>
+<text x="224.2" y="423.4" class="pin" text-anchor="middle">VSYS</text>
+<text x="201.3" y="423.4" class="pin" text-anchor="middle">VBUS</text>
+<text x="855.0" y="30.0" class="pin" text-anchor="end">logic side</text>
+<text x="909.0" y="30.0" class="pin">isolated DMX side</text>
+</g>
+</svg>

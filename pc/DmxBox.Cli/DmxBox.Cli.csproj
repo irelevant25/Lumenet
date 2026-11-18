@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>DmxBox.Cli</RootNamespace>
+    <!-- The program is called dmxbox.exe. -->
+    <AssemblyName>dmxbox</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DmxBox\DmxBox.csproj" />
+  </ItemGroup>
+
+</Project>

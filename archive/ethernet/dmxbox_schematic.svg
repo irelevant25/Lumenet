@@ -1,0 +1,510 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 1010" width="1500" height="1010">
+<rect width="1500" height="1010" fill="white"/>
+<rect x="940" y="70" width="550" height="775" fill="#f1f7ff"/>
+<rect x="10" y="10" width="1480" height="990" fill="none" stroke="#9ca3af" stroke-width="1.5"/>
+<text x="30" y="45" font-size="22" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">dmxbox — Ethernet → DMX512 interface</text>
+<text x="30" y="45" font-size="22" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">dmxbox — Ethernet → DMX512 interface</text>
+<text x="30" y="64" font-size="13" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">Raspberry Pi Pico + W5500 + isolated RS-485</text>
+<text x="30" y="64" font-size="13" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">Raspberry Pi Pico + W5500 + isolated RS-485</text>
+<text x="600" y="95" font-size="13" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">LOGIC SIDE  ·  GND</text>
+<text x="600" y="95" font-size="13" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">LOGIC SIDE  ·  GND</text>
+<text x="1220" y="95" font-size="13" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">ISOLATED DMX SIDE  ·  GND2</text>
+<text x="1220" y="95" font-size="13" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#1d4ed8">ISOLATED DMX SIDE  ·  GND2</text>
+<rect x="120" y="170" width="180" height="300" fill="#fffaf0" stroke="#8b1e1e" stroke-width="2.2" rx="3"/>
+<text x="210.0" y="314.0" font-size="15" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">U2</text>
+<text x="210.0" y="314.0" font-size="15" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">U2</text>
+<text x="210.0" y="326.0" font-size="13" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">W5500 module</text>
+<text x="210.0" y="326.0" font-size="13" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">W5500 module</text>
+<text x="210.0" y="344.0" font-size="11" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">SPI Ethernet</text>
+<text x="210.0" y="344.0" font-size="11" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="#6b7280">SPI Ethernet</text>
+<line x1="300" y1="200" x2="340" y2="200" stroke="#8b1e1e" stroke-width="2"/>
+<text x="294" y="204" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">MISO</text>
+<text x="294" y="204" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">MISO</text>
+<line x1="300" y1="240" x2="340" y2="240" stroke="#8b1e1e" stroke-width="2"/>
+<text x="294" y="244" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">SCS</text>
+<text x="294" y="244" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">SCS</text>
+<line x1="300" y1="280" x2="340" y2="280" stroke="#8b1e1e" stroke-width="2"/>
+<text x="294" y="284" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">SCLK</text>
+<text x="294" y="284" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">SCLK</text>
+<line x1="300" y1="320" x2="340" y2="320" stroke="#8b1e1e" stroke-width="2"/>
+<text x="294" y="324" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">MOSI</text>
+<text x="294" y="324" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">MOSI</text>
+<line x1="300" y1="360" x2="340" y2="360" stroke="#8b1e1e" stroke-width="2"/>
+<text x="294" y="364" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">RST</text>
+<text x="294" y="364" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">RST</text>
+<line x1="300" y1="400" x2="340" y2="400" stroke="#8b1e1e" stroke-width="2"/>
+<text x="294" y="404" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">INT</text>
+<text x="294" y="404" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">INT</text>
+<path d="M335,395 L345,405 M345,395 L335,405" stroke="#b91c1c" stroke-width="2"/>
+<line x1="210" y1="170" x2="210" y2="140" stroke="#8b1e1e" stroke-width="2"/>
+<text x="210" y="186" font-size="12" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">3V3</text>
+<text x="210" y="186" font-size="12" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">3V3</text>
+<rect x="194.9" y="116" width="30.200000000000003" height="18" fill="#fff4e5" stroke="#a2470a" stroke-width="1.4" rx="2"/>
+<line x1="210" y1="134" x2="210" y2="140" stroke="#16794a" stroke-width="2"/>
+<text x="210" y="129" font-size="12" text-anchor="middle" font-weight="bold" font-family="Menlo, Consolas, monospace" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">3V3</text>
+<text x="210" y="129" font-size="12" text-anchor="middle" font-weight="bold" font-family="Menlo, Consolas, monospace" fill="#a2470a">3V3</text>
+<line x1="210" y1="470" x2="210" y2="500" stroke="#8b1e1e" stroke-width="2"/>
+<text x="210" y="463" font-size="12" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">GND</text>
+<text x="210" y="463" font-size="12" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">GND</text>
+<line x1="210" y1="500" x2="210" y2="510" stroke="#16794a" stroke-width="2"/>
+<line x1="199" y1="510" x2="221" y2="510" stroke="#1f2328" stroke-width="2"/>
+<line x1="203" y1="514" x2="217" y2="514" stroke="#1f2328" stroke-width="2"/>
+<line x1="207" y1="518" x2="213" y2="518" stroke="#1f2328" stroke-width="2"/>
+<rect x="72" y="275" width="48" height="70" fill="#e5e7eb" stroke="#1f2328" stroke-width="1.5" rx="3"/>
+<rect x="82" y="292" width="28" height="36" fill="white" stroke="#1f2328" stroke-width="1.2"/>
+<text x="96" y="268" font-size="12" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">RJ45</text>
+<text x="96" y="268" font-size="12" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">RJ45</text>
+<text x="96" y="365" font-size="11" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">to PC /</text>
+<text x="96" y="365" font-size="11" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">to PC /</text>
+<text x="96" y="378" font-size="11" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">switch</text>
+<text x="96" y="378" font-size="11" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">switch</text>
+<rect x="460" y="150" width="180" height="460" fill="#fffaf0" stroke="#8b1e1e" stroke-width="2.2" rx="3"/>
+<text x="550.0" y="374.0" font-size="15" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">U1</text>
+<text x="550.0" y="374.0" font-size="15" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">U1</text>
+<text x="550.0" y="386.0" font-size="13" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">Raspberry Pi Pico</text>
+<text x="550.0" y="386.0" font-size="13" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">Raspberry Pi Pico</text>
+<text x="550.0" y="404.0" font-size="11" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">RP2040 · pin no. = physical</text>
+<text x="550.0" y="404.0" font-size="11" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="#6b7280">RP2040 · pin no. = physical</text>
+<line x1="460" y1="200" x2="420" y2="200" stroke="#8b1e1e" stroke-width="2"/>
+<text x="466" y="204" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">GP16</text>
+<text x="466" y="204" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">GP16</text>
+<text x="440.0" y="196" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">21</text>
+<text x="440.0" y="196" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">21</text>
+<line x1="460" y1="240" x2="420" y2="240" stroke="#8b1e1e" stroke-width="2"/>
+<text x="466" y="244" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">GP17</text>
+<text x="466" y="244" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">GP17</text>
+<text x="440.0" y="236" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">22</text>
+<text x="440.0" y="236" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">22</text>
+<line x1="460" y1="280" x2="420" y2="280" stroke="#8b1e1e" stroke-width="2"/>
+<text x="466" y="284" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">GP18</text>
+<text x="466" y="284" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">GP18</text>
+<text x="440.0" y="276" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">24</text>
+<text x="440.0" y="276" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">24</text>
+<line x1="460" y1="320" x2="420" y2="320" stroke="#8b1e1e" stroke-width="2"/>
+<text x="466" y="324" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">GP19</text>
+<text x="466" y="324" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">GP19</text>
+<text x="440.0" y="316" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">25</text>
+<text x="440.0" y="316" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">25</text>
+<line x1="460" y1="360" x2="420" y2="360" stroke="#8b1e1e" stroke-width="2"/>
+<text x="466" y="364" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">GP20</text>
+<text x="466" y="364" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">GP20</text>
+<text x="440.0" y="356" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">26</text>
+<text x="440.0" y="356" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">26</text>
+<line x1="460" y1="480" x2="420" y2="480" stroke="#8b1e1e" stroke-width="2"/>
+<text x="466" y="484" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">GP14</text>
+<text x="466" y="484" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">GP14</text>
+<text x="440.0" y="476" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">19</text>
+<text x="440.0" y="476" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">19</text>
+<line x1="460" y1="540" x2="420" y2="540" stroke="#8b1e1e" stroke-width="2"/>
+<text x="466" y="544" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">GP15</text>
+<text x="466" y="544" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">GP15</text>
+<text x="440.0" y="536" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">20</text>
+<text x="440.0" y="536" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">20</text>
+<line x1="640" y1="200" x2="680" y2="200" stroke="#8b1e1e" stroke-width="2"/>
+<text x="634" y="204" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">GP0</text>
+<text x="634" y="204" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">GP0</text>
+<text x="660.0" y="196" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">1</text>
+<text x="660.0" y="196" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">1</text>
+<line x1="640" y1="240" x2="680" y2="240" stroke="#8b1e1e" stroke-width="2"/>
+<text x="634" y="244" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">GP1</text>
+<text x="634" y="244" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">GP1</text>
+<text x="660.0" y="236" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">2</text>
+<text x="660.0" y="236" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">2</text>
+<line x1="640" y1="480" x2="680" y2="480" stroke="#8b1e1e" stroke-width="2"/>
+<text x="634" y="484" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">3V3_OUT</text>
+<text x="634" y="484" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">3V3_OUT</text>
+<text x="660.0" y="476" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">36</text>
+<text x="660.0" y="476" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">36</text>
+<line x1="640" y1="520" x2="680" y2="520" stroke="#8b1e1e" stroke-width="2"/>
+<text x="634" y="524" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">VSYS</text>
+<text x="634" y="524" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">VSYS</text>
+<text x="660.0" y="516" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">39</text>
+<text x="660.0" y="516" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">39</text>
+<line x1="640" y1="560" x2="680" y2="560" stroke="#8b1e1e" stroke-width="2"/>
+<text x="634" y="564" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">VBUS</text>
+<text x="634" y="564" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">VBUS</text>
+<text x="660.0" y="556" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">40</text>
+<text x="660.0" y="556" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">40</text>
+<line x1="550" y1="610" x2="550" y2="640" stroke="#8b1e1e" stroke-width="2"/>
+<text x="550" y="603" font-size="12" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">GND</text>
+<text x="550" y="603" font-size="12" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">GND</text>
+<text x="555" y="629.0" font-size="10" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">3,38</text>
+<text x="555" y="629.0" font-size="10" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">3,38</text>
+<line x1="550" y1="640" x2="550" y2="650" stroke="#16794a" stroke-width="2"/>
+<line x1="539" y1="650" x2="561" y2="650" stroke="#1f2328" stroke-width="2"/>
+<line x1="543" y1="654" x2="557" y2="654" stroke="#1f2328" stroke-width="2"/>
+<line x1="547" y1="658" x2="553" y2="658" stroke="#1f2328" stroke-width="2"/>
+<path d="M675,555 L685,565 M685,555 L675,565" stroke="#b91c1c" stroke-width="2"/>
+<text x="690" y="585" font-size="10" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">(USB 5 V, unused)</text>
+<text x="690" y="585" font-size="10" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="#6b7280">(USB 5 V, unused)</text>
+<polyline points="340,200 420,200" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="340,240 420,240" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="340,280 420,280" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="340,320 420,320" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="340,360 420,360" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<text x="380" y="194" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">MISO</text>
+<text x="380" y="194" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">MISO</text>
+<text x="380" y="234" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">CS</text>
+<text x="380" y="234" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">CS</text>
+<text x="380" y="274" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">SCK</text>
+<text x="380" y="274" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">SCK</text>
+<text x="380" y="314" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">MOSI</text>
+<text x="380" y="314" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">MOSI</text>
+<text x="380" y="354" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">RST</text>
+<text x="380" y="354" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">RST</text>
+<polyline points="420,480 395,480" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="335,480 345,480" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="385,480 395,480" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<circle cx="345" cy="480" r="3" fill="white" stroke="#8b1e1e" stroke-width="2"/>
+<circle cx="385" cy="480" r="3" fill="white" stroke="#8b1e1e" stroke-width="2"/>
+<line x1="343" y1="470" x2="387" y2="470" stroke="#8b1e1e" stroke-width="2"/>
+<line x1="365.0" y1="470" x2="365.0" y2="460" stroke="#8b1e1e" stroke-width="2"/>
+<line x1="359.0" y1="460" x2="371.0" y2="460" stroke="#8b1e1e" stroke-width="2"/>
+<text x="365.0" y="498" font-size="11" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">SW1</text>
+<text x="365.0" y="498" font-size="11" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">SW1</text>
+<text x="365.0" y="511" font-size="11" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">BLACKOUT</text>
+<text x="365.0" y="511" font-size="11" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">BLACKOUT</text>
+<polyline points="335,480 320,480 320,490" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<line x1="320" y1="490" x2="320" y2="500" stroke="#16794a" stroke-width="2"/>
+<line x1="309" y1="500" x2="331" y2="500" stroke="#1f2328" stroke-width="2"/>
+<line x1="313" y1="504" x2="327" y2="504" stroke="#1f2328" stroke-width="2"/>
+<line x1="317" y1="508" x2="323" y2="508" stroke="#1f2328" stroke-width="2"/>
+<polyline points="420,540 395,540" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="335,540 345,540" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="385,540 395,540" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<circle cx="345" cy="540" r="3" fill="white" stroke="#8b1e1e" stroke-width="2"/>
+<circle cx="385" cy="540" r="3" fill="white" stroke="#8b1e1e" stroke-width="2"/>
+<line x1="343" y1="530" x2="387" y2="530" stroke="#8b1e1e" stroke-width="2"/>
+<line x1="365.0" y1="530" x2="365.0" y2="520" stroke="#8b1e1e" stroke-width="2"/>
+<line x1="359.0" y1="520" x2="371.0" y2="520" stroke="#8b1e1e" stroke-width="2"/>
+<text x="365.0" y="558" font-size="11" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">SW2</text>
+<text x="365.0" y="558" font-size="11" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">SW2</text>
+<text x="365.0" y="571" font-size="11" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">PRESET 1</text>
+<text x="365.0" y="571" font-size="11" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">PRESET 1</text>
+<polyline points="335,540 320,540 320,550" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<line x1="320" y1="550" x2="320" y2="560" stroke="#16794a" stroke-width="2"/>
+<line x1="309" y1="560" x2="331" y2="560" stroke="#1f2328" stroke-width="2"/>
+<line x1="313" y1="564" x2="327" y2="564" stroke="#1f2328" stroke-width="2"/>
+<line x1="317" y1="568" x2="323" y2="568" stroke="#1f2328" stroke-width="2"/>
+<text x="365" y="600" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">optional</text>
+<text x="365" y="600" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="#6b7280">optional</text>
+<polyline points="680,480 715,480" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<polygon points="715,480 723,471 753.2,471 753.2,489 723,489" fill="#fff4e5" stroke="#a2470a" stroke-width="1.4"/>
+<text x="738.1" y="484" font-size="12" text-anchor="middle" font-weight="bold" font-family="Menlo, Consolas, monospace" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">3V3</text>
+<text x="738.1" y="484" font-size="12" text-anchor="middle" font-weight="bold" font-family="Menlo, Consolas, monospace" fill="#a2470a">3V3</text>
+<polyline points="680,520 715,520" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<polygon points="715,520 723,511 760.6,511 760.6,529 723,529" fill="#fff4e5" stroke="#a2470a" stroke-width="1.4"/>
+<text x="741.8" y="524" font-size="12" text-anchor="middle" font-weight="bold" font-family="Menlo, Consolas, monospace" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">VSYS</text>
+<text x="741.8" y="524" font-size="12" text-anchor="middle" font-weight="bold" font-family="Menlo, Consolas, monospace" fill="#a2470a">VSYS</text>
+<rect x="820" y="140" width="240" height="320" fill="#fffaf0" stroke="#8b1e1e" stroke-width="2.2" rx="3"/>
+<line x1="940" y1="140" x2="940" y2="460" stroke="#93b4f0" stroke-width="2" stroke-dasharray="6 5"/>
+<text x="940.0" y="294.0" font-size="15" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">U3</text>
+<text x="940.0" y="294.0" font-size="15" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">U3</text>
+<text x="940.0" y="306.0" font-size="13" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">ISO1410</text>
+<text x="940.0" y="306.0" font-size="13" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">ISO1410</text>
+<text x="940.0" y="324.0" font-size="11" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">isolated RS-485, half duplex</text>
+<text x="940.0" y="324.0" font-size="11" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="#6b7280">isolated RS-485, half duplex</text>
+<line x1="820" y1="170" x2="780" y2="170" stroke="#8b1e1e" stroke-width="2"/>
+<text x="826" y="174" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">VCC1</text>
+<text x="826" y="174" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">VCC1</text>
+<line x1="820" y1="240" x2="780" y2="240" stroke="#8b1e1e" stroke-width="2"/>
+<text x="826" y="244" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">D</text>
+<text x="826" y="244" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">D</text>
+<line x1="820" y1="290" x2="780" y2="290" stroke="#8b1e1e" stroke-width="2"/>
+<text x="826" y="294" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">DE</text>
+<text x="826" y="294" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">DE</text>
+<line x1="820" y1="340" x2="780" y2="340" stroke="#8b1e1e" stroke-width="2"/>
+<text x="826" y="344" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">/RE</text>
+<text x="826" y="344" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">/RE</text>
+<line x1="820" y1="390" x2="780" y2="390" stroke="#8b1e1e" stroke-width="2"/>
+<text x="826" y="394" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">R</text>
+<text x="826" y="394" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">R</text>
+<path d="M775,385 L785,395 M785,385 L775,395" stroke="#b91c1c" stroke-width="2"/>
+<line x1="1060" y1="170" x2="1100" y2="170" stroke="#8b1e1e" stroke-width="2"/>
+<text x="1054" y="174" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">VCC2</text>
+<text x="1054" y="174" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">VCC2</text>
+<line x1="1060" y1="260" x2="1100" y2="260" stroke="#8b1e1e" stroke-width="2"/>
+<text x="1054" y="264" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">A</text>
+<text x="1054" y="264" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">A</text>
+<line x1="1060" y1="400" x2="1100" y2="400" stroke="#8b1e1e" stroke-width="2"/>
+<text x="1054" y="404" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">B</text>
+<text x="1054" y="404" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">B</text>
+<line x1="870" y1="460" x2="870" y2="490" stroke="#8b1e1e" stroke-width="2"/>
+<text x="870" y="453" font-size="12" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">GND1</text>
+<text x="870" y="453" font-size="12" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">GND1</text>
+<line x1="870" y1="490" x2="870" y2="500" stroke="#16794a" stroke-width="2"/>
+<line x1="859" y1="500" x2="881" y2="500" stroke="#1f2328" stroke-width="2"/>
+<line x1="863" y1="504" x2="877" y2="504" stroke="#1f2328" stroke-width="2"/>
+<line x1="867" y1="508" x2="873" y2="508" stroke="#1f2328" stroke-width="2"/>
+<line x1="1010" y1="460" x2="1010" y2="490" stroke="#8b1e1e" stroke-width="2"/>
+<text x="1010" y="453" font-size="12" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">GND2</text>
+<text x="1010" y="453" font-size="12" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">GND2</text>
+<line x1="1010" y1="490" x2="1010" y2="500" stroke="#16794a" stroke-width="2"/>
+<polygon points="1000,500 1020,500 1010,512" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+<text x="1023" y="512" font-size="10" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">GND2</text>
+<text x="1023" y="512" font-size="10" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#1d4ed8">GND2</text>
+<polyline points="780,170 755,170" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<polygon points="755,170 747,161 716.8,161 716.8,179 747,179" fill="#fff4e5" stroke="#a2470a" stroke-width="1.4"/>
+<text x="731.9" y="174" font-size="12" text-anchor="middle" font-weight="bold" font-family="Menlo, Consolas, monospace" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">3V3</text>
+<text x="731.9" y="174" font-size="12" text-anchor="middle" font-weight="bold" font-family="Menlo, Consolas, monospace" fill="#a2470a">3V3</text>
+<polyline points="780,340 760,340" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<polygon points="760,340 752,331 721.8,331 721.8,349 752,349" fill="#fff4e5" stroke="#a2470a" stroke-width="1.4"/>
+<text x="736.9" y="344" font-size="12" text-anchor="middle" font-weight="bold" font-family="Menlo, Consolas, monospace" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">3V3</text>
+<text x="736.9" y="344" font-size="12" text-anchor="middle" font-weight="bold" font-family="Menlo, Consolas, monospace" fill="#a2470a">3V3</text>
+<text x="742" y="364" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">receiver off</text>
+<text x="742" y="364" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="#6b7280">receiver off</text>
+<polyline points="680,200 730,200 730,240 780,240" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<text x="755" y="233" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">DMX_TX</text>
+<text x="755" y="233" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">DMX_TX</text>
+<polyline points="680,240 695,240 695,290 780,290" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<text x="750" y="283" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">DMX_DE</text>
+<text x="750" y="283" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">DMX_DE</text>
+<circle cx="695" cy="290" r="4" fill="#16794a"/>
+<polyline points="695,290 695,320.0" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="695,370.0 695,400" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<rect x="687" y="320.0" width="16" height="50" fill="#fffaf0" stroke="#8b1e1e" stroke-width="2"/>
+<text x="681" y="342.0" font-size="12" text-anchor="end" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">R1</text>
+<text x="681" y="342.0" font-size="12" text-anchor="end" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">R1</text>
+<text x="681" y="357.0" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">10k</text>
+<text x="681" y="357.0" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">10k</text>
+<line x1="695" y1="400" x2="695" y2="410" stroke="#16794a" stroke-width="2"/>
+<line x1="684" y1="410" x2="706" y2="410" stroke="#1f2328" stroke-width="2"/>
+<line x1="688" y1="414" x2="702" y2="414" stroke="#1f2328" stroke-width="2"/>
+<line x1="692" y1="418" x2="698" y2="418" stroke="#1f2328" stroke-width="2"/>
+<polyline points="1100,170 1130,170" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<polygon points="1130,170 1138,161 1197.8,161 1197.8,179 1138,179" fill="#fff4e5" stroke="#a2470a" stroke-width="1.4"/>
+<text x="1167.9" y="174" font-size="12" text-anchor="middle" font-weight="bold" font-family="Menlo, Consolas, monospace" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">+5V_ISO</text>
+<text x="1167.9" y="174" font-size="12" text-anchor="middle" font-weight="bold" font-family="Menlo, Consolas, monospace" fill="#a2470a">+5V_ISO</text>
+<polyline points="1100,260 1280,260" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="1100,400 1280,400" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<rect x="1150" y="305" width="60" height="50" fill="#fffaf0" stroke="#8b1e1e" stroke-width="2" rx="3"/>
+<path d="M1166,322 l8,8 l-8,8 z M1194,322 l-8,8 l8,8 z" fill="none" stroke="#8b1e1e" stroke-width="1.6"/>
+<line x1="1180" y1="320" x2="1180" y2="340" stroke="#8b1e1e" stroke-width="2"/>
+<polyline points="1180,305 1180,260" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<circle cx="1180" cy="260" r="4" fill="#16794a"/>
+<text x="1186" y="300" font-size="10" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">1</text>
+<text x="1186" y="300" font-size="10" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">1</text>
+<polyline points="1180,355 1180,400" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<circle cx="1180" cy="400" r="4" fill="#16794a"/>
+<text x="1186" y="370" font-size="10" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">2</text>
+<text x="1186" y="370" font-size="10" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">2</text>
+<polyline points="1210,330 1240,330" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<text x="1222" y="325" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">3</text>
+<text x="1222" y="325" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">3</text>
+<line x1="1240" y1="330" x2="1240" y2="340" stroke="#16794a" stroke-width="2"/>
+<polygon points="1230,340 1250,340 1240,352" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+<text x="1253" y="352" font-size="10" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">GND2</text>
+<text x="1253" y="352" font-size="10" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#1d4ed8">GND2</text>
+<text x="1144" y="327" font-size="12" text-anchor="end" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">D1</text>
+<text x="1144" y="327" font-size="12" text-anchor="end" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">D1</text>
+<text x="1144" y="342" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">SM712</text>
+<text x="1144" y="342" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">SM712</text>
+<text x="1144" y="356" font-size="10" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">TVS</text>
+<text x="1144" y="356" font-size="10" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">TVS</text>
+<rect x="1320" y="230" width="120" height="280" fill="#fffaf0" stroke="#8b1e1e" stroke-width="2.2" rx="3"/>
+<text x="1380.0" y="364.0" font-size="15" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">J1</text>
+<text x="1380.0" y="364.0" font-size="15" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">J1</text>
+<text x="1380.0" y="376.0" font-size="13" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">XLR-5 female</text>
+<text x="1380.0" y="376.0" font-size="13" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">XLR-5 female</text>
+<text x="1380.0" y="394.0" font-size="11" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">DMX OUT</text>
+<text x="1380.0" y="394.0" font-size="11" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="#6b7280">DMX OUT</text>
+<line x1="1320" y1="260" x2="1280" y2="260" stroke="#8b1e1e" stroke-width="2"/>
+<text x="1326" y="264" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">3  Data+</text>
+<text x="1326" y="264" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">3  Data+</text>
+<line x1="1320" y1="400" x2="1280" y2="400" stroke="#8b1e1e" stroke-width="2"/>
+<text x="1326" y="404" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">2  Data−</text>
+<text x="1326" y="404" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">2  Data−</text>
+<line x1="1320" y1="460" x2="1280" y2="460" stroke="#8b1e1e" stroke-width="2"/>
+<text x="1326" y="464" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">1  Common</text>
+<text x="1326" y="464" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">1  Common</text>
+<text x="1330" y="492" font-size="11" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">4, 5: n.c.</text>
+<text x="1330" y="492" font-size="11" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">4, 5: n.c.</text>
+<polyline points="1280,460 1262,460 1262,470" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<line x1="1262" y1="470" x2="1262" y2="480" stroke="#16794a" stroke-width="2"/>
+<polygon points="1252,480 1272,480 1262,492" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+<text x="1275" y="492" font-size="10" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">GND2</text>
+<text x="1275" y="492" font-size="10" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#1d4ed8">GND2</text>
+<text x="1240" y="252" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">DATA+</text>
+<text x="1240" y="252" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">DATA+</text>
+<text x="1240" y="392" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">DATA−</text>
+<text x="1240" y="392" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">DATA−</text>
+<rect x="820" y="600" width="240" height="120" fill="#fffaf0" stroke="#8b1e1e" stroke-width="2.2" rx="3"/>
+<line x1="940" y1="600" x2="940" y2="720" stroke="#93b4f0" stroke-width="2" stroke-dasharray="6 5"/>
+<text x="940.0" y="654.0" font-size="15" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">U4</text>
+<text x="940.0" y="654.0" font-size="15" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">U4</text>
+<text x="940.0" y="666.0" font-size="13" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">B0505S-1W</text>
+<text x="940.0" y="666.0" font-size="13" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">B0505S-1W</text>
+<text x="940.0" y="684.0" font-size="11" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">isolated DC-DC 5 V → 5 V</text>
+<text x="940.0" y="684.0" font-size="11" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="#6b7280">isolated DC-DC 5 V → 5 V</text>
+<line x1="820" y1="630" x2="780" y2="630" stroke="#8b1e1e" stroke-width="2"/>
+<text x="826" y="634" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">+Vin</text>
+<text x="826" y="634" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">+Vin</text>
+<line x1="820" y1="690" x2="780" y2="690" stroke="#8b1e1e" stroke-width="2"/>
+<text x="826" y="694" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">−Vin</text>
+<text x="826" y="694" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">−Vin</text>
+<line x1="1060" y1="630" x2="1100" y2="630" stroke="#8b1e1e" stroke-width="2"/>
+<text x="1054" y="634" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">+Vout</text>
+<text x="1054" y="634" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">+Vout</text>
+<line x1="1060" y1="690" x2="1100" y2="690" stroke="#8b1e1e" stroke-width="2"/>
+<text x="1054" y="694" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">0V</text>
+<text x="1054" y="694" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">0V</text>
+<polyline points="780,630 755,630" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<polygon points="755,630 747,621 709.4,621 709.4,639 747,639" fill="#fff4e5" stroke="#a2470a" stroke-width="1.4"/>
+<text x="728.2" y="634" font-size="12" text-anchor="middle" font-weight="bold" font-family="Menlo, Consolas, monospace" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">VSYS</text>
+<text x="728.2" y="634" font-size="12" text-anchor="middle" font-weight="bold" font-family="Menlo, Consolas, monospace" fill="#a2470a">VSYS</text>
+<polyline points="780,690 760,690 760,700" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<line x1="760" y1="700" x2="760" y2="710" stroke="#16794a" stroke-width="2"/>
+<line x1="749" y1="710" x2="771" y2="710" stroke="#1f2328" stroke-width="2"/>
+<line x1="753" y1="714" x2="767" y2="714" stroke="#1f2328" stroke-width="2"/>
+<line x1="757" y1="718" x2="763" y2="718" stroke="#1f2328" stroke-width="2"/>
+<polyline points="1100,690 1125,690 1125,700" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<line x1="1125" y1="700" x2="1125" y2="710" stroke="#16794a" stroke-width="2"/>
+<polygon points="1115,710 1135,710 1125,722" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+<text x="1112" y="722" font-size="10" text-anchor="end" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">GND2</text>
+<text x="1112" y="722" font-size="10" text-anchor="end" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#1d4ed8">GND2</text>
+<polyline points="1100,630 1330,630" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<polygon points="1330,630 1338,621 1397.8,621 1397.8,639 1338,639" fill="#fff4e5" stroke="#a2470a" stroke-width="1.4"/>
+<text x="1367.9" y="634" font-size="12" text-anchor="middle" font-weight="bold" font-family="Menlo, Consolas, monospace" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">+5V_ISO</text>
+<text x="1367.9" y="634" font-size="12" text-anchor="middle" font-weight="bold" font-family="Menlo, Consolas, monospace" fill="#a2470a">+5V_ISO</text>
+<circle cx="1170" cy="630" r="4" fill="#16794a"/>
+<circle cx="1235" cy="630" r="4" fill="#16794a"/>
+<circle cx="1300" cy="630" r="4" fill="#16794a"/>
+<polyline points="1170,630 1170,670.0" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="1170,720.0 1170,760" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<rect x="1162" y="670.0" width="16" height="50" fill="#fffaf0" stroke="#8b1e1e" stroke-width="2"/>
+<text x="1184" y="692.0" font-size="12" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">R2</text>
+<text x="1184" y="692.0" font-size="12" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">R2</text>
+<text x="1184" y="707.0" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">270Ω</text>
+<text x="1184" y="707.0" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">270Ω</text>
+<line x1="1170" y1="760" x2="1170" y2="770" stroke="#16794a" stroke-width="2"/>
+<polygon points="1160,770 1180,770 1170,782" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+<text x="1183" y="782" font-size="10" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">GND2</text>
+<text x="1183" y="782" font-size="10" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#1d4ed8">GND2</text>
+<polyline points="1235,630 1235,691.0" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="1235,699.0 1235,760" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<line x1="1222" y1="691.0" x2="1248" y2="691.0" stroke="#8b1e1e" stroke-width="3"/>
+<line x1="1222" y1="699.0" x2="1248" y2="699.0" stroke="#8b1e1e" stroke-width="3"/>
+<text x="1217" y="689.0" font-size="12" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">+</text>
+<text x="1217" y="689.0" font-size="12" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">+</text>
+<text x="1253" y="692.0" font-size="12" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">C3</text>
+<text x="1253" y="692.0" font-size="12" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">C3</text>
+<text x="1253" y="707.0" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">10µ</text>
+<text x="1253" y="707.0" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">10µ</text>
+<line x1="1235" y1="760" x2="1235" y2="770" stroke="#16794a" stroke-width="2"/>
+<polygon points="1225,770 1245,770 1235,782" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+<text x="1248" y="782" font-size="10" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">GND2</text>
+<text x="1248" y="782" font-size="10" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#1d4ed8">GND2</text>
+<polyline points="1300,630 1300,691.0" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="1300,699.0 1300,760" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<line x1="1287" y1="691.0" x2="1313" y2="691.0" stroke="#8b1e1e" stroke-width="3"/>
+<line x1="1287" y1="699.0" x2="1313" y2="699.0" stroke="#8b1e1e" stroke-width="3"/>
+<text x="1318" y="692.0" font-size="12" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">C2</text>
+<text x="1318" y="692.0" font-size="12" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">C2</text>
+<text x="1318" y="707.0" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">100n</text>
+<text x="1318" y="707.0" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">100n</text>
+<line x1="1300" y1="760" x2="1300" y2="770" stroke="#16794a" stroke-width="2"/>
+<polygon points="1290,770 1310,770 1300,782" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+<text x="1313" y="782" font-size="10" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">GND2</text>
+<text x="1313" y="782" font-size="10" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#1d4ed8">GND2</text>
+<text x="1170" y="815" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">min. load</text>
+<text x="1170" y="815" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="#6b7280">min. load</text>
+<text x="1300" y="815" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">at U3 VCC2</text>
+<text x="1300" y="815" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="#6b7280">at U3 VCC2</text>
+<rect x="624.9" y="676" width="30.200000000000003" height="18" fill="#fff4e5" stroke="#a2470a" stroke-width="1.4" rx="2"/>
+<line x1="640" y1="694" x2="640" y2="700" stroke="#16794a" stroke-width="2"/>
+<text x="640" y="689" font-size="12" text-anchor="middle" font-weight="bold" font-family="Menlo, Consolas, monospace" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">3V3</text>
+<text x="640" y="689" font-size="12" text-anchor="middle" font-weight="bold" font-family="Menlo, Consolas, monospace" fill="#a2470a">3V3</text>
+<polyline points="640,700 640,731.0" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="640,739.0 640,770" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<line x1="627" y1="731.0" x2="653" y2="731.0" stroke="#8b1e1e" stroke-width="3"/>
+<line x1="627" y1="739.0" x2="653" y2="739.0" stroke="#8b1e1e" stroke-width="3"/>
+<text x="658" y="732.0" font-size="12" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">C1</text>
+<text x="658" y="732.0" font-size="12" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">C1</text>
+<text x="658" y="747.0" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">100n</text>
+<text x="658" y="747.0" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">100n</text>
+<line x1="640" y1="770" x2="640" y2="780" stroke="#16794a" stroke-width="2"/>
+<line x1="629" y1="780" x2="651" y2="780" stroke="#1f2328" stroke-width="2"/>
+<line x1="633" y1="784" x2="647" y2="784" stroke="#1f2328" stroke-width="2"/>
+<line x1="637" y1="788" x2="643" y2="788" stroke="#1f2328" stroke-width="2"/>
+<text x="640" y="815" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">at U3 VCC1</text>
+<text x="640" y="815" font-size="10" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="#6b7280">at U3 VCC1</text>
+<rect x="70" y="700" width="90" height="90" fill="#fffaf0" stroke="#8b1e1e" stroke-width="2.2" rx="3"/>
+<text x="115.0" y="745.0" font-size="15" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">J2</text>
+<text x="115.0" y="745.0" font-size="15" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">J2</text>
+<text x="115.0" y="757.0" font-size="13" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">DC 5 V</text>
+<text x="115.0" y="757.0" font-size="13" text-anchor="middle" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">DC 5 V</text>
+<line x1="160" y1="725" x2="190" y2="725" stroke="#8b1e1e" stroke-width="2"/>
+<text x="154" y="729" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">+</text>
+<text x="154" y="729" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">+</text>
+<line x1="160" y1="765" x2="190" y2="765" stroke="#8b1e1e" stroke-width="2"/>
+<text x="154" y="769" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">−</text>
+<text x="154" y="769" font-size="12" text-anchor="end" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">−</text>
+<polyline points="190,725 225.0,725" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<polyline points="245.0,725 280,725" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<polygon points="225.0,715 225.0,735 243.0,725" fill="#fffaf0" stroke="#8b1e1e" stroke-width="2"/>
+<line x1="244.0" y1="715" x2="244.0" y2="735" stroke="#8b1e1e" stroke-width="2.5"/>
+<text x="235.0" y="709" font-size="12" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">D2  1N5819</text>
+<text x="235.0" y="709" font-size="12" text-anchor="middle" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#8b1e1e">D2  1N5819</text>
+<polygon points="280,725 288,716 325.6,716 325.6,734 288,734" fill="#fff4e5" stroke="#a2470a" stroke-width="1.4"/>
+<text x="306.8" y="729" font-size="12" text-anchor="middle" font-weight="bold" font-family="Menlo, Consolas, monospace" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">VSYS</text>
+<text x="306.8" y="729" font-size="12" text-anchor="middle" font-weight="bold" font-family="Menlo, Consolas, monospace" fill="#a2470a">VSYS</text>
+<polyline points="190,765 215,765 215,775" fill="none" stroke="#16794a" stroke-width="2" stroke-linejoin="round"/>
+<line x1="215" y1="775" x2="215" y2="785" stroke="#16794a" stroke-width="2"/>
+<line x1="204" y1="785" x2="226" y2="785" stroke="#1f2328" stroke-width="2"/>
+<line x1="208" y1="789" x2="222" y2="789" stroke="#1f2328" stroke-width="2"/>
+<line x1="212" y1="793" x2="218" y2="793" stroke="#1f2328" stroke-width="2"/>
+<text x="70" y="815" font-size="11" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">optional — without J2/D2 the box runs from the Pico's USB port</text>
+<text x="70" y="815" font-size="11" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="#6b7280">optional — without J2/D2 the box runs from the Pico's USB port</text>
+<line x1="940" y1="70" x2="940" y2="140" stroke="#1d4ed8" stroke-width="2.5" stroke-dasharray="10 7"/>
+<line x1="940" y1="460" x2="940" y2="600" stroke="#1d4ed8" stroke-width="2.5" stroke-dasharray="10 7"/>
+<line x1="940" y1="720" x2="940" y2="845" stroke="#1d4ed8" stroke-width="2.5" stroke-dasharray="10 7"/>
+<text x="948" y="838" font-size="11" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">isolation barrier — keep ≥ 4 mm clearance</text>
+<text x="948" y="838" font-size="11" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" font-style="italic" fill="#1d4ed8">isolation barrier — keep ≥ 4 mm clearance</text>
+<line x1="10" y1="855" x2="1490" y2="855" stroke="#9ca3af" stroke-width="1.2"/>
+<text x="30" y="880" font-size="12" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">NOTES</text>
+<text x="30" y="880" font-size="12" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">NOTES</text>
+<text x="30" y="900" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">1.  A = Data+ = XLR pin 3,  B = Data− = XLR pin 2.</text>
+<text x="30" y="900" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">1.  A = Data+ = XLR pin 3,  B = Data− = XLR pin 2.</text>
+<text x="30" y="919" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">2.  GND2 must never connect to GND — that would defeat the isolation.</text>
+<text x="30" y="919" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">2.  GND2 must never connect to GND — that would defeat the isolation.</text>
+<text x="30" y="938" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">3.  No 120 Ω terminator in the box: terminate at the last fixture.</text>
+<text x="30" y="938" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">3.  No 120 Ω terminator in the box: terminate at the last fixture.</text>
+<text x="30" y="957" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">4.  U2, U3, U4 shown by signal name — check your module / datasheet for pin numbers.</text>
+<text x="30" y="957" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">4.  U2, U3, U4 shown by signal name — check your module / datasheet for pin numbers.</text>
+<text x="30" y="976" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">5.  Pins match firmware/src/config.h. Unused: W5500 INT, ISO1410 R, Pico VBUS.</text>
+<text x="30" y="976" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">5.  Pins match firmware/src/config.h. Unused: W5500 INT, ISO1410 R, Pico VBUS.</text>
+<line x1="780" y1="885" x2="780" y2="895" stroke="#16794a" stroke-width="2"/>
+<line x1="769" y1="895" x2="791" y2="895" stroke="#1f2328" stroke-width="2"/>
+<line x1="773" y1="899" x2="787" y2="899" stroke="#1f2328" stroke-width="2"/>
+<line x1="777" y1="903" x2="783" y2="903" stroke="#1f2328" stroke-width="2"/>
+<text x="800" y="902" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">GND  (Pico / logic)</text>
+<text x="800" y="902" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">GND  (Pico / logic)</text>
+<line x1="780" y1="935" x2="780" y2="945" stroke="#16794a" stroke-width="2"/>
+<polygon points="770,945 790,945 780,957" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+<text x="793" y="957" font-size="10" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">GND2</text>
+<text x="793" y="957" font-size="10" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#1d4ed8">GND2</text>
+<text x="830" y="952" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">(isolated, DMX side)</text>
+<text x="830" y="952" font-size="12" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">(isolated, DMX side)</text>
+<rect x="1080" y="870" width="400" height="120" fill="none" stroke="#1f2328" stroke-width="1.2"/>
+<line x1="1080" y1="905" x2="1480" y2="905" stroke="#1f2328" stroke-width="1"/>
+<line x1="1080" y1="950" x2="1480" y2="950" stroke="#1f2328" stroke-width="1"/>
+<line x1="1280" y1="905" x2="1280" y2="990" stroke="#1f2328" stroke-width="1"/>
+<text x="1090" y="894" font-size="14" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">dmxbox — Pico + W5500 → isolated DMX512</text>
+<text x="1090" y="894" font-size="14" text-anchor="start" font-weight="bold" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">dmxbox — Pico + W5500 → isolated DMX512</text>
+<text x="1090" y="922" font-size="10" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">Sheet</text>
+<text x="1090" y="922" font-size="10" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">Sheet</text>
+<text x="1090" y="940" font-size="13" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">1 / 1</text>
+<text x="1090" y="940" font-size="13" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">1 / 1</text>
+<text x="1290" y="922" font-size="10" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">Revision</text>
+<text x="1290" y="922" font-size="10" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">Revision</text>
+<text x="1290" y="940" font-size="13" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">A  (firmware 1.0)</text>
+<text x="1290" y="940" font-size="13" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">A  (firmware 1.0)</text>
+<text x="1090" y="967" font-size="10" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">Date</text>
+<text x="1090" y="967" font-size="10" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">Date</text>
+<text x="1090" y="984" font-size="13" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">2026-11-11</text>
+<text x="1090" y="984" font-size="13" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">2026-11-11</text>
+<text x="1290" y="967" font-size="10" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">Status</text>
+<text x="1290" y="967" font-size="10" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#6b7280">Status</text>
+<text x="1290" y="984" font-size="13" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round">Prototype — not yet built</text>
+<text x="1290" y="984" font-size="13" text-anchor="start" font-weight="normal" font-family="Helvetica, Arial, sans-serif" fill="#1f2328">Prototype — not yet built</text>
+</svg>

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>DmxBox</RootNamespace>
+    <!-- Not "DmxBox": the command line tool's assembly is "dmxbox", and two assemblies
+         whose names differ only in upper/lower case cannot be built into one folder. -->
+    <AssemblyName>DmxBox.Client</AssemblyName>
+    <!-- Writes DmxBox.Client.xml, so that editors show the doc comments. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Two tests have to move DmxBoxClient.Sequence. -->
+    <InternalsVisibleTo Include="DmxBox.Tests" />
+  </ItemGroup>
+
+</Project>

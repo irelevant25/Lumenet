@@ -23,10 +23,14 @@ import { TemplateDialog } from '../template-dialog/template-dialog';
 /** How a sequence is played: once, in a loop, or in a loop with a new random order every round. */
 type PlayMode = 'once' | 'loop' | 'random';
 
-const PLAY_MODES: readonly { mode: PlayMode; label: string }[] = [
-  { mode: 'once', label: 'Once' },
-  { mode: 'loop', label: 'Loop' },
-  { mode: 'random', label: 'Random' },
+/**
+ * `lines` is what the key shows, a long word split so that the key keeps the size of all keys;
+ * `name` is the word for screen readers.
+ */
+const PLAY_MODES: readonly { mode: PlayMode; lines: readonly string[]; name: string }[] = [
+  { mode: 'once', lines: ['Once'], name: 'Once' },
+  { mode: 'loop', lines: ['Loop'], name: 'Loop' },
+  { mode: 'random', lines: ['Ran', 'dom'], name: 'Random' },
 ];
 
 /**

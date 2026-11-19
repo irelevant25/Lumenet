@@ -30,17 +30,11 @@ h2 {
   font-weight: 600;
 }
 
-/* the five templates as keys; in this window a key is as wide as its word */
+/* the five templates as keys of the desk's one size; a long word is split into two lines */
 .templates {
   display: flex;
   flex-wrap: wrap;
   gap: var(--strip-gap);
-}
-
-.templates [lmLamp] {
-  width: auto;
-  min-width: calc(var(--key-w) * 1.5);
-  padding: 0 10px;
 }
 
 .about,

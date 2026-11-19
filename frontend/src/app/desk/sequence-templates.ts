@@ -24,8 +24,10 @@ export interface TemplateSettings {
 /** A template as the window that offers them shows it. */
 export interface TemplateInfo {
   readonly name: TemplateName;
-  /** The word on its key. */
+  /** Its name, for screen readers and wherever there is room. */
   readonly label: string;
+  /** What its key shows: a long word split into two lines, so that the key keeps the size of all keys. */
+  readonly key: readonly string[];
   /** One sentence: what it does. */
   readonly about: string;
   readonly usesLow: boolean;
@@ -40,6 +42,7 @@ export const TEMPLATES: readonly TemplateInfo[] = [
   {
     name: 'fire',
     label: 'Fire',
+    key: ['Fire'],
     about: 'Flickers like flames: every light on its own, between Low and High, in a new random order on every round.',
     usesLow: true,
     timeLabel: 'Seconds between flickers',
@@ -50,6 +53,7 @@ export const TEMPLATES: readonly TemplateInfo[] = [
   {
     name: 'chase',
     label: 'Chase',
+    key: ['Chase'],
     about: 'The lights come on one after the other, each for a moment, round and round.',
     usesLow: false,
     timeLabel: 'Seconds each light is on',
@@ -60,6 +64,7 @@ export const TEMPLATES: readonly TemplateInfo[] = [
   {
     name: 'wave',
     label: 'Wave',
+    key: ['Wave'],
     about: 'Each light swells and fades in turn; a single light breathes. For several lights at once, pick a memory that holds them.',
     usesLow: false,
     timeLabel: 'Seconds up, and as many down',
@@ -70,6 +75,7 @@ export const TEMPLATES: readonly TemplateInfo[] = [
   {
     name: 'strobe',
     label: 'Strobe',
+    key: ['Stro', 'be'],
     about: 'Short flashes, light after light. For several lights at once, pick a memory that holds them.',
     usesLow: false,
     timeLabel: 'Seconds between flashes',
@@ -80,6 +86,7 @@ export const TEMPLATES: readonly TemplateInfo[] = [
   {
     name: 'lightning',
     label: 'Storm',
+    key: ['Storm'],
     about: 'Lightning: strikes and faint flickers out of the dark, at random, with pauses between.',
     usesLow: true,
     timeLabel: 'Seconds of a pause, about',

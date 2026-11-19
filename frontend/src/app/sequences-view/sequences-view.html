@@ -38,13 +38,18 @@
               lmLamp
               type="button"
               tone="system"
-              [class.wide]="item.mode === 'random'"
               [level]="mode() === item.mode ? 3 : 1"
               [disabled]="locked()"
               [attr.aria-pressed]="mode() === item.mode"
+              [attr.aria-label]="item.name"
               (click)="setMode(item.mode)"
             >
-              {{ item.label }}
+              @for (line of item.lines; track $index) {
+                @if (!$first) {
+                  <br />
+                }
+                {{ line }}
+              }
             </button>
           }
         </div>
@@ -63,12 +68,11 @@
             lmLamp
             type="button"
             tone="system"
-            class="wide"
             aria-label="Make the steps from a template"
             [disabled]="locked()"
             (click)="openTemplate()"
           >
-            Template
+            Temp<br />late
           </button>
         </div>
 

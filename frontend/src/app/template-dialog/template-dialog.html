@@ -10,9 +10,15 @@
           tone="system"
           [level]="template.name === name() ? 3 : 1"
           [attr.aria-pressed]="template.name === name()"
+          [attr.aria-label]="template.label"
           (click)="choose(template.name)"
         >
-          {{ template.label }}
+          @for (line of template.key; track $index) {
+            @if (!$first) {
+              <br />
+            }
+            {{ line }}
+          }
         </button>
       }
     </div>

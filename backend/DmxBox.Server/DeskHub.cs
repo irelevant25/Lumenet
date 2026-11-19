@@ -17,16 +17,44 @@ internal sealed class DeskHub : Hub<IDeskClient>
     private readonly Desk _desk;
     private readonly ProjectStore _projects;
     private readonly BoxLink _boxLink;
+    private readonly LanAccess _lan;
 
-    /// <summary>SignalR makes a hub for every call and fills in the three parts of the server.</summary>
+    /// <summary>SignalR makes a hub for every call and fills in the parts of the server.</summary>
     /// <param name="desk">The desk.</param>
     /// <param name="projects">The projects folder and the open project.</param>
     /// <param name="boxLink">The link to the box, for its state.</param>
-    public DeskHub(Desk desk, ProjectStore projects, BoxLink boxLink)
+    /// <param name="lan">Whether other devices in the network may use the desk.</param>
+    public DeskHub(Desk desk, ProjectStore projects, BoxLink boxLink, LanAccess lan)
     {
         _desk = desk;
         _projects = projects;
         _boxLink = boxLink;
+        _lan = lan;
+    }
+
+    // True when the UI that calls runs on this PC, not on another device in the network.
+    private bool IsLocal => _lan.IsLocal(Context.GetHttpContext()?.Connection.RemoteIpAddress);
+
+    /// <summary>
+    /// A UI connected. One on this PC joins the group that hears about LAN; the connection of
+    /// another device is noted, so that LAN off can cut it.
+    /// </summary>
+    public override async Task OnConnectedAsync()
+    {
+        if (IsLocal)
+            await Groups.AddToGroupAsync(Context.ConnectionId, LanAccess.PcGroup);
+        else
+            _lan.Track(Context);
+
+        await base.OnConnectedAsync();
+    }
+
+    /// <summary>A UI went away.</summary>
+    /// <param name="exception">Why, if it was not a goodbye.</param>
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        _lan.Untrack(Context.ConnectionId);
+        await base.OnDisconnectedAsync(exception);
     }
 
     /// <summary>The first call of a UI: everything it needs to draw itself.</summary>
@@ -275,6 +303,29 @@ internal sealed class DeskHub : Hub<IDeskClient>
     {
         _desk.StackPrevious();
         return TellPlaybackAsync();
+    }
+
+    /// <summary>
+    /// Whether other devices in the network may use the desk. A UI on this PC also gets the
+    /// addresses at which they reach it, and the password while LAN is on.
+    /// </summary>
+    public LanState GetLanAccess()
+    {
+        return _lan.StateFor(IsLocal);
+    }
+
+    /// <summary>
+    /// Switches LAN on or off. Off cuts every other device off at once. Only a UI on this PC can
+    /// do this.
+    /// </summary>
+    /// <param name="on">True to let devices in the network in, with the password.</param>
+    public async Task SetLanAccess(bool on)
+    {
+        if (!IsLocal)
+            throw new DeskException("LAN can only be switched on the PC.");
+
+        _lan.Switch(on);
+        await _lan.TellPcAsync();
     }
 
     /// <summary>Lists the projects that can be loaded, the newest first.</summary>

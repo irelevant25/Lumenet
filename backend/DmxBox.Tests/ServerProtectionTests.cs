@@ -205,6 +205,15 @@ public sealed class ServerProtectionTests
         Assert.Equal(HttpStatusCode.OK, await StatusForHostAsync(server, "/api/health", "localhost:5080"));
         Assert.Equal(HttpStatusCode.OK, await StatusForHostAsync(server, "/api/health", "127.0.0.1:5080"));
         Assert.Equal(HttpStatusCode.OK, await StatusForHostAsync(server, "/api/health", "LOCALHOST:4200"));
+
+        // The address of this PC in its network, and its computer name, are names of this PC too:
+        // a phone calls the server by them. A web page cannot make a browser use them for itself.
+        Assert.Equal(HttpStatusCode.OK, await StatusForHostAsync(server, "/api/health", "10.20.30.40:5080"));
+        Assert.Equal(HttpStatusCode.OK, await StatusForHostAsync(server, "/api/health", "[::1]:5080"));
+        Assert.Equal(HttpStatusCode.OK, await StatusForHostAsync(server, "/api/health", "Pretend-PC"));
+        Assert.Equal(HttpStatusCode.OK, await StatusForHostAsync(server, "/api/health", "pretend-pc.local:5080"));
+        Assert.Equal(HttpStatusCode.BadRequest, await StatusForHostAsync(server, "/api/health", "10.20.30.41:5080"));
+        Assert.Equal(HttpStatusCode.BadRequest, await StatusForHostAsync(server, "/api/health", "pretend-pc.evil.example"));
     }
 
     [Fact]

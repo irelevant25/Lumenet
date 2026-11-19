@@ -1,4 +1,7 @@
+using System.Net;
+using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
 
 namespace DmxBox.Server;
@@ -10,10 +13,14 @@ namespace DmxBox.Server;
 /// </summary>
 internal static class Program
 {
-    private const string DefaultUrl = "http://localhost:5080";
+    // The server listens on every network card: a phone in the same network reaches it while
+    // LAN is switched on (see LanAccess), and while LAN is off its connections are refused.
+    private const string DefaultUrl = "http://*:5080";
 
-    // The names by which the server lets itself be called: those of this PC and no others.
+    // The names by which the server lets itself be called, besides the addresses and the
+    // computer name of this PC, which it always answers to (see AllowedHosts).
     private const string DefaultAllowedHosts = "localhost;127.0.0.1";
+    private const string AllowedHostsKey = "AllowedHosts";
 
     // The address the box always has on its USB cable (NET_IP in the firmware's config.h).
     private const string DefaultBoxHost = "192.168.7.1";
@@ -25,8 +32,9 @@ internal static class Program
     // The name under which SignalR logs the hub calls that failed.
     private const string HubCallLog = "Microsoft.AspNetCore.SignalR.Internal.DefaultHubDispatcher";
 
-    // The pages that may use the hub: the UI handed out by this server, and the UI on the
-    // development server ("ng serve", port 4200), each under both names of this PC.
+    // The pages that may use the hub besides the one this server hands out itself: the UI on
+    // the development server ("ng serve", port 4200), and the server's own UI under both names
+    // of this PC.
     private static readonly string[] DefaultAllowedOrigins =
     [
         "http://localhost:5080",
@@ -45,7 +53,10 @@ internal static class Program
     /// <param name="box">
     /// The box to use. The tests pass a pretend one; null stands for the real box of the settings.
     /// </param>
-    public static WebApplication Build(string[] args, IBox? box = null)
+    /// <param name="pc">
+    /// This PC on the network. The tests pass a pretend one; null stands for the real one.
+    /// </param>
+    public static WebApplication Build(string[] args, IBox? box = null, ThisPc? pc = null)
     {
         // The program's own folder counts, not the folder it was started from: that is where
         // appsettings.json is, and "wwwroot" with the UI's files.
@@ -54,13 +65,17 @@ internal static class Program
             Args = args,
             ContentRootPath = AppContext.BaseDirectory,
         });
+        AllowedHosts hosts = ReadAllowedHosts(builder.Configuration);
         ApplyDefaults(builder.Configuration);
         AllowedOrigins origins = ReadAllowedOrigins(builder.Configuration);
 
         AddDesk(builder.Services, builder.Configuration, box);
         AddHub(builder.Services, origins);
+        AddLan(builder, pc);
 
         WebApplication app = builder.Build();
+        RefuseForeignHosts(app, hosts);
+        app.Use((context, next) => LanGate.InvokeAsync(context, app.Services.GetRequiredService<LanAccess>(), next));
         RefuseOtherPages(app, origins);
         app.UseCors();
         ServeUi(app);
@@ -69,17 +84,24 @@ internal static class Program
         return app;
     }
 
-    // Two settings that ASP.NET Core reads by itself get their default here, for the case
-    // that no settings file, environment variable or command line gives them: the address to
-    // listen on ("urls"), and the host names the server answers to. The second one keeps out
-    // a web page that calls the server by a name of its own, which it has pointed at this PC
-    // (DNS rebinding).
+    // The address to listen on ("urls") gets its default here, for the case that no settings
+    // file, environment variable or command line gives one.
+    //
+    // ASP.NET Core checks the setting "AllowedHosts" by itself, against a fixed list. This
+    // program does that check itself (RefuseForeignHosts), because it also answers to this PC's
+    // own addresses, which can change while it runs. So ASP.NET Core's check is switched off,
+    // after ReadAllowedHosts has taken the setting over.
     private static void ApplyDefaults(ConfigurationManager settings)
     {
         if (string.IsNullOrEmpty(settings[WebHostDefaults.ServerUrlsKey]))
             settings[WebHostDefaults.ServerUrlsKey] = DefaultUrl;
-        if (string.IsNullOrEmpty(settings["AllowedHosts"]))
-            settings["AllowedHosts"] = DefaultAllowedHosts;
+
+        settings[AllowedHostsKey] = "*";
+    }
+
+    private static AllowedHosts ReadAllowedHosts(IConfiguration settings)
+    {
+        return new AllowedHosts(Setting(settings, AllowedHostsKey, DefaultAllowedHosts));
     }
 
     // A list that is missing or empty counts as not given, like any other setting.
@@ -139,19 +161,74 @@ internal static class Program
             .AllowCredentials()));
     }
 
-    // Stands in front of the hub: a request from a web page that is not on the list gets
-    // "403 Forbidden" and never reaches SignalR, whatever kind of request it is. CORS alone
-    // would not do, see AllowedOrigins.
+    // LAN: whether other devices in the network may use the desk. While it is off, a connection
+    // from another device is closed the moment it is made, before a byte of it is read.
+    private static void AddLan(WebApplicationBuilder builder, ThisPc? pc)
+    {
+        string passwordFile = Setting(builder.Configuration, "Lan:PasswordFile", DefaultPasswordFile());
+
+        // A pretend PC from the tests is theirs to dispose of; the real one the host disposes.
+        if (pc is null)
+            builder.Services.AddSingleton(_ => new ThisPc());
+        else
+            builder.Services.AddSingleton(pc);
+
+        builder.Services.AddSingleton(provider => new LanAccess(
+            provider.GetRequiredService<ThisPc>(),
+            passwordFile,
+            provider.GetRequiredService<IServer>(),
+            provider.GetRequiredService<IHubContext<DeskHub, IDeskClient>>(),
+            provider.GetRequiredService<ILogger<LanAccess>>()));
+
+        builder.WebHost.ConfigureKestrel(kestrel => kestrel.ConfigureEndpointDefaults(listen => listen.Use(next =>
+        {
+            LanAccess lan = listen.ApplicationServices.GetRequiredService<LanAccess>();
+            return connection =>
+            {
+                IPAddress? remote = (connection.RemoteEndPoint as IPEndPoint)?.Address;
+                return lan.MayConnect(remote) ? next(connection) : Task.CompletedTask;
+            };
+        })));
+    }
+
+    // Stands at the very front: a request that calls the server by a name that is not one of
+    // this PC's gets "400 Bad Request" and nothing else.
+    private static void RefuseForeignHosts(WebApplication app, AllowedHosts hosts)
+    {
+        ThisPc pc = app.Services.GetRequiredService<ThisPc>();
+        app.Use(async (context, next) =>
+        {
+            HostString host = context.Request.Host;
+            if (!hosts.Allows(host, pc))
+            {
+                app.Logger.LogWarning(
+                    "Refused a request for {Path} under the host name {Host}: it is not a name of this PC, nor in AllowedHosts.",
+                    context.Request.Path,
+                    host.Value);
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                return;
+            }
+
+            await next(context);
+        });
+    }
+
+    // Stands in front of the hub: a request from a web page that is not on the list, and is not
+    // the page this server handed out itself, gets "403 Forbidden" and never reaches SignalR,
+    // whatever kind of request it is. CORS alone would not do, see AllowedOrigins.
     private static void RefuseOtherPages(WebApplication app, AllowedOrigins origins)
     {
         app.Use(async (context, next) =>
         {
-            string? origin = OriginOf(context.Request);
-            if (context.Request.Path.StartsWithSegments(HubsPath) && !origins.Allows(origin))
+            HttpRequest request = context.Request;
+            string? origin = OriginOf(request);
+            if (request.Path.StartsWithSegments(HubsPath)
+                && !origins.Allows(origin)
+                && !AllowedOrigins.IsServerItself(origin, $"{request.Scheme}://{request.Host}"))
             {
                 app.Logger.LogWarning(
                     "Refused a request to {Path} from the web page {Origin}: it is not in Server:AllowedOrigins.",
-                    context.Request.Path,
+                    request.Path,
                     origin);
                 context.Response.StatusCode = StatusCodes.Status403Forbidden;
                 return;
@@ -168,17 +245,41 @@ internal static class Program
         return origin.Count == 0 ? null : origin.ToString();
     }
 
-    // The UI is built separately. If its files were put next to the program, in "wwwroot", the
-    // server hands them out as well. Without them it offers the hub and the API only.
+    // The UI is built separately. The server hands its files out too: those in the folder of
+    // the setting "Ui:Folder" (run.mjs builds the UI and names its folder there), or else those
+    // next to the program, in "wwwroot". Another device gets the UI this way. Without the files
+    // the server offers the hub and the API only.
     private static void ServeUi(WebApplication app)
     {
-        if (!app.Environment.WebRootFileProvider.GetFileInfo("index.html").Exists)
+        string? folder = app.Configuration["Ui:Folder"];
+        IFileProvider files;
+        if (string.IsNullOrWhiteSpace(folder))
+        {
+            files = app.Environment.WebRootFileProvider;
+        }
+        else
+        {
+            string fullPath = Path.GetFullPath(folder, app.Environment.ContentRootPath);
+            if (!Directory.Exists(fullPath))
+            {
+                // Said once the server runs, where it stands out after the lines of the start.
+                app.Lifetime.ApplicationStarted.Register(() => app.Logger.LogWarning(
+                    "The UI's files are not in {Folder}, so other devices get no page. Build the UI with \"npm run build\" in frontend.",
+                    fullPath));
+                return;
+            }
+
+            files = new PhysicalFileProvider(fullPath);
+        }
+
+        if (!files.GetFileInfo("index.html").Exists)
             return;
 
-        app.UseStaticFiles();
+        var options = new StaticFileOptions { FileProvider = files };
+        app.UseStaticFiles(options);
 
         // The UI has addresses of its own that are no files. They all get the UI's one page.
-        app.MapFallbackToFile("index.html");
+        app.MapFallbackToFile("index.html", options);
     }
 
     // A setting that is missing or empty counts as not given.
@@ -191,5 +292,12 @@ internal static class Program
     private static string DefaultProjectsFolder()
     {
         return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), AppInfo.Name);
+    }
+
+    // On this PC only, not in the documents: those may be copied to a cloud.
+    private static string DefaultPasswordFile()
+    {
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppInfo.Name, "lan-password.txt");
     }
 }

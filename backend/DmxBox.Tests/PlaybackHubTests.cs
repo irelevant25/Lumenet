@@ -327,6 +327,8 @@ public sealed class PlaybackHubTests
 
         public Task StackChanged(StackState stack) => throw new NotSupportedException();
 
+        public Task LanAccessChanged(LanState lan) => throw new NotSupportedException();
+
         private Task Note(string message)
         {
             Messages.Add(message);

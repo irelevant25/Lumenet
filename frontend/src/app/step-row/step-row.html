@@ -12,12 +12,13 @@
 </td>
 <td class="number">
   <!-- The whole list is filled in when the field is about to be used. Until then, and again
-       when another row is used, the field holds only the number it shows. -->
+       once the field is left, it holds only the number it shows. -->
   <select
     [disabled]="locked()"
     [attr.aria-label]="label() + ', number of the ' + step().target"
     (pointerdown)="fillList()"
     (focus)="fillList()"
+    (blur)="dropList()"
     (change)="onNumber($event)"
   >
     @if (listed()) {

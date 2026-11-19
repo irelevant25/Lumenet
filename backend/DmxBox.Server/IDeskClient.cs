@@ -74,4 +74,11 @@ public interface IDeskClient
     /// </summary>
     /// <param name="playback">The state of this moment.</param>
     Task PlaybackChanged(Playback playback);
+
+    /// <summary>
+    /// LAN was switched on or off, or this PC's address in the network changed. Only the UIs on
+    /// this PC get it: it carries the password.
+    /// </summary>
+    /// <param name="lan">LAN as it is now.</param>
+    Task LanAccessChanged(LanState lan);
 }

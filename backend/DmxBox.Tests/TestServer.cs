@@ -16,12 +16,13 @@ internal sealed class TestServer : IAsyncDisposable
     private readonly WebApplication _app;
     private readonly DirectoryInfo _folder;
 
-    private TestServer(WebApplication app, DirectoryInfo folder, FakeBox box, RecordingLog log)
+    private TestServer(WebApplication app, DirectoryInfo folder, FakeBox box, RecordingLog log, PretendPc pc)
     {
         _app = app;
         _folder = folder;
         Box = box;
         Log = log;
+        Pc = pc;
         Address = new Uri(app.Urls.Single());
     }
 
@@ -37,6 +38,18 @@ internal sealed class TestServer : IAsyncDisposable
 
     /// <summary>Everything the server wrote into its log, which is what its console shows.</summary>
     public RecordingLog Log { get; }
+
+    /// <summary>
+    /// The server's pretend PC, at <see cref="PretendPc.HomeAddress"/> in its network. The
+    /// tests' own connections come from this PC unless the test says otherwise.
+    /// </summary>
+    public PretendPc Pc { get; }
+
+    /// <summary>Whether other devices may use the desk, and the password they need.</summary>
+    public LanAccess Lan => _app.Services.GetRequiredService<LanAccess>();
+
+    /// <summary>The file in which the server keeps the LAN password.</summary>
+    public string PasswordFile => Path.Combine(_folder.FullName, "lan-password.txt");
 
     /// <summary>Where the server listens, for example http://127.0.0.1:50123/.</summary>
     public Uri Address { get; }
@@ -54,16 +67,19 @@ internal sealed class TestServer : IAsyncDisposable
         DirectoryInfo folder = Directory.CreateTempSubdirectory("lumenet-test-");
         var box = new FakeBox();
         box.Unplug();
+        var pc = new PretendPc();
 
-        // Port 0: the system picks a free one.
+        // Port 0: the system picks a free one. The projects and the LAN password stay in the
+        // test's own folder.
         string[] settings =
         [
             "--urls=http://127.0.0.1:0",
             $"--Projects:Folder={folder.FullName}",
+            $"--Lan:PasswordFile={Path.Combine(folder.FullName, "lan-password.txt")}",
             "--Box:Host=pretend-box",
             .. moreSettings,
         ];
-        WebApplication app = Program.Build(settings, box);
+        WebApplication app = Program.Build(settings, box, pc);
 
         // Two additions the real server does not have: a log the tests can read, next to the
         // console, and a second hub whose one method always fails.
@@ -72,13 +88,14 @@ internal sealed class TestServer : IAsyncDisposable
         app.MapHub<FaultyHub>(FaultyHubPath);
 
         await app.StartAsync();
-        return new TestServer(app, folder, box, log);
+        return new TestServer(app, folder, box, log, pc);
     }
 
     /// <summary>Connects a UI to the desk's hub.</summary>
-    public async Task<HubClient> ConnectAsync()
+    /// <param name="cookies">The cookies of the browser the UI runs in; none if null.</param>
+    public async Task<HubClient> ConnectAsync(System.Net.CookieContainer? cookies = null)
     {
-        HubClient ui = await HubClient.ConnectAsync(HubAddress);
+        HubClient ui = await HubClient.ConnectAsync(HubAddress, cookies);
 
         // The server lists a new UI as connected a moment after it has greeted it. Once it
         // answers a call of the UI, it has done so, and no message can be missed any more.
@@ -96,6 +113,17 @@ internal sealed class TestServer : IAsyncDisposable
     public HttpClient CreateHttpClient()
     {
         return new HttpClient { BaseAddress = Address };
+    }
+
+    /// <summary>
+    /// Makes a client like the browser of a phone: it keeps cookies and does not follow
+    /// redirects by itself, so that a test sees each answer.
+    /// </summary>
+    /// <param name="cookies">The phone's cookies.</param>
+    public HttpClient CreateBrowser(System.Net.CookieContainer cookies)
+    {
+        var handler = new HttpClientHandler { CookieContainer = cookies, UseCookies = true, AllowAutoRedirect = false };
+        return new HttpClient(handler) { BaseAddress = Address };
     }
 
     /// <summary>Stops the server and deletes its projects folder.</summary>

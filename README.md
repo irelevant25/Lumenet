@@ -476,21 +476,23 @@ its level.
   choose a memory, and the table under them shows the level that memory holds for each of the 512 channels,
   in rows as long as a row of faders (32 by 16, or 16 by 32 in a narrower window). The page keys at the
   right choose which memories the keys show.
-* **Project:** Save and Load at the top right, New at the top left. A project is one JSON file in
+* **Project:** New, Save and Load at the top right. A project is one JSON file in
   `Documents\Lumenet`. It holds the memories (looks and sequences), the stack, the notes and the channels of
   the independent keys, not the fader positions, so loading a project never switches a light on by itself.
   New empties the desk; it asks first.
+* **LAN** (top left, beside the name) lets a phone or a tablet in the same network use the desk; see below.
 
 **Steps.** A sequence and the stack are both made of steps. A step stands for a channel or a memory, has the
 value it brings that to (0 to 255), and three times in seconds: **up** (from zero to the value), **wait**
 (how long it stays) and **down** (back to zero when the next step takes over). The old step goes down while
 the new one goes up.
 
-In both tables the **number** of a step is chosen from a list. Each line of the list is a number and, behind
-it, the note that stands under that fader in the main view (its two lines with a space between them). For a
-channel the list has all 512 channels; for a memory only the memories that hold something. The **Notes**
-column beside the number shows the note of the channel or memory the step uses. It is read there, not
-written: a note is changed under its fader.
+In both tables the **number** of a step is chosen from a list. Each line of the list reads like
+`5: Front left`: the number, then the note that stands under that fader in the main view (its two lines with
+a space between them); a fader without a note shows its number alone. For a channel the list has all 512
+channels; for a memory only the memories that hold something. The **Notes** column beside the number shows
+the note of the channel or memory the step uses. It is read there, not written: a note is changed under its
+fader.
 
 **The Sequences view.** A memory can hold a sequence in place of a look; its key is then red running into
 yellow. A sequence runs while the fader of its memory is up: it starts at its first step when the fader
@@ -547,8 +549,26 @@ then the column scrolls.
 upright) the sections stand under each other and the page scrolls. The page keys lie under the section titles,
 in as many lines as they need. Narrower than 720 pixels, a row of 16 faders is shown as two lines of 8 and the
 top bar as three lines. The numbering does not change: a page is still 32 channels or 16 memories. The three
-limits are in `frontend/src/app/desk/desk-types.ts`, and only there. A phone can open the desk only after the
-backend has been opened to other devices (see "How it is built").
+limits are in `frontend/src/app/desk/desk-types.ts`, and only there.
+
+**A phone or a tablet (LAN):** the desk can be used from another device in the same network as the PC.
+
+* Press **LAN** in the page on the PC. It is lit, and under the box light a line appears with the address and
+  the password, for example `LAN 192.168.1.20:5080 Password K7M2Q`.
+* On the phone, open that address in the browser (`http://192.168.1.20:5080`). The page asks for the
+  password once; the phone remembers it. Small letters and spaces do not matter.
+* Press LAN again and it is off: every other device loses the desk at once, its connections are refused, and
+  no password is shown. LAN is off whenever the desk starts. Only the PC can switch it; the page on a phone
+  has no LAN key.
+* The password has 5 letters and digits (no 0, O, 1, I or L, which are easily mixed up). It is made once and
+  kept in `%LOCALAPPDATA%\Lumenet\lan-password.txt`, so a phone that knows it gets in again next time.
+  Delete that file for a new password. After 5 wrong passwords within a minute a device has to wait.
+* The first time the desk program starts after this change, Windows asks whether `DmxBox.Server` may use the
+  network. Allow it for **private** networks only. If that window was closed with "Cancel", Windows blocks the
+  program; then allow it under Windows Security, Firewall, "Allow an app through firewall".
+* The phone gets a built copy of the page from the desk program (port 5080). `run.cmd` builds that copy when
+  the page's files have changed since the last time; while the desk runs, `npm run build` in `frontend`
+  brings it up to date. The PC itself keeps using http://localhost:4200, which shows every change at once.
 
 **Moving a fader:** drag the handle, or press in the slot to bring the handle there. The mouse wheel moves it
 in steps of 5 (with Shift: 1). With the keyboard: the arrows, Page Up, Page Down, Home and End.
@@ -560,16 +580,20 @@ page cannot move a light. In the small-screen layout the mouse wheel scrolls the
 * `backend/DmxBox.Server` is the desk itself. It holds the state (levels, memories, sequences, the stack,
   notes, the project), works out the output and sends it to the box through the `DmxBox` library. A small
   clock in it lets time pass about 30 times a second, for the sequences and the stack. Its settings are in
-  `appsettings.json`: the address of the box (`Box:Host`) and the projects folder (`Projects:Folder`).
+  `appsettings.json`: the address of the box (`Box:Host`), the projects folder (`Projects:Folder`), the
+  built page it hands out (`Ui:Folder`) and the file with the LAN password (`Lan:PasswordFile`).
 * `frontend/` is an Angular app. It only shows the desk and passes on what you do, over SignalR (`/hub/desk`).
   Because the state lives in the backend, reloading the page loses nothing.
-* The backend only accepts pages from this PC (`Server:AllowedOrigins` and `AllowedHosts`). That keeps other
-  websites that are open in the browser from operating the desk. To open the desk from another device, both
-  settings have to be widened on purpose.
+* The backend listens on every network card (`Urls` is `http://*:5080`), but serves another device only while
+  LAN is on and only with the password; while LAN is off it closes such a connection before reading it. Two
+  more rules keep other websites that are open in a browser from operating the desk: the backend answers only
+  to the names of this PC (`AllowedHosts`, plus this PC's own addresses and computer name), and the hub only
+  to the pages listed in `Server:AllowedOrigins`, plus the page the backend hands out itself. With `Urls` set
+  to `http://localhost:5080` the desk stays on this PC for good.
 
-**Tests:** `dotnet test backend/DmxBox.sln` (287 tests: the client, the desk, sequences and the stack with a
-clock the tests set by hand, project files, the link to the box, the hub), and in `frontend/`:
-`npm test -- --watch=false` (52 tests of the page).
+**Tests:** `dotnet test backend/DmxBox.sln` (301 tests: the client, the desk, sequences and the stack with a
+clock the tests set by hand, project files, the link to the box, the hub, LAN with a pretend PC and a
+pretend phone), and in `frontend/`: `npm test -- --watch=false` (55 tests of the page).
 
 ---
 ## 5. The DX protocol (UDP 7000)
@@ -679,8 +703,13 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
   script's check, and the check notices all 19 planted mistakes. The sizes of the parts in the plan come from
   the parts list, not from measuring the parts. **Nothing has been soldered after this plan yet.**
 * **Lumenet on small screens (2026-11-19):** the layout was looked at in Chrome at seven window sizes, from
-  320 × 568 to 1920 × 1080, with an emulated finger and with the mouse. It has not been used on a real phone
-  or tablet: the backend still only accepts pages from this PC.
+  320 × 568 to 1920 × 1080, with an emulated finger and with the mouse.
+* **LAN (2026-11-19):** the backend passes 301 tests and the page 55. The tests play a phone over this PC's
+  own connection: refused while LAN is off, asked for the password, let in with the cookie, cut off when LAN
+  goes off, stopped after 5 wrong passwords. On a test copy that listened on this PC only, the LAN key, the
+  line with the address and the password, and the built page handed out by the backend (also under /stack,
+  at phone size) were looked at in Chrome. **Not yet tried with a real phone**, and the Windows firewall
+  question for `DmxBox.Server` has not been answered yet.
 * **PIO program:** unchanged from the first version. That light accepts its signal; the timing has not been
   looked at with an oscilloscope or a DMX tester.
 * **Not done yet:** more than one light or a long cable, the LED states, a preset surviving a power cycle on

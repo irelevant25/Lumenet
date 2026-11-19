@@ -168,6 +168,21 @@ export function stepAfter(last: TimedStep): TimedStep {
   };
 }
 
+/**
+ * LAN: whether other devices in the same network (a phone, a tablet) may use the desk. Off
+ * whenever the desk program starts; switched on and off at the PC only.
+ */
+export interface LanAccess {
+  /** True for a page on the PC itself. Only such a page can switch LAN and learns the password. */
+  local: boolean;
+  /** True while other devices may connect, with the password. */
+  on: boolean;
+  /** Where another device reaches the desk, for example "192.168.1.20:5080", the best one first. Empty on another device. */
+  addresses: string[];
+  /** The password other devices have to give; null while LAN is off, and on another device. */
+  password: string | null;
+}
+
 /** Whether the backend reaches the dmxbox. */
 export interface BoxStatus {
   connected: boolean;

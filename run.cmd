@@ -6,6 +6,7 @@ rem   run.cmd --Box:Host=127.0.0.1     another address, for example the simulato
 rem
 rem Then open http://localhost:4200. Ctrl+C stops both.
 rem The desk also works without the box: it shows "No box" until one answers.
+rem For a phone or tablet in the same network, press LAN in the page: it shows the address and the password.
 
 setlocal
 cd /d "%~dp0"

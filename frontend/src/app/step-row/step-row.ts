@@ -23,7 +23,7 @@ type TimeField = 'up' | 'wait' | 'down';
 
 /**
  * The one row, of all tables, whose field for the number holds the whole list right now: the
- * row that was used last. See the note about the list at StepRow.
+ * row whose field is in use. See the note about the list at StepRow.
  */
 const rowWithList = signal<StepRow | null>(null);
 
@@ -33,10 +33,11 @@ const rowWithList = signal<StepRow | null>(null);
  * on a table row: `<tr lmStepRow>`. Cells that belong before or after these seven are given by
  * whoever uses the row, marked `before` and `after`.
  *
- * The number is chosen from a list that shows every number with the note under its fader. The
- * list is long (512 channels), so only one row carries it at a time: the one whose field was
- * used last. A table of a hundred steps would otherwise hold fifty thousand entries. Every
- * other row holds just the number it shows.
+ * The number is chosen from a list that shows every number with the note under its fader,
+ * like "5: Front left". The list is long (512 channels), so only one row carries it at a time:
+ * the one whose field is in use. A table of a hundred steps would otherwise hold fifty thousand
+ * entries. Every other row holds just its number, which is also all a closed field shows: the
+ * note has a column of its own.
  *
  * A typed field is taken over when it is left or Enter is pressed. A text that is no number in
  * the allowed range is put back as it was.
@@ -91,6 +92,11 @@ export class StepRow {
     if (this.listed()) return;
     rowWithList.set(this);
     this.changes.detectChanges(); // at once: the browser opens the list right after this event
+  }
+
+  /** The field for the number was left: it goes back to holding its number alone. */
+  protected dropList(): void {
+    if (this.listed()) rowWithList.set(null);
   }
 
   protected onTarget(event: Event): void {

@@ -6,22 +6,32 @@
   padding: 10px var(--gap);
 }
 
-/* ---- left: what this is, whether the box is there, and the key for a new project */
+/* ---- left: what this is, whether the box is there, and the LAN key beside the name. A grid:
+   the name and the box light in the first column, the key in the second. While LAN is lit, its
+   line lies under both and may reach under the key: the key stays where it is, under the pointer. */
 .left {
-  display: flex;
+  display: grid;
+  grid-template-columns: max-content 1fr; /* the second column takes what the LAN line needs more */
   align-items: center;
-  gap: 20px;
+  column-gap: 20px;
+  row-gap: 4px;
   min-width: 0;
 }
 
+/* the name, the box light and the LAN line are rows of the grid above */
 .brand {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
+  display: contents;
+}
+
+.left > [lmLamp] {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  justify-self: start;
 }
 
 .title {
   display: flex;
+  grid-column: 1;
   align-items: baseline;
   gap: 10px;
 }
@@ -41,6 +51,7 @@ h1 {
 
 .box {
   display: inline-flex;
+  grid-column: 1;
   align-items: center;
   gap: 7px;
   color: var(--legend-dim);
@@ -63,6 +74,42 @@ h1 {
   border-color: var(--channel);
   background: var(--channel);
   box-shadow: 0 0 8px color-mix(in srgb, var(--channel) 60%, transparent);
+}
+
+/* While LAN is lit: the address for a phone and the password, under the box light, with an
+   amber light like the LAN key. The address and the password are the bright parts. */
+.lan {
+  display: inline-flex;
+  grid-column: 1 / -1;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--legend-dim);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.lan .light {
+  box-sizing: border-box;
+  align-self: center;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--system);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--system) 60%, transparent);
+}
+
+.lan strong {
+  color: #fff;
+  font-weight: 600;
+}
+
+.lan .label {
+  margin-left: 6px;
+}
+
+.lan .password {
+  letter-spacing: 0.12em;
+  user-select: text; /* it can be copied */
 }
 
 /* ---- middle: the links to the views. The view that is shown has a lit bar under its name. */
@@ -165,18 +212,22 @@ h1 {
 }
 
 :host-context(.mobile) .left {
-  gap: 12px;
+  column-gap: 12px;
 }
 
-/* ---- phone: three lines. What this is and New; the links to the views; the project. */
+/* ---- phone: three lines. What this is and LAN; the links to the views; the project. */
 :host-context(.phone) {
   grid-template-columns: minmax(0, 1fr);
   gap: 8px;
 }
 
-:host-context(.phone) .left,
 :host-context(.phone) .project {
   justify-content: space-between;
+}
+
+/* the LAN key at the right end of its line, as the keys of the project below */
+:host-context(.phone) .left > [lmLamp] {
+  justify-self: end;
 }
 
 /* The four links fill the line, so the "live" tag has no room beside its word: it sits on the

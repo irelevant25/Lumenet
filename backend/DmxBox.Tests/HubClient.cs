@@ -37,9 +37,13 @@ internal sealed class HubClient : IAsyncDisposable
 
     /// <summary>Connects to a hub the way a browser does once it has chosen WebSockets.</summary>
     /// <param name="hub">The hub's address, for example ws://127.0.0.1:5080/hub/desk.</param>
-    public static async Task<HubClient> ConnectAsync(Uri hub)
+    /// <param name="cookies">The cookies to send along, as a browser does; none if null.</param>
+    public static async Task<HubClient> ConnectAsync(Uri hub, System.Net.CookieContainer? cookies = null)
     {
         var client = new HubClient();
+        if (cookies is not null)
+            client._socket.Options.Cookies = cookies;
+
         try
         {
             using var patience = new CancellationTokenSource(Patience);

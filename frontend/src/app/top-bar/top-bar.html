@@ -10,17 +10,29 @@
       <span class="light" aria-hidden="true"></span>
       {{ store.box().connected ? 'Box connected' : 'No box' }}
     </span>
+    @if (lanLine(); as line) {
+      <!-- Only while LAN is lit, and only on the PC: what to open on a phone, and the password. -->
+      <span class="lan" [attr.title]="line.hint">
+        <span class="light" aria-hidden="true"></span>
+        LAN <strong>{{ line.address }}</strong><span class="label"> Password </span
+        ><strong class="password">{{ line.password }}</strong>
+      </span>
+    }
   </div>
-  <button
-    lmLamp
-    type="button"
-    tone="system"
-    aria-label="New project"
-    [disabled]="store.live()"
-    (click)="dialog().open('new')"
-  >
-    New
-  </button>
+  @if (lanSwitch(); as lan) {
+    <button
+      lmLamp
+      type="button"
+      tone="system"
+      aria-label="LAN"
+      title="Lets phones and tablets in the same network use the desk, with a password"
+      [level]="lan.on ? 3 : 1"
+      [attr.aria-pressed]="lan.on"
+      (click)="store.setLan(!lan.on)"
+    >
+      LAN
+    </button>
+  }
 </div>
 
 <!-- The views of the desk. The one that is shown is lit. -->
@@ -56,6 +68,16 @@
     </div>
     <span class="path">{{ store.project().path ?? 'Not stored in a file yet' }}</span>
   </div>
+  <button
+    lmLamp
+    type="button"
+    tone="system"
+    aria-label="New project"
+    [disabled]="store.live()"
+    (click)="dialog().open('new')"
+  >
+    New
+  </button>
   <button lmLamp type="button" tone="system" aria-label="Save project" (click)="dialog().open('save')">
     Save
   </button>

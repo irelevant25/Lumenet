@@ -7,6 +7,7 @@ import { DeskConnection } from './desk/desk-connection';
 import { DeskStore } from './desk/desk-store';
 import {
   CHANNEL_COUNT,
+  LanAccess,
   MEMORY_COUNT,
   Playback,
   Sequence,
@@ -53,6 +54,9 @@ class FakeConnection {
     stack: { currentId: null, nextId: null, state: 'idle', paused: false, remaining: 0, live: false },
   };
 
+  /** LAN as the backend answers "GetLanAccess": this page runs on the PC, and LAN is off. */
+  lan: LanAccess = { local: true, on: false, addresses: ['192.168.1.20:5080'], password: null };
+
   start(): void {
     this.online.set(true);
     for (const callback of this.connected) callback();
@@ -73,6 +77,7 @@ class FakeConnection {
     if (method === 'GetSequences') return this.sequences;
     if (method === 'GetStack') return this.stack;
     if (method === 'GetPlayback') return this.playback;
+    if (method === 'GetLanAccess') return this.lan;
     if (method === 'NewProject') return { name: 'Untitled', path: null, unsaved: false };
     return undefined;
   }
@@ -98,7 +103,7 @@ class FakeConnection {
 }
 
 /** What the page asks the backend by itself, after connecting and after every "DeskChanged". */
-const QUESTIONS = ['Hello', 'GetMemories', 'GetSequences', 'GetStack', 'GetPlayback'];
+const QUESTIONS = ['Hello', 'GetMemories', 'GetSequences', 'GetStack', 'GetPlayback', 'GetLanAccess'];
 
 /** A step on a channel, with all three times at one second unless said otherwise. */
 function step(number: number, value: number, more: Partial<TimedStep> = {}): TimedStep {
@@ -480,6 +485,43 @@ describe('the desk page', () => {
     expect(button('New project')).toBeTruthy();
   });
 
+  it('the LAN key stands at the top left, and New beside Save and Load at the right', () => {
+    const labels = (selector: string) =>
+      [...page.querySelectorAll(`lm-top-bar ${selector} button`)].map((key) => key.getAttribute('aria-label'));
+    expect(labels('.left')).toEqual(['LAN']);
+    expect(labels('.project')).toEqual(['New project', 'Save project', 'Load project']);
+  });
+
+  it('LAN lit shows the address and the password under the box light; off shows neither', async () => {
+    const line = () => page.querySelector('lm-top-bar .lan');
+    expect(button('LAN').getAttribute('aria-pressed')).toBe('false');
+    expect(button('LAN').className).toContain('level-1');
+    expect(line()).toBeNull();
+
+    await press(button('LAN'));
+    expect(connection.last('SetLanAccess')).toEqual([true]);
+    expect(button('LAN').className).toContain('level-3'); // lit at once
+
+    // the desk answers with the password
+    connection.emit('LanAccessChanged', { ...connection.lan, on: true, password: 'K7M2Q' });
+    await fixture.whenStable();
+    expect(line()?.textContent?.replace(/\s+/g, ' ').trim()).toBe('LAN 192.168.1.20:5080 Password K7M2Q');
+    expect(line()?.getAttribute('title')).toContain('open http://192.168.1.20:5080');
+
+    await press(button('LAN'));
+    expect(connection.last('SetLanAccess')).toEqual([false]);
+    expect(line()).toBeNull(); // the password goes at once
+    expect(button('LAN').getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('a page on a phone has no LAN key and shows no password', async () => {
+    connection.emit('LanAccessChanged', { local: false, on: true, addresses: [], password: null });
+    await fixture.whenStable();
+
+    expect(page.querySelector('button[aria-label="LAN"]')).toBeNull();
+    expect(page.querySelector('lm-top-bar .lan')).toBeNull();
+  });
+
   it('blackout is switched on and off', async () => {
     await press(button('Blackout'));
     expect(connection.calls).toContainEqual({ method: 'SetBlackout', args: [true] });
@@ -759,9 +801,8 @@ describe('the desk page', () => {
     second.dispatchEvent(new Event('focus'));
     expect(second.options.length).toBe(512); // at once, before the browser opens the list
     expect(second.value).toBe('6');
-    expect(second.options[4].text).toBe('5');
-    expect(second.options[5].text.startsWith('6')).toBe(true);
-    expect(second.options[5].text.endsWith('Front left')).toBe(true);
+    expect(second.options[4].text).toBe('5'); // a channel without a note: its number alone
+    expect(second.options[5].text).toBe('6: Front left'); // the note's two lines, one space between
 
     second.value = '70';
     second.dispatchEvent(new Event('change'));
@@ -775,6 +816,12 @@ describe('the desk page', () => {
     expect(second.options.length).toBe(1);
     expect(second.value).toBe('70');
 
+    // a field that is left holds its number alone again
+    numberOf(0)?.dispatchEvent(new Event('blur'));
+    await fixture.whenStable();
+    expect(numberOf(0)?.options.length).toBe(1);
+    expect(numberOf(0)?.options[0].text.trim()).toBe('5');
+
     // a step switched to "memory": only the memories that hold a look are on offer, and it lands on one
     const kind = rows()[0].querySelector<HTMLSelectElement>('select[aria-label="Step 1, channel or memory"]');
     if (!kind) throw new Error('no kind field in step 1');
@@ -785,7 +832,7 @@ describe('the desk page', () => {
     const memories = rows()[0].querySelector<HTMLSelectElement>('select[aria-label="Step 1, number of the memory"]');
     memories?.dispatchEvent(new Event('focus'));
     expect([...(memories?.options ?? [])].map((option) => option.value)).toEqual(['2']);
-    expect(memories?.options[0].text.endsWith('Wash')).toBe(true);
+    expect(memories?.options[0].text.trim()).toBe('2: Wash');
     expect(rows()[0].querySelector('td.note')?.textContent?.trim()).toBe('Wash');
   });
 

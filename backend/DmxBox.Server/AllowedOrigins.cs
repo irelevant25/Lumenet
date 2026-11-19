@@ -6,10 +6,11 @@ namespace DmxBox.Server;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The hub has no login, and the server listens on this PC only. That alone does not keep
-/// strangers out: a browser on this PC lets any web page open a WebSocket to localhost, and
-/// the rules that browsers apply to ordinary requests (CORS) do not cover WebSockets. So any
-/// site that is open in the browser could work the desk.
+/// The hub has no login of its own: this PC may always use it, another device only with the
+/// LAN password (see <see cref="LanAccess"/>). That alone does not keep strangers out: a
+/// browser on this PC lets any web page open a WebSocket to localhost, and the rules that
+/// browsers apply to ordinary requests (CORS) do not cover WebSockets. So any site that is
+/// open in the browser could work the desk.
 /// </para>
 /// <para>
 /// What a browser always does is tell the server which page is asking, in the request's
@@ -46,6 +47,18 @@ internal sealed class AllowedOrigins
             return true;
 
         return Normalize(origin) is { } normalized && _origins.Contains(normalized);
+    }
+
+    /// <summary>
+    /// True for the page this server handed out itself: its origin is the address the request
+    /// was sent to. That holds whatever address another device used to reach the server, and it
+    /// is safe because the server only answers to the names of this PC (see AllowedHosts).
+    /// </summary>
+    /// <param name="origin">The request's Origin header; null if the request has none.</param>
+    /// <param name="server">The address the request was sent to: scheme and Host header, as in "http://192.168.1.20:5080".</param>
+    public static bool IsServerItself(string? origin, string server)
+    {
+        return origin is not null && Normalize(origin) is { } page && page == Normalize(server);
     }
 
     // One spelling for every origin, so that two origins are the same exactly when their texts

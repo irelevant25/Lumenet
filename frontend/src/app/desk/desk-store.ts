@@ -6,6 +6,7 @@ import {
   DEFAULT_LOOP,
   DeskState,
   INDEPENDENT_COUNT,
+  LanAccess,
   MAX_LEVEL,
   MAX_SEQUENCE_STEPS,
   MEDIUM_BELOW_PX,
@@ -99,6 +100,12 @@ export class DeskStore {
   readonly box = signal<BoxStatus>({ connected: false, host: '', firmware: null });
   readonly project = signal<ProjectInfo>({ name: 'Untitled', path: null, unsaved: false });
   readonly version = signal('');
+  /**
+   * Whether other devices in the network may use the desk, and the address and password they
+   * need. Null while it is not known: before the first answer, or with a desk program from
+   * before LAN.
+   */
+  readonly lan = signal<LanAccess | null>(null);
 
   /**
    * What each channel fader shows: its own level, or what the memories whose faders are up
@@ -213,6 +220,7 @@ export class DeskStore {
     connection.on<[ProjectInfo]>('ProjectChanged', (project) => this.project.set(project));
     connection.on<[StackState]>('StackChanged', (stack) => this.stack.set(stack));
     connection.on<[Playback]>('PlaybackChanged', (playback) => this.takePlayback(playback));
+    connection.on<[LanAccess]>('LanAccessChanged', (lan) => this.lan.set(lan));
 
     connection.whenConnected(() => void this.refresh());
     connection.start();
@@ -406,6 +414,20 @@ export class DeskStore {
     this.run('StackPrevious');
   }
 
+  // ---------------------------------------------------------------- LAN
+
+  /**
+   * Lets other devices in the network use the desk (with the password), or cuts them off.
+   * Only a page on the PC itself can do this.
+   */
+  setLan(on: boolean): void {
+    const lan = this.lan();
+    if (!lan?.local || lan.on === on) return;
+    // Lit at once. The desk answers with the address and the password a moment later.
+    this.lan.set({ ...lan, on, password: on ? lan.password : null });
+    this.run('SetLanAccess', on);
+  }
+
   // ---------------------------------------------------------------- projects
 
   listProjects(): Promise<ProjectList> {
@@ -509,8 +531,18 @@ export class DeskStore {
       this.box.set(welcome.box);
       this.project.set(welcome.project);
       this.loaded.set(true);
+      void this.fetchLan();
     } catch {
       // The connection dropped again before the answer arrived. The next connect asks again.
+    }
+  }
+
+  private async fetchLan(): Promise<void> {
+    try {
+      this.lan.set((await this.connection.invoke<LanAccess | undefined>('GetLanAccess')) ?? null);
+    } catch {
+      // A desk program from before LAN does not know the question. Then the page has no LAN key.
+      this.lan.set(null);
     }
   }
 

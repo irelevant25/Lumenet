@@ -90,4 +90,7 @@ internal sealed class RecordingClient : IDeskClient
 
     /// <inheritdoc />
     public Task PlaybackChanged(Playback playback) => throw new NotSupportedException();
+
+    /// <inheritdoc />
+    public Task LanAccessChanged(LanState lan) => throw new NotSupportedException();
 }

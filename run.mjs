@@ -6,17 +6,24 @@
 //
 // Everything after the script name is handed to the backend as a setting.
 // Ctrl+C stops both. If one of them exits on its own, the other one is stopped too.
+//
+// Before that it builds the page once more if its sources changed since the last build. The
+// backend hands that built page to phones and tablets (the LAN key in the page lets them in);
+// this PC uses the development server, which shows every change at once.
 
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const frontendDir = join(root, 'frontend');
+const angularCli = join(frontendDir, 'node_modules', '@angular', 'cli', 'bin', 'ng.js');
+const builtPage = join(frontendDir, 'dist', 'lumenet', 'browser');
 const backendProject = join(root, 'backend', 'DmxBox.Server');
-const backendSettings = process.argv.slice(2);
+// The built page's folder comes first, so that a "--Ui:Folder=..." of the caller wins.
+const backendSettings = [`--Ui:Folder=${builtPage}`, ...process.argv.slice(2)];
 
 const useColor = process.stdout.isTTY && !process.env.NO_COLOR;
 const paint = (code, text) => (useColor ? `\x1b[${code}m${text}\x1b[0m` : text);
@@ -33,6 +40,40 @@ if (!existsSync(join(frontendDir, 'node_modules'))) {
   log('run', 'Installing frontend packages (first run only)...');
   const install = spawnSync('npm', ['install'], { cwd: frontendDir, stdio: 'inherit', shell: true });
   if (install.status !== 0) process.exit(install.status ?? 1);
+}
+
+// ---- the built page, for phones and tablets: only after a change of its sources ----
+
+buildPageIfChanged();
+
+function buildPageIfChanged() {
+  const index = join(builtPage, 'index.html');
+  const builtAt = existsSync(index) ? statSync(index).mtimeMs : 0;
+  const sources = ['src', 'angular.json', 'package.json', 'package-lock.json', 'tsconfig.json', 'tsconfig.app.json']
+    .map((name) => join(frontendDir, name))
+    .filter((path) => existsSync(path));
+  if (Math.max(...sources.map(newestChange)) <= builtAt) return;
+
+  log('run', 'Building the page for phones and tablets (only after a change, about 10 seconds)...');
+  const build = spawnSync(process.execPath, [angularCli, 'build'], {
+    cwd: frontendDir,
+    encoding: 'utf8',
+    env: { ...process.env, NG_CLI_ANALYTICS: 'false' },
+  });
+  for (const line of `${build.stdout ?? ''}${build.stderr ?? ''}`.split(/\r?\n/)) {
+    if (line.trim() !== '') log('frontend', line);
+  }
+  if (build.status !== 0) {
+    // Not a reason to stop: this PC uses the development server, which says what is wrong.
+    log('run', 'The page for phones could not be built. This PC works as before; phones get no page.');
+  }
+}
+
+// The time of the newest change of a file, or of anything in a folder.
+function newestChange(path) {
+  const info = statSync(path);
+  if (!info.isDirectory()) return info.mtimeMs;
+  return readdirSync(path).reduce((newest, name) => Math.max(newest, newestChange(join(path, name))), info.mtimeMs);
 }
 
 // ---- the two processes ----
@@ -68,6 +109,7 @@ function announceWhenReady(name, line) {
   if (name === 'frontend' && line.includes('Local:')) ready.frontend = true;
   if (ready.backend && ready.frontend) {
     log('run', paint('1', 'Ready: open http://localhost:4200  (Ctrl+C stops both)'));
+    log('run', 'For a phone or tablet in the same network: press LAN in the page.');
   }
 }
 
@@ -117,7 +159,7 @@ process.on('SIGTERM', () => {
 
 log('run', 'Backend http://localhost:5080, frontend http://localhost:4200');
 
-run('backend', 'dotnet', ['run', '-c', 'Release', '--project', backendProject, ...(backendSettings.length > 0 ? ['--', ...backendSettings] : [])], {
+run('backend', 'dotnet', ['run', '-c', 'Release', '--project', backendProject, '--', ...backendSettings], {
   cwd: root,
   env: {
     ...process.env,
@@ -126,7 +168,7 @@ run('backend', 'dotnet', ['run', '-c', 'Release', '--project', backendProject, .
   },
 });
 
-run('frontend', process.execPath, [join(frontendDir, 'node_modules', '@angular', 'cli', 'bin', 'ng.js'), 'serve'], {
+run('frontend', process.execPath, [angularCli, 'serve'], {
   cwd: frontendDir,
   env: {
     ...process.env,

@@ -23,13 +23,25 @@ describe('sequence templates', () => {
     expect(made.steps.length).toBe(16); // eight for each of the two lights
     expect(made.steps.filter((step) => step.number === 1).length).toBe(8);
     expect(made.steps.every((step) => step.target === 'channel')).toBe(true);
-    // between low and high, apart from the dips, which stay above 40 % of low
-    expect(made.steps.every((step) => step.value >= 36 && step.value <= 255)).toBe(true);
+    // always between low and high
+    expect(made.steps.every((step) => step.value >= 90 && step.value <= 255)).toBe(true);
     expect(new Set(made.steps.map((step) => step.value)).size).toBeGreaterThan(10);
     // short, uneven times on tenths, and down longer than up
     expect(made.steps.every((step) => step.up <= 0.1 && step.wait <= 0.2 && step.down >= 0.3)).toBe(true);
     expect(made.steps.every((step) => Number.isInteger(Math.round(step.down * 10)))).toBe(true);
     expect(made.steps.every((step) => step.down > step.up)).toBe(true);
+  });
+
+  it('fire and storm never go outside low and high: with both at 255 the lights stay at full', () => {
+    for (const name of ['fire', 'lightning'] as const) {
+      const made = makeSequence(settings({ name, low: 255, high: 255 }), sameEveryTime());
+      const lit = made.steps.filter((step) => step.value > 0); // the dark pauses of a storm give nothing
+      expect(lit.length).toBeGreaterThan(0);
+      expect(lit.every((step) => step.value === 255)).toBe(true);
+    }
+
+    const narrow = makeSequence(settings({ name: 'fire', low: 120, high: 140 }), sameEveryTime());
+    expect(narrow.steps.every((step) => step.value >= 120 && step.value <= 140)).toBe(true);
   });
 
   it('chase: the lights one after the other, in the order typed', () => {
@@ -73,7 +85,8 @@ describe('sequence templates', () => {
     const pauses = made.steps.filter((step) => step.value === 0);
     expect(pauses.length).toBe(3);
     expect(pauses.every((step) => step.wait >= 1.5 && step.wait <= 4.5)).toBe(true);
-    expect(made.steps.filter((step) => step.value === 255).length).toBe(2); // a full strike for each light
+    expect(made.steps.filter((step) => step.value === 255).length).toBeGreaterThanOrEqual(2); // a full strike for each light
+    expect(made.steps.filter((step) => step.value > 0).every((step) => step.value >= 60)).toBe(true); // never under Low
   });
 
   it('a template never makes more steps than a sequence can hold', () => {

@@ -516,12 +516,14 @@ it gives in red.
   The speed is kept with the sequence in the project.
 * **Template** fills the sequence from a pattern, for the lights you name (channels like `1, 2` or `1-4`,
   or memories). The steps it makes replace the old ones and can be changed in the table like any others.
-  * **Fire:** every light flickers on its own between Low and High, now and then a dip, played at random.
+  * **Fire:** every light flickers on its own, always between Low and High (now and then near Low, where a
+    flame ducks), played at random. Low and High both at 255 give a steady full light.
     It looks best over a glow: set the faders of those lights to about 80.
   * **Chase:** one light after the other. **Wave:** each light swells and fades in turn; a single light
     breathes. **Strobe:** short flashes, light after light. For several lights at once, name a memory
     that holds them.
-  * **Storm:** strikes and faint flickers out of the dark, with pauses between, at random.
+  * **Storm:** strikes up to High and faint flickers from Low, with dark pauses between, at random. The
+    pauses are steps with the value 0: they give no light at all.
 * A wait of 0 means the next step starts as soon as this one is up.
 * A step that stands for a memory plays that memory's look. A memory that holds a sequence itself gives
   nothing there: sequences are not played inside sequences. So the list for a memory step offers only the

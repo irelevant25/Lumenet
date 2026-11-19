@@ -43,7 +43,7 @@ export const TEMPLATES: readonly TemplateInfo[] = [
     name: 'fire',
     label: 'Fire',
     key: ['Fire'],
-    about: 'Flickers like flames: every light on its own, between Low and High, in a new random order on every round.',
+    about: 'Flickers like flames: every light on its own, always between Low and High, in a new random order on every round.',
     usesLow: true,
     timeLabel: 'Seconds between flickers',
     low: 90,
@@ -87,7 +87,7 @@ export const TEMPLATES: readonly TemplateInfo[] = [
     name: 'lightning',
     label: 'Storm',
     key: ['Storm'],
-    about: 'Lightning: strikes and faint flickers out of the dark, at random, with pauses between.',
+    about: 'Lightning: strikes up to High and faint flickers from Low, at random, with dark pauses between.',
     usesLow: true,
     timeLabel: 'Seconds of a pause, about',
     low: 60,
@@ -139,16 +139,16 @@ export function makeSequence(settings: TemplateSettings, random: () => number = 
 
   switch (settings.name) {
     case 'fire': {
-      // Every light gets values between Low and High, now and then a dip below Low, with short
-      // and uneven times. Down is longer than Up, so that each value grows out of the one
-      // before instead of falling to dark in between. Played at random, the lights flicker
-      // each at its own pace.
+      // Every light gets values between Low and High, never outside them, with short and
+      // uneven times. Now and then a value at the bottom of that range, where a flame ducks.
+      // Down is longer than Up, so that each value grows out of the one before instead of
+      // falling to dark in between. Played at random, the lights flicker each at its own pace.
       const perLight = stepsNeeded('fire', numbers.length) / numbers.length;
       const steps: TimedStep[] = [];
       for (let round = 0; round < perLight; round++) {
         for (const number of numbers) {
-          const dip = random() < 0.15;
-          const value = dip ? low * (0.4 + random() * 0.3) : low + random() * (high - low);
+          const ducks = random() < 0.15;
+          const value = low + (high - low) * random() * (ducks ? 0.15 : 1);
           steps.push(step(number, value, random() * time * 0.5, random() * time, time * (1.5 + random() * 1.5)));
         }
       }
@@ -182,17 +182,17 @@ export function makeSequence(settings: TemplateSettings, random: () => number = 
     }
 
     case 'lightning': {
-      // Dark pauses of different lengths, and for every light two strikes and a faint flicker.
-      // Played at random, they come in a new order every round: now a double strike, now a
-      // long dark wait.
+      // Dark pauses of different lengths, and for every light two strikes and a faint flicker,
+      // all three between Low and High. Played at random, they come in a new order every
+      // round: now a double strike, now a long dark wait.
       const steps: TimedStep[] = [];
       for (let pause = 0; pause < 3; pause++) {
         steps.push(step(numbers[0], 0, 0, time * (0.5 + random()), 0));
       }
       for (const number of numbers) {
         steps.push(step(number, high, 0, 0, 0.1 + random() * 0.2));
-        steps.push(step(number, high * (0.8 + random() * 0.2), 0, 0, 0.1 + random() * 0.3));
-        steps.push(step(number, low + random() * Math.max(0, (high - low) / 2), 0, 0.1, 0.3));
+        steps.push(step(number, high - (high - low) * random() * 0.2, 0, 0, 0.1 + random() * 0.3));
+        steps.push(step(number, low + random() * ((high - low) / 2), 0, 0.1, 0.3));
       }
       return { steps, loop: true, random: true };
     }

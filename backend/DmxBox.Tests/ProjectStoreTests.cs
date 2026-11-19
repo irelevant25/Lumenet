@@ -50,13 +50,15 @@ public sealed class ProjectStoreTests : IDisposable
         _desk.SetChannelNote(512, "Smoke machine");
         _desk.SetMemoryNote(3, "Blue wash");
         _desk.SetIndependent(2, 300);
+        _desk.SetSequence(7, loop: true, [new Step("channel", 5, 255, 1, 0.5, 2)]);
+        _desk.AddStackStep(new Step("memory", 1, 200, 3, 0, 4));
 
         _store.Save("show");
 
         string expected = """
             {
               "format": "lumenet-project",
-              "version": 1,
+              "version": 2,
               "memories": [
                 {
                   "number": 1,
@@ -94,6 +96,33 @@ public sealed class ProjectStoreTests : IDisposable
                 14,
                 15,
                 16
+              ],
+              "sequences": [
+                {
+                  "number": 7,
+                  "loop": true,
+                  "steps": [
+                    {
+                      "target": "channel",
+                      "number": 5,
+                      "value": 255,
+                      "up": 1,
+                      "wait": 0.5,
+                      "down": 2
+                    }
+                  ]
+                }
+              ],
+              "stack": [
+                {
+                  "cue": "1.0",
+                  "target": "memory",
+                  "number": 1,
+                  "value": 200,
+                  "up": 3,
+                  "wait": 0,
+                  "down": 4
+                }
               ]
             }
             """;
@@ -109,13 +138,15 @@ public sealed class ProjectStoreTests : IDisposable
         string expected = $$"""
             {
               "format": "lumenet-project",
-              "version": 1,
+              "version": 2,
               "memories": [],
               "channelNotes": {},
               "memoryNotes": {},
               "independents": [
                 {{independents}}
-              ]
+              ],
+              "sequences": [],
+              "stack": []
             }
             """;
         Assert.Equal(expected.ReplaceLineEndings(), File.ReadAllText(PathOf("show")).ReplaceLineEndings());
@@ -405,7 +436,7 @@ public sealed class ProjectStoreTests : IDisposable
     [Fact]
     public void FileOfANewerVersionIsRefused()
     {
-        AssertRefused("version 2", """{ "format": "lumenet-project", "version": 2, "memories": [] }""");
+        AssertRefused("version 3", """{ "format": "lumenet-project", "version": 3, "memories": [] }""");
     }
 
     [Fact]

@@ -149,6 +149,107 @@ internal sealed class DeskHub : Hub<IDeskClient>
         return _desk.GetMemoryLooks();
     }
 
+    /// <summary>The sequences, for each memory that holds one, by its number.</summary>
+    public Dictionary<int, Sequence> GetSequences()
+    {
+        return _desk.GetSequences();
+    }
+
+    /// <summary>Stores a sequence in a memory that is empty or holds a sequence already.</summary>
+    /// <param name="memory">Memory number, 1-128.</param>
+    /// <param name="loop">True to start again after the last step, false to play once.</param>
+    /// <param name="steps">The steps, the first one first.</param>
+    public Task SetSequence(int memory, bool loop, Step[] steps)
+    {
+        _desk.SetSequence(memory, loop, steps);
+        return TellDeskAsync();
+    }
+
+    /// <summary>The stack: its steps in the order of their numbers.</summary>
+    public StackState GetStack()
+    {
+        return _desk.GetStack();
+    }
+
+    /// <summary>What changes with time: what the running sequences give, and where the stack stands.</summary>
+    public Playback GetPlayback()
+    {
+        return _desk.GetPlayback();
+    }
+
+    /// <summary>Puts a new step at the end of the stack.</summary>
+    /// <param name="step">The step.</param>
+    /// <returns>The name of the new step.</returns>
+    public async Task<int> AddStackStep(Step step)
+    {
+        int id = _desk.AddStackStep(step);
+        await TellStackAsync();
+        return id;
+    }
+
+    /// <summary>Changes what a step of the stack stands for, its value or its times.</summary>
+    /// <param name="id">The name of the step.</param>
+    /// <param name="step">The step as it is to be.</param>
+    public Task UpdateStackStep(int id, Step step)
+    {
+        _desk.UpdateStackStep(id, step);
+        return TellStackAsync();
+    }
+
+    /// <summary>Takes a step out of the stack.</summary>
+    /// <param name="id">The name of the step.</param>
+    public Task DeleteStackStep(int id)
+    {
+        _desk.DeleteStackStep(id);
+        return TellStackAsync();
+    }
+
+    /// <summary>Puts a step of the stack right after another one; it gets a number that fits there.</summary>
+    /// <param name="id">The name of the step to move.</param>
+    /// <param name="afterId">The step it goes behind; null for the very top.</param>
+    public Task MoveStackStep(int id, int? afterId)
+    {
+        _desk.MoveStackStep(id, afterId);
+        return TellStackAsync();
+    }
+
+    /// <summary>Gives a step of the stack the number its owner typed.</summary>
+    /// <param name="id">The name of the step.</param>
+    /// <param name="cue">The number as text: "3", "3.0", "2.1".</param>
+    public Task RenumberStackStep(int id, string cue)
+    {
+        _desk.RenumberStackStep(id, cue);
+        return TellStackAsync();
+    }
+
+    /// <summary>Play: goes on after a pause, or goes to the next step.</summary>
+    public Task StackPlay()
+    {
+        _desk.StackPlay();
+        return TellPlaybackAsync();
+    }
+
+    /// <summary>Pause: holds a running fade or wait.</summary>
+    public Task StackPause()
+    {
+        _desk.StackPause();
+        return TellPlaybackAsync();
+    }
+
+    /// <summary>Next: goes to the next step now.</summary>
+    public Task StackNext()
+    {
+        _desk.StackNext();
+        return TellPlaybackAsync();
+    }
+
+    /// <summary>Previous: goes to the step before the current one now.</summary>
+    public Task StackPrevious()
+    {
+        _desk.StackPrevious();
+        return TellPlaybackAsync();
+    }
+
     /// <summary>Lists the projects that can be loaded, the newest first.</summary>
     public ProjectList GetProjects()
     {
@@ -199,6 +300,23 @@ internal sealed class DeskHub : Hub<IDeskClient>
     {
         await Clients.All.DeskChanged(_desk.GetState());
         await TellProjectAsync();
+    }
+
+    // After a change to the steps of the stack: every UI gets the stack again, and where it
+    // stands (a step that was taken out may have been the current or the next one). The stack
+    // is part of the project.
+    private async Task TellStackAsync()
+    {
+        await Clients.All.StackChanged(_desk.GetStack());
+        await TellPlaybackAsync();
+        await TellProjectAsync();
+    }
+
+    // After Play, Pause, Next or Previous: every UI learns at once where the stack stands. The
+    // faders it moves follow from the desk clock.
+    private Task TellPlaybackAsync()
+    {
+        return Clients.All.PlaybackChanged(_desk.GetPlayback());
     }
 
     // The project goes out only when its name, file or "unsaved" mark really changed.

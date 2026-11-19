@@ -20,6 +20,7 @@ public sealed class HubTests
     private static readonly string[] DeskProperties =
     [
         "channels", "memoryLevels", "memoryStored", "master", "blackout", "channelNotes", "memoryNotes", "independents",
+        "memorySequence",
     ];
 
     [Fact]

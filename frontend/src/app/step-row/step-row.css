@@ -1,0 +1,11 @@
+/* The look of the cells and of the fields in them is in styles.css under "tables of steps":
+   the cells that the Sequences view and the Stack view put before and after the fields of a
+   step share it, and a style sheet of this component would not reach those. */
+td {
+  min-width: 64px;
+}
+
+/* channel or memory: wide enough for the longer word */
+td:first-of-type {
+  min-width: 104px;
+}

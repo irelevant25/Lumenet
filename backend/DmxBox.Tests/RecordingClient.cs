@@ -84,4 +84,10 @@ internal sealed class RecordingClient : IDeskClient
 
     /// <inheritdoc />
     public Task ProjectChanged(ProjectInfo project) => throw new NotSupportedException();
+
+    /// <inheritdoc />
+    public Task StackChanged(StackState stack) => throw new NotSupportedException();
+
+    /// <inheritdoc />
+    public Task PlaybackChanged(Playback playback) => throw new NotSupportedException();
 }

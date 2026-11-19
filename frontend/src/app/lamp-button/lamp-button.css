@@ -67,6 +67,32 @@
   font-weight: 600;
 }
 
+/* A memory that holds a sequence: from the red of the memories to yellow. --lamp is the orange
+   between the two, for the border, the glow and the lettering; --mix is how lit the key is.
+   These rules stand after the three levels, because they replace the plain background. */
+:host(.tone-sequence) {
+  --lamp: #ff9838;
+  --mix: 14%;
+}
+
+:host(.tone-sequence.level-2) {
+  --mix: 45%;
+}
+
+:host(.tone-sequence.level-3) {
+  --mix: 100%;
+}
+
+:host(.tone-sequence),
+:host(.tone-sequence.level-2),
+:host(.tone-sequence.level-3) {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--memory) var(--mix), var(--well)),
+    color-mix(in srgb, var(--sequence-end) var(--mix), var(--well))
+  );
+}
+
 /* Shown instead of blinking for people who asked for less motion. */
 :host(.steady-attention) {
   outline: 2px dashed #fff;

@@ -3,10 +3,11 @@ import { BlinkClock } from '../desk/blink-clock';
 import { LampLevel } from '../desk/lamps';
 
 /**
- * The colour of a lamp: green for channels, red for memories, amber for the memory
- * functions and the project buttons, white for Clear, blue for Blackout.
+ * The colour of a lamp: green for channels, red for memories, red running into yellow for a
+ * memory that holds a sequence, amber for the memory functions and the project buttons,
+ * white for Clear, blue for Blackout.
  */
-export type LampTone = 'channel' | 'memory' | 'system' | 'white' | 'blue';
+export type LampTone = 'channel' | 'memory' | 'sequence' | 'system' | 'white' | 'blue';
 
 /**
  * A square key that is lit from behind, like the keys of a lighting desk.

@@ -15,6 +15,7 @@
   /* lamp colours: channels, memories, the memory functions and project buttons, Clear, Blackout */
   --channel: #3ddc84;
   --memory: #ff5247;
+  --sequence-end: #ffd426; /* a memory that holds a sequence runs from the memory red to this yellow */
   --system: #ffb020;
   --white-lamp: #f1f3f6;
   --blue-lamp: #4aa3ff;
@@ -109,4 +110,156 @@ body {
 :focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
+}
+
+/* ---- tables of steps (the Sequences view and the Stack view) ----
+   One row is one step. The rows are their own strips with a little room between them. */
+table.steps {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 3px;
+  font-size: 14px;
+}
+
+/* for screen readers only */
+table.steps caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+table.steps thead th {
+  padding: 0 6px 2px;
+  color: var(--legend-dim);
+  font-size: 12px;
+  font-stretch: 75%;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+table.steps tbody th,
+table.steps td {
+  padding: 3px 4px;
+  border-top: 1px solid var(--edge);
+  border-bottom: 1px solid var(--edge);
+  background: var(--well);
+}
+
+/* the number of the step, at the start of its row */
+table.steps tbody th {
+  width: 1%;
+  padding: 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+
+table.steps tbody tr > :first-child {
+  border-left: 1px solid var(--edge);
+  border-radius: 4px 0 0 4px;
+}
+
+table.steps tbody tr > :last-child {
+  border-right: 1px solid var(--edge);
+  border-radius: 0 4px 4px 0;
+}
+
+/* The step that is on right now is green, like a channel that is up. The step that comes
+   next has the amber edge of the keys that act on the desk. */
+table.steps tr.current > * {
+  border-color: var(--channel);
+  background: color-mix(in srgb, var(--channel) 20%, var(--well));
+}
+
+table.steps tr.next > * {
+  border-color: var(--system);
+}
+
+/* while a step is dragged: a line where it would land, above or below this row */
+table.steps tr.drop-before > * {
+  box-shadow: inset 0 3px 0 var(--focus);
+}
+
+table.steps tr.drop-after > * {
+  box-shadow: inset 0 -3px 0 var(--focus);
+}
+
+table.steps input,
+table.steps select {
+  box-sizing: border-box;
+  width: 100%;
+  height: 28px;
+  margin: 0;
+  padding: 0 6px;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--legend);
+  font: inherit;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+table.steps input {
+  text-align: right;
+  user-select: text;
+}
+
+table.steps select {
+  cursor: pointer;
+}
+
+table.steps input:hover,
+table.steps select:hover {
+  border-color: var(--legend-dim);
+}
+
+table.steps input:focus-visible,
+table.steps select:focus-visible {
+  outline-offset: 0;
+}
+
+/* the small keys at the end of a row: up, down, take out */
+table.steps .row-keys {
+  width: 1%;
+  white-space: nowrap;
+}
+
+table.steps .row-keys button {
+  width: 30px;
+  height: 28px;
+  margin: 0 1px;
+  padding: 0;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--legend);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+table.steps .row-keys button:hover:not(:disabled) {
+  border-color: var(--legend-dim);
+}
+
+table.steps .row-keys button:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
+table.steps td.empty {
+  padding: 14px 12px;
+  border: 1px dashed var(--edge);
+  border-radius: 4px;
+  background: none;
+  color: var(--legend-dim);
 }

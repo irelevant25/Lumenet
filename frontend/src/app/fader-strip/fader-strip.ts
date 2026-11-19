@@ -2,7 +2,7 @@ import { Component, booleanAttribute, computed, input, model, output } from '@an
 import { LampLevel } from '../desk/lamps';
 import { NOTE_LINE_LENGTH, joinNote, splitNote } from '../desk/notes';
 import { Fader } from '../fader/fader';
-import { LampButton } from '../lamp-button/lamp-button';
+import { LampButton, LampTone } from '../lamp-button/lamp-button';
 
 /** One fader with its level number above it, its numbered key below it, and a note under the key. */
 @Component({
@@ -31,6 +31,9 @@ export class FaderStrip {
   readonly blink = input(false);
   /** Memory keys can be pressed. Channel keys only show a state. */
   readonly pressable = input(false, { transform: booleanAttribute });
+  /** True for a memory that holds a sequence: its key is red running into yellow. */
+  readonly sequence = input(false);
+  protected readonly keyTone = computed<LampTone>(() => (this.sequence() ? 'sequence' : this.kind()));
   readonly keyPress = output<void>();
   /** A short text of the owner's, for example which light this is. Empty: nothing is shown. */
   readonly note = model('');

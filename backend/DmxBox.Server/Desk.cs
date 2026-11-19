@@ -13,8 +13,14 @@ namespace DmxBox.Server;
 /// cannot be done in a <see cref="DeskException"/>. Both carry a message for the user.
 /// </para>
 /// <para>Thread-safe: the hub and the box link use the same desk from different threads.</para>
+/// <para>
+/// Two things on the desk change with time: a memory can hold a sequence instead of a look
+/// (Desk.Sequences.cs), and the stack moves faders by itself (Desk.Stack.cs). The desk has no
+/// timer of its own: <see cref="Tick"/> has to be called many times a second, and
+/// <see cref="GetOutput"/> gives the output of the moment it is called.
+/// </para>
 /// </remarks>
-internal sealed class Desk
+internal sealed partial class Desk
 {
     /// <summary>Number of DMX channels, each with a fader.</summary>
     public const int ChannelCount = 512;
@@ -49,6 +55,26 @@ internal sealed class Desk
     private bool _blackout;
     private long _outputChanges;
     private long _projectChanges;
+
+    private readonly TimeProvider _time;
+    private readonly long _born;
+
+    /// <summary>A desk that goes by the computer's clock.</summary>
+    public Desk()
+        : this(TimeProvider.System)
+    {
+    }
+
+    /// <summary>A desk that goes by the given clock. The tests pass one they can set by hand.</summary>
+    /// <param name="time">Tells how much time has passed, for the sequences and the stack.</param>
+    public Desk(TimeProvider time)
+    {
+        _time = time;
+        _born = time.GetTimestamp();
+    }
+
+    // Seconds since the desk was made. Sequences and the stack count in these.
+    private double Now => _time.GetElapsedTime(_born).TotalSeconds;
 
     /// <summary>
     /// True while blackout is on. <see cref="GetOutput"/> does not show it: the box does the
@@ -106,7 +132,10 @@ internal sealed class Desk
         return Enumerable.Range(1, IndependentCount).ToArray();
     }
 
-    /// <summary>Moves one channel fader.</summary>
+    /// <summary>
+    /// Moves one channel fader by hand. If the stack was moving that fader, the hand wins: the
+    /// stack leaves it alone from here on.
+    /// </summary>
     /// <param name="channel">Channel number, 1-512.</param>
     /// <param name="level">The fader's new level, 0-255.</param>
     public void SetChannel(int channel, int level)
@@ -116,12 +145,17 @@ internal sealed class Desk
 
         lock (_lock)
         {
+            _moves.Remove(new Fader(Memory: false, channel));
             _channels[channel - 1] = (byte)level;
             _outputChanges++;
         }
     }
 
-    /// <summary>Moves the fader of one memory. An empty memory has a fader too; it just adds nothing.</summary>
+    /// <summary>
+    /// Moves the fader of one memory by hand. An empty memory has a fader too; it just adds
+    /// nothing. A sequence starts when its fader leaves zero. If the stack was moving the
+    /// fader, the hand wins.
+    /// </summary>
     /// <param name="memory">Memory number, 1-128.</param>
     /// <param name="level">The fader's new level, 0-255.</param>
     public void SetMemoryLevel(int memory, int level)
@@ -131,7 +165,8 @@ internal sealed class Desk
 
         lock (_lock)
         {
-            _memoryLevels[memory - 1] = (byte)level;
+            _moves.Remove(new Fader(Memory: true, memory));
+            MoveMemoryFader(memory, (byte)level);
             _outputChanges++;
         }
     }
@@ -218,8 +253,10 @@ internal sealed class Desk
     }
 
     /// <summary>
-    /// Brings every channel fader and every memory fader down to 0. The stored looks, the
-    /// notes, the bindings of the independent keys, the master and blackout stay.
+    /// Brings every channel fader and every memory fader down to 0, and stops the stack: no
+    /// step is on, and Play starts with the first one. The stored looks and sequences, the
+    /// steps of the stack, the notes, the bindings of the independent keys, the master and
+    /// blackout stay.
     /// </summary>
     public void Clear()
     {
@@ -227,13 +264,15 @@ internal sealed class Desk
         {
             Array.Clear(_channels);
             Array.Clear(_memoryLevels);
+            StopStack();
             _outputChanges++;
         }
     }
 
     /// <summary>
     /// Stores a copy of what the channel faders show in a memory, replacing what the memory
-    /// held. Faders that are all down make a dark look; the memory still counts as stored.
+    /// held, a sequence too. Faders that are all down make a dark look; the memory still
+    /// counts as stored.
     /// </summary>
     /// <param name="memory">Memory number, 1-128.</param>
     public void SaveMemory(int memory)
@@ -243,25 +282,32 @@ internal sealed class Desk
         lock (_lock)
         {
             _memories[memory - 1] = Copy(_channels);
+            _sequences[memory - 1] = null;
             CountLookChange();
         }
     }
 
     /// <summary>Sets the channel faders to the look stored in a memory.</summary>
     /// <param name="memory">Memory number, 1-128.</param>
-    /// <exception cref="DeskException">The memory is empty.</exception>
+    /// <exception cref="DeskException">The memory is empty, or holds a sequence.</exception>
     public void LoadMemory(int memory)
     {
         RequireMemory(memory);
 
         lock (_lock)
         {
+            if (_sequences[memory - 1] is not null)
+                throw new DeskException($"Memory {memory} holds a sequence. Change it on the Sequences page.");
+
             StoredLook(memory).CopyTo(_channels, 0);
             _outputChanges++;
         }
     }
 
-    /// <summary>Stores a copy of one memory's look in another memory, replacing what that one held.</summary>
+    /// <summary>
+    /// Stores a copy of what one memory holds, a look or a sequence, in another memory,
+    /// replacing what that one held.
+    /// </summary>
     /// <param name="from">Number of the memory to copy, 1-128.</param>
     /// <param name="to">Number of the memory that receives the copy, 1-128.</param>
     /// <exception cref="DeskException">The memory to copy is empty, or both numbers are the same.</exception>
@@ -274,7 +320,17 @@ internal sealed class Desk
 
         lock (_lock)
         {
-            _memories[to - 1] = Copy(StoredLook(from));
+            if (_sequences[from - 1] is { } sequence)
+            {
+                _memories[to - 1] = null;
+                StoreSequence(to, sequence with { Steps = Copy(sequence.Steps) });
+            }
+            else
+            {
+                _memories[to - 1] = Copy(StoredLook(from));
+                _sequences[to - 1] = null;
+            }
+
             CountLookChange();
         }
     }
@@ -287,18 +343,19 @@ internal sealed class Desk
 
         lock (_lock)
         {
-            if (_memories[memory - 1] is null)
+            if (_memories[memory - 1] is null && _sequences[memory - 1] is null)
                 return;
 
             _memories[memory - 1] = null;
+            _sequences[memory - 1] = null;
             CountLookChange();
         }
     }
 
     /// <summary>
     /// Makes the desk clean for a new project: every channel fader and memory fader down to 0,
-    /// every memory empty, no notes, the independent keys back on channels 1 to 16. The master
-    /// and blackout stay: they belong to the evening, not to the project.
+    /// every memory empty, an empty stack, no notes, the independent keys back on channels 1 to
+    /// 16. The master and blackout stay: they belong to the evening, not to the project.
     /// </summary>
     /// <returns><see cref="ProjectChanges"/> right after the change.</returns>
     public long StartNewProject()
@@ -308,6 +365,9 @@ internal sealed class Desk
             Array.Clear(_channels);
             Array.Clear(_memoryLevels);
             Array.Clear(_memories);
+            Array.Clear(_sequences);
+            _stack.Clear();
+            StopStack();
             Array.Fill(_channelNotes, "");
             Array.Fill(_memoryNotes, "");
             DefaultIndependents().CopyTo(_independents, 0);
@@ -318,9 +378,10 @@ internal sealed class Desk
 
     /// <summary>
     /// Replaces everything a project file holds at once, which is what loading a project does:
-    /// the looks of all memories, all notes and the bindings of the independent keys. Every
-    /// memory fader goes down to 0, so that none of the new looks appears on stage unasked.
-    /// The channel faders stay.
+    /// the looks and sequences of all memories, the stack, all notes and the bindings of the
+    /// independent keys. Every memory fader goes down to 0 and the stack stands before its
+    /// first step, so that nothing of the new project appears on stage unasked. The channel
+    /// faders stay.
     /// </summary>
     /// <param name="project">What the file held, with an entry for every memory, fader and key.</param>
     /// <returns><see cref="ProjectChanges"/> right after the change.</returns>
@@ -331,8 +392,12 @@ internal sealed class Desk
         lock (_lock)
         {
             for (int index = 0; index < MemoryCount; index++)
+            {
                 _memories[index] = project.Looks[index] is { } look ? Copy(look) : null;
+                _sequences[index] = project.Sequences[index];
+            }
 
+            ReplaceStack(project.Stack);
             project.ChannelNotes.CopyTo(_channelNotes, 0);
             project.MemoryNotes.CopyTo(_memoryNotes, 0);
             project.Independents.CopyTo(_independents, 0);
@@ -353,7 +418,11 @@ internal sealed class Desk
             for (int index = 0; index < MemoryCount; index++)
                 looks[index] = _memories[index] is { } look ? Copy(look) : null;
 
-            var content = new ProjectContent(looks, Copy(_channelNotes), Copy(_memoryNotes), Copy(_independents));
+            var content = new ProjectContent(looks, Copy(_channelNotes), Copy(_memoryNotes), Copy(_independents))
+            {
+                Sequences = Copy(_sequences),
+                Stack = _stack.Select(entry => new ProjectStep(entry.Cue, entry.Step)).ToArray(),
+            };
             return (content, _projectChanges);
         }
     }
@@ -363,15 +432,24 @@ internal sealed class Desk
     {
         lock (_lock)
         {
+            bool[] stored = new bool[MemoryCount];
+            bool[] sequence = new bool[MemoryCount];
+            for (int index = 0; index < MemoryCount; index++)
+            {
+                sequence[index] = _sequences[index] is not null;
+                stored[index] = sequence[index] || _memories[index] is not null;
+            }
+
             return new DeskState(
                 Channels: Array.ConvertAll(_channels, level => (int)level),
                 MemoryLevels: Array.ConvertAll(_memoryLevels, level => (int)level),
-                MemoryStored: Array.ConvertAll(_memories, look => look is not null),
+                MemoryStored: stored,
                 Master: _master,
                 Blackout: _blackout,
                 ChannelNotes: Copy(_channelNotes),
                 MemoryNotes: Copy(_memoryNotes),
-                Independents: Copy(_independents));
+                Independents: Copy(_independents),
+                MemorySequence: sequence);
         }
     }
 
@@ -396,9 +474,10 @@ internal sealed class Desk
     }
 
     /// <summary>
-    /// Computes the levels the box has to send. For every channel the highest wins: its own
-    /// fader, or a memory that holds the channel, scaled by that memory's fader. The master
-    /// then scales the result. Blackout is left out, see <see cref="Blackout"/>.
+    /// Computes the levels the box has to send at this moment. For every channel the highest
+    /// wins: its own fader, or a memory that holds the channel, scaled by that memory's fader.
+    /// A memory with a sequence gives what its sequence gives right now. The master then
+    /// scales the result. Blackout is left out, see <see cref="Blackout"/>.
     /// </summary>
     /// <returns>512 levels; channel 1 is at index 0.</returns>
     public byte[] GetOutput()
@@ -412,6 +491,8 @@ internal sealed class Desk
                 if (_memories[index] is { } look && _memoryLevels[index] > 0)
                     RaiseTo(output, look, _memoryLevels[index]);
             }
+
+            AddSequences(output, Now, stepsOn: null);
 
             for (int channel = 0; channel < ChannelCount; channel++)
                 output[channel] = Scale(output[channel], _master);
@@ -482,6 +563,13 @@ internal sealed class Desk
             throw new ArgumentException("There must be a note, or an empty text, for every fader.", nameof(project));
         if (project.Independents.Length != IndependentCount)
             throw new ArgumentException($"There must be {IndependentCount} independents.", nameof(project));
+        if (project.Sequences.Length != MemoryCount)
+            throw new ArgumentException($"There must be {MemoryCount} entries for sequences, one per memory.", nameof(project));
+        for (int index = 0; index < MemoryCount; index++)
+        {
+            if (project.Looks[index] is not null && project.Sequences[index] is not null)
+                throw new ArgumentException($"Memory {index + 1} cannot hold a look and a sequence.", nameof(project));
+        }
     }
 
     private static void RequireChannel(int channel)

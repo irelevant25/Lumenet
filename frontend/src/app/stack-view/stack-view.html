@@ -1,0 +1,165 @@
+<header>
+  <h2>Stack</h2>
+  <p class="summary" role="status">{{ summary() }}</p>
+</header>
+
+<div class="top">
+  <div class="transport" role="group" aria-label="Going through the stack">
+    <button lmLamp type="button" tone="system" aria-label="Previous step" (click)="store.stackPrevious()">
+      Prev
+    </button>
+    <button
+      lmLamp
+      type="button"
+      tone="channel"
+      aria-label="Play"
+      [level]="running() ? 3 : 1"
+      (click)="store.stackPlay()"
+    >
+      Play
+    </button>
+    <button
+      lmLamp
+      type="button"
+      tone="system"
+      aria-label="Pause"
+      [level]="paused() ? 3 : 1"
+      [blink]="paused()"
+      [attr.aria-pressed]="paused()"
+      (click)="store.stackPause()"
+    >
+      Pause
+    </button>
+    <button lmLamp type="button" tone="system" aria-label="Next step" (click)="store.stackNext()">
+      Next
+    </button>
+  </div>
+
+  <button lmLamp type="button" tone="system" aria-label="Add a step" (click)="addStep()">
+    Add<br />step
+  </button>
+
+  <!-- where the stack stands: the step that is on, and the one Play goes to -->
+  <div class="card current" [class.on]="current()">
+    <h3>Current</h3>
+    @if (current(); as step) {
+      <p class="what">
+        <strong>{{ step.cue }}</strong> {{ describe(step) }}
+      </p>
+    } @else {
+      <p class="what">No step is on.</p>
+    }
+    <p class="how">{{ progress() }}</p>
+  </div>
+
+  <div class="card next">
+    <h3>Next</h3>
+    @if (next(); as step) {
+      <p class="what">
+        <strong>{{ step.cue }}</strong> {{ describe(step) }}
+      </p>
+      <p class="how">{{ times(step) }}</p>
+    } @else {
+      <p class="what">{{ steps().length ? 'Nothing: the stack is at its end.' : 'Nothing yet.' }}</p>
+      <p class="how"></p>
+    }
+  </div>
+</div>
+
+<div class="table-box">
+  <table class="steps">
+    <caption>
+      The steps of the stack
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col"><span class="for-readers">Drag to move</span></th>
+        <th scope="col">Step</th>
+        <th scope="col">Channel or memory</th>
+        <th scope="col">Number</th>
+        <th scope="col">Value</th>
+        <th scope="col">Up (s)</th>
+        <th scope="col">Wait (s)</th>
+        <th scope="col">Down (s)</th>
+        <th scope="col"><span class="for-readers">Move or take out</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (step of steps(); track step.id) {
+        <tr
+          lmStepRow
+          [step]="step"
+          [label]="'Step ' + step.cue"
+          [class.current]="step.id === current()?.id"
+          [class.next]="step.id === next()?.id"
+          [class.drop-before]="dropMark()?.id === step.id && !dropMark()?.after"
+          [class.drop-after]="dropMark()?.id === step.id && dropMark()?.after"
+          (stepChange)="changeStep(step.id, $event)"
+          (dragover)="onDragOver($event, step)"
+          (drop)="onDrop($event, $index)"
+        >
+          <!-- For the mouse. The arrow keys at the end of the row do the same for everyone else. -->
+          <td
+            before
+            class="grip"
+            draggable="true"
+            aria-hidden="true"
+            title="Drag to move this step"
+            (dragstart)="onDragStart($event, step)"
+            (dragend)="onDragEnd()"
+          >
+            ⠿
+          </td>
+          <td before class="cue">
+            <input
+              type="text"
+              inputmode="decimal"
+              maxlength="5"
+              autocomplete="off"
+              [value]="step.cue"
+              [attr.aria-label]="'Number of step ' + step.cue"
+              (change)="renumber(step, $event)"
+              (keydown.enter)="finish($event)"
+            />
+          </td>
+          <td after class="row-keys">
+            <button
+              type="button"
+              [attr.aria-label]="'Move step ' + step.cue + ' up'"
+              [disabled]="$first"
+              (click)="moveUp($index)"
+            >
+              ▲
+            </button>
+            <button
+              type="button"
+              [attr.aria-label]="'Move step ' + step.cue + ' down'"
+              [disabled]="$last"
+              (click)="moveDown($index)"
+            >
+              ▼
+            </button>
+            <button
+              type="button"
+              [attr.aria-label]="'Take step ' + step.cue + ' out'"
+              (click)="store.deleteStackStep(step.id)"
+            >
+              ✕
+            </button>
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td class="empty" colspan="9">No steps yet. Add step puts in the first one.</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+
+  <p class="explain">
+    Up: seconds the fader takes to its value. Wait: with 0 the stack stays on the step until Play;
+    with more it goes on by itself after that many seconds. Down: seconds the fader takes back to
+    zero when the stack leaves the step. A step keeps its number when another is moved; type a
+    number to change it.
+  </p>
+</div>

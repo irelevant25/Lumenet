@@ -62,4 +62,16 @@ public interface IDeskClient
     /// <summary>The project's name, file or "unsaved" mark changed.</summary>
     /// <param name="project">The project after the change.</param>
     Task ProjectChanged(ProjectInfo project);
+
+    /// <summary>A step of the stack was added, changed, moved, renumbered or taken out.</summary>
+    /// <param name="stack">The stack after the change.</param>
+    Task StackChanged(StackState stack);
+
+    /// <summary>
+    /// What changes with time: what the running sequences give, and where the stack stands.
+    /// It comes about 10 times a second while something moves, once more when it has stopped,
+    /// and after Play, Pause, Next and Previous.
+    /// </summary>
+    /// <param name="playback">The state of this moment.</param>
+    Task PlaybackChanged(Playback playback);
 }

@@ -428,9 +428,10 @@ soon as a box answers.
 
 **What is on the page**
 
-The top bar has two links, **Main** and **Memories**. Main is the desk itself. Memories only shows what is
-stored (see below). At the right edge of Main stands the **Master** section: Clear, Black out and the master
-fader with its level.
+The top bar has four links: **Main**, **Memories**, **Sequences** and **Stack**. Main is the desk itself.
+Memories only shows what is stored. Sequences and Stack are for the two things that run by themselves (see
+below). At the right edge of Main stands the **Master** section: Clear, Black out and the master fader with
+its level.
 
 * **Channels:** two rows of faders. The keys at the right choose which of the 512 channels they show.
 * **Memories:** one row of faders, with page keys for the 128 memories. A memory holds a look:
@@ -469,8 +470,45 @@ fader with its level.
   in rows as long as a row of faders (32 by 16, or 16 by 32 in a narrower window). The page keys at the
   right choose which memories the keys show.
 * **Project:** Save and Load at the top right, New at the top left. A project is one JSON file in
-  `Documents\Lumenet`. It holds the memories, the notes and the channels of the independent keys, not the
-  fader positions, so loading a project never switches a light on by itself. New empties the desk; it asks first.
+  `Documents\Lumenet`. It holds the memories (looks and sequences), the stack, the notes and the channels of
+  the independent keys, not the fader positions, so loading a project never switches a light on by itself.
+  New empties the desk; it asks first.
+
+**Steps.** A sequence and the stack are both made of steps. A step stands for a channel or a memory, has the
+value it brings that to (0 to 255), and three times in seconds: **up** (from zero to the value), **wait**
+(how long it stays) and **down** (back to zero when the next step takes over). The old step goes down while
+the new one goes up.
+
+**The Sequences view.** A memory can hold a sequence in place of a look; its key is then red running into
+yellow. A sequence runs while the fader of its memory is up: it starts at its first step when the fader
+leaves zero, and the fader dims what it gives, like a look. It moves no fader; the channel faders show what
+it gives in red.
+
+* Choose a memory with the keys along the top. Add step puts in a step like the last one, on the next
+  channel or memory. Every change goes to the desk at once.
+* **Once** or **Loop:** played once, the last step stays on; in a loop the first step follows the last.
+* A wait of 0 means the next step starts as soon as this one is up.
+* A step that stands for a memory plays that memory's look. A memory that holds a sequence itself gives
+  nothing there: sequences are not played inside sequences.
+* A memory that holds a look is not turned into a sequence: empty it first with Del. Save over a sequence
+  replaces it by a look; Copy and Del work on sequences as on looks; Edit does not.
+
+**The Stack view.** The project has one stack: a list of steps that you go through by hand. The stack moves
+the real faders: going to a step moves the fader of its channel or memory up to the step's value, leaving
+it moves that fader back to zero. A memory that holds a sequence starts running, because its fader goes up.
+
+* **Play** goes to the next step, or goes on after Pause. **Pause** holds a fade or a wait where it is.
+  **Next** and **Prev** go to the next or the previous step at once, with the steps' own times. Prev from
+  the first step leaves it, so that no step is on.
+* A wait of 0 means the stack stays on the step until Play. With a wait above 0 it goes on by itself that
+  many seconds after the step is up.
+* The view shows all steps, the **current** one in green and the **next** one with an amber edge, and for
+  the current one how far it is.
+* A fader the stack is moving and that you move by hand is yours from then on. Clear also stops the stack.
+* **Step numbers** look like 1.0, 2.0, 2.1. A new step gets the next whole number. Drag a step by its grip
+  (or use the arrows at the end of its row): it gets the number of the step it now follows with the digit
+  after the dot one higher, and the others keep theirs. Moved between 2.0 and 3.0, a step becomes 2.1.
+  Type a number to change it: if another step has it, that one gives way (3.0 becomes 4.0, 3.1 becomes 4.1).
 
 **Window width:** a window at least 1850 pixels wide shows 32 faders in a row, so 64 channels and 32 memories
 at a time. A narrower window shows 16 in a row (32 channels and 16 memories) and twice as many page keys.
@@ -491,8 +529,9 @@ page cannot move a light. In the small-screen layout the mouse wheel scrolls the
 
 **How it is built**
 
-* `backend/DmxBox.Server` is the desk itself. It holds the state (levels, memories, notes, the project),
-  works out the output and sends it to the box through the `DmxBox` library. Its settings are in
+* `backend/DmxBox.Server` is the desk itself. It holds the state (levels, memories, sequences, the stack,
+  notes, the project), works out the output and sends it to the box through the `DmxBox` library. A small
+  clock in it lets time pass about 30 times a second, for the sequences and the stack. Its settings are in
   `appsettings.json`: the address of the box (`Box:Host`) and the projects folder (`Projects:Folder`).
 * `frontend/` is an Angular app. It only shows the desk and passes on what you do, over SignalR (`/hub/desk`).
   Because the state lives in the backend, reloading the page loses nothing.
@@ -500,8 +539,9 @@ page cannot move a light. In the small-screen layout the mouse wheel scrolls the
   websites that are open in the browser from operating the desk. To open the desk from another device, both
   settings have to be widened on purpose.
 
-**Tests:** `dotnet test backend/DmxBox.sln` (212 tests: the client, the desk, project files, the link to the
-box, the hub), and in `frontend/`: `npm test -- --watch=false` (36 tests of the page).
+**Tests:** `dotnet test backend/DmxBox.sln` (274 tests: the client, the desk, sequences and the stack with a
+clock the tests set by hand, project files, the link to the box, the hub), and in `frontend/`:
+`npm test -- --watch=false` (43 tests of the page).
 
 ---
 ## 5. The DX protocol (UDP 7000)
@@ -594,6 +634,10 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
 * **Lumenet, second day (2026-11-19):** the two views, the master section, the channel faders that follow a
   memory fader and the two note lines were checked in Chrome on a test copy without a box, at five window
   sizes. Not yet used by the owner, and not with a box.
+* **Sequences and the stack (2026-11-19):** the backend passes 274 tests and the page 43. On a test copy
+  without a box a sequence of four steps was built and run (the channel faders followed it), and a stack of
+  four steps was built, reordered by dragging and by typing a number, played, paused, and saved and loaded
+  with a project. Not yet used by the owner; no light has been driven by a sequence or the stack.
 * **A real DMX light (2026-11-18):** one light with four RGB cells (12 channels from address 5) on the
   breadboard build showed everything correctly: each of the 12 channels alone and in the right order, full
   white, a fade to dark, and a fade from red to blue, without flicker.

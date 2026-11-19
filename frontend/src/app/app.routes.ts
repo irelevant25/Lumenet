@@ -12,5 +12,16 @@ export const routes: Routes = [
     loadComponent: () => import('./memories-view/memories-view').then((file) => file.MemoriesView),
     title: 'Lumenet: memories',
   },
+  {
+    path: 'sequences',
+    loadComponent: () =>
+      import('./sequences-view/sequences-view').then((file) => file.SequencesView),
+    title: 'Lumenet: sequences',
+  },
+  {
+    path: 'stack',
+    loadComponent: () => import('./stack-view/stack-view').then((file) => file.StackView),
+    title: 'Lumenet: stack',
+  },
   { path: '**', redirectTo: '' },
 ];

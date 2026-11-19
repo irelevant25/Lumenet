@@ -1,0 +1,177 @@
+/* One section over the whole view: the title with a sentence about the memory, the memory
+   keys, under them the sequence of the chosen memory, and the page keys at the right. */
+:host {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: var(--panel-raised);
+}
+
+header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  min-width: 0;
+}
+
+h2 {
+  flex: none;
+  margin: 0;
+  color: var(--legend-dim);
+  font-size: 12px;
+  font-stretch: 75%;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.summary {
+  margin: 0;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* the sequence takes the whole width, the page keys stand at the right edge */
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--gap);
+  min-height: 0;
+}
+
+.content {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 12px;
+  min-height: 0;
+}
+
+/* the memory keys, as many in a line as faders in a row */
+.keys {
+  display: grid;
+  grid-template-columns: repeat(var(--line), minmax(0, 1fr));
+  justify-items: center;
+  gap: var(--strip-gap);
+  padding: 0 var(--strip-gap);
+}
+
+/* Once and Loop belong together; Add step stands a little apart; the explanation fills the rest */
+.tools {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.group {
+  display: flex;
+  gap: var(--strip-gap);
+}
+
+.explain,
+.hint {
+  margin: 0;
+  color: var(--legend-dim);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.explain {
+  max-width: 72ch;
+}
+
+.hint {
+  align-self: start;
+  max-width: 60ch;
+  padding: 12px 14px;
+  border: 1px dashed var(--edge);
+  border-radius: 4px;
+  color: var(--legend);
+  font-size: 14px;
+}
+
+/* the table scrolls when it has more steps than the window has room for */
+.table-box {
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+table {
+  max-width: 980px;
+}
+
+/* for screen readers only */
+.for-readers {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The page keys in ONE column, from the top, as in the main view. */
+.rail {
+  display: grid;
+  grid-template-columns: var(--key-w);
+  grid-auto-rows: minmax(var(--key-min-h), var(--key-h));
+  align-content: start;
+  gap: var(--strip-gap);
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.rail [lmLamp] {
+  height: auto;
+}
+
+/* ---- mobile: the page keys lie under the title, everything is as long as it needs to be */
+:host-context(.mobile) {
+  grid-template-rows: none;
+}
+
+:host-context(.mobile) header {
+  display: block;
+}
+
+:host-context(.mobile) .summary {
+  margin-top: 6px;
+  white-space: normal;
+}
+
+:host-context(.mobile) .body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+:host-context(.mobile) .content {
+  grid-template-rows: none;
+}
+
+:host-context(.mobile) .rail {
+  order: -1;
+  grid-template-columns: repeat(var(--line), var(--strip));
+  grid-auto-rows: var(--key-h);
+  justify-content: space-between;
+  justify-items: center;
+  overflow: visible;
+}
+
+:host-context(.mobile) .tools {
+  flex-wrap: wrap;
+}
+
+/* a table of seven columns is wider than a phone: it scrolls sideways in its box */
+:host-context(.mobile) .table-box {
+  overflow-x: auto;
+  overflow-y: visible;
+}

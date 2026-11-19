@@ -110,6 +110,12 @@ internal static class Program
 
         // The same link as above: the host starts and stops it, the hub asks it for the box's state.
         services.AddHostedService(provider => provider.GetRequiredService<BoxLink>());
+
+        // Lets time pass on the desk, for the sequences and the stack.
+        services.AddHostedService(provider => new DeskClock(
+            provider.GetRequiredService<Desk>(),
+            provider.GetRequiredService<IHubContext<DeskHub, IDeskClient>>().Clients.All,
+            provider.GetRequiredService<ILogger<DeskClock>>()));
     }
 
     private static void AddHub(IServiceCollection services, AllowedOrigins origins)

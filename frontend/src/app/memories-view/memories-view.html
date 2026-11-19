@@ -11,7 +11,7 @@
           lmLamp
           type="button"
           class="number"
-          tone="memory"
+          [tone]="keyTone(memory)"
           [level]="keyLamp(memory)"
           [attr.aria-pressed]="memory === store.inspectedMemory()"
           [attr.aria-label]="'Look at memory ' + memory"

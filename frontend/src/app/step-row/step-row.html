@@ -1,0 +1,70 @@
+<ng-content select="[before]" />
+
+<td>
+  <select [attr.aria-label]="label() + ', channel or memory'" (change)="onTarget($event)">
+    <option value="channel" [selected]="step().target === 'channel'">Channel</option>
+    <option value="memory" [selected]="step().target === 'memory'">Memory</option>
+  </select>
+</td>
+<td>
+  <input
+    type="text"
+    inputmode="numeric"
+    maxlength="3"
+    autocomplete="off"
+    [value]="step().number"
+    [attr.aria-label]="label() + ', number of the ' + step().target + ', 1 to ' + highest()"
+    (change)="onNumber($event)"
+    (keydown.enter)="finish($event)"
+  />
+</td>
+<td>
+  <input
+    type="text"
+    inputmode="numeric"
+    maxlength="3"
+    autocomplete="off"
+    [value]="step().value"
+    [attr.aria-label]="label() + ', value, 0 to 255'"
+    (change)="onValue($event)"
+    (keydown.enter)="finish($event)"
+  />
+</td>
+<td>
+  <input
+    type="text"
+    inputmode="decimal"
+    maxlength="5"
+    autocomplete="off"
+    [value]="seconds(step().up)"
+    [attr.aria-label]="label() + ', up time in seconds'"
+    (change)="onTime('up', $event)"
+    (keydown.enter)="finish($event)"
+  />
+</td>
+<td>
+  <input
+    type="text"
+    inputmode="decimal"
+    maxlength="5"
+    autocomplete="off"
+    [value]="seconds(step().wait)"
+    [attr.aria-label]="label() + ', wait time in seconds'"
+    (change)="onTime('wait', $event)"
+    (keydown.enter)="finish($event)"
+  />
+</td>
+<td>
+  <input
+    type="text"
+    inputmode="decimal"
+    maxlength="5"
+    autocomplete="off"
+    [value]="seconds(step().down)"
+    [attr.aria-label]="label() + ', down time in seconds'"
+    (change)="onTime('down', $event)"
+    (keydown.enter)="finish($event)"
+  />
+</td>
+
+<ng-content select="[after]" />

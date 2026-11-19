@@ -6,6 +6,7 @@
       <lm-fader-strip
         kind="memory"
         pressable
+        [sequence]="store.memorySequence()[memory - 1]"
         [number]="memory"
         [value]="store.memoryLevels()[memory - 1]"
         [lampLevel]="lamp(memory)"

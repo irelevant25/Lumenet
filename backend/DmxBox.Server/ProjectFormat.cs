@@ -4,32 +4,39 @@ using System.Text.Json;
 namespace DmxBox.Server;
 
 /// <summary>
-/// Reads and writes project files: JSON that lists the memories that hold a look, the notes
-/// under the faders, and the channels of the independent keys.
+/// Reads and writes project files: JSON that lists the memories that hold a look or a
+/// sequence, the stack, the notes under the faders, and the channels of the independent keys.
 /// </summary>
 /// <remarks>
 /// <code>
 /// {
 ///   "format": "lumenet-project",
-///   "version": 1,
+///   "version": 2,
 ///   "memories": [
 ///     { "number": 1, "levels": { "5": 255, "6": 128 } }
 ///   ],
 ///   "channelNotes": { "5": "Front left" },
 ///   "memoryNotes": { "1": "Blue wash" },
-///   "independents": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ]
+///   "independents": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ],
+///   "sequences": [
+///     { "number": 2, "loop": true, "steps": [
+///       { "target": "channel", "number": 5, "value": 255, "up": 1, "wait": 0.5, "down": 1 } ] }
+///   ],
+///   "stack": [
+///     { "cue": "1.0", "target": "memory", "number": 1, "value": 255, "up": 2, "wait": 0, "down": 2 }
+///   ]
 /// }
 /// </code>
 /// The notes and the independents may be missing: then there are no notes, and the keys are
-/// on channels 1 to 16. That keeps the files from before these existed readable, and is why
-/// the version is still 1.
+/// on channels 1 to 16. That keeps the files from before these existed readable. Version 2
+/// added the sequences and the stack; a file of version 1 has neither, and is still read.
 /// </remarks>
 internal static class ProjectFormat
 {
     private const string FormatName = "lumenet-project";
 
     // The version this program writes, and the newest it can read.
-    private const int CurrentVersion = 1;
+    private const int CurrentVersion = 2;
 
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -54,12 +61,27 @@ internal static class ProjectFormat
             ChannelNotes = NotesThatAreNotEmpty(project.ChannelNotes),
             MemoryNotes = NotesThatAreNotEmpty(project.MemoryNotes),
             Independents = project.Independents.ToList(),
+            Sequences = [],
+            Stack = project.Stack.Select(step => FileStep(step.Step, step.Cue.ToString())).ToList(),
         };
 
         for (int index = 0; index < project.Looks.Length; index++)
         {
             if (project.Looks[index] is { } look)
                 file.Memories.Add(new ProjectFileMemory { Number = index + 1, Levels = LevelsAboveZero(look) });
+        }
+
+        for (int index = 0; index < project.Sequences.Length; index++)
+        {
+            if (project.Sequences[index] is { } sequence)
+            {
+                file.Sequences.Add(new ProjectFileSequence
+                {
+                    Number = index + 1,
+                    Loop = sequence.Loop,
+                    Steps = sequence.Steps.Select(step => FileStep(step, cue: null)).ToList(),
+                });
+            }
         }
 
         JsonSerializer.Serialize(stream, file, Options);
@@ -76,11 +98,16 @@ internal static class ProjectFormat
         ProjectFile file = Parse(stream);
         RequireFormat(file);
 
+        byte[]?[] looks = LooksOf(file);
         return new ProjectContent(
-            LooksOf(file),
+            looks,
             NotesOf(file.ChannelNotes, Desk.ChannelCount, "channel"),
             NotesOf(file.MemoryNotes, Desk.MemoryCount, "memory"),
-            IndependentsOf(file.Independents));
+            IndependentsOf(file.Independents))
+        {
+            Sequences = SequencesOf(file.Sequences, looks),
+            Stack = StackOf(file.Stack),
+        };
     }
 
     private static ProjectFile Parse(Stream stream)
@@ -226,6 +253,91 @@ internal static class ProjectFormat
         }
 
         return listed.ToArray();
+    }
+
+    // One entry per memory: its sequence, or null for a memory the file lists none for. A file
+    // from before there were sequences has no list at all.
+    private static Sequence?[] SequencesOf(List<ProjectFileSequence?>? listed, byte[]?[] looks)
+    {
+        var sequences = new Sequence?[Desk.MemoryCount];
+        foreach (ProjectFileSequence? entry in listed ?? [])
+        {
+            if (entry?.Number is not int number || number < 1 || number > Desk.MemoryCount)
+                throw Bad($"The file has a sequence without the number of its memory, from 1 to {Desk.MemoryCount}.");
+            if (sequences[number - 1] is not null || looks[number - 1] is not null)
+                throw Bad($"The file lists memory {number} twice.");
+
+            List<ProjectFileStep?> steps = entry.Steps ?? throw Bad($"The sequence of memory {number} in the file has no steps list.");
+            if (steps.Count > Sequence.MaxSteps)
+                throw Bad($"The sequence of memory {number} in the file has {steps.Count} steps; there can be {Sequence.MaxSteps}.");
+
+            string where = $"of the sequence of memory {number}";
+            sequences[number - 1] = new Sequence(
+                entry.Loop ?? false,
+                steps.Select((step, index) => StepOf(step, $"Step {index + 1} {where}")).ToArray());
+        }
+
+        return sequences;
+    }
+
+    // The steps of the stack in the order of their numbers.
+    private static ProjectStep[] StackOf(List<ProjectFileStep?>? listed)
+    {
+        var steps = new List<ProjectStep>();
+        foreach (ProjectFileStep? entry in listed ?? [])
+        {
+            string where = $"Step {entry?.Cue ?? "without a number"} of the stack";
+            CueNumber cue;
+            try
+            {
+                cue = CueNumber.Parse(entry?.Cue);
+            }
+            catch (DeskException e)
+            {
+                throw Bad($"{where} in the file cannot be used. {e.Message}");
+            }
+
+            if (steps.Any(step => step.Cue == cue))
+                throw Bad($"The file lists step {cue} of the stack twice.");
+
+            steps.Add(new ProjectStep(cue, StepOf(entry, where)));
+        }
+
+        if (steps.Count > Desk.MaxStackSteps)
+            throw Bad($"The stack in the file has {steps.Count} steps; there can be {Desk.MaxStackSteps}.");
+
+        return steps.OrderBy(step => step.Cue).ToArray();
+    }
+
+    // The same rules as for a step made on the UI, so that a file cannot bring in a step that
+    // the desk itself would refuse. "where" names the step for the message.
+    private static Step StepOf(ProjectFileStep? entry, string where)
+    {
+        if (entry is null || entry.Target is null || entry.Number is null || entry.Value is null)
+            throw Bad($"{where} in the file is not complete: it needs a target, a number and a value.");
+
+        try
+        {
+            return new Step(entry.Target, entry.Number.Value, entry.Value.Value, entry.Up ?? 0, entry.Wait ?? 0, entry.Down ?? 0).Checked();
+        }
+        catch (DeskException e)
+        {
+            throw Bad($"{where} in the file cannot be used. {e.Message}");
+        }
+    }
+
+    private static ProjectFileStep FileStep(Step step, string? cue)
+    {
+        return new ProjectFileStep
+        {
+            Cue = cue,
+            Target = step.Target,
+            Number = step.Number,
+            Value = step.Value,
+            Up = step.Up,
+            Wait = step.Wait,
+            Down = step.Down,
+        };
     }
 
     // Channel number and level of every channel that is not at 0.

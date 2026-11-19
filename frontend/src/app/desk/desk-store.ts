@@ -12,10 +12,15 @@ import {
   MOBILE_BELOW_WIDTH_PX,
   MemoryLooks,
   PHONE_BELOW_PX,
+  Playback,
   ProjectInfo,
   ProjectList,
   STRIPS_PER_ROW_MEDIUM,
   STRIPS_PER_ROW_WIDE,
+  Sequence,
+  Sequences,
+  StackState,
+  TimedStep,
   Welcome,
   pageStart,
 } from './desk-types';
@@ -35,6 +40,13 @@ const SEND_DELAY_MS = 15;
 /** How long a notice stays in the top bar. */
 const NOTICE_MS = 5000;
 
+/** Nothing runs: no sequence gives anything, and no step of the stack is on. */
+const NO_PLAYBACK: Playback = {
+  levels: [],
+  sequenceSteps: {},
+  stack: { currentId: null, nextId: null, state: 'idle', paused: false, remaining: 0 },
+};
+
 /**
  * The state of the desk as this page sees it, and everything the page can do with it.
  *
@@ -53,6 +65,16 @@ export class DeskStore {
   readonly memoryLooks = signal<MemoryLooks>({});
   /** False while the looks could not be fetched: a desk program from before the page knew them. */
   readonly memoryLooksKnown = signal(false);
+  /** Whether what each memory holds is a sequence (and not a look). */
+  readonly memorySequence = signal<readonly boolean[]>(allFalse(MEMORY_COUNT));
+  /** The sequences, by the number of the memory that holds each. */
+  readonly sequences = signal<Sequences>({});
+  /** The one stack of the project. */
+  readonly stack = signal<StackState>({ steps: [] });
+  /** What changes with time: what the running sequences give, and where the stack stands. */
+  readonly playback = signal<Playback>(NO_PLAYBACK);
+  /** False while the desk program is one from before sequences and the stack. */
+  readonly playbackKnown = signal(false);
   /** The notes under the faders, like tape labels on a desk. An empty text means no note. */
   readonly channelNotes = signal<readonly string[]>(noNotes(CHANNEL_COUNT));
   readonly memoryNotes = signal<readonly string[]>(noNotes(MEMORY_COUNT));
@@ -66,8 +88,9 @@ export class DeskStore {
 
   /**
    * What each channel fader shows: its own level, or what the memories whose faders are up
-   * give the channel, whichever is higher. The backend works out the output the same way,
-   * before the master.
+   * give the channel, whichever is higher. A look gives a fixed level; a running sequence
+   * gives what the backend reports from moment to moment. The backend works out the output
+   * the same way, before the master.
    */
   readonly shownChannels = computed<readonly number[]>(() => {
     const own = this.channels();
@@ -81,6 +104,14 @@ export class DeskStore {
       for (let index = 0; index < look.length; index++) {
         const part = Math.floor((look[index] * level + 127) / MAX_LEVEL); // rounded like the backend does
         if (part > shown[index]) shown[index] = part;
+      }
+    }
+
+    const running = this.playback().levels;
+    for (let index = 0; index < running.length; index++) {
+      if (running[index] > (shown ?? own)[index]) {
+        shown ??= own.slice();
+        shown[index] = running[index];
       }
     }
     return shown ?? own;
@@ -144,6 +175,8 @@ export class DeskStore {
     connection.on<[DeskState]>('DeskChanged', (desk) => this.takeDesk(desk));
     connection.on<[BoxStatus]>('BoxChanged', (box) => this.box.set(box));
     connection.on<[ProjectInfo]>('ProjectChanged', (project) => this.project.set(project));
+    connection.on<[StackState]>('StackChanged', (stack) => this.stack.set(stack));
+    connection.on<[Playback]>('PlaybackChanged', (playback) => this.playback.set(playback));
 
     connection.whenConnected(() => void this.refresh());
     connection.start();
@@ -240,6 +273,61 @@ export class DeskStore {
 
   pressMemory(memory: number): void {
     this.follow(pressMemory(this.mode(), memory, this.memoryStored()[memory - 1]));
+  }
+
+  // ---------------------------------------------------------------- sequences
+
+  /** Stores a sequence in a memory that is empty or holds a sequence already. */
+  setSequence(memory: number, sequence: Sequence): void {
+    this.sequences.update((all) => ({ ...all, [memory]: sequence }));
+    this.memoryStored.update((flags) => withItem(flags, memory - 1, true));
+    this.memorySequence.update((flags) => withItem(flags, memory - 1, true));
+    this.run('SetSequence', memory, sequence.loop, sequence.steps);
+  }
+
+  // ---------------------------------------------------------------- the stack
+  // The backend keeps the steps in order and gives them their numbers. After every change it
+  // sends the whole stack to every page, this one included.
+
+  addStackStep(step: TimedStep): void {
+    this.run('AddStackStep', step);
+  }
+
+  updateStackStep(id: number, step: TimedStep): void {
+    this.stack.update((stack) => ({
+      steps: stack.steps.map((old) => (old.id === id ? { ...old, ...step } : old)),
+    }));
+    this.run('UpdateStackStep', id, step);
+  }
+
+  deleteStackStep(id: number): void {
+    this.run('DeleteStackStep', id);
+  }
+
+  /** Puts a step right after another one; `null` puts it at the very top. It gets a new number there. */
+  moveStackStep(id: number, afterId: number | null): void {
+    this.run('MoveStackStep', id, afterId);
+  }
+
+  /** Gives a step the number typed for it, for example "3" or "2.1". */
+  renumberStackStep(id: number, cue: string): void {
+    this.run('RenumberStackStep', id, cue);
+  }
+
+  stackPlay(): void {
+    this.run('StackPlay');
+  }
+
+  stackPause(): void {
+    this.run('StackPause');
+  }
+
+  stackNext(): void {
+    this.run('StackNext');
+  }
+
+  stackPrevious(): void {
+    this.run('StackPrevious');
   }
 
   // ---------------------------------------------------------------- projects
@@ -374,6 +462,7 @@ export class DeskStore {
     this.channels.set(desk.channels);
     this.memoryLevels.set(desk.memoryLevels);
     this.memoryStored.set(desk.memoryStored);
+    this.memorySequence.set(desk.memorySequence ?? allFalse(MEMORY_COUNT));
     // An older desk program does not know notes or independent keys and leaves them out.
     // Then the page keeps what it has, instead of falling back to empty notes and keys 1 to 16.
     if (desk.channelNotes) this.channelNotes.set(desk.channelNotes);
@@ -382,8 +471,29 @@ export class DeskStore {
     this.master.set(desk.master);
     this.blackout.set(desk.blackout);
     // The whole desk comes when a memory was stored, copied or emptied, or a project loaded:
-    // exactly when a look may be another one.
+    // exactly when a look, a sequence or the stack may be another one.
     void this.fetchMemoryLooks();
+    void this.fetchSequencesAndStack();
+  }
+
+  private async fetchSequencesAndStack(): Promise<void> {
+    try {
+      const [sequences, stack, playback] = await Promise.all([
+        this.connection.invoke<Sequences | undefined>('GetSequences'),
+        this.connection.invoke<StackState | undefined>('GetStack'),
+        this.connection.invoke<Playback | undefined>('GetPlayback'),
+      ]);
+      this.sequences.set(sequences ?? {});
+      this.stack.set(stack ?? { steps: [] });
+      this.playback.set(playback ?? NO_PLAYBACK);
+      this.playbackKnown.set(true);
+    } catch {
+      // An older desk program knows neither sequences nor the stack. The two views say so.
+      this.sequences.set({});
+      this.stack.set({ steps: [] });
+      this.playback.set(NO_PLAYBACK);
+      this.playbackKnown.set(false);
+    }
   }
 
   private async fetchMemoryLooks(): Promise<void> {

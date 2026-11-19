@@ -51,6 +51,11 @@ internal sealed class LanAccess : IDisposable
     // Wrong passwords within a minute: from one device, and from all devices together. The second
     // limit holds a guesser that keeps taking new addresses, which is easy with IPv6. With it,
     // trying every password would take more than two years.
+    //
+    // The price, chosen knowingly: someone in the network who sends wrong passwords on purpose
+    // keeps the door shut for new devices, the right password included (letting the right one
+    // through would tell a guesser when it has found it). It shuts nothing else: a device that
+    // got in before keeps its cookie and is never asked again, and this PC needs no password.
     private const int WrongPasswordsPerMinute = 5;
     private const int WrongPasswordsPerMinuteFromAll = 20;
     private static readonly TimeSpan WrongPasswordWindow = TimeSpan.FromMinutes(1);

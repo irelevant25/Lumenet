@@ -565,7 +565,9 @@ limits are in `frontend/src/app/desk/desk-types.ts`, and only there.
   Delete that file for a new password; every phone then has to give the new one.
 * A phone is remembered by a cookie that holds a long random key, not the password, so the cookie cannot be
   guessed. Guessing the password is slowed down instead: after 5 wrong passwords within a minute a device
-  has to wait, and after 20 from all devices together every device has to wait.
+  has to wait, and after 20 from all devices together every device has to wait. So someone in the network
+  who keeps sending wrong passwords can stop a new phone from getting in; a phone that got in before is not
+  asked again, and the PC never needs the password.
 * The first time the desk program starts after this change, Windows asks whether `DmxBox.Server` may use the
   network. Allow it for **private** networks only. If that window was closed with "Cancel", Windows blocks the
   program; then allow it under Windows Security, Firewall, "Allow an app through firewall".

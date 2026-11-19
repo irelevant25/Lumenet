@@ -21,8 +21,12 @@ namespace DmxBox.Server;
 /// </para>
 /// <para>
 /// While LAN is on, a device first gets a page that asks for the password. The right one
-/// gives it a cookie with the password, so that it is asked once only. The password is made
-/// once and kept in a file, so a device that knows it gets in again after the next start.
+/// gives it a cookie, so that it is asked once only. The cookie is not the password but a
+/// random key of 256 bits: a cookie can be sent as often as one likes, so it must be nothing
+/// that can be guessed. Guessing the password itself is held up by a limit of wrong passwords
+/// per device and one for all devices together. The password and the key are made once and
+/// kept in a file, so a device that knows them gets in again after the next start; deleting
+/// the file makes a new password and shuts every device out.
 /// </para>
 /// <para>Thread-safe.</para>
 /// </remarks>
@@ -41,8 +45,14 @@ internal sealed class LanAccess : IDisposable
     // no 0 and O, no 1, I and L.
     private const string PasswordCharacters = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
-    // Wrong passwords a device may give within a minute. More than that is guessing.
+    // The key in the cookie: 32 random bytes, written as 64 hexadecimal digits.
+    private const int CookieKeyBytes = 32;
+
+    // Wrong passwords within a minute: from one device, and from all devices together. The second
+    // limit holds a guesser that keeps taking new addresses, which is easy with IPv6. With it,
+    // trying every password would take more than two years.
     private const int WrongPasswordsPerMinute = 5;
+    private const int WrongPasswordsPerMinuteFromAll = 20;
     private static readonly TimeSpan WrongPasswordWindow = TimeSpan.FromMinutes(1);
 
     private readonly ThisPc _pc;
@@ -56,11 +66,13 @@ internal sealed class LanAccess : IDisposable
     // The hub connections of other devices, so that they can be cut off when LAN goes off.
     private readonly ConcurrentDictionary<string, HubCallerContext> _devices = new();
 
-    // The wrong passwords of each device: since when it has been counted, and how many.
+    // The wrong passwords of each device, and of all together: since when counted, and how many.
     private readonly Dictionary<IPAddress, (DateTimeOffset Since, int Count)> _wrong = [];
+    private (DateTimeOffset Since, int Count) _wrongFromAll;
 
     private bool _on;
     private string? _password;
+    private string? _cookieKey;
 
     /// <summary>Puts it together. LAN starts off.</summary>
     /// <param name="pc">This PC: which connections come from it, and its addresses in the network.</param>
@@ -123,6 +135,19 @@ internal sealed class LanAccess : IDisposable
         }
     }
 
+    /// <summary>What the cookie of a device that gave the right password holds: a random key, not the password.</summary>
+    public string CookieValue
+    {
+        get
+        {
+            lock (_lock)
+            {
+                Load();
+                return _cookieKey!;
+            }
+        }
+    }
+
     /// <summary>True if a connection from this address comes from this PC itself.</summary>
     /// <param name="remote">The address of the other end; null when it is not known.</param>
     public bool IsLocal(IPAddress? remote)
@@ -167,8 +192,8 @@ internal sealed class LanAccess : IDisposable
     }
 
     /// <summary>
-    /// A device sent a password. A device that has sent too many wrong ones within a minute
-    /// gets <see cref="Answer.TooMany"/> until the minute is over.
+    /// A device sent a password. Once a device has sent too many wrong ones within a minute, or
+    /// all devices together have, it gets <see cref="Answer.TooMany"/> until the minute is over.
     /// </summary>
     /// <param name="remote">The device's address.</param>
     /// <param name="typed">What it sent. Spaces, dashes and lower case do not matter.</param>
@@ -178,11 +203,9 @@ internal sealed class LanAccess : IDisposable
         lock (_lock)
         {
             DateTimeOffset now = _time.GetUtcNow();
-            (DateTimeOffset Since, int Count) wrong = _wrong.GetValueOrDefault(device);
-            if (wrong.Count > 0 && now - wrong.Since >= WrongPasswordWindow)
-                wrong = default;
-
-            if (wrong.Count >= WrongPasswordsPerMinute)
+            (DateTimeOffset Since, int Count) wrong = Current(_wrong.GetValueOrDefault(device), now);
+            _wrongFromAll = Current(_wrongFromAll, now);
+            if (wrong.Count >= WrongPasswordsPerMinute || _wrongFromAll.Count >= WrongPasswordsPerMinuteFromAll)
                 return Answer.TooMany;
 
             if (Matches(Normalize(typed), PasswordLocked()))
@@ -191,7 +214,9 @@ internal sealed class LanAccess : IDisposable
                 return Answer.Welcome;
             }
 
-            _wrong[device] = wrong.Count == 0 ? (now, 1) : (wrong.Since, wrong.Count + 1);
+            ForgetOldTries(now);
+            _wrong[device] = OneMore(wrong, now);
+            _wrongFromAll = OneMore(_wrongFromAll, now);
             return Answer.Wrong;
         }
     }
@@ -205,7 +230,8 @@ internal sealed class LanAccess : IDisposable
 
         lock (_lock)
         {
-            return Matches(cookie, PasswordLocked());
+            Load();
+            return Matches(cookie, _cookieKey!);
         }
     }
 
@@ -283,29 +309,47 @@ internal sealed class LanAccess : IDisposable
     // Call with the lock held.
     private string PasswordLocked()
     {
-        _password ??= ReadPassword() ?? KeepPassword(NewPassword());
-        return _password;
+        Load();
+        return _password!;
     }
 
-    private string? ReadPassword()
+    // Call with the lock held. Reads the password and the cookie key from their file, the first
+    // time they are needed. What is missing is made new and kept; a new password always comes
+    // with a new key, so that the devices that knew the old one are out.
+    private void Load()
+    {
+        if (_password is not null)
+            return;
+
+        string[] lines = ReadLines();
+        string? password = lines.Length > 0 && IsPassword(lines[0]) ? lines[0] : null;
+        string? key = password is not null && lines.Length > 1 && IsCookieKey(lines[1]) ? lines[1] : null;
+        _password = password ?? NewPassword();
+        _cookieKey = key ?? Convert.ToHexString(RandomNumberGenerator.GetBytes(CookieKeyBytes));
+        if (password is null || key is null)
+            Keep();
+    }
+
+    private string[] ReadLines()
     {
         try
         {
-            string text = File.ReadAllText(_passwordFile).Trim();
-            return text.Length == PasswordLength && text.All(PasswordCharacters.Contains) ? text : null;
+            return File.ReadAllLines(_passwordFile).Select(line => line.Trim()).ToArray();
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            return null;   // no file yet, or one that cannot be read: a new password is made
+            return [];   // no file yet, or one that cannot be read: a new password is made
         }
     }
 
-    private string KeepPassword(string password)
+    // Call with the lock held. The password on the first line, for a person who looks into the
+    // file; the key on the second.
+    private void Keep()
     {
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_passwordFile)!);
-            File.WriteAllText(_passwordFile, password + Environment.NewLine);
+            File.WriteAllLines(_passwordFile, [_password!, _cookieKey!]);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
@@ -314,8 +358,16 @@ internal sealed class LanAccess : IDisposable
                 _passwordFile,
                 e.Message);
         }
+    }
 
-        return password;
+    private static bool IsPassword(string text)
+    {
+        return text.Length == PasswordLength && text.All(PasswordCharacters.Contains);
+    }
+
+    private static bool IsCookieKey(string text)
+    {
+        return text.Length == CookieKeyBytes * 2 && text.All(Uri.IsHexDigit);
     }
 
     private static string NewPassword()
@@ -325,6 +377,28 @@ internal sealed class LanAccess : IDisposable
             characters[index] = PasswordCharacters[RandomNumberGenerator.GetInt32(PasswordCharacters.Length)];
 
         return new string(characters);
+    }
+
+    // A count of wrong passwords that is older than its minute starts again from nothing.
+    private static (DateTimeOffset Since, int Count) Current((DateTimeOffset Since, int Count) wrong, DateTimeOffset now)
+    {
+        return wrong.Count > 0 && now - wrong.Since >= WrongPasswordWindow ? default : wrong;
+    }
+
+    private static (DateTimeOffset Since, int Count) OneMore((DateTimeOffset Since, int Count) wrong, DateTimeOffset now)
+    {
+        return wrong.Count == 0 ? (now, 1) : (wrong.Since, wrong.Count + 1);
+    }
+
+    // Call with the lock held. A guesser with ever new addresses must not fill the memory: the
+    // counts whose minute is over go.
+    private void ForgetOldTries(DateTimeOffset now)
+    {
+        if (_wrong.Count < 1000)
+            return;
+
+        foreach (IPAddress device in _wrong.Where(entry => now - entry.Value.Since >= WrongPasswordWindow).Select(entry => entry.Key).ToArray())
+            _wrong.Remove(device);
     }
 
     // What a person types: upper case, without spaces and dashes.

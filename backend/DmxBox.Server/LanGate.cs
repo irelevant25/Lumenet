@@ -68,7 +68,7 @@ internal static class LanGate
         switch (lan.LogIn(remote, form["password"].ToString()))
         {
             case LanAccess.Answer.Welcome:
-                context.Response.Cookies.Append(LanAccess.CookieName, lan.Password, new CookieOptions
+                context.Response.Cookies.Append(LanAccess.CookieName, lan.CookieValue, new CookieOptions
                 {
                     HttpOnly = true,                 // the pages' scripts never see it
                     SameSite = SameSiteMode.Strict,  // and no other site's page can send it along
@@ -120,11 +120,17 @@ internal static class LanGate
     }
 
     // Where to go after the password: a path on this server, nothing else. "//other.example"
-    // would lead to another site.
+    // would lead to another site, and so would "/\other.example" and "/<tab>/other.example":
+    // browsers read a backslash as a slash and drop tabs and line breaks from an address. So a
+    // backslash, a control character or anything else that is not a plain address sends the
+    // device to the start page instead.
     private static string SafeBack(string back)
     {
-        bool onThisServer = back.StartsWith('/') && !back.StartsWith("//", StringComparison.Ordinal)
-            && !back.StartsWith("/\\", StringComparison.Ordinal);
+        bool onThisServer = back.StartsWith('/')
+            && !back.StartsWith("//", StringComparison.Ordinal)
+            && !back.Contains('\\')
+            && !back.Any(char.IsControl)
+            && Uri.IsWellFormedUriString(back, UriKind.Relative);
         return onThisServer ? back : "/";
     }
 }

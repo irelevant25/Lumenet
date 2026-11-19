@@ -88,9 +88,12 @@ public sealed class LanTests
         Assert.Equal(HttpStatusCode.SeeOther, answer.StatusCode);
         Assert.Equal("/stack", answer.Headers.Location?.OriginalString);
         string setCookie = Assert.Single(answer.Headers.GetValues("Set-Cookie"));
-        Assert.Contains("lumenet-lan=", setCookie);
         Assert.Contains("httponly", setCookie, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("samesite=strict", setCookie, StringComparison.OrdinalIgnoreCase);
+
+        // The cookie holds a random key of 256 bits, not the password.
+        Assert.Matches("^lumenet-lan=[0-9A-F]{64};", setCookie);
+        Assert.DoesNotContain(server.Lan.Password, setCookie);
 
         Assert.Equal(HttpStatusCode.OK, (await phone.GetAsync("/api/health")).StatusCode);
         await using HubClient ui = await server.ConnectAsync(cookies);
@@ -121,6 +124,41 @@ public sealed class LanTests
     }
 
     [Fact]
+    public async Task WrongPasswordsFromManyAddressesAreCountedTogetherToo()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        string wrong = server.Lan.Password == "AAAAA" ? "BBBBB" : "AAAAA";
+
+        // A guesser that takes a new address for every try, which is easy with IPv6.
+        for (int device = 1; device <= 20; device++)
+            Assert.Equal(LanAccess.Answer.Wrong, server.Lan.LogIn(IPAddress.Parse($"fd00::{device}"), wrong));
+
+        Assert.Equal(LanAccess.Answer.TooMany, server.Lan.LogIn(IPAddress.Parse("fd00::99"), server.Lan.Password));
+    }
+
+    [Fact]
+    public async Task CookieCannotBeGuessedFromThePassword()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        server.Lan.Switch(true);
+        server.Pc.LoopbackIsAnotherDevice = true;
+        using HttpClient phone = server.CreateHttpClient();
+
+        // A cookie can be sent without limit, so it must not be the password, which is short.
+        foreach ((string cookie, HttpStatusCode expected) in new[]
+        {
+            (server.Lan.Password, HttpStatusCode.Unauthorized),
+            (server.Lan.CookieValue, HttpStatusCode.OK),
+        })
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, "/api/health");
+            request.Headers.Add("Cookie", $"{LanAccess.CookieName}={cookie}");
+            using HttpResponseMessage response = await phone.SendAsync(request);
+            Assert.Equal(expected, response.StatusCode);
+        }
+    }
+
+    [Fact]
     public async Task AfterThePasswordTheDeviceOnlyGoesToAPageOfThisServer()
     {
         await using TestServer server = await TestServer.StartAsync();
@@ -128,11 +166,20 @@ public sealed class LanTests
         server.Pc.LoopbackIsAnotherDevice = true;
         using HttpClient phone = server.CreateBrowser(new CookieContainer());
 
-        foreach (string elsewhere in new[] { "//evil.example/", "/\\evil.example", "http://evil.example/", "" })
+        // Browsers read a backslash as a slash and drop tabs and line breaks from an address.
+        string[] elsewhere =
+        [
+            "//evil.example/", "/\\evil.example", "/a\\..\\\\evil.example", "http://evil.example/", "",
+            "/\t/evil.example", "/\n/evil.example", "/\r\n/evil.example", " //evil.example",
+        ];
+        foreach (string back in elsewhere)
         {
-            using HttpResponseMessage answer = await LogInAsync(phone, server.Lan.Password, elsewhere);
+            using HttpResponseMessage answer = await LogInAsync(phone, server.Lan.Password, back);
             Assert.Equal("/", answer.Headers.Location?.OriginalString);
         }
+
+        using HttpResponseMessage kept = await LogInAsync(phone, server.Lan.Password, "/stack?view=1");
+        Assert.Equal("/stack?view=1", kept.Headers.Location?.OriginalString);
     }
 
     [Fact]
@@ -230,15 +277,27 @@ public sealed class LanTests
         try
         {
             string password;
+            string cookie;
             await using (TestServer first = await TestServer.StartAsync($"--Lan:PasswordFile={file}"))
             {
                 password = first.Lan.Password;
+                cookie = first.Lan.CookieValue;
                 Assert.Matches("^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{5}$", password);
-                Assert.Equal(password, File.ReadAllText(file).Trim());
+                Assert.Equal([password, cookie], File.ReadAllLines(file));
             }
 
-            await using TestServer second = await TestServer.StartAsync($"--Lan:PasswordFile={file}");
-            Assert.Equal(password, second.Lan.Password);
+            // A phone that got in before gets in again, with the same cookie.
+            await using (TestServer second = await TestServer.StartAsync($"--Lan:PasswordFile={file}"))
+            {
+                Assert.Equal(password, second.Lan.Password);
+                Assert.Equal(cookie, second.Lan.CookieValue);
+            }
+
+            // A file without a valid password makes a new password and a new cookie key: every phone is out.
+            File.WriteAllLines(file, ["no", cookie]);
+            await using TestServer third = await TestServer.StartAsync($"--Lan:PasswordFile={file}");
+            Assert.NotEqual(password, third.Lan.Password);
+            Assert.NotEqual(cookie, third.Lan.CookieValue);
         }
         finally
         {

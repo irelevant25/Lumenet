@@ -562,7 +562,10 @@ limits are in `frontend/src/app/desk/desk-types.ts`, and only there.
   has no LAN key.
 * The password has 5 letters and digits (no 0, O, 1, I or L, which are easily mixed up). It is made once and
   kept in `%LOCALAPPDATA%\Lumenet\lan-password.txt`, so a phone that knows it gets in again next time.
-  Delete that file for a new password. After 5 wrong passwords within a minute a device has to wait.
+  Delete that file for a new password; every phone then has to give the new one.
+* A phone is remembered by a cookie that holds a long random key, not the password, so the cookie cannot be
+  guessed. Guessing the password is slowed down instead: after 5 wrong passwords within a minute a device
+  has to wait, and after 20 from all devices together every device has to wait.
 * The first time the desk program starts after this change, Windows asks whether `DmxBox.Server` may use the
   network. Allow it for **private** networks only. If that window was closed with "Cancel", Windows blocks the
   program; then allow it under Windows Security, Firewall, "Allow an app through firewall".
@@ -591,7 +594,7 @@ page cannot move a light. In the small-screen layout the mouse wheel scrolls the
   to the pages listed in `Server:AllowedOrigins`, plus the page the backend hands out itself. With `Urls` set
   to `http://localhost:5080` the desk stays on this PC for good.
 
-**Tests:** `dotnet test backend/DmxBox.sln` (301 tests: the client, the desk, sequences and the stack with a
+**Tests:** `dotnet test backend/DmxBox.sln` (303 tests: the client, the desk, sequences and the stack with a
 clock the tests set by hand, project files, the link to the box, the hub, LAN with a pretend PC and a
 pretend phone), and in `frontend/`: `npm test -- --watch=false` (55 tests of the page).
 
@@ -704,9 +707,10 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
   the parts list, not from measuring the parts. **Nothing has been soldered after this plan yet.**
 * **Lumenet on small screens (2026-11-19):** the layout was looked at in Chrome at seven window sizes, from
   320 × 568 to 1920 × 1080, with an emulated finger and with the mouse.
-* **LAN (2026-11-19):** the backend passes 301 tests and the page 55. The tests play a phone over this PC's
-  own connection: refused while LAN is off, asked for the password, let in with the cookie, cut off when LAN
-  goes off, stopped after 5 wrong passwords. On a test copy that listened on this PC only, the LAN key, the
+* **LAN (2026-11-19):** the backend passes 303 tests and the page 55. The tests play a phone over this PC's
+  own connection: refused while LAN is off, asked for the password, let in with the cookie (and not with the
+  password as a cookie), cut off when LAN goes off, stopped after 5 wrong passwords, and all devices stopped
+  after 20. On a test copy that listened on this PC only, the LAN key, the
   line with the address and the password, and the built page handed out by the backend (also under /stack,
   at phone size) were looked at in Chrome. **Not yet tried with a real phone**, and the Windows firewall
   question for `DmxBox.Server` has not been answered yet.

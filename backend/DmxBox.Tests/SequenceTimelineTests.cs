@@ -79,6 +79,58 @@ public sealed class SequenceTimelineTests
     }
 
     [Fact]
+    public void AtRandomEveryRoundPlaysEveryStepOnceInAnOrderOfItsOwn()
+    {
+        Step[] steps = Enumerable.Range(1, 6).Select(number => new Step("channel", number, 255, 0, 1, 0)).ToArray();
+        var sequence = new Sequence(Loop: false, steps) { Random = true };   // at random it loops anyway
+
+        var orders = new List<string>();
+        for (int round = 0; round < 20; round++)
+        {
+            int[] order = SequenceTimeline.OrderOf(sequence, seed: 42, round);
+            Assert.Equal([0, 1, 2, 3, 4, 5], order.Order());   // every step once
+            orders.Add(string.Join(",", order));
+
+            // What plays in the round is that order: one second per step here.
+            for (int place = 0; place < 6; place++)
+                Assert.Equal(order[place], SequenceTimeline.CurrentStep(sequence, round * 6 + place + 0.5, seed: 42));
+        }
+
+        Assert.True(orders.Distinct().Count() > 10, string.Join(" | ", orders));   // the rounds differ
+        Assert.True(SequenceTimeline.StillMoves(sequence, 1_000_000));
+        Assert.Equal(orders, Enumerable.Range(0, 20).Select(round => string.Join(",", SequenceTimeline.OrderOf(sequence, 42, round))));   // the same every time it is asked
+        Assert.NotEqual(orders[0], string.Join(",", SequenceTimeline.OrderOf(sequence, seed: 7, 0)));   // another start, other orders
+    }
+
+    [Fact]
+    public void AtRandomTwoRoundsNeverMeetWithTheSameStep()
+    {
+        Step[] steps = Enumerable.Range(1, 3).Select(number => new Step("channel", number, 255, 0, 1, 0)).ToArray();
+        var sequence = new Sequence(Loop: true, steps) { Random = true };
+
+        for (int seed = 0; seed < 200; seed++)
+        {
+            for (int round = 1; round < 10; round++)
+                Assert.NotEqual(SequenceTimeline.OrderOf(sequence, seed, round - 1)[^1], SequenceTimeline.OrderOf(sequence, seed, round)[0]);
+        }
+    }
+
+    [Fact]
+    public void AtRandomTheLastStepOfARoundGoesDownWhileTheNextRoundBegins()
+    {
+        var step = new Step("channel", 1, 255, Up: 1, Wait: 1, Down: 1);
+        var sequence = new Sequence(Loop: true, [step, step with { Number = 2 }, step with { Number = 3 }]) { Random = true };
+        int last = SequenceTimeline.OrderOf(sequence, seed: 5, round: 0)[^1];
+        int first = SequenceTimeline.OrderOf(sequence, seed: 5, round: 1)[0];
+
+        // One round takes 6 s. Half a second into the second round:
+        double[] fractions = SequenceTimeline.Fractions(sequence, 6.5, seed: 5);
+        Assert.Equal(0.5, fractions[last], precision: 6);    // half way down
+        Assert.Equal(0.5, fractions[first], precision: 6);   // half way up
+        Assert.Equal(0, fractions.Where((_, index) => index != last && index != first).Single(), precision: 6);
+    }
+
+    [Fact]
     public void SequenceWithoutStepsGivesNothing()
     {
         var empty = new Sequence(Loop: true, []);

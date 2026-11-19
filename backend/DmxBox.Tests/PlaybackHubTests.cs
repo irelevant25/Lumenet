@@ -18,7 +18,7 @@ public sealed class PlaybackHubTests
         Assert.Empty((await ui.InvokeAsync("GetSequences")).EnumerateObject());
 
         var step = new { target = "channel", number = 5, value = 200, up = 1.5, wait = 0, down = 2 };
-        await ui.InvokeAsync("SetSequence", 7, true, new[] { step });
+        await ui.InvokeAsync("SetSequence", 7, new { loop = true, random = true, speed = 1.5, steps = new[] { step } });
 
         HubMessage message = await ui.NextMessageAsync();
         Assert.Equal("DeskChanged", message.Name);
@@ -27,8 +27,31 @@ public sealed class PlaybackHubTests
 
         JsonElement sequences = await ui.InvokeAsync("GetSequences");
         Assert.Equal(
-            """{"7":{"loop":true,"steps":[{"target":"channel","number":5,"value":200,"up":1.5,"wait":0,"down":2}]}}""",
+            """{"7":{"loop":true,"steps":[{"target":"channel","number":5,"value":200,"up":1.5,"wait":0,"down":2}],"random":true,"speed":1.5}}""",
             sequences.GetRawText());
+    }
+
+    [Fact]
+    public async Task SpeedOfASequenceIsChangedLikeAFaderAndTheOtherUisHearOfIt()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient mover = await server.ConnectAsync();
+        await using HubClient watcher = await server.ConnectAsync();
+        var step = new { target = "channel", number = 5, value = 200, up = 1, wait = 0, down = 1 };
+        await mover.InvokeAsync("SetSequence", 7, new { loop = true, steps = new[] { step } });
+
+        await mover.InvokeAsync("SetSequenceSpeed", 7, 2.33);
+
+        HubMessage message = await watcher.NextMessageAsync();
+        while (message.Name != "SequenceSpeedChanged")
+            message = await watcher.NextMessageAsync();
+        Assert.Equal("[7,2.35]", JsonSerializer.Serialize(message.Arguments));   // in steps of 0.05
+        Assert.Equal(2.35, (await watcher.InvokeAsync("GetSequences")).GetProperty("7").GetProperty("speed").GetDouble());
+
+        var tooFast = await Assert.ThrowsAsync<HubCallException>(() => mover.InvokeAsync("SetSequenceSpeed", 7, 11));
+        Assert.Contains("The speed of a sequence must be from 0.1 to 10, not 11.", tooFast.Message);
+        var noSequence = await Assert.ThrowsAsync<HubCallException>(() => mover.InvokeAsync("SetSequenceSpeed", 8, 2));
+        Assert.Contains("Memory 8 holds no sequence.", noSequence.Message);
     }
 
     [Fact]
@@ -235,7 +258,11 @@ public sealed class PlaybackHubTests
         var desk = new Desk();
         desk.SetChannel(1, 50);
         desk.SaveMemory(1);
-        desk.SetSequence(2, loop: true, [new Step("memory", 1, 255, 0.5, 1, 2), new Step("channel", 9, 10, 0, 0, 0)]);
+        desk.SetSequence(2, new Sequence(Loop: true, [new Step("memory", 1, 255, 0.5, 1, 2), new Step("channel", 9, 10, 0, 0, 0)])
+        {
+            Random = true,
+            Speed = 0.35,
+        });
         desk.AddStackStep(new Step("channel", 3, 255, 1, 2, 3));
         int second = desk.AddStackStep(new Step("memory", 2, 128, 0, 0, 0));
         desk.RenumberStackStep(second, "0.5");
@@ -249,6 +276,8 @@ public sealed class PlaybackHubTests
         loaded.ReplaceProject(read);
         Assert.Equal(desk.GetSequences()[2].Steps, loaded.GetSequences()[2].Steps);
         Assert.True(loaded.GetSequences()[2].Loop);
+        Assert.True(loaded.GetSequences()[2].Random);
+        Assert.Equal(0.35, loaded.GetSequences()[2].Speed);
         Assert.Equal(["0.5", "1.0"], loaded.GetStack().Steps.Select(step => step.Cue));
         Assert.Equal("memory", loaded.GetStack().Steps[0].Target);
         Assert.Equal(3, loaded.GetStack().Steps[1].Down);
@@ -264,6 +293,8 @@ public sealed class PlaybackHubTests
             """);
 
         Assert.Equal([true, false, true], read.Sequences.Take(3).Select(sequence => sequence!.Loop));
+        Assert.All(read.Sequences.Take(3), sequence => Assert.False(sequence!.Random));   // nor at random,
+        Assert.All(read.Sequences.Take(3), sequence => Assert.Equal(1, sequence!.Speed));  // and at speed 1
     }
 
     [Fact]
@@ -281,6 +312,7 @@ public sealed class PlaybackHubTests
     [InlineData("""  "sequences": [ { "number": 200, "steps": [] } ]  """, "from 1 to 128")]
     [InlineData("""  "sequences": [ { "number": 5 } ]  """, "has no steps list")]
     [InlineData("""  "sequences": [ { "number": 5, "steps": [ { "target": "channel", "number": 600, "value": 1 } ] } ]  """, "Step 1 of the sequence of memory 5")]
+    [InlineData("""  "sequences": [ { "number": 5, "speed": 0.05, "steps": [] } ]  """, "The speed of a sequence must be from 0.1 to 10")]
     [InlineData("""  "stack": [ { "cue": "1.0", "target": "channel", "number": 1, "value": 1 }, { "cue": "1", "target": "channel", "number": 2, "value": 1 } ]  """, "step 1.0 of the stack twice")]
     [InlineData("""  "stack": [ { "cue": "first", "target": "channel", "number": 1, "value": 1 } ]  """, "looks like 3 or 2.1")]
     [InlineData("""  "stack": [ { "cue": "1.0", "target": "channel", "number": 1 } ]  """, "is not complete")]
@@ -329,6 +361,8 @@ public sealed class PlaybackHubTests
         public Task ProjectChanged(ProjectInfo project) => throw new NotSupportedException();
 
         public Task StackChanged(StackState stack) => throw new NotSupportedException();
+
+        public Task SequenceSpeedChanged(int memory, double speed) => throw new NotSupportedException();
 
         public Task LanAccessChanged(LanState lan) => throw new NotSupportedException();
 

@@ -1,0 +1,111 @@
+/* The element takes no room in the view: only the window it opens is ever seen. The window
+   looks like the one for projects. */
+:host {
+  display: contents;
+}
+
+dialog {
+  width: min(560px, calc(100vw - 40px));
+  padding: 0;
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  background: var(--panel-raised);
+  color: var(--legend);
+  user-select: text;
+}
+
+dialog::backdrop {
+  background: rgb(0 0 0 / 60%);
+}
+
+form {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+}
+
+h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+/* the five templates as keys; in this window a key is as wide as its word */
+.templates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--strip-gap);
+}
+
+.templates [lmLamp] {
+  width: auto;
+  min-width: calc(var(--key-w) * 1.5);
+  padding: 0 10px;
+}
+
+.about,
+.hint {
+  margin: 0;
+  color: var(--legend-dim);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.about {
+  min-height: 2.7em; /* two lines, so that the window does not jump between the templates */
+  color: var(--legend);
+}
+
+/* the labels in a column, the fields beside them */
+.fields {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 8px 12px;
+}
+
+label {
+  color: var(--legend-dim);
+  font-size: 13px;
+}
+
+.lights {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px;
+}
+
+input,
+select {
+  box-sizing: border-box;
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: var(--well);
+  color: var(--legend);
+  font: inherit;
+  font-size: 15px;
+}
+
+.fields > input {
+  max-width: 120px;
+}
+
+select {
+  cursor: pointer;
+}
+
+.error {
+  margin: 0;
+  color: #ff8f87;
+}
+
+/* the same square keys as on the desk */
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--strip-gap);
+  margin-top: 4px;
+}

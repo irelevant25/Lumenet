@@ -20,7 +20,7 @@ namespace DmxBox.Server;
 ///   "independents": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ],
 ///   "memoryIndependents": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ],
 ///   "sequences": [
-///     { "number": 2, "loop": true, "steps": [
+///     { "number": 2, "loop": true, "random": false, "speed": 1, "steps": [
 ///       { "target": "channel", "number": 5, "value": 255, "up": 1, "wait": 0.5, "down": 1 } ] }
 ///   ],
 ///   "stack": [
@@ -31,7 +31,8 @@ namespace DmxBox.Server;
 /// The notes and the independents may be missing: then there are no notes, and the keys are
 /// on channels 1 to 10 and memories 1 to 10. That keeps the files from before these existed
 /// readable. Version 2 added the sequences and the stack; a file of version 1 has neither, and
-/// is still read. A sequence that does not say whether it loops is played in a loop. Version 3
+/// is still read. A sequence that does not say whether it loops is played in a loop, one that
+/// does not say "random" in turn, and one without a speed at speed 1. Version 3
 /// has 10 keys for channels and 10 for memories among the independents; versions 1 and 2 had
 /// 16 keys for channels, of which the first 10 are used.
 /// </remarks>
@@ -87,6 +88,8 @@ internal static class ProjectFormat
                 {
                     Number = index + 1,
                     Loop = sequence.Loop,
+                    Random = sequence.Random,
+                    Speed = sequence.Speed,
                     Steps = sequence.Steps.Select(step => FileStep(step, cue: null)).ToList<ProjectFileStep?>(),
                 });
             }
@@ -307,10 +310,27 @@ internal static class ProjectFormat
             string where = $"of the sequence of memory {number}";
             sequences[number - 1] = new Sequence(
                 entry.Loop ?? Sequence.DefaultLoop,
-                steps.Select((step, index) => StepOf(step, $"Step {index + 1} {where}")).ToArray());
+                steps.Select((step, index) => StepOf(step, $"Step {index + 1} {where}")).ToArray())
+            {
+                Random = entry.Random ?? false,
+                Speed = SpeedOf(entry.Speed, number),
+            };
         }
 
         return sequences;
+    }
+
+    // The same rules as for a speed set on the UI. A file that does not say means 1.
+    private static double SpeedOf(double? speed, int memory)
+    {
+        try
+        {
+            return Sequence.CheckedSpeed(speed ?? 1);
+        }
+        catch (DeskException e)
+        {
+            throw Bad($"The sequence of memory {memory} in the file cannot be used. {e.Message}");
+        }
     }
 
     // The steps of the stack in the order of their numbers.

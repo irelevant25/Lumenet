@@ -92,10 +92,19 @@ export interface Sequence {
   /** True: after the last step it starts again. False: it runs once and stays on the last step. */
   loop: boolean;
   steps: TimedStep[];
+  /** True: in a loop, but every round plays the steps in a new random order. Missing means false. */
+  random?: boolean;
+  /** How fast it is played, 0.1 to 10: every time is divided by it. Missing means 1. */
+  speed?: number;
 }
 
 /** How a new sequence is played until its owner says otherwise: in a loop. The backend starts one the same way. */
 export const DEFAULT_LOOP = true;
+
+/** The speed of a sequence: from a tenth to ten times, in steps of 0.05. */
+export const MIN_SPEED = 0.1;
+export const MAX_SPEED = 10;
+export const SPEED_STEP = 0.05;
 
 /** The sequences, by the number of the memory that holds each. */
 export type Sequences = Readonly<Record<number, Sequence>>;

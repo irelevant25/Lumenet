@@ -19,7 +19,8 @@ const WHEEL_STEP = 5;
 const PAGE_STEP = 16;
 
 /**
- * A fader: a cap that slides in a slot, from 0 at the bottom (or left) to 255.
+ * A fader: a cap that slides in a slot, from 0 at the bottom (or left) to 255, or to another
+ * top that the owner names.
  *
  * - Drag the cap, or press anywhere in the slot to bring the cap there.
  * - A finger must take the cap: a touch beside it does nothing. On a phone the faders cover
@@ -37,8 +38,9 @@ const PAGE_STEP = 16;
     role: 'slider',
     tabindex: '0',
     'aria-valuemin': '0',
-    'aria-valuemax': '255',
+    '[attr.aria-valuemax]': 'max()',
     '[attr.aria-valuenow]': 'value()',
+    '[attr.aria-valuetext]': 'valueText()',
     '[attr.aria-label]': 'label()',
     '[attr.aria-orientation]': 'orientation()',
     '[class]': 'hostClass()',
@@ -69,6 +71,15 @@ export class Fader {
   readonly label = input.required<string>();
   readonly tone = input<LampTone>('channel');
   readonly orientation = input<'vertical' | 'horizontal'>('vertical');
+  /** The top of the scale. A level fader goes to 255; another scale, like the speed of a sequence, names its own. */
+  readonly max = input(MAX_LEVEL);
+  /** How far an arrow key or a notch of the wheel moves the fader. Shift with the wheel moves it by 1. */
+  readonly step = input(1);
+  /** What a screen reader says for the value, when the number itself means nothing to a person, like "1.50 times". */
+  readonly valueText = input<string | null>(null);
+
+  /** Page Up and Page Down: 16 levels on a level fader, four steps on another scale. */
+  private readonly pageStep = computed(() => (this.step() === 1 ? PAGE_STEP : this.step() * 4));
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly cap = viewChild.required<ElementRef<HTMLElement>>('cap');
@@ -79,10 +90,10 @@ export class Fader {
   private grabOffset = 0;
   private readonly dragging = signal(false);
 
-  protected readonly fraction = computed(() => this.value() / MAX_LEVEL);
+  protected readonly fraction = computed(() => this.value() / this.max());
   /** Where the fader's own part of the lit slot ends: at the cap, unless something holds the fader higher. */
   protected readonly ownFraction = computed(
-    () => Math.min(this.ownLevel() ?? this.value(), this.value()) / MAX_LEVEL,
+    () => Math.min(this.ownLevel() ?? this.value(), this.value()) / this.max(),
   );
 
   protected readonly hostClass = computed(() => {
@@ -140,7 +151,7 @@ export class Fader {
     const turn = event.deltaY !== 0 ? event.deltaY : event.deltaX;
     if (turn === 0) return;
 
-    const step = event.shiftKey ? 1 : WHEEL_STEP;
+    const step = event.shiftKey ? 1 : this.step() === 1 ? WHEEL_STEP : this.step();
     this.nudge(turn < 0 ? step : -step);
   }
 
@@ -156,18 +167,18 @@ export class Fader {
     switch (key) {
       case 'ArrowUp':
       case 'ArrowRight':
-        return this.own() + 1;
+        return this.own() + this.step();
       case 'ArrowDown':
       case 'ArrowLeft':
-        return this.own() - 1;
+        return this.own() - this.step();
       case 'PageUp':
-        return this.own() + PAGE_STEP;
+        return this.own() + this.pageStep();
       case 'PageDown':
-        return this.own() - PAGE_STEP;
+        return this.own() - this.pageStep();
       case 'Home':
         return 0;
       case 'End':
-        return MAX_LEVEL;
+        return this.max();
       default:
         return null;
     }
@@ -188,7 +199,7 @@ export class Fader {
   private readonly own = linkedSignal(() => this.ownLevel() ?? this.value());
 
   private setLevel(level: number): void {
-    const wanted = Math.min(MAX_LEVEL, Math.max(0, Math.round(level)));
+    const wanted = Math.min(this.max(), Math.max(0, Math.round(level)));
     if (wanted === this.own()) return;
 
     this.own.set(wanted);
@@ -217,6 +228,6 @@ export class Fader {
 
     const middle = this.positionOf(event) - this.grabOffset;
     const fromZeroEnd = vertical ? slot.bottom - middle : middle - slot.left;
-    this.setLevel(((fromZeroEnd - capLength / 2) / travel) * MAX_LEVEL);
+    this.setLevel(((fromZeroEnd - capLength / 2) / travel) * this.max());
   }
 }

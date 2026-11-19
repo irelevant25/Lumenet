@@ -51,7 +51,7 @@ public sealed record Step(string Target, int Number, int Value, double Up, doubl
     {
         // "Not a number" fails both comparisons, so it is refused as well.
         if (!(time >= 0 && time <= MaxSeconds))
-            throw new DeskException($"The {which} time of a step must be from 0 to {MaxSeconds} seconds.");
+            throw new DeskException(FormattableString.Invariant($"The {which} time of a step must be from 0 to {MaxSeconds} seconds."));
 
         return Math.Round(time, 1);
     }

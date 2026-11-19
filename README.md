@@ -505,8 +505,23 @@ it gives in red.
 * Choose a memory with the keys along the top; the two lines of its note stand under each. Add step puts
   in a step like the last one, on the next channel or memory. Every change goes to the desk at once. Rec
   seq in the main view is the other way to put in steps: by pressing keys.
-* **Once** or **Loop:** played once, the last step stays on; in a loop the first step follows the last.
-  A new sequence is played in a loop until you choose Once.
+* **Once**, **Loop** or **Random:** played once, the last step stays on; in a loop the first step follows
+  the last. Random loops too, but plays all steps on every round in a new order, so that a few steps never
+  look like a loop (the same step never comes twice in a row between two rounds). A new sequence is played
+  in a loop until you choose another.
+* **Speed:** a lying fader above the table, with 1× in the middle: to the left down to 0.1× (ten times
+  slower), to the right up to 10× (ten times faster), in steps of 0.05. It divides every time of the
+  sequence, so 2× plays it twice as fast. A running sequence goes on from where it is; it does not start
+  again. The 1× key puts it back. The arrow keys move it by 0.05 left of the middle and by 0.5 right of it.
+  The speed is kept with the sequence in the project.
+* **Template** fills the sequence from a pattern, for the lights you name (channels like `1, 2` or `1-4`,
+  or memories). The steps it makes replace the old ones and can be changed in the table like any others.
+  * **Fire:** every light flickers on its own between Low and High, now and then a dip, played at random.
+    It looks best over a glow: set the faders of those lights to about 80.
+  * **Chase:** one light after the other. **Wave:** each light swells and fades in turn; a single light
+    breathes. **Strobe:** short flashes, light after light. For several lights at once, name a memory
+    that holds them.
+  * **Storm:** strikes and faint flickers out of the dark, with pauses between, at random.
 * A wait of 0 means the next step starts as soon as this one is up.
 * A step that stands for a memory plays that memory's look. A memory that holds a sequence itself gives
   nothing there: sequences are not played inside sequences. So the list for a memory step offers only the
@@ -599,9 +614,9 @@ page cannot move a light. In the small-screen layout the mouse wheel scrolls the
   to the pages listed in `Server:AllowedOrigins`, plus the page the backend hands out itself. With `Urls` set
   to `http://localhost:5080` the desk stays on this PC for good.
 
-**Tests:** `dotnet test backend/DmxBox.sln` (306 tests: the client, the desk, sequences and the stack with a
+**Tests:** `dotnet test backend/DmxBox.sln` (315 tests: the client, the desk, sequences and the stack with a
 clock the tests set by hand, project files, the link to the box, the hub, LAN with a pretend PC and a
-pretend phone), and in `frontend/`: `npm test -- --watch=false` (59 tests of the page).
+pretend phone), and in `frontend/`: `npm test -- --watch=false` (69 tests of the page).
 
 ---
 ## 5. The DX protocol (UDP 7000)
@@ -712,6 +727,11 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
   the parts list, not from measuring the parts. **Nothing has been soldered after this plan yet.**
 * **Lumenet on small screens (2026-11-19):** the layout was looked at in Chrome at seven window sizes, from
   320 × 568 to 1920 × 1080, with an emulated finger and with the mouse.
+* **Templates, random order and speed (2026-11-19):** the backend passes 315 tests and the page 69. On a
+  test copy without a box a Fire template on channels 1 and 2 was made and run: the two channels flickered
+  each on its own (about 20 different levels each in 2 seconds), the running step was marked in the table
+  in random order too, and the speed fader dragged with the mouse gave 5.80× and 0.50× without restarting
+  the sequence. Not yet used by the owner, and not with a light.
 * **Independents with memory keys (2026-11-19):** the backend passes 306 tests and the page 59. On a test copy
   without a box the new main layout (master and record in one column, the twenty independents at the right
   edge) and the notes under the memory keys of the Memories and Sequences views were looked at in Chrome at

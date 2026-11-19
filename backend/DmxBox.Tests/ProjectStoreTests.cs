@@ -108,6 +108,8 @@ public sealed class ProjectStoreTests : IDisposable
                 {
                   "number": 7,
                   "loop": true,
+                  "random": false,
+                  "speed": 1,
                   "steps": [
                     {
                       "target": "channel",

@@ -1,0 +1,89 @@
+<dialog #dialog aria-labelledby="template-dialog-title">
+  <form (submit)="make($event)">
+    <h2 id="template-dialog-title">Template for memory {{ memory() }}</h2>
+
+    <div class="templates" role="group" aria-label="Template">
+      @for (template of templates; track template.name) {
+        <button
+          lmLamp
+          type="button"
+          tone="system"
+          [level]="template.name === name() ? 3 : 1"
+          [attr.aria-pressed]="template.name === name()"
+          (click)="choose(template.name)"
+        >
+          {{ template.label }}
+        </button>
+      }
+    </div>
+    <p class="about">{{ info().about }}</p>
+
+    <div class="fields">
+      <label for="template-target">Lights</label>
+      <div class="lights">
+        <select id="template-target" aria-label="Channels or memories" (change)="onTarget($event)">
+          <option value="channel" [selected]="target() === 'channel'">Channels</option>
+          <option value="memory" [selected]="target() === 'memory'">Memories</option>
+        </select>
+        <input
+          type="text"
+          autocomplete="off"
+          spellcheck="false"
+          aria-label="Numbers of the lights, like 1, 2 or 1-4"
+          placeholder="1, 2 or 1-4"
+          [value]="numbers()"
+          (input)="onNumbers($event)"
+        />
+      </div>
+
+      @if (info().usesLow) {
+        <label for="template-low">Low</label>
+        <input
+          id="template-low"
+          type="text"
+          inputmode="numeric"
+          maxlength="3"
+          autocomplete="off"
+          [value]="low()"
+          (change)="onLevel('low', $event)"
+        />
+      }
+
+      <label for="template-high">High</label>
+      <input
+        id="template-high"
+        type="text"
+        inputmode="numeric"
+        maxlength="3"
+        autocomplete="off"
+        [value]="high()"
+        (change)="onLevel('high', $event)"
+      />
+
+      <label for="template-time">{{ info().timeLabel }}</label>
+      <input
+        id="template-time"
+        type="text"
+        inputmode="decimal"
+        maxlength="4"
+        autocomplete="off"
+        [value]="time()"
+        (change)="onTime($event)"
+      />
+    </div>
+
+    @if (replacing() > 0) {
+      <p class="hint">This replaces the {{ replacing() }} steps of memory {{ memory() }}.</p>
+    }
+    <p class="hint">Fire and Storm look best over a glow: set the faders of those lights to about 80.</p>
+
+    @if (error()) {
+      <p class="error" role="alert">{{ error() }}</p>
+    }
+
+    <div class="actions">
+      <button lmLamp type="button" tone="system" (click)="close()">Cancel</button>
+      <button lmLamp type="submit" tone="system" aria-label="Make the steps" [level]="3">Make</button>
+    </div>
+  </form>
+</dialog>

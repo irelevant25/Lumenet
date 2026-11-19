@@ -474,6 +474,7 @@ public sealed class DeskStackTests
             () => _desk.CopyMemory(1, 4),
             () => _desk.DeleteMemory(1),
             () => _desk.SetSequence(2, loop: false, []),
+            () => _desk.SetSequenceSpeed(2, 2),
             () => _desk.AddSequenceStep(2, aStep),
             () => _desk.AddSequenceStep(5, aStep),
             () => _desk.SetChannelNote(1, "Front"),

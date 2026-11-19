@@ -59,6 +59,12 @@ internal sealed class ProjectFileSequence
     /// <summary>True to start again after the last step, false to play once. A file that does not say means a loop.</summary>
     public bool? Loop { get; set; }
 
+    /// <summary>True for a new random order on every round. A file that does not say means in turn.</summary>
+    public bool? Random { get; set; }
+
+    /// <summary>How fast it is played, 0.1 to 10. A file that does not say means 1.</summary>
+    public double? Speed { get; set; }
+
     /// <summary>The steps, the first one first. They have no <see cref="ProjectFileStep.Cue"/>.</summary>
     public List<ProjectFileStep?>? Steps { get; set; }
 }

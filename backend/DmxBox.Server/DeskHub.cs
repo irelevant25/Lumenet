@@ -201,12 +201,27 @@ internal sealed class DeskHub : Hub<IDeskClient>
 
     /// <summary>Stores a sequence in a memory that is empty or holds a sequence already.</summary>
     /// <param name="memory">Memory number, 1-128.</param>
-    /// <param name="loop">True to start again after the last step, false to play once.</param>
-    /// <param name="steps">The steps, the first one first.</param>
-    public Task SetSequence(int memory, bool loop, Step[] steps)
+    /// <param name="sequence">
+    /// The sequence: "loop", "random" (a new order on every round), "speed" (0.1 to 10) and the
+    /// steps, the first one first.
+    /// </param>
+    public Task SetSequence(int memory, Sequence sequence)
     {
-        _desk.SetSequence(memory, loop, steps);
+        _desk.SetSequence(memory, sequence);
         return TellDeskAsync();
+    }
+
+    /// <summary>
+    /// Changes how fast the sequence of a memory is played, without starting it again. The UI
+    /// moves its speed fader this way, like a fader: the other UIs hear of it, this one does not.
+    /// </summary>
+    /// <param name="memory">Memory number, 1-128.</param>
+    /// <param name="speed">From 0.1 to 10.</param>
+    public async Task SetSequenceSpeed(int memory, double speed)
+    {
+        double kept = _desk.SetSequenceSpeed(memory, speed);
+        await Clients.Others.SequenceSpeedChanged(memory, kept);
+        await TellProjectAsync();
     }
 
     /// <summary>

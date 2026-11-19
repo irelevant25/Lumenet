@@ -19,6 +19,16 @@ import {
 import { IDLE } from './desk/function-mode';
 import { NOTE_LINE_SEPARATOR } from './desk/notes';
 
+// The test browser (jsdom) has no modal windows. A window of the page only gets its "open" mark here.
+if (typeof HTMLDialogElement.prototype.showModal !== 'function') {
+  HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
+    this.open = true;
+  };
+  HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
+    this.open = false;
+  };
+}
+
 /** Stands in for the connection to the backend: answers "Hello" and remembers what the page sent. */
 class FakeConnection {
   readonly online = signal(false);
@@ -795,8 +805,7 @@ describe('the desk page', () => {
     await fixture.whenStable();
     expect(connection.last('SetSequence')).toEqual([
       3,
-      false,
-      [step(5, 200), step(6, 150, { wait: 0 })],
+      { loop: false, random: false, speed: 1, steps: [step(5, 200), step(6, 150, { wait: 0 })] },
     ]);
 
     // a time: a comma is taken, the text is shown with one digit, nonsense is put back
@@ -819,7 +828,7 @@ describe('the desk page', () => {
 
     await press(button('Loop'));
     expect(store.sequences()[3].loop).toBe(true);
-    expect(connection.last('SetSequence')?.[1]).toBe(true);
+    expect((connection.last('SetSequence')?.[1] as Sequence).loop).toBe(true);
 
     await press(button('Move step 3 up'));
     expect(store.sequences()[3].steps.map((item) => item.number)).toEqual([5, 7, 6]);
@@ -840,8 +849,98 @@ describe('the desk page', () => {
     await press(button('Work on memory 9'));
     expect(button('Loop').getAttribute('aria-pressed')).toBe('true'); // what a new sequence will be
     await press(button('Add a step'));
-    expect(connection.last('SetSequence')).toEqual([9, true, [step(1, 255)]]);
+    expect(connection.last('SetSequence')).toEqual([9, { loop: true, random: false, speed: 1, steps: [step(1, 255)] }]);
     expect(store.memorySequence()[8]).toBe(true);
+  });
+
+  it('random plays a sequence in a new order every round', async () => {
+    await show('/sequences');
+    await press(button('Work on memory 3'));
+    expect(button('Once').getAttribute('aria-pressed')).toBe('true');
+
+    await press(button('Random'));
+    expect(button('Random').getAttribute('aria-pressed')).toBe('true');
+    expect(button('Loop').getAttribute('aria-pressed')).toBe('false');
+    expect(connection.last('SetSequence')?.[1]).toEqual(
+      expect.objectContaining({ loop: true, random: true }),
+    );
+    expect(page.querySelector('.summary')?.textContent).toContain('played in a random order');
+
+    await press(button('Once'));
+    expect(connection.last('SetSequence')?.[1]).toEqual(expect.objectContaining({ loop: false, random: false }));
+  });
+
+  it('the speed fader makes a sequence faster or slower without starting it again', async () => {
+    await show('/sequences');
+    await press(button('Work on memory 3'));
+    const fader = page.querySelector<HTMLElement>('lm-fader[aria-label="Speed of the sequence"]');
+    if (!fader) throw new Error('no speed fader');
+    expect(fader.getAttribute('aria-valuetext')).toBe('1.00 times');
+    expect(page.querySelector('.speed-value')?.textContent?.trim()).toBe('1.00×');
+    expect(button('Normal speed').disabled).toBe(true);
+
+    // right of the middle: faster, in steps of 0.5 with the keys
+    fader.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    await fixture.whenStable();
+    expect(store.sequences()[3].speed).toBe(1.5);
+    expect(page.querySelector('.speed-value')?.textContent?.trim()).toBe('1.50×');
+    await new Promise((resolve) => setTimeout(resolve, 40)); // sent like a fader move, a moment later
+    expect(connection.last('SetSequenceSpeed')).toEqual([3, 1.5]);
+    expect(connection.methods()).not.toContain('SetSequence'); // the steps stay as they are
+
+    // left of the middle: slower, in steps of 0.05
+    await press(button('Normal speed'));
+    fader.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+    await fixture.whenStable();
+    expect(store.sequences()[3].speed).toBe(0.95);
+    fader.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home' }));
+    await fixture.whenStable();
+    expect(store.sequences()[3].speed).toBe(0.1);
+    fader.dispatchEvent(new KeyboardEvent('keydown', { key: 'End' }));
+    await fixture.whenStable();
+    expect(store.sequences()[3].speed).toBe(10);
+
+    // another page changes it: this one follows
+    connection.emit('SequenceSpeedChanged', 3, 2.25);
+    await fixture.whenStable();
+    expect(page.querySelector('.speed-value')?.textContent?.trim()).toBe('2.25×');
+    expect(page.querySelector('.summary')?.textContent).toContain('at 2.25× speed');
+  });
+
+  it('a template fills the sequence of the memory with steps that can be changed afterwards', async () => {
+    await show('/sequences');
+    await press(button('Work on memory 9'));
+    await press(button('Make the steps from a template'));
+    const dialog = page.querySelector('lm-template-dialog dialog');
+    expect(dialog?.querySelector('h2')?.textContent).toContain('memory 9');
+    expect(button('Fire').getAttribute('aria-pressed')).toBe('true');
+
+    // lights that do not exist are refused with a word why
+    const numbers = page.querySelector<HTMLInputElement>('input[aria-label="Numbers of the lights, like 1, 2 or 1-4"]');
+    if (!numbers) throw new Error('no field for the lights');
+    numbers.value = '1, 600';
+    numbers.dispatchEvent(new Event('input'));
+    await press(button('Make the steps'));
+    expect(page.querySelector('lm-template-dialog .error')?.textContent).toContain('from 1 to 512');
+    expect(connection.methods()).not.toContain('SetSequence');
+
+    numbers.value = '1, 2';
+    numbers.dispatchEvent(new Event('input'));
+    await press(button('Make the steps'));
+    const made = connection.last('SetSequence') as [number, Sequence];
+    expect(made[0]).toBe(9);
+    expect(made[1].random).toBe(true);
+    expect(made[1].steps.length).toBe(16);
+    expect(page.querySelectorAll('lm-sequences-view table.steps tbody tr').length).toBe(16);
+    expect(page.querySelector('.summary')?.textContent).toContain('16 steps, played in a random order');
+
+    // another template over it: a chase of the two lights, in turn
+    await press(button('Make the steps from a template'));
+    expect(page.querySelector('lm-template-dialog .hint')?.textContent).toContain('replaces the 16 steps of memory 9');
+    await press(button('Chase'));
+    await press(button('Make the steps'));
+    expect((connection.last('SetSequence')?.[1] as Sequence).steps.map((item) => item.number)).toEqual([1, 2]);
+    expect(button('Loop').getAttribute('aria-pressed')).toBe('true');
   });
 
   it('the number of a step is chosen from a list that shows the notes under the faders', async () => {
@@ -877,7 +976,10 @@ describe('the desk page', () => {
     second.value = '70';
     second.dispatchEvent(new Event('change'));
     await fixture.whenStable();
-    expect(connection.last('SetSequence')).toEqual([3, false, [step(5, 200), step(70, 100, { wait: 0 })]]);
+    expect(connection.last('SetSequence')).toEqual([
+      3,
+      { loop: false, random: false, speed: 1, steps: [step(5, 200), step(70, 100, { wait: 0 })] },
+    ]);
 
     // another row takes the list over
     numberOf(0)?.dispatchEvent(new Event('focus'));

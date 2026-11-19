@@ -8,12 +8,18 @@ internal sealed partial class Desk
     // The sequence stored in each memory. Null where the memory holds a look or nothing.
     private readonly Sequence?[] _sequences = new Sequence?[MemoryCount];
 
-    // When the fader of each memory last left zero, in desk seconds: the start of its sequence.
+    // When the sequence of each memory started, in desk seconds, as if it had always run at the
+    // speed it has now: then the time of the sequence is (now - start) x speed. A change of the
+    // speed moves this, so that the sequence goes on from where it is.
     private readonly double[] _sequenceStarts = new double[MemoryCount];
 
+    // The seed of each start, which chooses the orders of a sequence played at random: every
+    // start plays other orders.
+    private readonly int[] _sequenceSeeds = new int[MemoryCount];
+
     /// <summary>
-    /// Stores a sequence in a memory that is empty or holds a sequence already. If the memory's
-    /// fader is up, the sequence starts from its first step.
+    /// Stores a sequence in a memory that is empty or holds a sequence already, played in turn
+    /// and at its own speed. See <see cref="SetSequence(int, Sequence?)"/>.
     /// </summary>
     /// <param name="memory">Memory number, 1-128.</param>
     /// <param name="loop">True to start again after the last step, false to play once.</param>
@@ -21,19 +27,71 @@ internal sealed partial class Desk
     /// <exception cref="DeskException">The memory holds a look, a step is out of range, or the stack is live.</exception>
     public void SetSequence(int memory, bool loop, Step[]? steps)
     {
+        SetSequence(memory, new Sequence(loop, steps!));
+    }
+
+    /// <summary>
+    /// Stores a sequence in a memory that is empty or holds a sequence already: its steps, and
+    /// how it is played. If the memory's fader is up, the sequence starts from its first step.
+    /// </summary>
+    /// <param name="memory">Memory number, 1-128.</param>
+    /// <param name="sequence">The sequence: at most 99 steps (none at all is allowed: such a sequence gives nothing), and a speed from 0.1 to 10.</param>
+    /// <exception cref="DeskException">
+    /// The memory holds a look, a step or the speed is out of range, or the stack is live.
+    /// </exception>
+    public void SetSequence(int memory, Sequence? sequence)
+    {
         RequireMemory(memory);
-        steps ??= [];
+        if (sequence is null)
+            throw new DeskException("The sequence is missing.");
+
+        Step[] steps = sequence.Steps ?? [];
         if (steps.Length > Sequence.MaxSteps)
             throw TooManySteps();
 
-        Step[] checkedSteps = Array.ConvertAll(steps, step => (step ?? throw new DeskException("A step is missing.")).Checked());
+        Sequence checkedSequence = sequence with
+        {
+            Steps = Array.ConvertAll(steps, step => (step ?? throw new DeskException("A step is missing.")).Checked()),
+            Speed = Sequence.CheckedSpeed(sequence.Speed),
+        };
 
         lock (_lock)
         {
             RequireUnlocked();
             RequireNoLook(memory);
-            StoreSequence(memory, new Sequence(loop, checkedSteps));
+            StoreSequence(memory, checkedSequence);
             CountLookChange();
+        }
+    }
+
+    /// <summary>
+    /// Changes how fast the sequence of a memory is played. A sequence that runs goes on from
+    /// where it is, at the new speed: it does not start again.
+    /// </summary>
+    /// <param name="memory">Memory number, 1-128.</param>
+    /// <param name="speed">From 0.1 (ten times slower) to 10 (ten times faster); 1 plays the times as they are.</param>
+    /// <returns>The speed as the desk keeps it, in steps of 0.05.</returns>
+    /// <exception cref="DeskException">The memory holds no sequence, the speed is out of range, or the stack is live.</exception>
+    public double SetSequenceSpeed(int memory, double speed)
+    {
+        RequireMemory(memory);
+        double checkedSpeed = Sequence.CheckedSpeed(speed);
+
+        lock (_lock)
+        {
+            RequireUnlocked();
+            Sequence sequence = _sequences[memory - 1] ?? throw new DeskException($"Memory {memory} holds no sequence.");
+            if (sequence.Speed == checkedSpeed)
+                return checkedSpeed;
+
+            // The sequence stands where it stands; from here on its time runs at the new speed.
+            double now = Now;
+            double elapsed = SequenceTime(memory - 1, now);
+            _sequences[memory - 1] = sequence with { Speed = checkedSpeed };
+            _sequenceStarts[memory - 1] = now - elapsed / checkedSpeed;
+            _projectChanges++;
+            _outputChanges++;
+            return checkedSpeed;
         }
     }
 
@@ -87,7 +145,22 @@ internal sealed partial class Desk
     private void StoreSequence(int memory, Sequence sequence)
     {
         _sequences[memory - 1] = sequence;
-        _sequenceStarts[memory - 1] = Now;
+        StartSequence(memory - 1);
+    }
+
+    // Call with the lock held. The sequence of the memory at "index" starts now, with new
+    // random orders if it is played at random.
+    private void StartSequence(int index)
+    {
+        _sequenceStarts[index] = Now;
+        _sequenceSeeds[index] = System.Random.Shared.Next();
+    }
+
+    // Call with the lock held. The time of the sequence at "index": seconds since its start,
+    // counted at its speed.
+    private double SequenceTime(int index, double now)
+    {
+        return (now - _sequenceStarts[index]) * (_sequences[index]?.Speed ?? 1);
     }
 
     // Call with the lock held. A look is not turned into a sequence unasked: its owner empties
@@ -108,7 +181,7 @@ internal sealed partial class Desk
     private void MoveMemoryFader(int memory, byte level)
     {
         if (_memoryLevels[memory - 1] == 0 && level > 0)
-            _sequenceStarts[memory - 1] = Now;
+            StartSequence(memory - 1);
 
         _memoryLevels[memory - 1] = level;
     }
@@ -123,12 +196,13 @@ internal sealed partial class Desk
             if (fader == 0 || _sequences[index] is not { Steps.Length: > 0 } sequence)
                 continue;
 
-            double elapsed = now - _sequenceStarts[index];
-            double[] fractions = SequenceTimeline.Fractions(sequence, elapsed);
+            double elapsed = SequenceTime(index, now);
+            int seed = _sequenceSeeds[index];
+            double[] fractions = SequenceTimeline.Fractions(sequence, elapsed, seed);
             for (int step = 0; step < fractions.Length; step++)
                 AddStep(levels, sequence.Steps[step], fractions[step], fader);
 
-            stepsOn?.Add(index + 1, SequenceTimeline.CurrentStep(sequence, elapsed) + 1);
+            stepsOn?.Add(index + 1, SequenceTimeline.CurrentStep(sequence, elapsed, seed) + 1);
         }
     }
 
@@ -163,7 +237,7 @@ internal sealed partial class Desk
         for (int index = 0; index < MemoryCount; index++)
         {
             if (_memoryLevels[index] > 0 && _sequences[index] is { } sequence
-                && SequenceTimeline.StillMoves(sequence, now - _sequenceStarts[index]))
+                && SequenceTimeline.StillMoves(sequence, SequenceTime(index, now)))
             {
                 return true;
             }

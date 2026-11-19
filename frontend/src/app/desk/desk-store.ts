@@ -227,6 +227,9 @@ export class DeskStore {
     connection.on<[StackState]>('StackChanged', (stack) => this.stack.set(stack));
     connection.on<[Playback]>('PlaybackChanged', (playback) => this.takePlayback(playback));
     connection.on<[LanAccess]>('LanAccessChanged', (lan) => this.lan.set(lan));
+    connection.on<[number, number]>('SequenceSpeedChanged', (memory, speed) =>
+      this.sequences.update((all) => (all[memory] ? { ...all, [memory]: { ...all[memory], speed } } : all)),
+    );
 
     connection.whenConnected(() => void this.refresh());
     connection.start();
@@ -352,11 +355,31 @@ export class DeskStore {
 
   // ---------------------------------------------------------------- sequences
 
-  /** Stores a sequence in a memory that is empty or holds a sequence already. */
+  /**
+   * Stores a sequence in a memory that is empty or holds a sequence already: its steps, and
+   * how it is played. A sequence that runs starts again from its first step.
+   */
   setSequence(memory: number, sequence: Sequence): void {
-    this.sequences.update((all) => ({ ...all, [memory]: sequence }));
+    const whole: Sequence = {
+      loop: sequence.loop,
+      random: sequence.random ?? false,
+      speed: sequence.speed ?? 1,
+      steps: sequence.steps,
+    };
+    this.sequences.update((all) => ({ ...all, [memory]: whole }));
     this.markStored(memory, 'sequence');
-    this.run('SetSequence', memory, sequence.loop, sequence.steps);
+    this.run('SetSequence', memory, whole);
+  }
+
+  /**
+   * Changes how fast the sequence of a memory is played. It goes on from where it is. The
+   * speed fader sends its moves like any fader: collected for a moment, the newest only.
+   */
+  setSequenceSpeed(memory: number, speed: number): void {
+    const old = this.sequences()[memory];
+    if (!old || (old.speed ?? 1) === speed) return;
+    this.sequences.update((all) => ({ ...all, [memory]: { ...old, speed } }));
+    this.sendSoon(`speed ${memory}`, 'SetSequenceSpeed', memory, speed);
   }
 
   /**
@@ -371,7 +394,8 @@ export class DeskStore {
       return;
     }
 
-    const sequence: Sequence = { loop: old?.loop ?? DEFAULT_LOOP, steps: [...(old?.steps ?? []), step] };
+    // How it is played stays as it was; a new sequence loops, in turn, at speed 1.
+    const sequence: Sequence = old ? { ...old, steps: [...old.steps, step] } : { loop: DEFAULT_LOOP, steps: [step] };
     this.sequences.update((all) => ({ ...all, [memory]: sequence }));
     this.markStored(memory, 'sequence');
     this.run('AddSequenceStep', memory, step);

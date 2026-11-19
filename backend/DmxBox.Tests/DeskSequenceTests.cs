@@ -153,6 +153,76 @@ public sealed class DeskSequenceTests
     }
 
     [Fact]
+    public void SpeedMakesEveryTimeOfTheSequenceShorterOrLonger()
+    {
+        var step = new Step("channel", 5, 200, Up: 2, Wait: 0, Down: 0);
+        _desk.SetSequence(2, new Sequence(Loop: false, [step]) { Speed = 2 });
+        _desk.SetMemoryLevel(2, 255);
+
+        _time.Pass(0.5);
+        Assert.Equal(100, _desk.GetOutput()[4]);     // at speed 2 the two seconds up take one
+        _time.Pass(0.5);
+        Assert.Equal(200, _desk.GetOutput()[4]);
+
+        _desk.SetSequence(3, new Sequence(Loop: false, [step with { Number = 6 }]) { Speed = 0.5 });
+        _desk.SetMemoryLevel(3, 255);
+        _time.Pass(2);
+        Assert.Equal(100, _desk.GetOutput()[5]);     // at half speed they take four
+    }
+
+    [Fact]
+    public void ChangingTheSpeedGoesOnFromWhereTheSequenceIs()
+    {
+        _desk.SetSequence(2, loop: false, [new Step("channel", 5, 200, Up: 4, Wait: 0, Down: 0)]);
+        _desk.SetMemoryLevel(2, 255);
+        _time.Pass(1);
+        Assert.Equal(50, _desk.GetOutput()[4]);      // a quarter of the way up
+
+        Assert.Equal(3, _desk.SetSequenceSpeed(2, 3));
+
+        Assert.Equal(50, _desk.GetOutput()[4]);      // no jump: it does not start again either
+        _time.Pass(0.5);
+        Assert.Equal(125, _desk.GetOutput()[4]);     // the next 1.5 s of the step in half a second
+        Assert.Equal(3, _desk.GetSequences()[2].Speed);
+    }
+
+    [Fact]
+    public void SpeedGoesInStepsOfFiveHundredthsFromATenthToTen()
+    {
+        _desk.SetSequence(2, loop: true, [new Step("channel", 5, 200, 1, 1, 1)]);
+
+        Assert.Equal(1.25, _desk.SetSequenceSpeed(2, 1.234));
+        Assert.Equal(0.1, _desk.SetSequenceSpeed(2, 0.1));
+        Assert.Equal(10, _desk.SetSequenceSpeed(2, 10));
+        AssertSpeedRefused(0.09);
+        AssertSpeedRefused(10.01);
+        AssertSpeedRefused(double.NaN);
+        Assert.Throws<DeskException>(() => _desk.SetSequence(3, new Sequence(true, []) { Speed = 0 }));
+
+        var noSequence = Assert.Throws<DeskException>(() => _desk.SetSequenceSpeed(4, 1));
+        Assert.Equal("Memory 4 holds no sequence.", noSequence.Message);
+
+        long before = _desk.ProjectChanges;
+        _desk.SetSequenceSpeed(2, 2);
+        _desk.SetSequenceSpeed(2, 2);                // the speed it has already
+        Assert.Equal(before + 1, _desk.ProjectChanges);
+    }
+
+    [Fact]
+    public void RandomAndSpeedGoAlongWhenTheSequenceIsCopiedOrGetsAStep()
+    {
+        _desk.SetSequence(1, new Sequence(Loop: true, [new Step("channel", 1, 255, 1, 1, 1)]) { Random = true, Speed = 0.5 });
+
+        _desk.CopyMemory(1, 2);
+        _desk.AddSequenceStep(1, new Step("channel", 2, 255, 1, 1, 1));
+
+        Assert.True(_desk.GetSequences()[2].Random);
+        Assert.Equal(0.5, _desk.GetSequences()[2].Speed);
+        Assert.True(_desk.GetSequences()[1].Random);
+        Assert.Equal(0.5, _desk.GetSequences()[1].Speed);
+    }
+
+    [Fact]
     public void StepsOutOfRangeAreRefused()
     {
         AssertRefused("stands for a channel or a memory", new Step("light", 1, 1, 0, 0, 0));
@@ -255,6 +325,12 @@ public sealed class DeskSequenceTests
         _desk.Tick();
         Assert.Equal(rested, _desk.OutputChanges);
         Assert.False(_desk.Animating);
+    }
+
+    private void AssertSpeedRefused(double speed)
+    {
+        var error = Assert.Throws<DeskException>(() => _desk.SetSequenceSpeed(2, speed));
+        Assert.StartsWith("The speed of a sequence must be from 0.1 to 10", error.Message);
     }
 
     private void AssertRefused(string expectedMessage, Step step)

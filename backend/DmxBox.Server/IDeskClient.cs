@@ -68,6 +68,11 @@ public interface IDeskClient
     /// <param name="project">The project after the change.</param>
     Task ProjectChanged(ProjectInfo project);
 
+    /// <summary>The speed of the sequence of a memory was changed; the sequence goes on from where it is.</summary>
+    /// <param name="memory">Memory number, 1-128.</param>
+    /// <param name="speed">The new speed, 0.1 to 10.</param>
+    Task SequenceSpeedChanged(int memory, double speed);
+
     /// <summary>A step of the stack was added, changed, moved, renumbered or taken out.</summary>
     /// <param name="stack">The stack after the change.</param>
     Task StackChanged(StackState stack);

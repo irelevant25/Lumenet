@@ -57,6 +57,13 @@ namespace DmxBox.Server;
 /// </remarks>
 internal static partial class UsittAscii
 {
+    /// <summary>
+    /// The most cues, submasters, groups, sequences, sequence steps and labels the reader keeps
+    /// of each kind: far more than any show has, and few enough that a file of millions of them
+    /// cannot fill the memory of the PC. The rest are counted in <see cref="AsciiShow.Skipped"/>.
+    /// </summary>
+    public const int MaxKept = 10_000;
+
     // Everything that separates the parts of a line.
     private static readonly char[] Separators = [' ', '\t', ',', '/', '<', '>', '=', '@'];
 
@@ -191,6 +198,15 @@ internal static partial class UsittAscii
         // The SmartFade sequence whose steps the "$CUE" lines are; null outside of one.
         private AsciiSequence? _sequence;
 
+        // The numbers, with their list or page, of the cues, groups and submasters kept so far:
+        // a number that came before is found at once, however long the file.
+        private readonly HashSet<(decimal Number, int Page)> _cueNumbers = [];
+        private readonly HashSet<(decimal Number, int Page)> _groupNumbers = [];
+        private readonly HashSet<(decimal Number, int Page)> _submasterNumbers = [];
+
+        // How many sequence steps have been kept.
+        private int _sequenceSteps;
+
         private enum Skip
         {
             Nothing,
@@ -297,16 +313,33 @@ internal static partial class UsittAscii
             {
                 string what = field.ToUpperInvariant();
                 if (what is "CUES" or "ALL")
+                {
                     Show.Cues.Clear();
+                    _cueNumbers.Clear();
+                }
+
                 if (what is "SUBS" or "ALL")
+                {
                     Show.Submasters.Clear();
+                    _submasterNumbers.Clear();
+                }
+
                 if (what is "GROUPS" or "ALL")
+                {
                     Show.Groups.Clear();
+                    _groupNumbers.Clear();
+                }
+
                 if (what is "PATCH" or "ALL")
+                {
                     Show.Patch.Clear();
+                    Show.DimmersAbove = 0;
+                }
+
                 if (what is "ALL")
                 {
                     Show.Sequences.Clear();
+                    _sequenceSteps = 0;
                     Show.ChannelLabels.Clear();
                     Show.IndependentLabels.Clear();
                 }
@@ -334,8 +367,13 @@ internal static partial class UsittAscii
                     && TryLevel(fields[index + 2], out double share))
                 {
                     (int channel, int dimmer) = dimmerFirst ? (second, first) : (first, second);
-                    if (channel > 0 && dimmer > 0)
+                    if (channel == 0 || dimmer == 0)
+                        continue;
+
+                    if (dimmer <= Desk.ChannelCount)
                         Show.Patch[dimmer] = new AsciiPatch(channel, share);
+                    else
+                        Show.DimmersAbove++;
                 }
                 else
                 {
@@ -358,7 +396,13 @@ internal static partial class UsittAscii
             }
 
             int? list = PageOf(fields);
-            if (Show.Cues.Any(cue => cue.Number == cueNumber && SamePage(cue.Page, list)))
+            if (Show.Cues.Count == MaxKept)
+            {
+                TooMany();
+                return;
+            }
+
+            if (!_cueNumbers.Add((cueNumber, list ?? 1)))
             {
                 Drop(number, unread: false);
                 return;
@@ -378,7 +422,7 @@ internal static partial class UsittAscii
                 return;
             }
 
-            StartLook(Show.Groups, new AsciiLook(groupNumber, PageOf(fields)), number);
+            StartLook(Show.Groups, _groupNumbers, new AsciiLook(groupNumber, PageOf(fields)), number);
         }
 
         // "SUB 1 5": submaster 1 on page 5.
@@ -391,12 +435,20 @@ internal static partial class UsittAscii
                 return;
             }
 
-            StartLook(Show.Submasters, new AsciiLook(submaster, PageOf(fields)), number);
+            StartLook(Show.Submasters, _submasterNumbers, new AsciiLook(submaster, PageOf(fields)), number);
         }
 
-        private void StartLook(List<AsciiLook> looks, AsciiLook look, int number)
+        // A group or submaster, unless one with that number came before on the same page. A file
+        // that gives no page means the first.
+        private void StartLook(List<AsciiLook> looks, HashSet<(decimal Number, int Page)> numbers, AsciiLook look, int number)
         {
-            if (looks.Any(other => other.Number == look.Number && SamePage(other.Page, look.Page)))
+            if (looks.Count == MaxKept)
+            {
+                TooMany();
+                return;
+            }
+
+            if (!numbers.Add((look.Number, look.Page ?? 1)))
             {
                 Drop(number, unread: false);
                 return;
@@ -414,6 +466,13 @@ internal static partial class UsittAscii
             else
                 Show.Repeated++;
 
+            _skip = Skip.DroppedBlock;
+        }
+
+        // A block beyond MaxKept of its kind: it goes, with its lines, and is counted.
+        private void TooMany()
+        {
+            Show.Skipped++;
             _skip = Skip.DroppedBlock;
         }
 
@@ -525,6 +584,12 @@ internal static partial class UsittAscii
                 return;
             }
 
+            if (Show.Sequences.Count == MaxKept)
+            {
+                TooMany();
+                return;
+            }
+
             var sequence = new AsciiSequence(index, mode);
             Show.Sequences.Add(sequence);
             _sequence = sequence;
@@ -537,15 +602,22 @@ internal static partial class UsittAscii
         {
             AsciiSequence? sequence = _sequence;
             EndBlock();
+            _sequence = sequence;   // the steps after this one still belong to it
             if (sequence is null || fields.Length == 0 || !TryNumber(fields[0], out decimal stepNumber))
             {
                 Drop(number, unread: true);
                 return;
             }
 
+            if (_sequenceSteps == MaxKept)
+            {
+                TooMany();
+                return;
+            }
+
+            _sequenceSteps++;
             var step = new AsciiCue(stepNumber, null);
             sequence.Steps.Add(step);
-            _sequence = sequence;
             _block = step;
         }
 
@@ -557,6 +629,12 @@ internal static partial class UsittAscii
             if (fields.Length == 0 || !TryWhole(fields[0], out int which))
             {
                 Drop(number, unread: true);
+                return;
+            }
+
+            if (labels is not null && labels.Count == MaxKept && !labels.ContainsKey(which))
+            {
+                TooMany();
                 return;
             }
 
@@ -686,10 +764,10 @@ internal static partial class UsittAscii
             bool whole = fields.Length > 0 && fields.Length % 2 == 0;
             for (int index = 0; index + 1 < fields.Length; index += 2)
             {
-                if (TryWhole(fields[index], out int dimmer))
-                    Show.DimmerNames[dimmer] = fields[index + 1];
-                else
+                if (!TryWhole(fields[index], out int dimmer))
                     whole = false;
+                else if (dimmer <= Desk.ChannelCount)   // a name above 512 belongs to no address of the box
+                    Show.DimmerNames[dimmer] = fields[index + 1];
             }
 
             if (!whole)
@@ -716,12 +794,6 @@ internal static partial class UsittAscii
         private static int? PageOf(string[] fields)
         {
             return fields.Length > 1 && TryWhole(fields[1], out int page) ? page : null;
-        }
-
-        // A file that gives no page means the first one.
-        private static bool SamePage(int? one, int? other)
-        {
-            return (one ?? 1) == (other ?? 1);
         }
 
         private static string? NullIfEmpty(string text)

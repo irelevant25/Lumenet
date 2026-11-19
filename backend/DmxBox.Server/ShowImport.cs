@@ -184,7 +184,6 @@ internal static class ShowImport
         private readonly SortedSet<int> _lostChannels = [];
         private readonly HashSet<AsciiCue> _delayed = [];
         private readonly HashSet<AsciiCue> _untimed = [];
-        private int _dimmersAbove;
         private int _early;
         private int _links;
         private int _shortened;
@@ -211,6 +210,8 @@ internal static class ShowImport
         private readonly List<(int Independent, int[] Addresses)> _boundIndependents = [];
         private int _lostSteps;
         private int _manual;
+        private int _cutStackSteps;
+        private int _cutSequenceSteps;
 
         public ImportedShow Build()
         {
@@ -262,9 +263,13 @@ internal static class ShowImport
         // own, and each sequence a memory that holds it.
         private List<string> SmartFade(out ProjectStep[] stack)
         {
-            List<AsciiCue> cues = show.Cues.OrderBy(cue => cue.Number).ToList();
+            // As many steps as the stack and a sequence can have; a SmartFade has fewer anyway.
+            List<AsciiCue> cues = show.Cues.OrderBy(cue => cue.Number).Take(Desk.MaxStackSteps).ToList();
+            _cutStackSteps = show.Cues.Count - cues.Count;
             List<AsciiSequence> sequences = show.Sequences.Where(sequence => sequence.Steps.Count > 0).OrderBy(sequence => sequence.Index).ToList();
-            List<AsciiCue> steps = [.. cues, .. sequences.SelectMany(sequence => sequence.Steps)];
+            var stepsOf = sequences.ToDictionary(sequence => sequence, sequence => sequence.Steps.Take(Sequence.MaxSteps).ToList());
+            _cutSequenceSteps = sequences.Sum(sequence => sequence.Steps.Count - stepsOf[sequence].Count);
+            List<AsciiCue> steps = [.. cues, .. sequences.SelectMany(sequence => stepsOf[sequence])];
 
             foreach (AsciiLook memory in show.Groups)
                 _consoleMemories[(int)memory.Number] = memory;
@@ -298,7 +303,7 @@ internal static class ShowImport
             int sequencesFound = 0;
             foreach (AsciiSequence sequence in sequences)
             {
-                List<(AsciiCue Cue, int Memory)> targets = Targets(sequence.Steps);
+                List<(AsciiCue Cue, int Memory)> targets = Targets(stepsOf[sequence]);
                 if (targets.Count == 0 || Reserve(NoteOf("Seq " + (sequence.Index + 1), sequence.BestLabel())) is not { } found)
                     continue;
 
@@ -409,12 +414,7 @@ internal static class ShowImport
             }
 
             foreach ((int dimmer, AsciiPatch patch) in show.Patch)
-            {
-                if (dimmer <= Desk.ChannelCount)
-                    _addresses[dimmer - 1] = patch;
-                else
-                    _dimmersAbove++;
-            }
+                _addresses[dimmer - 1] = patch;   // the reader keeps dimmers 1 to 512 only
 
             for (int index = 0; index < Desk.ChannelCount; index++)
             {
@@ -606,10 +606,21 @@ internal static class ShowImport
         // under each memory keeps the cue's own number in any case.
         private CueNumber[] StepNumbers(List<decimal> cues)
         {
+            CueNumber?[] fitting = cues.Select(Fitting).ToArray();
+
+            // For each cue, the first number after it that the stack can have as it is.
+            var nextFitting = new CueNumber?[cues.Count];
+            CueNumber? following = null;
+            for (int index = cues.Count - 1; index >= 0; index--)
+            {
+                nextFitting[index] = following;
+                following = fitting[index] ?? following;
+            }
+
             var numbers = new CueNumber[cues.Count];
             for (int index = 0; index < cues.Count; index++)
             {
-                CueNumber? own = Fitting(cues[index]);
+                CueNumber? own = fitting[index];
                 CueNumber? before = index > 0 ? numbers[index - 1] : null;
                 if (own is { } fits && (before is null || fits > before.Value))
                 {
@@ -618,8 +629,7 @@ internal static class ShowImport
                 }
 
                 CueNumber candidate = before is { } previous ? After(previous) : new CueNumber(0, 1);
-                CueNumber? limit = cues.Skip(index + 1).Select(Fitting).FirstOrDefault(number => number is not null);
-                if (candidate.Major > CueNumber.MaxMajor || (limit is { } next && candidate >= next))
+                if (candidate.Major > CueNumber.MaxMajor || (nextFitting[index] is { } next && candidate >= next))
                 {
                     _numberedInTurn = true;
                     return Enumerable.Range(1, cues.Count).Select(number => new CueNumber(number, 0)).ToArray();
@@ -717,6 +727,19 @@ internal static class ShowImport
                 left.Add(Counted(_lostSteps, "step"));
             if (left.Count > 0)
                 report.Add(string.Create(CultureInfo.InvariantCulture, $"Left out, because Lumenet has {Desk.MemoryCount} memories: {Join(left)}."));
+            if (_cutStackSteps > 0)
+            {
+                report.Add(string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"Stack steps beyond {Desk.MaxStackSteps}: {_cutStackSteps}. They are left out: the stack has at most {Desk.MaxStackSteps}."));
+            }
+
+            if (_cutSequenceSteps > 0)
+            {
+                report.Add(string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"Sequence steps beyond {Sequence.MaxSteps}: {_cutSequenceSteps}. They are left out: a sequence has at most {Sequence.MaxSteps}."));
+            }
 
             TellTimes(report, inParts: 0);
         }
@@ -832,11 +855,18 @@ internal static class ShowImport
                     $"Channels without a DMX address from 1 to 512: {_lostChannels.Count} ({Named(_lostChannels, "channel")}). Their levels are left out."));
             }
 
-            if (_dimmersAbove > 0)
+            if (show.DimmersAbove > 0)
             {
                 report.Add(string.Create(
                     CultureInfo.InvariantCulture,
-                    $"Dimmers above 512 in the patch: {_dimmersAbove}. They are left out: the box sends one universe, addresses 1 to 512."));
+                    $"Dimmers above 512 in the patch: {show.DimmersAbove}. They are left out: the box sends one universe, addresses 1 to 512."));
+            }
+
+            if (show.Skipped > 0)
+            {
+                report.Add(string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"Cues, memories, steps and labels beyond {UsittAscii.MaxKept} of one kind: {show.Skipped}. They are skipped."));
             }
 
             if (show.MakerLines > 0)

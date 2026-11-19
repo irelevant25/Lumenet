@@ -522,6 +522,8 @@ level) with **Record** under it, and at the right edge, over the whole height, t
   * **Not taken over:** lines that only one maker's consoles understand (they begin with `$`: moving lights,
     effects, macros), cue lists after the first, and cue numbers the stack cannot have (more than one digit
     after the dot, or above 999.9): those steps get the next free number, and the note keeps the cue's own.
+    Of cues, groups, submasters, sequence steps and labels the import keeps at most 10,000 of each kind, far
+    more than a show has; a file with more is still read in well under a second.
   * **One difference in the fades:** a console fades every light straight from its old level to its new one.
     The stack fades the old memory down while the new one comes up, and the higher of the two wins, so a light
     that stays on from one cue to the next dips to about half in the middle of the fade.
@@ -670,7 +672,7 @@ page cannot move a light. In the small-screen layout the mouse wheel scrolls the
   to the pages listed in `Server:AllowedOrigins`, plus the page the backend hands out itself. With `Urls` set
   to `http://localhost:5080` the desk stays on this PC for good.
 
-**Tests:** `dotnet test backend/DmxBox.sln` (377 tests: the client, the desk, sequences and the stack with a
+**Tests:** `dotnet test backend/DmxBox.sln` (379 tests: the client, the desk, sequences and the stack with a
 clock the tests set by hand, project files and the example project, the import of show files, the link to the
 box, the hub, LAN with a pretend PC and a pretend phone), and in `frontend/`: `npm test -- --watch=false` (75
 tests of the page).

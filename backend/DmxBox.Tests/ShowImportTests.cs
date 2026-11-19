@@ -461,6 +461,26 @@ public class ShowImportTests
     }
 
     [Fact]
+    public void SmartFadeStackAndSequencesKeepToTheLimitsOfLumenet()
+    {
+        // Steps share memories, so a file can name more steps than there are memories.
+        var text = new System.Text.StringBuilder("CONSOLE SMARTFADE\nGROUP 1\nCHAN 1/100\n$SEQUENCE 48 2 0 256 256\n");
+        for (int step = 1; step <= 1200; step++)
+            text.Append("CUE ").Append(step).Append(".0\nUP 1\n$$MEMORY 0 0\nCHAN 1/100\n");
+        text.Append("$SEQUENCE 0 0 0 256 256\n");
+        for (int step = 1; step <= 120; step++)
+            text.Append("$CUE 1.0\nUP 1\n$$MEMORY 0 0\nCHAN 1/100\n");
+
+        ImportedShow show = Import(text.ToString());
+
+        Assert.Equal(Desk.MaxStackSteps, show.Content.Stack.Length);
+        Assert.Equal(new CueNumber(999, 0), show.Content.Stack[^1].Cue);
+        Assert.Equal(Sequence.MaxSteps, show.Content.Sequences[1]!.Steps.Length);
+        Assert.Contains("Stack steps beyond 999: 201. They are left out: the stack has at most 999.", show.Report);
+        Assert.Contains("Sequence steps beyond 99: 21. They are left out: a sequence has at most 99.", show.Report);
+    }
+
+    [Fact]
     public void SmartFadeFileWithoutAShowIsRefused()
     {
         var refusal = Assert.Throws<DeskException>(() => Import("MANUFACTURER AVAB\nCONSOLE SMARTFADE\nCLEAR ALL\nPATCH 1 1/1/100\nENDDATA"));

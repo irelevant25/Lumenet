@@ -37,13 +37,23 @@ internal sealed class AsciiShow
     public List<AsciiLook> Groups { get; } = [];
 
     /// <summary>
-    /// The soft patch: for every dimmer the file patches, the channel it belongs to. A dimmer
-    /// is a DMX address. Empty when the file has no patch: then channel 1 is dimmer 1, and so on.
+    /// The soft patch: for every dimmer from 1 to 512 the file patches, the channel it belongs
+    /// to. A dimmer is a DMX address. Empty when the file has no patch: then channel 1 is dimmer
+    /// 1, and so on.
     /// </summary>
     public SortedDictionary<int, AsciiPatch> Patch { get; } = [];
 
-    /// <summary>The names of dimmers, from Strand's $$DIMMERNAMES: dimmer and name.</summary>
+    /// <summary>How often the patch gives a dimmer above 512, an address that one universe of DMX does not have.</summary>
+    public int DimmersAbove { get; set; }
+
+    /// <summary>The names of dimmers from 1 to 512, from Strand's $$DIMMERNAMES: dimmer and name.</summary>
     public SortedDictionary<int, string> DimmerNames { get; } = [];
+
+    /// <summary>
+    /// How many cues, submasters, groups, sequences, sequence steps and labels were not kept
+    /// because the file has more than <see cref="UsittAscii.MaxKept"/> of that kind.
+    /// </summary>
+    public int Skipped { get; set; }
 
     /// <summary>
     /// How many lines belong to one maker's consoles (those that begin with "$", and the lines

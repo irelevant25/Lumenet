@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Text;
 using DmxBox.Server;
 
 namespace DmxBox.Tests;
@@ -5,6 +7,28 @@ namespace DmxBox.Tests;
 /// <summary>Reading show files in the USITT ASCII format, as theatre consoles write them.</summary>
 public class UsittAsciiTests
 {
+    [Fact]
+    public void HugeFileIsReadQuicklyAndKeepsAtMostMaxKeptOfOneKind()
+    {
+        var text = new StringBuilder();
+        for (int cue = 1; cue <= 200_000; cue++)
+            text.Append("Cue ").Append(cue).Append("\nChan 1 50\n");
+        for (int dimmer = 1; dimmer <= 1000; dimmer++)
+            text.Append("Patch 1 1<").Append(dimmer).Append("@100\n");
+
+        var clock = Stopwatch.StartNew();
+        AsciiShow show = UsittAscii.Read(text.ToString());
+
+        // A check for numbers that came before, made by looking through every cue kept so far,
+        // took minutes on such a file.
+        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(10), $"Reading took {clock.Elapsed}.");
+        Assert.Equal(UsittAscii.MaxKept, show.Cues.Count);
+        Assert.Equal(200_000 - UsittAscii.MaxKept, show.Skipped);
+        Assert.Equal(512, show.Patch.Count);       // dimmers 1 to 512
+        Assert.Equal(488, show.DimmersAbove);      // the rest are only counted
+        Assert.Empty(show.UnreadLines);
+    }
+
     [Fact]
     public void ReadsACueWithItsLevelsTimesAndWhatComesAfterIt()
     {

@@ -1,0 +1,55 @@
+<header>
+  <h2>Memories</h2>
+  <p class="summary" role="status">{{ summary() }}</p>
+</header>
+
+<div class="body">
+  <div class="content">
+    <div class="keys" role="group" aria-label="Memory to look at">
+      @for (memory of numbers(); track memory) {
+        <button
+          lmLamp
+          type="button"
+          class="number"
+          tone="memory"
+          [level]="keyLamp(memory)"
+          [attr.aria-pressed]="memory === store.inspectedMemory()"
+          [attr.aria-label]="'Look at memory ' + memory"
+          (click)="store.inspectedMemory.set(memory)"
+        >
+          {{ memory }}
+        </button>
+      }
+    </div>
+
+    <ol class="matrix" [attr.aria-label]="'The channels of memory ' + store.inspectedMemory()">
+      @for (cell of cells(); track cell.channel) {
+        <li
+          [class.up]="cell.level > 0"
+          [style.--part]="cell.level / 255"
+          [attr.aria-label]="'Channel ' + cell.channel + ': ' + cell.level"
+        >
+          <span class="channel" aria-hidden="true">{{ cell.channel }}</span>
+          <span class="level" aria-hidden="true">{{ cell.level }}</span>
+        </li>
+      }
+    </ol>
+  </div>
+
+  <nav class="rail" aria-label="Memory pages">
+    @for (item of pages(); track item.first) {
+      <button
+        lmLamp
+        type="button"
+        class="range"
+        tone="memory"
+        [level]="item.lamp"
+        [attr.aria-pressed]="item.shown"
+        [attr.aria-label]="'Memories ' + item.first + ' to ' + item.last"
+        (click)="store.showMemoryPage(item.first)"
+      >
+        {{ item.first }}-{{ item.last }}
+      </button>
+    }
+  </nav>
+</div>

@@ -1,0 +1,50 @@
+<div class="left">
+  <div class="brand">
+    <div class="title">
+      <h1>Lumenet</h1>
+      @if (store.version()) {
+        <span class="version">v{{ store.version() }}</span>
+      }
+    </div>
+    <span class="box" [class.connected]="store.box().connected" [attr.title]="boxHint()">
+      <span class="light" aria-hidden="true"></span>
+      {{ store.box().connected ? 'Box connected' : 'No box' }}
+    </span>
+  </div>
+  <button lmLamp type="button" tone="system" aria-label="New project" (click)="dialog().open('new')">
+    New
+  </button>
+</div>
+
+<!-- The views of the desk. The one that is shown is lit. -->
+<nav class="views" aria-label="Views">
+  <a
+    routerLink="/"
+    routerLinkActive="shown"
+    ariaCurrentWhenActive="page"
+    [routerLinkActiveOptions]="{ exact: true }"
+  >
+    Main
+  </a>
+  <a routerLink="/memories" routerLinkActive="shown" ariaCurrentWhenActive="page">Memories</a>
+</nav>
+
+<div class="project">
+  <div class="file">
+    <div class="name">
+      <strong>{{ store.project().name }}</strong>
+      @if (store.project().unsaved) {
+        <span class="unsaved">not saved</span>
+      }
+    </div>
+    <span class="path">{{ store.project().path ?? 'Not stored in a file yet' }}</span>
+  </div>
+  <button lmLamp type="button" tone="system" aria-label="Save project" (click)="dialog().open('save')">
+    Save
+  </button>
+  <button lmLamp type="button" tone="system" aria-label="Load project" (click)="dialog().open('load')">
+    Load
+  </button>
+</div>
+
+<lm-project-dialog />

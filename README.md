@@ -19,8 +19,10 @@ at **192.168.7.1**. So the box is controlled over UDP like a network device, but
 |---|---|
 | `firmware/` | Pico SDK project (C). Builds `dmxbox.uf2`. `firmware/test/` tests the network code on a PC. |
 | `sim/` | The **same** engine and protocol C code as the firmware, running on a PC over normal sockets. Use it to develop software before the hardware exists. |
-| `pc/` | .NET: the `DmxBox` library, the `dmxbox` command-line tool and end-to-end tests. |
-| `schematic/` | The schematic and the breadboard plan (SVG, PNG, one PDF for printing), and the script that draws them. |
+| `backend/` | .NET: the `DmxBox` library, the `dmxbox` command-line tool, the server of the Lumenet desk, and the tests. |
+| `frontend/` | Angular: the page of the Lumenet fader desk. |
+| `run.cmd` | Starts the Lumenet desk: backend and frontend together. |
+| `schematic/` | The schematic, the breadboard plan and the perfboard plan (SVG, PNG, PDF for printing), and the scripts that draw them. |
 | `3d/` | Blender model, renders, and a drawing of the board's tracks. |
 | [BOM.md](BOM.md) | Parts list for ordering. |
 | `archive/` | Earlier designs with an Ethernet port. Not needed for this box. |
@@ -39,6 +41,7 @@ Parts: see [BOM.md](BOM.md). Pictures: [top](3d/dmxbox_usb_top.png), [solder sid
 
 Schematic: [drawing](schematic/dmxbox_schematic.png). To try the circuit on a breadboard first:
 [breadboard plan](schematic/dmxbox_breadboard.png). Both are in [one PDF](schematic/dmxbox_drawings.pdf) for printing.
+To solder it on a perfboard: [perfboard plan](#building-it-on-a-perfboard).
 
 Tracks: the board is 100 × 66 mm and has every track on the solder side
 ([drawing](3d/dmxbox_usb_routing.png), [SVG](3d/dmxbox_usb_routing.svg)).
@@ -140,6 +143,58 @@ A safe order:
 
 The plan is checked by the script that draws it (`schematic/draw.py`): every leg and wire end has a hole of
 its own, and the holes joined by the board and the wires give exactly the connections of the schematic.
+
+### Building it on a perfboard
+
+![Perfboard plan, parts side](schematic/dmxbox_perfboard.png)
+
+The soldered version, on a 70 × 90 mm perfboard with 26 × 31 holes (lettered A to Z, numbered 1 to 31), the
+kind where every hole has a solder pad of its own. If the pads of your board are joined in strips or in
+groups, this plan does not fit it.
+
+* [The solder side](schematic/dmxbox_perfboard_solder.png) shows the tracks, as you see them with the board
+  turned over.
+* [The lists](schematic/dmxbox_perfboard.md) give the holes of every part and every track from hole to hole.
+* [One PDF](schematic/dmxbox_perfboard.pdf) has both drawings for printing.
+
+The 50 × 70 mm board (18 × 24 holes) is not used: the Pico alone takes 8 of its 18 columns and 20 of its 24
+rows, which leaves too little room for the isolated side behind a gap.
+
+How to read the plan:
+
+* A hole is written with a dash: N-3 is column N, row 3. (C1, R3 or U4 without a dash are parts.)
+* **Columns O and P stay empty from top to bottom.** That is the isolation gap. Everything left of it belongs
+  to the Pico and the computer, everything right of it to the DMX line. Only U3 and U4 reach across.
+* The Pico stands at the left edge with its USB socket at row 1. Everything with many pins sits in a socket.
+* A track is a line of neighbouring pads joined on the solder side: lay a bare wire along them, or run solder
+  from pad to pad. A pad in a track with no leg in it is just a place the track passes.
+* One connection is an insulated wire (W1, from B-1 to M-4), because it has to get past the Pico's socket
+  strip. Run it on whichever side you like.
+* Each button has four legs. Its signal goes to one corner and ground to the opposite corner; the other two
+  legs are soldered for a firm seat but join nothing. That works whichever way the button is joined inside.
+* The screw terminal J1 has, from the top: XLR pin 2 (Data −), pin 3 (Data +), pin 1 (common).
+* U4's socket strip has seven contacts, the converter only four pins. Pull contacts 3 and 4 out of the strip
+  before soldering it in: they would stand in the gap (O-8 and P-8).
+
+A safe order:
+
+1. Solder the socket strips and sockets, then the resistors and diodes, then the capacitors, the buttons
+   and J1. Mind the notch of U3 and U5 (towards row 1) and the plus leg of C3 and C4.
+2. Join the pads track by track after the solder-side drawing, and tick each track off in the list.
+3. Before anything is plugged in, test with a multimeter set to continuity. Every track must conduct from end
+   to end. Tracks of different colours must not conduct to each other. **Nothing left of the gap may conduct
+   to anything right of it.**
+4. Plug in the Pico and U4, leave U3 and U5 out, and connect the USB cable. Between S-8 (plus) and Q-8 (minus)
+   there should be about 5 V (4.6 to 5.5 V).
+5. Unplug, put in U3 and U5 (pin 1 at the notch), wire J1 to the XLR jack, and go on with step 4 of the
+   breadboard list above: the measurement between XLR pin 3 and pin 2.
+
+How the plan is made: the places of the parts are chosen by hand, and `schematic/perfboard.py` finds the
+tracks. A separate check in the same script then confirms that the joined pads give exactly the connections
+of the schematic (whichever way the buttons are joined inside), that every leg has a hole of its own, that
+nothing reaches across the gap, and that no two parts stand in each other's way. Run with `--selftest`, the
+script plants 19 mistakes (a missing piece of track in each connection, Data + and Data − swapped at J1, U5
+turned round, a solder bridge, a track across the gap, and others) and confirms that the check notices each.
 
 ### Power
 
@@ -292,7 +347,7 @@ not been tried on one.
 ### Command line
 
 ```powershell
-dotnet build pc/DmxBox.sln -c Release          # once; gives pc\DmxBox.Cli\bin\Release\net10.0\dmxbox.exe
+dotnet build backend/DmxBox.sln -c Release     # once; gives backend\DmxBox.Cli\bin\Release\net10.0\dmxbox.exe
 
 dmxbox discover                  # ArtPoll: lists every Art-Net node
 dmxbox ping
@@ -311,13 +366,13 @@ dmxbox demo cues                 # demos for 4 RGB PARs at channels 1-12 (also: 
 
 The tool talks to 192.168.7.1 unless you name another address with `-H <address>` or in the environment
 variable `DMXBOX_HOST` (for example `-H 127.0.0.1` for the simulator).
-`dmxbox --help` lists everything. Without building first: `dotnet run --project pc/DmxBox.Cli -- ping`.
+`dmxbox --help` lists everything. Without building first: `dotnet run --project backend/DmxBox.Cli -- ping`.
 In the first seconds after plugging in, `discover` can come back empty: try again. If it stays empty
 although `ping` works, let the program through the Windows firewall.
 
 ### Library
 
-Reference the project `pc/DmxBox/DmxBox.csproj`.
+Reference the project `backend/DmxBox/DmxBox.csproj`.
 
 ```csharp
 using DmxBox;
@@ -332,7 +387,7 @@ art.Send(frame);                                                         // up t
 ```
 
 A rejected request throws `DmxBoxException` (with the box's status, e.g. `BAD_ARG`); no answer after all
-retransmits throws `DmxBoxTimeoutException`. `pc/DmxBox.Cli/Demos.cs` has a cue demo (box-side fades) and a
+retransmits throws `DmxBoxTimeoutException`. `backend/DmxBox.Cli/Demos.cs` has a cue demo (box-side fades) and a
 streaming rainbow demo (Art-Net).
 
 ### QLC+ (or any Art-Net software)
@@ -352,7 +407,7 @@ sim\dmxbox_sim.exe --show 12                   # prints channel values as they c
 # another terminal:
 dmxbox -H 127.0.0.1 fade 1 255 128 0 -t 2
 
-dotnet test pc/DmxBox.sln                      # 14 end-to-end tests against the simulator
+dotnet test backend/DmxBox.sln                 # the client against the simulator, and the desk server
 ```
 
 `dmxbox_sim.exe --drop 0.3` loses 30 % of control packets in each direction. Use it to test the reliability
@@ -360,7 +415,96 @@ layer; the test suite does exactly this. On Linux or macOS build the simulator w
 
 ---
 
-## 4. The DX protocol (UDP 7000)
+## 4. Lumenet, the fader desk
+
+A lighting desk in the browser, in the old style with faders. It needs the .NET 10 SDK and Node.js 22.
+
+```powershell
+run.cmd            # starts the backend and the frontend; then open http://localhost:4200
+```
+
+Ctrl+C stops both. The desk also works without the box: it shows "No box" and sends the whole state as
+soon as a box answers.
+
+**What is on the page**
+
+The top bar has two links, **Main** and **Memories**. Main is the desk itself. Memories only shows what is
+stored (see below). At the right edge of Main stands the **Master** section: Clear, Black out and the master
+fader with its level.
+
+* **Channels:** two rows of faders. The keys at the right choose which of the 512 channels they show.
+* **Memories:** one row of faders, with page keys for the 128 memories. A memory holds a look:
+  the levels the channel faders were set to at the moment it was saved. Its fader plays that look at the
+  fader's level. For every channel the highest value wins, whether it comes from the channel fader or from
+  a memory.
+* **A memory fader moves the channel faders it uses.** A channel fader shows what goes out for its channel
+  (before the master): its own level, or what the memories give it when that is higher. The slot is lit green
+  up to the fader's own level and red above it, where a memory holds the channel. The own level is kept:
+  bring the memory down, and the fader goes back to it. While a memory holds a channel up, its fader can
+  still be moved; the handle stays where the memory holds it, and the green part shows what you set.
+  Save stores the faders' own levels, not the part a memory adds.
+* **Keys under the faders:** a channel key is lit when the channel is above zero. A memory key is half lit
+  when something is stored in it and fully lit when its fader is up. A page key is fully lit for the page
+  that is shown and half lit for another page with something on it.
+* **Notes:** under each key are two lines to type into: which light or which look it is (11 characters per
+  line). Each line stays where it was typed; the second can be used without the first.
+* **Record** (bottom right) has Save, Edit, Copy and Del: press one, and the memory keys that can be used blink
+  between their normal light and full.
+  * **Save:** press a memory key, and the channel faders are stored there.
+  * **Edit:** press a stored memory, and it is loaded into the channel faders. Change it, press Edit again,
+    and it is stored back.
+  * **Copy:** press the memory to copy from, then the memory to copy to.
+  * **Del:** press the memory to empty.
+  * Pressing the lit function again cancels it.
+* **Clear** cancels an unfinished function and brings every channel fader and memory fader to zero.
+* **Black out** sends zero to every address but leaves the desk as it is; the key blinks while it is active.
+  The blackout button on the box does the same, and the desk shows it.
+* **Master** dims the whole output.
+* **Independents:** sixteen keys in a column at the right. Each switches one channel between zero and full,
+  and that channel's fader follows. The keys start on channels 1 to 16. Press Edit there, type other channel
+  numbers onto the keys, and press Edit again. A key is lit when its channel's own fader is up; a memory
+  that holds the channel does not light it.
+* **The Memories view** is for looking only; nothing there changes the desk. The memory keys along the top
+  choose a memory, and the table under them shows the level that memory holds for each of the 512 channels,
+  in rows as long as a row of faders (32 by 16, or 16 by 32 in a narrower window). The page keys at the
+  right choose which memories the keys show.
+* **Project:** Save and Load at the top right, New at the top left. A project is one JSON file in
+  `Documents\Lumenet`. It holds the memories, the notes and the channels of the independent keys, not the
+  fader positions, so loading a project never switches a light on by itself. New empties the desk; it asks first.
+
+**Window width:** a window at least 1850 pixels wide shows 32 faders in a row, so 64 channels and 32 memories
+at a time. A narrower window shows 16 in a row (32 channels and 16 memories) and twice as many page keys.
+The page keys stand in one column at the right; when they are too many for the height, they get flatter and
+then the column scrolls.
+
+**Small screens:** in a window narrower than 900 pixels or lower than 600 pixels (a phone, a tablet held
+upright) the sections stand under each other and the page scrolls. The page keys lie under the section titles,
+in as many lines as they need. Narrower than 720 pixels, a row of 16 faders is shown as two lines of 8 and the
+top bar as three lines. The numbering does not change: a page is still 32 channels or 16 memories. The three
+limits are in `frontend/src/app/desk/desk-types.ts`, and only there. A phone can open the desk only after the
+backend has been opened to other devices (see "How it is built").
+
+**Moving a fader:** drag the handle, or press in the slot to bring the handle there. The mouse wheel moves it
+in steps of 5 (with Shift: 1). With the keyboard: the arrows, Page Up, Page Down, Home and End.
+With a finger a fader moves only by its handle: a touch in the slot does nothing, so a thumb that scrolls the
+page cannot move a light. In the small-screen layout the mouse wheel scrolls the page and leaves the faders alone.
+
+**How it is built**
+
+* `backend/DmxBox.Server` is the desk itself. It holds the state (levels, memories, notes, the project),
+  works out the output and sends it to the box through the `DmxBox` library. Its settings are in
+  `appsettings.json`: the address of the box (`Box:Host`) and the projects folder (`Projects:Folder`).
+* `frontend/` is an Angular app. It only shows the desk and passes on what you do, over SignalR (`/hub/desk`).
+  Because the state lives in the backend, reloading the page loses nothing.
+* The backend only accepts pages from this PC (`Server:AllowedOrigins` and `AllowedHosts`). That keeps other
+  websites that are open in the browser from operating the desk. To open the desk from another device, both
+  settings have to be widened on purpose.
+
+**Tests:** `dotnet test backend/DmxBox.sln` (212 tests: the client, the desk, project files, the link to the
+box, the hub), and in `frontend/`: `npm test -- --watch=false` (36 tests of the page).
+
+---
+## 5. The DX protocol (UDP 7000)
 
 All integers are **big-endian**. Every message has a 12-byte header:
 
@@ -410,7 +554,7 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
 
 ---
 
-## 5. Ideas for later
+## 6. Ideas for later
 
 * **Wi-Fi:** a Pico W has the same size and pins and has Wi-Fi on board. With a Wi-Fi part in the firmware the
   box could join a wireless network itself, and USB would only supply power.
@@ -444,12 +588,25 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
   for a DMX signal with the right polarity: 4.28 V on the resting line, about −2.5 V with all channels at
   zero, and a positive reading with all channels at full. Both buttons work: SW1 switches blackout on and
   off, SW2 fades to preset 0 in 2 s.
+* **Lumenet desk (2026-11-18):** the backend passes 212 tests and the page 36. The page was operated in Chrome
+  against the real backend: levels, memories, the four functions, notes, the independent keys, and saving,
+  loading and starting a project. The owner then used it with the box and a real light, and it worked.
+* **Lumenet, second day (2026-11-19):** the two views, the master section, the channel faders that follow a
+  memory fader and the two note lines were checked in Chrome on a test copy without a box, at five window
+  sizes. Not yet used by the owner, and not with a box.
 * **A real DMX light (2026-11-18):** one light with four RGB cells (12 channels from address 5) on the
   breadboard build showed everything correctly: each of the 12 channels alone and in the right order, full
   white, a fade to dark, and a fade from red to blue, without flicker.
+* **Perfboard plan (2026-11-19):** 89 legs, one insulated wire and tracks for all 12 connections pass the
+  script's check, and the check notices all 19 planted mistakes. The sizes of the parts in the plan come from
+  the parts list, not from measuring the parts. **Nothing has been soldered after this plan yet.**
+* **Lumenet on small screens (2026-11-19):** the layout was looked at in Chrome at seven window sizes, from
+  320 × 568 to 1920 × 1080, with an emulated finger and with the mouse. It has not been used on a real phone
+  or tablet: the backend still only accepts pages from this PC.
 * **PIO program:** unchanged from the first version. That light accepts its signal; the timing has not been
   looked at with an oscilloscope or a DMX tester.
 * **Not done yet:** more than one light or a long cable, the LED states, a preset surviving a power cycle on
   the real Pico, and any other computer (Windows 10, macOS, Linux, tablets). Next steps:
   1. Check the LED, and that a preset is still there after unplugging.
-  2. Move the circuit from the breadboard to a soldered board.
+  2. Move the circuit from the breadboard to a soldered board, after the
+     [perfboard plan](#building-it-on-a-perfboard).

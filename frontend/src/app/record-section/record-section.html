@@ -1,0 +1,18 @@
+<h2>Record</h2>
+
+<div class="keys" role="group" aria-label="Memory functions">
+  @for (item of functions(); track item.function) {
+    <button
+      lmLamp
+      type="button"
+      tone="system"
+      [level]="item.active ? 3 : 1"
+      [blink]="item.blink"
+      [attr.aria-pressed]="item.active"
+      [attr.aria-label]="item.name"
+      (click)="store.pressFunction(item.function)"
+    >
+      {{ item.label }}
+    </button>
+  }
+</div>

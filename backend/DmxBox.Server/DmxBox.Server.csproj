@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>DmxBox.Server</RootNamespace>
+    <!-- The one place that holds the version: the program reads it from its assembly. -->
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DmxBox\DmxBox.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The tests work on the desk, the project files and the box link directly. -->
+    <InternalsVisibleTo Include="DmxBox.Tests" />
+  </ItemGroup>
+
+</Project>

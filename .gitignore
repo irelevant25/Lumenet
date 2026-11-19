@@ -8,6 +8,9 @@ build/
 .vs/
 TestResults/
 
+# Python's compiled copies of scripts
+__pycache__/
+
 # written by the simulator
 presets.bin
 

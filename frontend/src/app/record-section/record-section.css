@@ -1,0 +1,59 @@
+/* A small section under the independents: the title and the four record keys. */
+:host {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  min-height: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: var(--panel-raised);
+}
+
+h2 {
+  margin: 0;
+  color: var(--legend-dim);
+  font-size: 12px;
+  font-stretch: 75%;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* one column: save, edit, copy, del. On a low window the keys get flatter. */
+.keys {
+  display: grid;
+  grid-template-rows: repeat(4, minmax(0, var(--key-h)));
+  align-content: start;
+  justify-items: center;
+  gap: var(--strip-gap);
+  min-height: 0;
+}
+
+.keys [lmLamp] {
+  height: auto;
+}
+
+/* ---- mobile: one line. The title at the left, the four keys in the last four columns of the faders. */
+:host-context(.mobile) {
+  grid-template-columns: repeat(var(--line), var(--strip));
+  grid-template-rows: none;
+  align-items: center;
+  justify-content: space-between;
+  justify-items: center;
+  gap: 8px var(--strip-gap);
+}
+
+:host-context(.mobile) h2 {
+  grid-column: 1 / -5; /* all columns but the last four */
+  justify-self: start;
+}
+
+:host-context(.mobile) .keys {
+  display: contents; /* the keys take their places in the section's own columns */
+}
+
+:host-context(.mobile) .keys [lmLamp] {
+  height: var(--key-h);
+}

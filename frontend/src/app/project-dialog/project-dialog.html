@@ -1,0 +1,81 @@
+<dialog #dialog aria-labelledby="project-dialog-title">
+  <form (submit)="confirm($event)">
+    <h2 id="project-dialog-title">{{ title() }}</h2>
+
+    @if (task() === 'new') {
+      <p class="hint">
+        This starts an empty project: every memory and every note is removed, and all faders go to zero.
+      </p>
+      @if (losesChanges()) {
+        <p class="hint">The open project has changes that are not saved. They are lost.</p>
+      }
+    } @else {
+      @if (task() === 'save') {
+        <label for="project-name">Name</label>
+        <input
+          id="project-name"
+          type="text"
+          autocomplete="off"
+          spellcheck="false"
+          maxlength="80"
+          [value]="name()"
+          (input)="onNameInput($event)"
+        />
+      }
+
+      <p class="hint">
+        @if (replaces()) {
+          A project with this name exists. Saving replaces it.
+        } @else if (losesChanges()) {
+          The open project has changes that are not saved. Loading another one drops them.
+        } @else if (task() === 'save') {
+          Projects are stored in {{ folder() }}
+        } @else {
+          Projects in {{ folder() }}
+        }
+      </p>
+
+      <ul class="projects" [attr.aria-label]="task() === 'save' ? 'Existing projects' : 'Projects'">
+        @for (project of projects(); track project.name) {
+          <li>
+            <button
+              type="button"
+              [class.picked]="project.name === name()"
+              [attr.aria-pressed]="project.name === name()"
+              (click)="pick(project.name)"
+            >
+              <span class="project-name">{{ project.name }}</span>
+              <span class="modified">{{ project.modified | date: 'd MMM y, HH:mm' }}</span>
+            </button>
+          </li>
+        } @empty {
+          <li class="empty">
+            {{
+              task() === 'save'
+                ? 'No projects yet. This will be the first.'
+                : 'No projects yet. Save one first.'
+            }}
+          </li>
+        }
+      </ul>
+    }
+
+    @if (error()) {
+      <p class="error" role="alert">{{ error() }}</p>
+    }
+
+    <div class="actions">
+      <button lmLamp type="button" tone="system" (click)="close()">Cancel</button>
+      <button
+        lmLamp
+        type="submit"
+        tone="system"
+        [level]="3"
+        [disabled]="!canConfirm()"
+        [attr.aria-label]="confirmLabel().name"
+      >
+        {{ confirmLabel().key }}
+      </button>
+    </div>
+  </form>
+</dialog>

@@ -1,0 +1,37 @@
+<h2>Memories</h2>
+
+<div class="body">
+  <div class="row">
+    @for (memory of numbers(); track $index) {
+      <lm-fader-strip
+        kind="memory"
+        pressable
+        [number]="memory"
+        [value]="store.memoryLevels()[memory - 1]"
+        [lampLevel]="lamp(memory)"
+        [blink]="blinks(memory)"
+        [note]="store.memoryNotes()[memory - 1]"
+        (valueChange)="store.setMemoryLevel(memory, $event)"
+        (noteChange)="store.setMemoryNote(memory, $event)"
+        (keyPress)="store.pressMemory(memory)"
+      />
+    }
+  </div>
+
+  <nav class="rail" aria-label="Memory pages">
+    @for (item of pages(); track item.first) {
+      <button
+        lmLamp
+        type="button"
+        class="range"
+        tone="memory"
+        [level]="item.lamp"
+        [attr.aria-pressed]="item.shown"
+        [attr.aria-label]="'Memories ' + item.first + ' to ' + item.last"
+        (click)="store.showMemoryPage(item.first)"
+      >
+        {{ item.first }}-{{ item.last }}
+      </button>
+    }
+  </nav>
+</div>

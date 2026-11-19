@@ -1,0 +1,87 @@
+:host {
+  display: block;
+  height: 100dvh;
+}
+
+.desk {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  container-type: inline-size; /* the mobile layout measures the desk's width: 100cqw in styles.css */
+}
+
+.desk.off {
+  opacity: 0.35;
+}
+
+/* The view that is chosen in the top bar fills the rest of the window. */
+main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 0;
+  padding: 0 var(--gap) var(--gap);
+}
+
+/* The router puts the view in after this element. The element itself takes no place. */
+router-outlet {
+  display: none;
+}
+
+/* ---- mobile: the view is as high as it needs to be, and the page scrolls */
+:host-context(.mobile) {
+  height: auto;
+}
+
+:host-context(.mobile) .desk {
+  grid-template-rows: none;
+  height: auto;
+}
+
+.offline {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: min(440px, calc(100vw - 40px));
+  padding: 24px 28px;
+  translate: -50% -50%;
+  border: 1px solid var(--system);
+  border-radius: 8px;
+  background: var(--panel-raised);
+  user-select: text;
+}
+
+.offline h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.offline p {
+  margin: 0 0 12px;
+  color: var(--legend-dim);
+}
+
+.offline code {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 4px;
+  background: var(--well);
+  font-family: Consolas, 'Cascadia Mono', monospace;
+  font-size: 14px;
+}
+
+/* a short message from the desk, for example "Project saved" or why something was refused */
+.notice {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  max-width: min(640px, calc(100vw - 40px));
+  margin: 0;
+  padding: 10px 16px;
+  translate: -50% 0;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: var(--panel-raised);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 50%);
+  font-size: 15px;
+}

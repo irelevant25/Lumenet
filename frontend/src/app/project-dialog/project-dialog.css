@@ -1,0 +1,117 @@
+/* The element itself takes no room in the top bar: only the window it opens is ever seen. */
+:host {
+  display: contents;
+}
+
+dialog {
+  width: min(520px, calc(100vw - 40px));
+  padding: 0;
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  background: var(--panel-raised);
+  color: var(--legend);
+  user-select: text;
+}
+
+dialog::backdrop {
+  background: rgb(0 0 0 / 60%);
+}
+
+form {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+}
+
+h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+label {
+  color: var(--legend-dim);
+  font-size: 13px;
+}
+
+input {
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: -6px;
+  padding: 9px 10px;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: var(--well);
+  color: var(--legend);
+  font: inherit;
+  font-size: 16px;
+}
+
+.hint {
+  margin: 0;
+  color: var(--legend-dim);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.projects {
+  display: grid;
+  gap: 2px;
+  max-height: 260px;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: var(--well);
+  list-style: none;
+}
+
+.projects button {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 3px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.projects button:hover {
+  background: var(--panel-raised);
+}
+
+.projects button.picked {
+  background: color-mix(in srgb, var(--system) 22%, var(--well));
+}
+
+.modified {
+  flex: none;
+  color: var(--legend-dim);
+  font-size: 13px;
+}
+
+.empty {
+  padding: 14px 10px;
+  color: var(--legend-dim);
+}
+
+.error {
+  margin: 0;
+  color: #ff8f87;
+}
+
+/* the same square keys as on the desk */
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--strip-gap);
+  margin-top: 4px;
+}

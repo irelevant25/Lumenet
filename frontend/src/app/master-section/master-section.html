@@ -1,0 +1,25 @@
+<h2>Master</h2>
+
+<button lmLamp type="button" tone="white" [level]="3" (click)="store.clear()">Clear</button>
+<button
+  lmLamp
+  type="button"
+  tone="blue"
+  aria-label="Blackout"
+  [level]="1"
+  [blink]="store.blackout()"
+  [attr.aria-pressed]="store.blackout()"
+  (click)="store.toggleBlackout()"
+>
+  Black<br />out
+</button>
+
+<!-- The fader stands in the column and lies in the line of the mobile layout. -->
+<lm-fader
+  tone="system"
+  label="Master"
+  [orientation]="store.mobile() ? 'horizontal' : 'vertical'"
+  [value]="store.master()"
+  (valueChange)="store.setMaster($event)"
+/>
+<span class="readout" aria-hidden="true">{{ store.master() }}</span>

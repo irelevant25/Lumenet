@@ -1,0 +1,45 @@
+<h2>Ind</h2>
+
+<div class="keys">
+  <button
+    lmLamp
+    type="button"
+    tone="system"
+    aria-label="Edit the channels of the independent keys"
+    [level]="editing() ? 3 : 1"
+    [blink]="editing()"
+    [attr.aria-pressed]="editing()"
+    (click)="toggleEditing()"
+  >
+    Edit
+  </button>
+
+  @for (item of keys(); track item.number) {
+    @if (editing()) {
+      <input
+        class="channel"
+        type="text"
+        inputmode="numeric"
+        maxlength="3"
+        autocomplete="off"
+        [value]="item.channel"
+        [attr.aria-label]="'Channel of independent key ' + item.number"
+        (change)="onChannelTyped(item.number, $event)"
+        (keydown.enter)="leaveField($event)"
+      />
+    } @else {
+      <button
+        lmLamp
+        type="button"
+        class="number"
+        tone="channel"
+        [level]="item.on ? 3 : 1"
+        [attr.aria-pressed]="item.on"
+        [attr.aria-label]="'Independent ' + item.number + ', channel ' + item.channel"
+        (click)="store.toggleIndependent(item.number)"
+      >
+        {{ item.channel }}
+      </button>
+    }
+  }
+</div>

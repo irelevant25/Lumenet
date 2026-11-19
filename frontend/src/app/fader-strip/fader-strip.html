@@ -1,0 +1,54 @@
+<span class="readout" aria-hidden="true">{{ value() }}</span>
+
+<lm-fader
+  [value]="value()"
+  [ownLevel]="ownLevel()"
+  [label]="name()"
+  [tone]="kind()"
+  (valueChange)="valueChange.emit($event)"
+/>
+
+@if (pressable()) {
+  <button
+    lmLamp
+    type="button"
+    class="number"
+    [tone]="kind()"
+    [level]="lampLevel()"
+    [blink]="blink()"
+    [attr.aria-label]="name() + ' key'"
+    (click)="keyPress.emit()"
+  >
+    {{ number() }}
+  </button>
+} @else {
+  <!-- The fader above already carries the name; this lamp only shows the state. -->
+  <span lmLamp class="number" aria-hidden="true" [tone]="kind()" [level]="lampLevel()">{{
+    number()
+  }}</span>
+}
+
+<div class="note" [attr.title]="lines()[1] ? lines()[0] + ' ' + lines()[1] : lines()[0] || null">
+  <input
+    type="text"
+    autocomplete="off"
+    spellcheck="false"
+    [attr.maxlength]="lineLength"
+    [value]="lines()[0]"
+    [attr.aria-label]="'Note for ' + name()"
+    (change)="onLineChange(0, $event)"
+    (keydown.enter)="finishNote($event)"
+    (keydown.escape)="cancelNote(0, $event)"
+  />
+  <input
+    type="text"
+    autocomplete="off"
+    spellcheck="false"
+    [attr.maxlength]="lineLength"
+    [value]="lines()[1]"
+    [attr.aria-label]="'Note for ' + name() + ', second line'"
+    (change)="onLineChange(1, $event)"
+    (keydown.enter)="finishNote($event)"
+    (keydown.escape)="cancelNote(1, $event)"
+  />
+</div>

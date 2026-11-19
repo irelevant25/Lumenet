@@ -1,0 +1,20 @@
+<!-- Without the desk program nothing can be operated, so the desk is switched off until it answers. -->
+<div class="desk" [attr.inert]="store.online() ? null : ''" [class.off]="!store.online()">
+  <lm-top-bar />
+  <main>
+    <!-- the view chosen in the top bar is put in right after this element -->
+    <router-outlet />
+  </main>
+</div>
+
+@if (!store.online()) {
+  <div class="offline" role="status">
+    <h2>The desk program is not running</h2>
+    <p>Start it, and this page connects by itself:</p>
+    <code>run.cmd</code>
+  </div>
+}
+
+@if (store.notice()) {
+  <p class="notice" role="status">{{ store.notice() }}</p>
+}

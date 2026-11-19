@@ -48,7 +48,7 @@ There is no power jack: the box takes its 5 V from the USB cable.
 
 | Qty | Part | Notes |
 |---|---|---|
-| 1 | Carrier board | **Not something you can order yet.** The model shows a routed board (100 × 66 mm) with every track on the solder side, but there are no manufacturing files. Until then: build it on perfboard following the schematic in the README, or make a single-sided board from the [track drawing](3d/dmxbox_usb_routing.svg). |
+| 1 | Carrier board | **Not something you can order yet.** The model shows a routed board (100 × 66 mm) with every track on the solder side, but there are no manufacturing files. Until then: build it on a perfboard after the [perfboard plan](README.md#building-it-on-a-perfboard) (a 70 × 90 mm board with 26 × 31 holes, every hole with a pad of its own; plus some bare wire for the tracks and a short piece of insulated wire), or make a single-sided board from the [track drawing](3d/dmxbox_usb_routing.svg). |
 | 1 | Enclosure | The model uses a 108 × 75 × 38 mm box (inside: 103 × 70 × 33 mm). Openings: 12 × 8 mm for the USB plug in the left end, and a 24 mm hole plus two screw holes for the XLR jack in the right end. The board's left edge sits 1.5 mm from the inside of the left wall, so that the Pico's USB socket ends right at the wall. The opening is that large so the plug's plastic grip fits into the wall; a thicker wall than 2.5 mm needs it even more. |
 | 4 | Screw M3 × 6 mm | For the carrier board. One of the four holes is under the Pico: put that screw in before you plug the Pico in. |
 | 4 | Spacer M3 × 6 mm | Only if your box has no moulded posts |

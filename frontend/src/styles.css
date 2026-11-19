@@ -1,0 +1,112 @@
+/* Lumenet desk: the colours, lettering and sizes every component shares. */
+:root {
+  color-scheme: dark;
+
+  /* the desk surface and what is cut into it */
+  --panel: #1c1f24;
+  --panel-raised: #23272e;
+  --well: #0e1013;
+  --edge: #363c46;
+
+  /* lettering */
+  --legend: #d3d8df;
+  --legend-dim: #8b93a1;
+
+  /* lamp colours: channels, memories, the memory functions and project buttons, Clear, Blackout */
+  --channel: #3ddc84;
+  --memory: #ff5247;
+  --system: #ffb020;
+  --white-lamp: #f1f3f6;
+  --blue-lamp: #4aa3ff;
+
+  --cap: #d9dde3;
+  --focus: #8ab4ff;
+
+  /* DIN-style lettering, as on equipment panels. Bahnschrift comes with Windows, DIN Alternate with Apple devices. */
+  --font: 'Bahnschrift', 'DIN Alternate', 'Roboto Condensed', 'Arial Narrow', system-ui, sans-serif;
+
+  /* ---- layout ----
+     A wide window shows 32 faders in a row. The width of one fader strip follows the window:
+     32 strips and the one column of page keys beside them are 32.82 strips (a key is 0.82
+     strips wide); the other 365px are the gaps, the paddings and the two columns at the right
+     (independents with record, and the master section). */
+  --gap: 10px;
+  --strip-gap: 4px;
+  --strips: 32; /* faders in one row */
+  --line: var(--strips); /* faders side by side: fewer than a row only on a phone, where a row breaks in two */
+  --strip: clamp(28px, calc((100vw - 365px) / 32.82), 60px);
+
+  /* A column of keys that is too high for its place first gets flatter keys, down to this
+     height, and after that it scrolls. */
+  --key-min-h: 20px;
+
+  /* Every key on the desk has the same size: a little narrower than a strip and nearly square.
+     It never gets narrower than 32px, so a range like 129-192 still fits on one line. */
+  --key-w: min(var(--strip), max(32px, calc(var(--strip) * 0.82)));
+  --key-h: calc(var(--key-w) * 0.86);
+
+  /* lettering sizes that grow with the keys */
+  --key-number: max(11px, calc(var(--key-w) * 0.36));
+  --key-word: max(10px, calc(var(--key-w) * 0.3));
+  --key-range: max(9px, calc(var(--key-w) * 0.26));
+  --readout: max(11px, calc(var(--key-w) * 0.31));
+}
+
+/* ---- window sizes ----
+   The page marks <html> with a class for the size of the window: "medium", "mobile", "phone".
+   The limits in pixels stand in one place only: app/desk/desk-types.ts. */
+
+/* medium: 16 faders in a row, and twice as many page keys */
+html.medium {
+  --strips: 16;
+  --strip: clamp(28px, calc((100vw - 301px) / 16.82), 60px);
+}
+
+/* mobile: a small screen, or a window too narrow or too low for the whole desk. The sections
+   stand under each other and the page scrolls. Nothing stands beside the faders any more, so a
+   strip is the width of the desk (100cqw: the width without the scrollbar) less the paddings
+   and the gaps, divided by the faders in a line. */
+html.mobile {
+  --strip: clamp(
+    28px,
+    calc((100cqw - 2 * var(--gap) - 20px - (var(--line) - 1) * var(--strip-gap)) / var(--line)),
+    60px
+  );
+  --key-w: min(var(--strip), 48px); /* as wide as a strip: a finger needs the room */
+  --fader-h: clamp(150px, 24svh, 220px); /* the faders no longer share the window's height */
+
+  overscroll-behavior-y: none; /* pulling the page down must not reload it */
+}
+
+html.mobile body {
+  overflow: visible; /* the page scrolls */
+}
+
+/* phone: a row of 16 faders breaks into two lines of 8 */
+html.phone {
+  --line: 8;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--panel);
+  color: var(--legend);
+  font-family: var(--font);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent; /* the keys show a press themselves */
+  overflow: hidden; /* the desk fills the window; nothing scrolls */
+  touch-action: manipulation; /* fast taps on a key must not zoom the page */
+  user-select: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}

@@ -1,0 +1,64 @@
+/* A narrow section at the right edge: the title, Clear, Blackout, and the master fader with
+   its level under it. The fader takes the height that is left. */
+:host {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  justify-items: center;
+  gap: var(--strip-gap);
+  min-height: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: var(--panel-raised);
+}
+
+h2 {
+  justify-self: start;
+  margin: 0 0 4px;
+  color: var(--legend-dim);
+  font-size: 12px;
+  font-stretch: 75%;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+lm-fader {
+  width: var(--key-w);
+  margin-top: 6px;
+}
+
+.readout {
+  font-size: var(--readout);
+  font-stretch: 87.5%;
+  line-height: 1;
+}
+
+/* ---- mobile: one line. Clear and Blackout first, then the title as the fader's caption,
+   the fader over the room that is left, and its level. */
+:host-context(.mobile) {
+  display: flex;
+  align-items: center;
+}
+
+:host-context(.mobile) h2 {
+  order: 1;
+  margin: 0 6px 0 14px;
+  font-size: 13px;
+}
+
+:host-context(.mobile) lm-fader {
+  flex: 1;
+  order: 2;
+  width: auto;
+  height: var(--key-h);
+  margin: 0;
+}
+
+:host-context(.mobile) .readout {
+  order: 3;
+  min-width: 3ch;
+  margin-left: 6px;
+  text-align: right;
+}

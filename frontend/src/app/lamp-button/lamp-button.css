@@ -1,0 +1,87 @@
+/* Every key has the same, nearly square size. Level 1: an outline and a faint fill. */
+:host {
+  --lamp: var(--system);
+
+  box-sizing: border-box;
+  display: grid;
+  place-content: center;
+  width: var(--key-w);
+  height: var(--key-h);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--lamp) 50%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--lamp) 11%, var(--well));
+  color: color-mix(in srgb, var(--lamp) 62%, white);
+  font: inherit;
+  font-size: var(--key-word);
+  font-stretch: 87.5%;
+  line-height: 1.05;
+  text-align: center;
+  text-transform: uppercase;
+  appearance: none;
+}
+
+/* a key that carries a channel or memory number */
+:host(.number) {
+  font-size: var(--key-number);
+}
+
+/* a key that carries a range such as 129-192: narrow lettering, so it stays on one line */
+:host(.range) {
+  font-size: var(--key-range);
+  font-stretch: 75%;
+  white-space: nowrap;
+}
+
+:host(.tone-channel) {
+  --lamp: var(--channel);
+}
+
+:host(.tone-memory) {
+  --lamp: var(--memory);
+}
+
+:host(.tone-white) {
+  --lamp: var(--white-lamp);
+}
+
+:host(.tone-blue) {
+  --lamp: var(--blue-lamp);
+}
+
+/* Level 2: half lit. */
+:host(.level-2) {
+  border-color: color-mix(in srgb, var(--lamp) 80%, transparent);
+  background: color-mix(in srgb, var(--lamp) 40%, var(--well));
+  color: #fff;
+}
+
+/* Level 3: fully lit, the only thing on the desk that glows. */
+:host(.level-3) {
+  border-color: var(--lamp);
+  background: var(--lamp);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--lamp) 55%, transparent);
+  color: #0b0d10;
+  font-weight: 600;
+}
+
+/* Shown instead of blinking for people who asked for less motion. */
+:host(.steady-attention) {
+  outline: 2px dashed #fff;
+  outline-offset: 1px;
+}
+
+:host(button) {
+  cursor: pointer;
+}
+
+:host(button:active) {
+  translate: 0 1px;
+}
+
+:host(button:disabled) {
+  cursor: default;
+  opacity: 0.45;
+}

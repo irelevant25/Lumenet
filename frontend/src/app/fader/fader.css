@@ -1,0 +1,167 @@
+/* --level is set by the component: 0 at the bottom (or left), 1 at the top (or right). */
+:host {
+  --lamp: var(--channel);
+
+  position: relative;
+  container-type: size; /* lets the handle below measure itself against the fader's height */
+  display: block;
+  min-width: 0;
+  min-height: 0;
+  cursor: pointer;
+  touch-action: pan-y; /* a finger in the slot scrolls the page; only the cap moves the fader */
+}
+
+:host(.tone-memory) {
+  --lamp: var(--memory);
+}
+
+:host(.tone-system) {
+  --lamp: var(--system);
+}
+
+:host(:focus-visible) {
+  outline-offset: 1px;
+  border-radius: 3px;
+}
+
+/* The size of the handle along the direction of travel: 48px, so it is easy to grab. On a low
+   window, where the whole fader is short, it is at most a third of the fader, so that the
+   handle still has room to travel. */
+.slot,
+.cap {
+  --cap-length: min(48px, 33cqh);
+}
+
+/* The slot is cut into the panel. It lights up from the bottom to the cap, like a level meter. */
+.slot {
+  position: absolute;
+  top: calc(var(--cap-length) / 2);
+  bottom: calc(var(--cap-length) / 2);
+  left: 50%;
+  width: 6px;
+  translate: -50% 0;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--well);
+  box-shadow: inset 0 0 0 1px #000;
+}
+
+/* --own is where the fader's own level ends. It is the same as --level, unless a memory holds
+   the fader higher: then the part above the own level is lit in the colour of the memories. */
+.fill {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: calc(var(--own) * 100%);
+  background: var(--lamp);
+}
+
+.lift {
+  position: absolute;
+  right: 0;
+  bottom: calc(var(--own) * 100%);
+  left: 0;
+  height: calc((var(--level) - var(--own)) * 100%);
+  background: var(--memory);
+}
+
+.cap {
+  position: absolute;
+  bottom: calc(var(--level) * (100% - var(--cap-length)));
+  left: 50%;
+  box-sizing: border-box;
+  width: min(84%, 30px);
+  height: var(--cap-length);
+  translate: -50% 0;
+  border: 1px solid #0b0d10;
+  border-radius: 2px;
+  background: var(--cap);
+  cursor: grab;
+  touch-action: none; /* a finger on the cap moves the fader, not the page */
+}
+
+/* For a finger the cap can be taken a little beside it as well. */
+@media (pointer: coarse) {
+  .cap::before {
+    content: '';
+    position: absolute;
+    inset: -4px -6px;
+  }
+}
+
+/* the line across the middle of the cap */
+.cap::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  left: 2px;
+  height: 2px;
+  translate: 0 -50%;
+  background: #23272e;
+}
+
+:host(.dragging),
+:host(.dragging) .cap {
+  cursor: grabbing;
+}
+
+:host(.dragging) .cap {
+  background: #fff;
+}
+
+/* ---- lying down: used for the master fader */
+:host(.horizontal) .slot,
+:host(.horizontal) .cap {
+  --cap-length: 16px;
+}
+
+/* wide enough for a finger */
+@media (pointer: coarse) {
+  :host(.horizontal) .slot,
+  :host(.horizontal) .cap {
+    --cap-length: 30px;
+  }
+}
+
+:host(.horizontal) .slot {
+  top: 50%;
+  right: calc(var(--cap-length) / 2);
+  bottom: auto;
+  left: calc(var(--cap-length) / 2);
+  width: auto;
+  height: 6px;
+  translate: 0 -50%;
+}
+
+:host(.horizontal) .fill {
+  top: 0;
+  right: auto;
+  width: calc(var(--own) * 100%);
+  height: auto;
+}
+
+/* nothing holds a lying fader up */
+:host(.horizontal) .lift {
+  display: none;
+}
+
+:host(.horizontal) .cap {
+  top: 50%;
+  bottom: auto;
+  left: calc(var(--level) * (100% - var(--cap-length)));
+  width: var(--cap-length);
+  height: min(84%, 30px);
+  translate: 0 -50%;
+}
+
+:host(.horizontal) .cap::after {
+  top: 2px;
+  right: auto;
+  bottom: 2px;
+  left: 50%;
+  width: 2px;
+  height: auto;
+  translate: -50% 0;
+}

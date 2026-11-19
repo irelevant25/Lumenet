@@ -1,0 +1,79 @@
+/* A narrow section at the right edge: the title, Edit, and sixteen keys in one column. */
+:host {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  min-height: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: var(--panel-raised);
+}
+
+h2 {
+  margin: 0;
+  color: var(--legend-dim);
+  font-size: 12px;
+  font-stretch: 75%;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* Edit and the sixteen keys. On a low window they get flatter instead of running out of the window. */
+.keys {
+  display: grid;
+  grid-template-rows: repeat(17, minmax(0, var(--key-h)));
+  align-content: start;
+  justify-items: center;
+  gap: var(--strip-gap);
+  min-height: 0;
+}
+
+.keys [lmLamp] {
+  height: auto;
+}
+
+/* While editing, a key becomes a field for its channel number. */
+.channel {
+  box-sizing: border-box;
+  width: var(--key-w);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 1px dashed var(--channel);
+  border-radius: 3px;
+  background: var(--well);
+  color: #fff;
+  font: inherit;
+  font-size: var(--key-number);
+  font-stretch: 87.5%;
+  text-align: center;
+  user-select: text;
+}
+
+/* ---- mobile: the section lies down. The title and Edit share the first line; the sixteen
+   keys stand under them, in the columns of the faders. */
+:host-context(.mobile) {
+  grid-template-columns: repeat(var(--line), var(--strip));
+  grid-template-rows: none;
+  align-items: center;
+  justify-content: space-between;
+  justify-items: center;
+  gap: 8px var(--strip-gap);
+}
+
+:host-context(.mobile) h2 {
+  grid-column: 1 / -2; /* all columns but the last, where Edit stands */
+  justify-self: start;
+}
+
+:host-context(.mobile) .keys {
+  display: contents; /* the keys take their places in the section's own columns */
+}
+
+:host-context(.mobile) .keys [lmLamp],
+:host-context(.mobile) .channel {
+  height: var(--key-h);
+}

@@ -1,0 +1,68 @@
+/* the level number, the fader, the key and the note, centred above each other */
+:host {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  justify-items: center;
+  gap: 4px;
+  width: var(--strip);
+  min-height: 0;
+}
+
+lm-fader {
+  justify-self: stretch;
+}
+
+/* mobile: the page scrolls, so a fader has a height of its own instead of the room that is left */
+:host-context(.mobile) lm-fader {
+  height: var(--fader-h);
+}
+
+/* the level as a number; it brightens when the fader is up */
+.readout {
+  color: var(--legend-dim);
+  font-size: var(--readout);
+  font-stretch: 87.5%;
+  line-height: 1;
+  text-align: center;
+}
+
+:host(.up) .readout {
+  color: #fff;
+}
+
+/* The note under the key: two lines, each a field of its own, empty until something is typed.
+   They look like lettering on the desk, and only show that they are fields when the pointer
+   is on them or they are being typed in. */
+.note {
+  display: grid;
+  width: 100%;
+}
+
+.note input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 16px;
+  margin: 0;
+  padding: 0 1px;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 2px;
+  background: none;
+  color: var(--legend);
+  font: inherit;
+  font-size: 13px;
+  font-stretch: 75%;
+  line-height: 15px;
+  text-align: center;
+  text-overflow: ellipsis;
+  user-select: text;
+}
+
+.note input:hover {
+  border-bottom-color: var(--legend-dim);
+}
+
+.note input:focus {
+  outline-offset: 0;
+  background: var(--well);
+}

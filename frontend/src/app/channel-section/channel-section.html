@@ -1,0 +1,39 @@
+<h2>Channels</h2>
+
+<div class="body">
+  <div class="rows">
+    @for (row of rows(); track $index) {
+      <div class="row">
+        @for (channel of row; track $index) {
+          <lm-fader-strip
+            kind="channel"
+            [number]="channel"
+            [value]="store.shownChannels()[channel - 1]"
+            [ownLevel]="store.channels()[channel - 1]"
+            [lampLevel]="lamp(channel)"
+            [note]="store.channelNotes()[channel - 1]"
+            (valueChange)="store.setChannel(channel, $event)"
+            (noteChange)="store.setChannelNote(channel, $event)"
+          />
+        }
+      </div>
+    }
+  </div>
+
+  <nav class="rail" aria-label="Channel pages">
+    @for (item of pages(); track item.first) {
+      <button
+        lmLamp
+        type="button"
+        class="range"
+        tone="channel"
+        [level]="item.lamp"
+        [attr.aria-pressed]="item.shown"
+        [attr.aria-label]="'Channels ' + item.first + ' to ' + item.last"
+        (click)="store.showChannelPage(item.first)"
+      >
+        {{ item.first }}-{{ item.last }}
+      </button>
+    }
+  </nav>
+</div>

@@ -1,0 +1,168 @@
+/* One section over the whole view: the title with a sentence about the memory, the memory
+   keys, under them the table of the 512 channels, and the page keys at the right. */
+:host {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: var(--panel-raised);
+}
+
+header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  min-width: 0;
+}
+
+h2 {
+  flex: none;
+  margin: 0;
+  color: var(--legend-dim);
+  font-size: 12px;
+  font-stretch: 75%;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.summary {
+  margin: 0;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* the table takes the whole width, the page keys stand at the right edge */
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--gap);
+  min-height: 0;
+}
+
+.content {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+  min-height: 0;
+}
+
+/* The memory keys and the table share the columns of the faders in the main view:
+   as many in a line as faders in a row. */
+.keys,
+.matrix {
+  display: grid;
+  grid-template-columns: repeat(var(--line), var(--strip));
+  justify-content: space-between;
+  gap: var(--strip-gap);
+}
+
+.keys {
+  justify-items: center;
+}
+
+/* 512 cells. The rows share the height; when the window is too low for that, the table scrolls. */
+.matrix {
+  grid-auto-rows: minmax(20px, 1fr);
+  row-gap: 2px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-width: thin;
+}
+
+/* One channel: its number small in the corner, its level at the right, where numbers of a
+   table stand. --part is the level from 0 to 1; the cell gets brighter with it. */
+.matrix li {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 0;
+  padding-right: 5px;
+  border: 1px solid color-mix(in srgb, var(--edge) 60%, transparent);
+  border-radius: 3px;
+  background: var(--well);
+  color: color-mix(in srgb, var(--legend-dim) 55%, transparent);
+  font-size: var(--readout);
+  font-stretch: 87.5%;
+  line-height: 1;
+}
+
+.matrix li.up {
+  border-color: color-mix(in srgb, var(--channel) 70%, transparent);
+  background: color-mix(in srgb, var(--channel) calc(14% + var(--part) * 46%), var(--well));
+  color: #fff;
+  font-weight: 600;
+}
+
+.channel {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  color: var(--legend-dim);
+  font-size: 9px;
+  font-weight: 400;
+}
+
+.matrix li.up .channel {
+  color: color-mix(in srgb, #fff 80%, transparent);
+}
+
+/* The page keys in ONE column, from the top, as in the main view. */
+.rail {
+  display: grid;
+  grid-template-columns: var(--key-w);
+  grid-auto-rows: minmax(var(--key-min-h), var(--key-h));
+  align-content: start;
+  gap: var(--strip-gap);
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.rail [lmLamp] {
+  height: auto;
+}
+
+/* ---- mobile: the page keys lie under the title, the table is as long as it needs to be */
+:host-context(.mobile) {
+  grid-template-rows: none;
+}
+
+:host-context(.mobile) header {
+  display: block;
+}
+
+:host-context(.mobile) .summary {
+  margin-top: 6px;
+  white-space: normal;
+}
+
+:host-context(.mobile) .body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+:host-context(.mobile) .rail {
+  order: -1;
+  grid-template-columns: repeat(var(--line), var(--strip));
+  grid-auto-rows: var(--key-h);
+  justify-content: space-between;
+  justify-items: center;
+  overflow: visible;
+}
+
+:host-context(.mobile) .matrix {
+  grid-auto-rows: 34px;
+  overflow: visible;
+}

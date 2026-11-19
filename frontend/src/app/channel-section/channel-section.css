@@ -1,0 +1,94 @@
+/* One section, set into the panel: the title, the two rows of faders, and the page keys at the right. */
+:host {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  min-height: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: var(--panel-raised);
+}
+
+h2 {
+  margin: 0;
+  color: var(--legend-dim);
+  font-size: 12px;
+  font-stretch: 75%;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* the faders take the whole width, the page keys stand at the right edge */
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--gap);
+  min-height: 0;
+}
+
+.rows {
+  display: grid;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  min-height: 0;
+}
+
+/* one row of faders: 32 on a wide window, 16 on a narrower one */
+.row {
+  display: grid;
+  grid-template-columns: repeat(var(--line), var(--strip));
+  /* On a wide window the strips keep their width and the room between them grows. */
+  justify-content: space-between;
+  gap: var(--strip-gap);
+  min-height: 0;
+}
+
+/* a thin line between the two rows */
+.row + .row {
+  padding-top: 10px;
+  border-top: 1px solid var(--edge);
+}
+
+/* The page keys in ONE column, from the top. When they are too many for the height, they first
+   get flatter and then the column scrolls. */
+.rail {
+  display: grid;
+  grid-template-columns: var(--key-w);
+  grid-auto-rows: minmax(var(--key-min-h), var(--key-h));
+  align-content: start;
+  gap: var(--strip-gap);
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.rail [lmLamp] {
+  height: auto;
+}
+
+/* ---- mobile: the page keys lie under the title, in the columns of the faders, and go on in
+   another line when one line cannot hold them. The faders follow under them. */
+:host-context(.mobile) .body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+:host-context(.mobile) .rail {
+  order: -1;
+  grid-template-columns: repeat(var(--line), var(--strip));
+  grid-auto-rows: var(--key-h);
+  justify-content: space-between;
+  justify-items: center;
+  overflow: visible;
+}
+
+:host-context(.mobile) .rows {
+  grid-template-rows: none;
+}
+
+/* on a phone a row of 16 is two lines of 8: more room between the lines than between the strips */
+:host-context(.mobile) .row {
+  row-gap: 14px;
+}

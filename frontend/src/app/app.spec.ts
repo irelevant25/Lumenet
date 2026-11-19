@@ -7,6 +7,7 @@ import { DeskConnection } from './desk/desk-connection';
 import { DeskStore } from './desk/desk-store';
 import {
   CHANNEL_COUNT,
+  ImportAnswer,
   LanAccess,
   MEMORY_COUNT,
   Playback,
@@ -68,6 +69,13 @@ class FakeConnection {
   /** LAN as the backend answers "GetLanAccess": this page runs on the PC, and LAN is off. */
   lan: LanAccess = { local: true, on: false, addresses: ['192.168.1.20:5080'], password: null };
 
+  /** What the backend answers to "ImportProject", or the message it refuses it with. */
+  importAnswer: ImportAnswer = {
+    project: { name: 'Hamlet', path: null, unsaved: true },
+    report: ['Hamlet.asc: 1 cue.', 'Memory 1 holds the cue.', 'Nothing is saved yet: Save keeps the project.'],
+  };
+  importRefusal: string | null = null;
+
   start(): void {
     this.online.set(true);
     for (const callback of this.connected) callback();
@@ -90,6 +98,10 @@ class FakeConnection {
     if (method === 'GetPlayback') return this.playback;
     if (method === 'GetLanAccess') return this.lan;
     if (method === 'NewProject') return { name: 'Untitled', path: null, unsaved: false };
+    if (method === 'ImportProject') {
+      if (this.importRefusal) throw new Error(this.importRefusal);
+      return this.importAnswer;
+    }
     return undefined;
   }
 
@@ -207,6 +219,28 @@ describe('the desk page', () => {
   async function stackStands(stack: StackPlayback): Promise<void> {
     connection.emit('PlaybackChanged', { ...connection.playback, stack });
     await fixture.whenStable();
+  }
+
+  /** Chooses a file in the import window, as the system's window for choosing files does. */
+  async function pick(file: File): Promise<void> {
+    const picker = page.querySelector<HTMLInputElement>('lm-import-dialog input[type="file"]');
+    if (!picker) throw new Error('no window for choosing a file');
+    Object.defineProperty(picker, 'files', { value: [file], configurable: true });
+    picker.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+  }
+
+  /** Waits for what the page does on its own, such as reading a file and waiting for the desk. */
+  async function until(happened: () => boolean): Promise<void> {
+    for (let round = 0; round < 50 && !happened(); round++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await fixture.whenStable();
+    }
+    if (!happened()) throw new Error('it did not happen');
+  }
+
+  function textOf(selector: string): string | undefined {
+    return page.querySelector(selector)?.textContent?.trim();
   }
 
   it('shows the name, 64 channel faders, 32 memory faders and the page buttons', () => {
@@ -565,11 +599,71 @@ describe('the desk page', () => {
     expect(button('New project')).toBeTruthy();
   });
 
-  it('the LAN key stands at the top left, and New beside Save and Load at the right', () => {
+  it('the LAN key stands at the top left, and New beside Save, Load and Import at the right', () => {
     const labels = (selector: string) =>
       [...page.querySelectorAll(`lm-top-bar ${selector} button`)].map((key) => key.getAttribute('aria-label'));
     expect(labels('.left')).toEqual(['LAN']);
-    expect(labels('.project')).toEqual(['New project', 'Save project', 'Load project']);
+    expect(labels('.project')).toEqual(['New project', 'Save project', 'Load project', 'Import a show']);
+  });
+
+  it('import: a show file becomes the project, and the window says what became of it', async () => {
+    connection.emit('ProjectChanged', { name: 'Untitled', path: null, unsaved: true });
+    await press(button('Import a show'));
+    const dialog = page.querySelector<HTMLDialogElement>('lm-import-dialog dialog');
+    expect(dialog?.open).toBe(true);
+    expect(textOf('lm-import-dialog .file-name')).toBe('No file chosen');
+    expect(button('Import the show').disabled).toBe(true);
+
+    await pick(new File(['Cue 1\nChan 1 FL\n'], 'Hamlet.asc'));
+    expect(textOf('lm-import-dialog .file-name')).toBe('Hamlet.asc');
+    expect(page.querySelector('lm-import-dialog')?.textContent).toContain(
+      'The open project has changes that are not saved. Importing drops them.',
+    );
+    await press(button('Import the show'));
+    await until(() => page.querySelector('lm-import-dialog .report') !== null);
+
+    expect(connection.last('ImportProject')).toEqual(['Hamlet.asc', 'Cue 1\nChan 1 FL\n']);
+    const report = [...page.querySelectorAll('lm-import-dialog .report p')].map((line) => line.textContent?.trim());
+    expect(report).toEqual(connection.importAnswer.report);
+    expect(textOf('lm-top-bar .name strong')).toBe('Hamlet');
+
+    // OK closes the window. Import again asks for a file at once, over a new question.
+    await press(button('Close'));
+    expect(dialog?.open).toBe(false);
+    const asked = vi.spyOn(HTMLInputElement.prototype, 'click');
+    await press(button('Import a show'));
+    expect(asked).toHaveBeenCalledTimes(1);
+    expect(textOf('lm-import-dialog .file-name')).toBe('No file chosen');
+    asked.mockRestore();
+    await press(page.querySelector<HTMLButtonElement>('lm-import-dialog .actions button')); // Cancel
+    expect(dialog?.open).toBe(false);
+
+    // saving offers the name of the show file
+    await press(button('Save project'));
+    expect(page.querySelector<HTMLInputElement>('#project-name')?.value).toBe('Hamlet');
+  });
+
+  it('import says why the desk refused a file, and another one can be tried', async () => {
+    connection.importRefusal = '"notes.txt" has no cues, submasters or groups.';
+    await press(button('Import a show'));
+    await pick(new File(['Dear diary,'], 'notes.txt'));
+    await press(button('Import the show'));
+    await until(() => page.querySelector('lm-import-dialog .error') !== null);
+
+    expect(textOf('lm-import-dialog .error')).toBe('"notes.txt" has no cues, submasters or groups.');
+    expect(page.querySelector<HTMLDialogElement>('lm-import-dialog dialog')?.open).toBe(true);
+    expect(button('Import the show').disabled).toBe(false);
+  });
+
+  it('import takes no file larger than the desk takes, and sends nothing', async () => {
+    await press(button('Import a show'));
+    const file = new File(['Cue 1'], 'huge.asc');
+    Object.defineProperty(file, 'size', { value: 9 * 1024 * 1024 });
+    await pick(file);
+
+    expect(textOf('lm-import-dialog .error')).toBe('"huge.asc" has 9.0 MB. A show file can have up to 8.0 MB.');
+    expect(button('Import the show').disabled).toBe(true);
+    expect(connection.methods()).not.toContain('ImportProject');
   });
 
   it('LAN lit shows the address and the password under the box light; off shows neither', async () => {
@@ -1086,6 +1180,7 @@ describe('the desk page', () => {
       'Delete memory',
       'New project',
       'Load project',
+      'Import a show',
       'Edit the channels and memories of the independent keys',
     ]) {
       expect(button(key).disabled).toBe(true);

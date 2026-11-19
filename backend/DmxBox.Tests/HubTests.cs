@@ -527,6 +527,89 @@ public sealed class HubTests
     }
 
     [Fact]
+    public async Task ImportedShowReplacesTheProjectAndWaitsToBeSaved()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await using HubClient other = await server.ConnectAsync();
+        string imported = """{"name":"Hamlet","path":null,"unsaved":true}""";
+
+        JsonElement answer = await ui.InvokeAsync("ImportProject", "Hamlet.asc", "Cue 1\nUp 2\nChan 1 FL\nText Dawn\n");
+
+        // The answer: the project, called after the file and not saved, and the report.
+        Assert.Equal(["project", "report"], NamesIn(answer));
+        Assert.Equal(imported, answer.GetProperty("project").GetRawText());
+        Assert.Equal("Hamlet.asc: 1 cue.", Texts(answer.GetProperty("report"))[0]);
+
+        // Every UI gets the new desk and the new project, as after loading one.
+        JsonElement desk = await NextDeskAsync(other);
+        Assert.True(Flags(desk.GetProperty("memoryStored"))[0]);
+        Assert.Equal("Cue 1" + (char)0x2028 + "Dawn", Texts(desk.GetProperty("memoryNotes"))[0]);
+        await AssertNextAsync(other, "ProjectChanged", $"[{imported}]");
+        JsonElement step = Assert.Single((await ui.InvokeAsync("GetStack")).GetProperty("steps").EnumerateArray());
+        Assert.Equal(
+            """{"cue":"1.0","target":"memory","number":1,"value":255,"up":2,"wait":0,"down":2}""",
+            JsonSerializer.Serialize(new
+            {
+                cue = step.GetProperty("cue").GetString(),
+                target = step.GetProperty("target").GetString(),
+                number = step.GetProperty("number").GetInt32(),
+                value = step.GetProperty("value").GetInt32(),
+                up = step.GetProperty("up").GetDouble(),
+                wait = step.GetProperty("wait").GetDouble(),
+                down = step.GetProperty("down").GetDouble(),
+            }));
+
+        // Saved under a name, it is a project like any other.
+        JsonElement saved = await ui.InvokeAsync("SaveProject", "Hamlet");
+        Assert.Equal(Project("Hamlet", Path.Combine(server.ProjectsFolder, "Hamlet.json"), unsaved: false), saved.GetRawText());
+    }
+
+    [Fact]
+    public async Task ImportIsRefusedForAFileWithoutCuesAndWhileTheStackIsLive()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+
+        await AssertRefusedAsync(
+            "\"notes.txt\" has no cues, submasters or groups. Lumenet imports show files in the USITT ASCII format, " +
+            "the text that theatre consoles write.",
+            ui,
+            "ImportProject",
+            "notes.txt",
+            "Dear diary,");
+
+        await ui.InvokeAsync("AddStackStep", new { target = "channel", number = 1, value = 255, up = 1, wait = 0, down = 1 });
+        await ui.InvokeAsync("SetStackLive", true);
+        await AssertRefusedAsync(
+            "The stack is live, so nothing that is stored can be changed. Switch Stack off first.",
+            ui,
+            "ImportProject",
+            "show.asc",
+            "Cue 1");
+    }
+
+    [Fact]
+    public async Task ShowFileOfSomeMegabytesComesThrough()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        var text = new System.Text.StringBuilder();
+        string comment = "! " + new string('x', 1000) + "\n";
+        for (int cue = 1; cue <= 100; cue++)
+        {
+            text.Append(CultureInfo.InvariantCulture, $"Cue {cue}\nUp 3\nChan {cue} FL\n");
+            for (int line = 0; line < 30; line++)
+                text.Append(comment);
+        }
+
+        Assert.True(text.Length > 3_000_000);
+        JsonElement answer = await ui.InvokeAsync("ImportProject", "big.asc", text.ToString());
+
+        Assert.Equal("big.asc: 100 cues.", Texts(answer.GetProperty("report"))[0]);
+    }
+
+    [Fact]
     public async Task BoxComingAndGoingIsToldToTheUis()
     {
         await using TestServer server = await TestServer.StartAsync();

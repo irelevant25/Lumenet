@@ -403,6 +403,22 @@ internal sealed class DeskHub : Hub<IDeskClient>
         return project;
     }
 
+    /// <summary>
+    /// Makes a project out of a theatre console's show file in the USITT ASCII format (".asc"),
+    /// see <see cref="ShowImport"/>, and opens it in place of the open one, as loading does: all
+    /// memory faders go to 0. Nothing is saved.
+    /// </summary>
+    /// <param name="fileName">The name of the file; the project is called after it.</param>
+    /// <param name="text">What the file holds.</param>
+    /// <returns>The project, and what the import made of the file, for the user to read.</returns>
+    public async Task<ImportAnswer> ImportProject(string fileName, string text)
+    {
+        ImportedShow show = ShowImport.Read(fileName, text);
+        ProjectInfo project = _projects.Import(show.Name, show.Content);
+        await TellDeskAsync();
+        return new ImportAnswer(project, show.Report);
+    }
+
     // After a change that is more than one fader or one note: every UI gets the whole desk
     // again, also the UI that asked. A changed memory changes the project too.
     private async Task TellDeskAsync()

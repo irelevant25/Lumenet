@@ -1,18 +1,19 @@
 import { Component, computed, inject, viewChild } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { DeskStore } from '../desk/desk-store';
+import { ImportDialog } from '../import-dialog/import-dialog';
 import { LampButton } from '../lamp-button/lamp-button';
 import { ProjectDialog } from '../project-dialog/project-dialog';
 
 /**
  * The strip along the top: name and version with the box light and the LAN key, the links to
- * the views, and the project with its keys New, Save and Load.
+ * the views, and the project with its keys New, Save, Load and Import.
  */
 @Component({
   host: {
     role: 'banner',
   },
-  imports: [LampButton, ProjectDialog, RouterLink, RouterLinkActive],
+  imports: [ImportDialog, LampButton, ProjectDialog, RouterLink, RouterLinkActive],
   selector: 'lm-top-bar',
   styleUrl: './top-bar.css',
   templateUrl: './top-bar.html',
@@ -20,6 +21,7 @@ import { ProjectDialog } from '../project-dialog/project-dialog';
 export class TopBar {
   protected readonly store = inject(DeskStore);
   protected readonly dialog = viewChild.required(ProjectDialog);
+  protected readonly importDialog = viewChild.required(ImportDialog);
 
   /** Shown when the pointer rests on the connection light. */
   protected readonly boxHint = computed(() => {

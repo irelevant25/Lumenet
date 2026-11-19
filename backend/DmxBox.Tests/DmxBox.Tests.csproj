@@ -18,8 +18,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- The example project of the repository, for ExampleProjectTests -->
+    <!-- The example project of the repository, for ExampleProjectTests, and the example show
+         file of a theatre console, for ExampleShowFileTests -->
     <None Include="..\..\examples\Example show.json" Link="examples\Example show.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\examples\Example theatre show.asc" Link="examples\Example theatre show.asc" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

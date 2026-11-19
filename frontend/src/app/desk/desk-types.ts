@@ -209,6 +209,21 @@ export interface ProjectInfo {
   unsaved: boolean;
 }
 
+/** The name the backend gives a project that has none yet: a new one. */
+export const NEW_PROJECT_NAME = 'Untitled';
+
+/** What the backend answers to an import: the project, now open, and what became of the show file, sentence by sentence. */
+export interface ImportAnswer {
+  project: ProjectInfo;
+  report: string[];
+}
+
+/**
+ * The largest show file the page sends to import. It goes to the backend in one message, and
+ * the backend takes messages of up to 10 MB (Program.MaxMessageBytes): room for the file in JSON.
+ */
+export const IMPORT_LIMIT_BYTES = 8 * 1024 * 1024;
+
 /** What the backend answers when the page connects. */
 export interface Welcome {
   version: string;

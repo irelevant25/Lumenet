@@ -29,6 +29,12 @@ internal static class Program
     private const string HubsPath = "/hub";
     private const string DeskHubPath = HubsPath + "/desk";
 
+    /// <summary>
+    /// The largest message a UI may send to the hub: room for a show file of 8 MB, the largest
+    /// the UI sends (its IMPORT_LIMIT_BYTES), in JSON.
+    /// </summary>
+    public const long MaxMessageBytes = 10 * 1024 * 1024;
+
     // The name under which SignalR logs the hub calls that failed.
     private const string HubCallLog = "Microsoft.AspNetCore.SignalR.Internal.DefaultHubDispatcher";
 
@@ -143,7 +149,14 @@ internal static class Program
     private static void AddHub(IServiceCollection services, AllowedOrigins origins)
     {
         services.AddSingleton<UserErrorFilter>();
-        services.AddSignalR(options => options.AddFilter<UserErrorFilter>());
+        services.AddSignalR(options =>
+        {
+            options.AddFilter<UserErrorFilter>();
+
+            // A show file to import comes in one message (see DeskHub.ImportProject). SignalR's
+            // limit of 32 KB would close the connection for a show of a few dozen cues.
+            options.MaximumReceiveMessageSize = MaxMessageBytes;
+        });
 
         // SignalR writes an error with a stack trace for every hub call that ends in an
         // exception, also when the hub only refused a mistake of the user. UserErrorFilter

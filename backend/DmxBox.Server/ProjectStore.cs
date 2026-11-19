@@ -154,6 +154,27 @@ internal sealed class ProjectStore
         }
     }
 
+    /// <summary>
+    /// Replaces the desk's project by one made from another console's show file, see
+    /// <see cref="ShowImport"/>. The project gets its name but no file: until it is saved it
+    /// counts as unsaved, because nothing of it is in a file yet.
+    /// </summary>
+    /// <param name="name">The name of the project, which <see cref="ProjectName"/> allows.</param>
+    /// <param name="content">The project.</param>
+    /// <returns>The project after the import.</returns>
+    public ProjectInfo Import(string name, ProjectContent content)
+    {
+        ProjectName.Require(name);
+        lock (_lock)
+        {
+            long changes = _desk.ReplaceProject(content);
+            _name = name;
+            _path = null;
+            _savedChanges = changes - 1;   // one change, the import itself, is not in a file
+            return CurrentInfo();
+        }
+    }
+
     // Call with the lock held.
     private ProjectInfo CurrentInfo()
     {

@@ -1,0 +1,85 @@
+/* The element takes no room in the top bar: only the window it opens is ever seen. The window
+   looks like the one for projects. */
+:host {
+  display: contents;
+}
+
+dialog {
+  width: min(560px, calc(100vw - 40px));
+  padding: 0;
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  background: var(--panel-raised);
+  color: var(--legend);
+  user-select: text;
+}
+
+dialog::backdrop {
+  background: rgb(0 0 0 / 60%);
+}
+
+form {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+}
+
+h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.hint {
+  margin: 0;
+  color: var(--legend-dim);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+/* the File key, and beside it the name of the chosen file */
+.file {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.file-name {
+  overflow: hidden;
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* what became of the show: one short paragraph per sentence, in a well that scrolls if it is long */
+.report {
+  display: grid;
+  gap: 8px;
+  max-height: min(360px, 60vh);
+  padding: 12px;
+  overflow-y: auto;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: var(--well);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.report p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.error {
+  margin: 0;
+  color: #ff8f87;
+}
+
+/* the same square keys as on the desk */
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--strip-gap);
+  margin-top: 4px;
+}

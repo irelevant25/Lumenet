@@ -179,6 +179,7 @@ h1 {
   align-items: baseline;
   justify-content: flex-end;
   gap: 8px;
+  min-width: 0; /* a long name is cut short with "…" rather than running under the keys */
   font-size: 16px;
 }
 

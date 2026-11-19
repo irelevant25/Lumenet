@@ -22,7 +22,7 @@ at **192.168.7.1**. So the box is controlled over UDP like a network device, but
 | `backend/` | .NET: the `DmxBox` library, the `dmxbox` command-line tool, the server of the Lumenet desk, and the tests. |
 | `frontend/` | Angular: the page of the Lumenet fader desk. |
 | `run.cmd` | Starts the Lumenet desk: backend and frontend together. |
-| `examples/` | An example project for the desk, to load and look at. |
+| `examples/` | An example project for the desk, to load and look at, and an example show file of a theatre console, to import. |
 | `schematic/` | The schematic, the breadboard plan and the perfboard plan (SVG, PNG, PDF for printing), and the scripts that draw them. |
 | `3d/` | Blender model, renders, and a drawing of the board's tracks. |
 | [BOM.md](BOM.md) | Parts list for ordering. |
@@ -487,7 +487,7 @@ level) with **Record** under it, and at the right edge, over the whole height, t
   choose a memory, each with the two lines of its note under it, and the table under them shows the level
   that memory holds for each of the 512 channels, in rows as long as a row of faders (32 by 16, or 16 by 32
   in a narrower window). The page keys at the right choose which memories the keys show.
-* **Project:** New, Save and Load at the top right. A project is one JSON file in
+* **Project:** New, Save, Load and Import at the top right. A project is one JSON file in
   `Documents\Lumenet`. It holds the memories (looks and sequences), the stack, the notes and what the
   independent keys are bound to, not the fader positions, so loading a project never switches a light on by
   itself. New empties the desk; it asks first. A project saved before the independents had memory keys
@@ -499,6 +499,44 @@ level) with **Record** under it, and at the right edge, over the whole height, t
   at speeds from 0.5× to 2×), all twenty independent keys bound, and a stack of 14 steps with steps put in
   between (3.5, 4.1), waits that go on by themselves and a channel step for the hazer. Copy it into
   `Documents\Lumenet` and load "Example show".
+* **Import** opens the show of a theatre console as a project: a file in the USITT ASCII format (`.asc`, up
+  to 8 MB), the plain text in which consoles such as ETC Eos, Ion and Express, the ETC (AVAB) SmartFade or the
+  Strand consoles hand a show on (on an Eos: File, Export, USITT ASCII; a SmartFade saves its shows in this
+  format). Press Import, choose the file, and press Import in the
+  window; the window then says what came across and what was left out. Like Load, it replaces the open
+  project, and the window warns when that has changes that are not saved. The imported project is called
+  after the file and is not saved until Save.
+  * **Cues:** every cue of the first cue list becomes a memory with its look, and a step of the stack that
+    brings that memory up: with the cue's number, its up time, and as down the down time of the cue after it
+    (the stack takes the old step down while the new one comes up). A follow time becomes the step's wait,
+    which counts from the moment the step is up. A cue in parts becomes one fade, as long as its slowest
+    part; a delay is added to the fade time. A cue without a time fades in 5 seconds. A last cue that links
+    to the first goes round, as the stack does; other links are left out.
+  * **Submasters and groups** become memories too, after the cues, as long as memories are left. There are 128
+    in all: what does not fit is left out, and the window says so.
+  * **Patch:** the levels go through the file's patch onto the DMX addresses 1 to 512, which are Lumenet's
+    channels; a file without a patch has channel 1 on address 1. The note under a channel names the console
+    channel on that address ("Ch 7"; under it the share, if the patch gives less than 100 %).
+  * **Notes under the memories:** the cue, submaster or group and the start of its label, like "Cue 4.5" over
+    "Spot on the".
+  * **Not taken over:** lines that only one maker's consoles understand (they begin with `$`: moving lights,
+    effects, macros), cue lists after the first, and cue numbers the stack cannot have (more than one digit
+    after the dot, or above 999.9): those steps get the next free number, and the note keeps the cue's own.
+  * **One difference in the fades:** a console fades every light straight from its old level to its new one.
+    The stack fades the old memory down while the new one comes up, and the higher of the two wins, so a light
+    that stays on from one cue to the next dips to about half in the middle of the fade.
+  * **ETC SmartFade:** its files have a dialect of their own, and its show keeps its shape. Its memories become
+    memories, in the order of their numbers, with a note like "Mem 25" over the memory's label. The steps of
+    its stack bring those memories up, so a memory that several steps play is there once; only a step with
+    levels of its own (a "state", a single channel) gets a memory of its own, and a memory that a step plays
+    but the file does not hold stays empty, as on the console. Its sequences become memories that hold
+    sequences: Loop and One Shot as on the console, Manual in a loop. A wait counts from the moment a step is
+    up, as on the console, and a wait of 0 waits for Play. Its patch has the DMX address first; the labels of
+    its channels become the notes under them, and its independents IND 1 and IND 2 get independent keys 1
+    and 2. A percentage becomes a DMX value rounded up, as the console has it (17 % is 44).
+  * `examples/Example theatre show.asc` is a short play for the lights of the example project, written by
+    hand to show all of this: a patch, a blackout, a cue in two parts with a delay, a storm whose cues follow
+    on by themselves, a fade of 1:30, submasters and groups. Import it from the `examples` folder.
 * **LAN** (top left, beside the name) lets a phone or a tablet in the same network use the desk; see below.
 
 **Steps.** A sequence and the stack are both made of steps. A step stands for a channel or a memory, has the
@@ -632,9 +670,10 @@ page cannot move a light. In the small-screen layout the mouse wheel scrolls the
   to the pages listed in `Server:AllowedOrigins`, plus the page the backend hands out itself. With `Urls` set
   to `http://localhost:5080` the desk stays on this PC for good.
 
-**Tests:** `dotnet test backend/DmxBox.sln` (319 tests: the client, the desk, sequences and the stack with a
-clock the tests set by hand, project files and the example project, the link to the box, the hub, LAN with a
-pretend PC and a pretend phone), and in `frontend/`: `npm test -- --watch=false` (70 tests of the page).
+**Tests:** `dotnet test backend/DmxBox.sln` (377 tests: the client, the desk, sequences and the stack with a
+clock the tests set by hand, project files and the example project, the import of show files, the link to the
+box, the hub, LAN with a pretend PC and a pretend phone), and in `frontend/`: `npm test -- --watch=false` (75
+tests of the page).
 
 ---
 ## 5. The DX protocol (UDP 7000)
@@ -749,6 +788,19 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
   window of the page, and saved by the desk itself. The backend passes 319 tests, among them four that load
   the example, save it again unchanged and check that no step or key points at an empty memory; the page
   passes 70. The notes were checked in Chrome at 1920 × 1080: none is cut off under its fader.
+* **Import of show files (2026-11-19):** the backend passes 367 tests, 48 of them for the import: the reader
+  of the format, with the examples of Strand's "Guide to ASCII Cues" and ETC's labels, the making of the
+  project, the hub, and a file of 3 MB. The page passes 75. On a test copy without a box the example show file
+  was imported in Chrome at 1920 × 1080 and 1366 × 768: the report, the memories with their notes and the 14
+  steps of the stack came out as planned, and a file that is no show was refused with a message.
+* **Show files of a real console (2026-11-19):** 30 show files that ETC SmartFades wrote (software 3.0.1 and
+  3.0.2) went through the import. The first version read them wrongly: their "FOLLOWON 0" (no wait) as a
+  follow at once, their patch the wrong way round, and it lost their labels. With the SmartFade's dialect
+  (see Import) all 29 files that hold a show import without a line that could not be read; the 30th holds
+  none and is refused with a message. Checked by hand in the results: the memories with their labels, the
+  stack steps on the memories they play, waits of 50 s and 1:30 and a run of point cues, sequences with the
+  same memory twice, labels with "Č", the independents. Each of the 29 also went into a desk and came back
+  whole from a project file. The backend passes 377 tests, the page 75.
 * **Templates, random order and speed (2026-11-19):** the backend passes 315 tests and the page 69. On a
   test copy without a box a Fire template on channels 1 and 2 was made and run: the two channels flickered
   each on its own (about 20 different levels each in 2 seconds), the running step was marked in the table

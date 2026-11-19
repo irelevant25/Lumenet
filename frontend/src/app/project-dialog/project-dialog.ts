@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { DeskStore } from '../desk/desk-store';
-import { ProjectFile } from '../desk/desk-types';
+import { NEW_PROJECT_NAME, ProjectFile } from '../desk/desk-types';
 import { LampButton } from '../lamp-button/lamp-button';
 
 /** What the window is asked to do. */
@@ -58,8 +58,10 @@ export class ProjectDialog {
     this.task.set(task);
     this.error.set('');
     this.busy.set(false);
-    // A project that already has a file keeps its name. A new one waits for a name to be typed.
-    this.name.set(task === 'save' && current.path !== null ? current.name : '');
+    // A project that already has a file keeps its name, and so does an imported one, which is
+    // called after its show file. A new one waits for a name to be typed.
+    const named = current.path !== null || current.name !== NEW_PROJECT_NAME;
+    this.name.set(task === 'save' && named ? current.name : '');
     this.dialog().nativeElement.showModal();
     if (task === 'new') return; // nothing to choose: only yes or no
 

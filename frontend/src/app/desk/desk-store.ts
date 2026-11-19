@@ -6,6 +6,7 @@ import {
   CHANNEL_INDEPENDENT_COUNT,
   DEFAULT_LOOP,
   DeskState,
+  ImportAnswer,
   LanAccess,
   MAX_LEVEL,
   MAX_SEQUENCE_STEPS,
@@ -15,6 +16,7 @@ import {
   MOBILE_BELOW_HEIGHT_PX,
   MOBILE_BELOW_WIDTH_PX,
   MemoryLooks,
+  NEW_PROJECT_NAME,
   PHONE_BELOW_PX,
   Playback,
   ProjectInfo,
@@ -101,7 +103,7 @@ export class DeskStore {
   readonly master = signal(MAX_LEVEL);
   readonly blackout = signal(false);
   readonly box = signal<BoxStatus>({ connected: false, host: '', firmware: null });
-  readonly project = signal<ProjectInfo>({ name: 'Untitled', path: null, unsaved: false });
+  readonly project = signal<ProjectInfo>({ name: NEW_PROJECT_NAME, path: null, unsaved: false });
   readonly version = signal('');
   /**
    * Whether other devices in the network may use the desk, and the address and password they
@@ -492,6 +494,17 @@ export class DeskStore {
   async loadProject(name: string): Promise<void> {
     this.mode.set(IDLE);
     this.project.set(await this.connection.invoke<ProjectInfo>('LoadProject', name));
+  }
+
+  /**
+   * Opens the show of a theatre console, from a file in the USITT ASCII format, as a project in
+   * place of the open one, as loading does. Gives back what the desk made of it, sentence by sentence.
+   */
+  async importShow(fileName: string, text: string): Promise<string[]> {
+    this.mode.set(IDLE);
+    const answer = await this.connection.invoke<ImportAnswer>('ImportProject', fileName, text);
+    this.project.set(answer.project);
+    return answer.report;
   }
 
   // ---------------------------------------------------------------- inner workings

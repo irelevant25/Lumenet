@@ -91,6 +91,18 @@
   >
     Load
   </button>
+  <button
+    lmLamp
+    type="button"
+    tone="system"
+    aria-label="Import a show"
+    title="Opens the show file of a theatre console (USITT ASCII, .asc) as a project"
+    [disabled]="store.live()"
+    (click)="importDialog().open()"
+  >
+    Import
+  </button>
 </div>
 
 <lm-project-dialog />
+<lm-import-dialog />

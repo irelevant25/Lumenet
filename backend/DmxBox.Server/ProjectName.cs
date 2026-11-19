@@ -44,6 +44,34 @@ internal static class ProjectName
             throw new DeskException($"\"{name}\" cannot be a project name: Windows keeps that name for itself.");
     }
 
+    /// <summary>
+    /// Makes a name out of any text, such as the name of a file from another program: every
+    /// character a name cannot have becomes a space, and a text that still cannot be a name
+    /// gives the fallback.
+    /// </summary>
+    /// <param name="text">The text, for example "Hamlet" of "Hamlet.asc".</param>
+    /// <param name="fallback">The name to use instead; it must be a good one.</param>
+    public static string Suggest(string text, string fallback)
+    {
+        var name = new System.Text.StringBuilder(text.Length);
+        foreach (char character in text)
+            name.Append(ForbiddenCharacters.Contains(character) || char.IsControl(character) ? ' ' : character);
+
+        string suggested = name.ToString().Trim(' ', '.');
+        if (suggested.Length > MaxLength)
+            suggested = suggested[..MaxLength].TrimEnd(' ', '.');
+
+        try
+        {
+            Require(suggested);
+            return suggested;
+        }
+        catch (DeskException)
+        {
+            return fallback;
+        }
+    }
+
     private static bool IsDotOrSpace(char character)
     {
         return character is '.' or ' ';

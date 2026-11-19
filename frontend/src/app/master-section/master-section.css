@@ -1,8 +1,8 @@
 /* A narrow section at the right edge: the title, Clear, Blackout, and the master fader with
-   its level under it. The fader takes the height that is left. */
+   its level above it. The fader takes the height that is left. */
 :host {
   display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
   justify-items: center;
   gap: var(--strip-gap);
   min-height: 0;
@@ -26,13 +26,19 @@ h2 {
 
 lm-fader {
   width: var(--key-w);
-  margin-top: 6px;
 }
 
+/* the level as a number, like the one above a channel fader: bright while the fader is up */
 .readout {
+  margin-top: 6px;
+  color: var(--legend-dim);
   font-size: var(--readout);
   font-stretch: 87.5%;
   line-height: 1;
+}
+
+.readout.up {
+  color: #fff;
 }
 
 /* ---- mobile: one line. Clear and Blackout first, then the title as the fader's caption,
@@ -56,9 +62,10 @@ lm-fader {
   margin: 0;
 }
 
+/* in the one line there is no "above": the level stands at the end, after the fader */
 :host-context(.mobile) .readout {
   order: 3;
   min-width: 3ch;
-  margin-left: 6px;
+  margin: 0 0 0 6px;
   text-align: right;
 }

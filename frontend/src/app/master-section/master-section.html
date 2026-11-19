@@ -14,6 +14,8 @@
   Black<br />out
 </button>
 
+<!-- The level stands above the fader, as on every other fader. -->
+<span class="readout" aria-hidden="true" [class.up]="store.master() > 0">{{ store.master() }}</span>
 <!-- The fader stands in the column and lies in the line of the mobile layout. -->
 <lm-fader
   tone="system"
@@ -22,4 +24,3 @@
   [value]="store.master()"
   (valueChange)="store.setMaster($event)"
 />
-<span class="readout" aria-hidden="true">{{ store.master() }}</span>

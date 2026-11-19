@@ -395,6 +395,14 @@ describe('the desk page', () => {
     expect(button('Clear').closest('lm-master-section')).toBeTruthy();
     expect(page.querySelector('lm-top-bar lm-fader')).toBeNull();
 
+    // from the top: Clear, Blackout, the level, the fader (the level above its fader, as on every strip)
+    const order = [...(page.querySelector('lm-master-section')?.children ?? [])].map(
+      (part) => part.getAttribute('aria-label') ?? part.className.split(' ')[0] ?? part.tagName,
+    );
+    expect(order.indexOf('readout')).toBeGreaterThan(order.indexOf('Blackout'));
+    expect(order.indexOf('readout')).toBeLessThan(order.indexOf('Master'));
+    expect(page.querySelector('lm-master-section .readout')?.textContent?.trim()).toBe('255');
+
     // the memories view is for looking only: it has no master section
     await show('/memories');
     expect(page.querySelector('lm-master-section')).toBeNull();

@@ -2,10 +2,32 @@
    the cells that the Sequences view and the Stack view put before and after the fields of a
    step share it, and a style sheet of this component would not reach those. */
 td {
+  width: 76px;
   min-width: 64px;
 }
 
 /* channel or memory: wide enough for the longer word */
-td:first-of-type {
+.kind {
+  width: 112px;
   min-width: 104px;
+}
+
+/* the number: three digits and the arrow of the dropdown */
+.number {
+  width: 84px;
+  min-width: 76px;
+}
+
+/* The note of the step's channel or memory: lettering, not a field. It takes the room the
+   other columns leave, and a note longer than that is cut off. */
+.note {
+  width: auto;
+  min-width: 120px;
+  max-width: 0; /* a cell that may not grow with its text shares the table's width instead */
+  padding-left: 8px;
+  overflow: hidden;
+  color: var(--legend);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: text;
 }

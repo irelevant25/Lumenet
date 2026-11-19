@@ -443,19 +443,26 @@ its level.
   up to the fader's own level and red above it, where a memory holds the channel. The own level is kept:
   bring the memory down, and the fader goes back to it. While a memory holds a channel up, its fader can
   still be moved; the handle stays where the memory holds it, and the green part shows what you set.
-  Save stores the faders' own levels, not the part a memory adds.
+  Save mem stores the faders' own levels, not the part a memory adds.
 * **Keys under the faders:** a channel key is lit when the channel is above zero. A memory key is half lit
   when something is stored in it and fully lit when its fader is up. A page key is fully lit for the page
   that is shown and half lit for another page with something on it.
 * **Notes:** under each key are two lines to type into: which light or which look it is (11 characters per
   line). Each line stays where it was typed; the second can be used without the first.
-* **Record** (bottom right) has Save, Edit, Copy and Del: press one, and the memory keys that can be used blink
-  between their normal light and full.
-  * **Save:** press a memory key, and the channel faders are stored there.
-  * **Edit:** press a stored memory, and it is loaded into the channel faders. Change it, press Edit again,
-    and it is stored back.
-  * **Copy:** press the memory to copy from, then the memory to copy to.
-  * **Del:** press the memory to empty.
+* **Record** (bottom right) has Save mem, Edit mem, Rec seq, Copy and Del: press one, and the keys that can
+  be used blink between their normal light and full.
+  * **Save mem:** press a memory key, and the channel faders are stored there as a look.
+  * **Edit mem:** press a memory that holds a look, and it is loaded into the channel faders. Change it, press
+    Edit mem again, and it is stored back. A memory that holds a sequence does not blink: it is changed in
+    the Sequences view.
+  * **Rec seq** records a sequence key by key. Press it, then the memory for the sequence: an empty one, or
+    one that holds a sequence already, which is then continued behind its last step. From then on every
+    channel key, and every key of a memory that holds a look, puts in one more step: that channel or memory
+    at full, with 1 second up, 1 second wait and 1 second down. A key shows the numbers of the steps it is in,
+    small and yellow in its top left corner (the same channel can be used several times: 1, 5, 14). Press
+    Rec seq again when the sequence is complete. A new sequence is played in a loop.
+  * **Copy:** press the memory to copy from, then the memory to copy to. A sequence is copied like a look.
+  * **Del:** press the memory to empty, whatever it holds.
   * Pressing the lit function again cancels it.
 * **Clear** cancels an unfinished function and brings every channel fader and memory fader to zero.
 * **Black out** sends zero to every address but leaves the desk as it is; the key blinks while it is active.
@@ -479,32 +486,53 @@ value it brings that to (0 to 255), and three times in seconds: **up** (from zer
 (how long it stays) and **down** (back to zero when the next step takes over). The old step goes down while
 the new one goes up.
 
+In both tables the **number** of a step is chosen from a list. Each line of the list is a number and, behind
+it, the note that stands under that fader in the main view (its two lines with a space between them). For a
+channel the list has all 512 channels; for a memory only the memories that hold something. The **Notes**
+column beside the number shows the note of the channel or memory the step uses. It is read there, not
+written: a note is changed under its fader.
+
 **The Sequences view.** A memory can hold a sequence in place of a look; its key is then red running into
 yellow. A sequence runs while the fader of its memory is up: it starts at its first step when the fader
 leaves zero, and the fader dims what it gives, like a look. It moves no fader; the channel faders show what
 it gives in red.
 
 * Choose a memory with the keys along the top. Add step puts in a step like the last one, on the next
-  channel or memory. Every change goes to the desk at once.
+  channel or memory. Every change goes to the desk at once. Rec seq in the main view is the other way to
+  put in steps: by pressing keys.
 * **Once** or **Loop:** played once, the last step stays on; in a loop the first step follows the last.
+  A new sequence is played in a loop until you choose Once.
 * A wait of 0 means the next step starts as soon as this one is up.
 * A step that stands for a memory plays that memory's look. A memory that holds a sequence itself gives
-  nothing there: sequences are not played inside sequences.
-* A memory that holds a look is not turned into a sequence: empty it first with Del. Save over a sequence
-  replaces it by a look; Copy and Del work on sequences as on looks; Edit does not.
+  nothing there: sequences are not played inside sequences. So the list for a memory step offers only the
+  memories that hold a look.
+* A memory that holds a look is not turned into a sequence: empty it first with Del. Save mem over a
+  sequence replaces it by a look; Copy and Del work on sequences as on looks; Edit mem does not.
 
-**The Stack view.** The project has one stack: a list of steps that you go through by hand. The stack moves
-the real faders: going to a step moves the fader of its channel or memory up to the step's value, leaving
-it moves that fader back to zero. A memory that holds a sequence starts running, because its fader goes up.
+**The Stack view.** The project has one stack: a list of steps for a show. The stack moves the real faders:
+going to a step moves the fader of its channel or memory up to the step's value, leaving it moves that fader
+back to zero. A memory that holds a sequence starts running, because its fader goes up.
 
+* **Stack** is the switch of the stack. Pressed, it is fully lit and the stack is **live**: every channel
+  fader and memory fader goes to zero, and the first step starts. Pressed again, the stack stops and the
+  faders stay where they are. While the stack is live, the link to the Stack view in the top bar carries a
+  red **Live** tag, in every view.
+* **While the stack is live, nothing that is stored can be changed:** not the steps of the stack, not a
+  memory (Save mem, Edit mem, Rec seq, Copy and Del are locked), not a sequence, not a note, not the channels
+  of the independent keys, and New and Load are locked too. The faders, the independent keys themselves,
+  Clear, Black out, the master and saving the project work as always.
+* While the stack is not live it does not run: Play, Pause, Next and Prev are dark. That is the time to
+  change the steps.
 * **Play** goes to the next step, or goes on after Pause. **Pause** holds a fade or a wait where it is.
-  **Next** and **Prev** go to the next or the previous step at once, with the steps' own times. Prev from
-  the first step leaves it, so that no step is on.
+  **Next** and **Prev** go to the next or the previous step at once, with the steps' own times.
+* **The stack goes round:** after the last step comes the first, for Play, for Next and when the stack goes
+  on by itself. Prev from the first step goes to the last.
 * A wait of 0 means the stack stays on the step until Play. With a wait above 0 it goes on by itself that
   many seconds after the step is up.
 * The view shows all steps, the **current** one in green and the **next** one with an amber edge, and for
   the current one how far it is.
-* A fader the stack is moving and that you move by hand is yours from then on. Clear also stops the stack.
+* A fader the stack is moving and that you move by hand is yours from then on. Clear brings every fader down
+  and takes the stack off its step; it stays live, and Play starts with the first step again.
 * **Step numbers** look like 1.0, 2.0, 2.1. A new step gets the next whole number. Drag a step by its grip
   (or use the arrows at the end of its row): it gets the number of the step it now follows with the digit
   after the dot one higher, and the others keep theirs. Moved between 2.0 and 3.0, a step becomes 2.1.
@@ -539,9 +567,9 @@ page cannot move a light. In the small-screen layout the mouse wheel scrolls the
   websites that are open in the browser from operating the desk. To open the desk from another device, both
   settings have to be widened on purpose.
 
-**Tests:** `dotnet test backend/DmxBox.sln` (274 tests: the client, the desk, sequences and the stack with a
+**Tests:** `dotnet test backend/DmxBox.sln` (287 tests: the client, the desk, sequences and the stack with a
 clock the tests set by hand, project files, the link to the box, the hub), and in `frontend/`:
-`npm test -- --watch=false` (43 tests of the page).
+`npm test -- --watch=false` (52 tests of the page).
 
 ---
 ## 5. The DX protocol (UDP 7000)
@@ -638,6 +666,12 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
   without a box a sequence of four steps was built and run (the channel faders followed it), and a stack of
   four steps was built, reordered by dragging and by typing a number, played, paused, and saved and loaded
   with a project. Not yet used by the owner; no light has been driven by a sequence or the stack.
+* **Rec seq and the live stack (2026-11-19):** the backend passes 287 tests and the page 52. On a test copy
+  without a box a sequence of eight steps was recorded with Rec seq (the keys showed their step numbers) and
+  ran in a loop; the stack was taken live, went round from its last step to its first by itself, and the
+  lock was tried in every view. The layout was looked at in Chrome at five window sizes, from 390 × 844 to
+  1920 × 1080. The list of numbers itself, when open, is drawn by the browser and was not looked at in a
+  picture. Not yet used by the owner, and not with a box.
 * **A real DMX light (2026-11-18):** one light with four RGB cells (12 channels from address 5) on the
   breadboard build showed everything correctly: each of the 12 channels alone and in the right order, full
   white, a fade to dark, and a fade from red to blue, without flicker.

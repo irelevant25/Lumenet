@@ -49,7 +49,7 @@ internal sealed class ProjectFileSequence
     /// <summary>The number of the memory, 1-128.</summary>
     public int? Number { get; set; }
 
-    /// <summary>True to start again after the last step, false to play once.</summary>
+    /// <summary>True to start again after the last step, false to play once. A file that does not say means a loop.</summary>
     public bool? Loop { get; set; }
 
     /// <summary>The steps, the first one first. They have no <see cref="ProjectFileStep.Cue"/>.</summary>

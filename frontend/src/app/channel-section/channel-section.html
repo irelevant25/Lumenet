@@ -7,13 +7,18 @@
         @for (channel of row; track $index) {
           <lm-fader-strip
             kind="channel"
+            [pressable]="armed()"
+            [blink]="armed()"
+            [steps]="steps(channel)"
             [number]="channel"
             [value]="store.shownChannels()[channel - 1]"
             [ownLevel]="store.channels()[channel - 1]"
             [lampLevel]="lamp(channel)"
             [note]="store.channelNotes()[channel - 1]"
+            [locked]="store.live()"
             (valueChange)="store.setChannel(channel, $event)"
             (noteChange)="store.setChannelNote(channel, $event)"
+            (keyPress)="store.pressChannel(channel)"
           />
         }
       </div>

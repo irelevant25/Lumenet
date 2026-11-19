@@ -19,16 +19,23 @@ public sealed record StackState(StackStep[] Steps);
 
 /// <summary>Where the stack stands.</summary>
 /// <param name="CurrentId">The step that is on, or on its way up; null if no step is on.</param>
-/// <param name="NextId">The step Play goes to; null at the end of the stack.</param>
+/// <param name="NextId">
+/// The step Play goes to: the one behind the current step, and behind the last step the first.
+/// Null if the stack has no other step.
+/// </param>
 /// <param name="State">
 /// "idle": no step is on. "fading": the current step is on its way up. "waiting": it is up, and
 /// the stack goes on by itself when its wait is over. "holding": it is up, and the stack waits
-/// for Play or is at its end.
+/// for Play.
 /// </param>
 /// <param name="Paused">True while Pause holds a fade or a wait.</param>
 /// <param name="Remaining">Seconds left of the fade or of the wait; 0 otherwise.</param>
+/// <param name="Live">
+/// True while the stack is live: it runs, and nothing that is stored can be changed. While it
+/// is false no step is on and Play, Pause, Next and Previous are refused.
+/// </param>
 /// <remarks>Public only because <see cref="IDeskClient"/> has to be.</remarks>
-public sealed record StackPlayback(int? CurrentId, int? NextId, string State, bool Paused, double Remaining);
+public sealed record StackPlayback(int? CurrentId, int? NextId, string State, bool Paused, double Remaining, bool Live);
 
 /// <summary>What changes with time, for the UI: several times a second while something runs.</summary>
 /// <param name="Levels">

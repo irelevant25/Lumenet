@@ -4,6 +4,9 @@ import { NOTE_LINE_LENGTH, joinNote, splitNote } from '../desk/notes';
 import { Fader } from '../fader/fader';
 import { LampButton, LampTone } from '../lamp-button/lamp-button';
 
+/** A key that is used in no step. One shared list, so that the keys have nothing to redraw. */
+const NO_STEPS: readonly number[] = [];
+
 /** One fader with its level number above it, its numbered key below it, and a note under the key. */
 @Component({
   host: {
@@ -29,18 +32,34 @@ export class FaderStrip {
   readonly ownLevel = input<number | null>(null);
   readonly lampLevel = input<LampLevel>(1);
   readonly blink = input(false);
-  /** Memory keys can be pressed. Channel keys only show a state. */
+  /** A key that can be pressed: a memory key always, a channel key while a sequence is recorded. */
   readonly pressable = input(false, { transform: booleanAttribute });
   /** True for a memory that holds a sequence: its key is red running into yellow. */
   readonly sequence = input(false);
   protected readonly keyTone = computed<LampTone>(() => (this.sequence() ? 'sequence' : this.kind()));
   readonly keyPress = output<void>();
+  /**
+   * While a sequence is recorded: the numbers of its steps that use this channel or memory.
+   * They stand in yellow in the corner of the key. Nothing given means none.
+   */
+  readonly steps = input(NO_STEPS, {
+    transform: (steps: readonly number[] | undefined) => steps ?? NO_STEPS,
+  });
   /** A short text of the owner's, for example which light this is. Empty: nothing is shown. */
   readonly note = model('');
+  /** True while the note cannot be changed: the stack is live. */
+  readonly locked = input(false);
 
   protected readonly name = computed(
     () => `${this.kind() === 'channel' ? 'Channel' : 'Memory'} ${this.number()}`,
   );
+
+  /** What a screen reader calls the key: "Channel 5 key", and the steps it is used in. */
+  protected readonly keyName = computed(() => {
+    const steps = this.steps();
+    if (steps.length === 0) return `${this.name()} key`;
+    return `${this.name()} key, in ${steps.length === 1 ? 'step' : 'steps'} ${steps.join(', ')}`;
+  });
 
   /** The note's two lines, each in a field of its own. */
   protected readonly lines = computed(() => splitNote(this.note()));

@@ -9,11 +9,11 @@
   min-height: 0;
 }
 
-/* 17 keys above 4 keys: the two sections share the height in that proportion, so that on a
+/* 17 keys above 5 keys: the two sections share the height in that proportion, so that on a
    low window the keys of both get flatter alike. */
 .side {
   display: grid;
-  grid-template-rows: minmax(0, 3.65fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 3.05fr) minmax(0, 1fr);
   grid-row: 1 / span 2;
   grid-column: 2;
   gap: var(--gap);

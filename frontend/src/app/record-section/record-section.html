@@ -1,6 +1,6 @@
 <h2>Record</h2>
 
-<div class="keys" role="group" aria-label="Memory functions">
+<div class="keys" role="group" aria-label="Record keys">
   @for (item of functions(); track item.function) {
     <button
       lmLamp
@@ -8,11 +8,19 @@
       tone="system"
       [level]="item.active ? 3 : 1"
       [blink]="item.blink"
+      [disabled]="store.live()"
       [attr.aria-pressed]="item.active"
       [attr.aria-label]="item.name"
       (click)="store.pressFunction(item.function)"
     >
-      {{ item.label }}
+      <span class="words" [class.two]="item.label.length > 1">
+        @for (word of item.label; track $index) {
+          @if (!$first) {
+            <br />
+          }
+          {{ word }}
+        }
+      </span>
     </button>
   }
 </div>

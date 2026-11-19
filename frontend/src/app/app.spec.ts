@@ -10,10 +10,12 @@ import {
   MEMORY_COUNT,
   Playback,
   Sequence,
+  StackPlayback,
   StackState,
   TimedStep,
   Welcome,
 } from './desk/desk-types';
+import { IDLE } from './desk/function-mode';
 import { NOTE_LINE_SEPARATOR } from './desk/notes';
 
 /** Stands in for the connection to the backend: answers "Hello" and remembers what the page sent. */
@@ -48,7 +50,7 @@ class FakeConnection {
   playback: Playback = {
     levels: [],
     sequenceSteps: {},
-    stack: { currentId: null, nextId: null, state: 'idle', paused: false, remaining: 0 },
+    stack: { currentId: null, nextId: null, state: 'idle', paused: false, remaining: 0, live: false },
   };
 
   start(): void {
@@ -103,6 +105,10 @@ function step(number: number, value: number, more: Partial<TimedStep> = {}): Tim
   return { target: 'channel', number, value, up: 1, wait: 1, down: 1, ...more };
 }
 
+/** Where the stack of the tests stands while it is not live, and once it is: on its first step, waiting for Play. */
+const NOT_LIVE: StackPlayback = { currentId: null, nextId: 11, state: 'idle', paused: false, remaining: 0, live: false };
+const LIVE: StackPlayback = { currentId: 11, nextId: 12, state: 'holding', paused: false, remaining: 0, live: true };
+
 describe('the desk page', () => {
   let connection: FakeConnection;
   let fixture: ComponentFixture<App>;
@@ -123,14 +129,18 @@ describe('the desk page', () => {
     connection.welcome.desk.memorySequence[2] = true;
     connection.sequences[3] = { loop: false, steps: [step(5, 200), step(6, 100, { wait: 0 })] };
 
-    // the stack has two steps; the first is on and waits for Play
+    // two faders carry a note: channel 6 (two lines) and memory 2
+    connection.welcome.desk.channelNotes[5] = 'Front' + NOTE_LINE_SEPARATOR + 'left';
+    connection.welcome.desk.memoryNotes[1] = 'Wash';
+
+    // the stack has two steps, and is not live: no step is on
     connection.stack = {
       steps: [
         { id: 11, cue: '1.0', ...step(7, 255, { wait: 0 }) },
         { id: 12, cue: '2.0', ...step(2, 128, { target: 'memory', wait: 3 }) },
       ],
     };
-    connection.playback.stack = { currentId: 11, nextId: 12, state: 'holding', paused: false, remaining: 0 };
+    connection.playback.stack = { ...NOT_LIVE };
 
     await TestBed.configureTestingModule({
       imports: [App],
@@ -159,14 +169,27 @@ describe('the desk page', () => {
     return found;
   }
 
+  // A key's name begins with "Memory 5 key"; while a sequence is recorded the steps it is in follow.
   function memoryKey(memory: number): HTMLButtonElement {
-    const found = page.querySelector<HTMLButtonElement>(`button[aria-label="Memory ${memory} key"]`);
+    const found = page.querySelector<HTMLButtonElement>(`button[aria-label^="Memory ${memory} key"]`);
     if (!found) throw new Error(`no key for memory ${memory}`);
     return found;
   }
 
-  async function press(element: HTMLElement): Promise<void> {
+  /** The key under a channel fader. It is a button only while a sequence is recorded. */
+  function channelKey(channel: number): HTMLButtonElement | null {
+    return page.querySelector<HTMLButtonElement>(`button[aria-label^="Channel ${channel} key"]`);
+  }
+
+  async function press(element: HTMLElement | null): Promise<void> {
+    if (!element) throw new Error('nothing to press');
     element.click();
+    await fixture.whenStable();
+  }
+
+  /** The desk reports where the stack stands, as it does after every key of the stack. */
+  async function stackStands(stack: StackPlayback): Promise<void> {
+    connection.emit('PlaybackChanged', { ...connection.playback, stack });
     await fixture.whenStable();
   }
 
@@ -245,6 +268,110 @@ describe('the desk page', () => {
     await press(memoryKey(2));
     expect(connection.calls).toContainEqual({ method: 'DeleteMemory', args: [2] });
     expect(store.memoryStored()[1]).toBe(false);
+  });
+
+  it('copy and delete work on a memory that holds a sequence too, and edit does not', async () => {
+    await press(button('Copy memory'));
+    await press(memoryKey(3));
+    await press(memoryKey(10));
+    expect(connection.calls).toContainEqual({ method: 'CopyMemory', args: [3, 10] });
+    expect(memoryKey(10).className).toContain('tone-sequence'); // at once, before the desk answers
+
+    await press(button('Edit memory'));
+    await press(memoryKey(3)); // a sequence is not edited with the faders
+    expect(connection.methods()).not.toContain('LoadMemory');
+    expect(store.mode()).toEqual({ kind: 'edit-pick' });
+    expect(store.notice()).toContain('Memory 3 holds a sequence');
+
+    await press(button('Delete memory'));
+    await press(memoryKey(3));
+    expect(connection.calls).toContainEqual({ method: 'DeleteMemory', args: [3] });
+    expect(memoryKey(3).className).toContain('tone-memory');
+    expect(memoryKey(3).className).toContain('level-1');
+  });
+
+  it('the record section has five keys: save mem, edit mem, rec seq, copy, del', () => {
+    const keys = [...page.querySelectorAll('lm-record-section button')];
+    expect(keys.map((key) => key.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
+      'Save mem',
+      'Edit mem',
+      'Rec seq',
+      'Copy',
+      'Del',
+    ]);
+    expect(keys.map((key) => key.getAttribute('aria-label'))).toEqual([
+      'Save memory',
+      'Edit memory',
+      'Record sequence',
+      'Copy memory',
+      'Delete memory',
+    ]);
+  });
+
+  it('rec seq: after the memory, every pressed key becomes a step of its sequence', async () => {
+    expect(channelKey(7)).toBeNull(); // a channel key is a lamp, not a key, until a sequence is recorded
+
+    await press(button('Record sequence'));
+    await press(memoryKey(2)); // holds a look: no place for a sequence
+    expect(store.mode()).toEqual({ kind: 'record-pick' });
+    expect(store.notice()).toContain('Memory 2 holds a look');
+    expect(channelKey(7)).toBeNull();
+
+    await press(memoryKey(9));
+    expect(store.mode()).toEqual({ kind: 'recording', memory: 9 });
+    expect(memoryKey(9).className).toContain('tone-sequence');
+    expect(memoryKey(9).className).toContain('level-3');
+    expect(button('Record sequence').getAttribute('aria-pressed')).toBe('true');
+
+    await press(channelKey(7));
+    await press(memoryKey(2));
+    await press(channelKey(7));
+    const added = connection.calls.filter((call) => call.method === 'AddSequenceStep');
+    expect(added.map((call) => call.args)).toEqual([
+      [9, step(7, 255)],
+      [9, step(2, 255, { target: 'memory' })],
+      [9, step(7, 255)],
+    ]);
+    // shown at once: a new sequence loops, and its steps have the usual times
+    expect(store.sequences()[9]).toEqual({
+      loop: true,
+      steps: [step(7, 255), step(2, 255, { target: 'memory' }), step(7, 255)],
+    });
+    expect(store.memorySequence()[8]).toBe(true);
+
+    // the keys carry the numbers of the steps they are in
+    expect(channelKey(7)?.querySelector('.steps')?.textContent).toBe('1,3');
+    expect(channelKey(7)?.getAttribute('aria-label')).toBe('Channel 7 key, in steps 1, 3');
+    expect(memoryKey(2).querySelector('.steps')?.textContent).toBe('2');
+    expect(memoryKey(2).getAttribute('aria-label')).toBe('Memory 2 key, in step 2');
+    expect(channelKey(8)?.querySelector('.steps')).toBeNull();
+
+    // what cannot be a step says why
+    await press(memoryKey(3));
+    expect(store.notice()).toContain('cannot be a step of another one');
+    await press(memoryKey(20));
+    expect(store.notice()).toContain('Memory 20 is empty');
+    expect(connection.calls.filter((call) => call.method === 'AddSequenceStep').length).toBe(3);
+
+    await press(button('Record sequence')); // done
+    expect(store.mode()).toEqual(IDLE);
+    expect(channelKey(7)).toBeNull();
+    expect(page.querySelector('.steps')).toBeNull();
+    expect(connection.methods()).not.toContain('SetSequence');
+  });
+
+  it('rec seq on a memory that holds a sequence goes on behind its last step', async () => {
+    await press(button('Record sequence'));
+    await press(memoryKey(3)); // two steps already: channel 5, channel 6
+
+    expect(channelKey(5)?.querySelector('.steps')?.textContent).toBe('1');
+    expect(channelKey(6)?.querySelector('.steps')?.textContent).toBe('2');
+
+    await press(channelKey(5));
+    expect(connection.last('AddSequenceStep')).toEqual([3, step(5, 255)]);
+    expect(store.sequences()[3].steps.length).toBe(3);
+    expect(store.sequences()[3].loop).toBe(false); // it stays what it was
+    expect(channelKey(5)?.querySelector('.steps')?.textContent).toBe('1,3');
   });
 
   it('clear cancels an unfinished function and brings every fader to zero', async () => {
@@ -496,7 +623,7 @@ describe('the desk page', () => {
 
     await press(button('Look at memory 2'));
     expect(button('Look at memory 2').getAttribute('aria-pressed')).toBe('true');
-    expect(page.querySelector('.summary')?.textContent).toContain('Memory 2: 2 of 512 channels are above zero');
+    expect(page.querySelector('.summary')?.textContent).toContain('Memory 2 (Wash): 2 of 512 channels are above zero');
     expect(levelOf(5)).toBe('200');
     expect(levelOf(70)).toBe('255');
     expect(levelOf(6)).toBe('0');
@@ -531,7 +658,9 @@ describe('the desk page', () => {
     await show('/sequences');
     const rows = () => [...page.querySelectorAll('lm-sequences-view table.steps tbody tr')];
     const field = (row: number, label: string) =>
-      rows()[row].querySelector<HTMLInputElement>(`input[aria-label^="Step ${row + 1}, ${label}"]`);
+      rows()[row].querySelector<HTMLInputElement | HTMLSelectElement>(
+        `[aria-label^="Step ${row + 1}, ${label}"]`,
+      );
 
     // memory 1 is worked on first, and it is empty; memory 2 holds a look
     expect(page.querySelector('.summary')?.textContent).toContain('Memory 1 is empty');
@@ -597,13 +726,72 @@ describe('the desk page', () => {
     expect(page.querySelector('.summary')?.textContent).toContain('It is running: step 2');
 
     await press(button('Work on memory 9'));
+    expect(button('Loop').getAttribute('aria-pressed')).toBe('true'); // what a new sequence will be
     await press(button('Add a step'));
-    expect(connection.last('SetSequence')).toEqual([9, false, [step(1, 255)]]);
+    expect(connection.last('SetSequence')).toEqual([9, true, [step(1, 255)]]);
     expect(store.memorySequence()[8]).toBe(true);
+  });
+
+  it('the number of a step is chosen from a list that shows the notes under the faders', async () => {
+    await show('/sequences');
+    await press(button('Work on memory 3'));
+    const rows = () => [...page.querySelectorAll('lm-sequences-view table.steps tbody tr')];
+    const numberOf = (row: number) =>
+      rows()[row].querySelector<HTMLSelectElement>(`select[aria-label="Step ${row + 1}, number of the channel"]`);
+    const second = numberOf(1);
+    if (!second) throw new Error('no number field in step 2');
+
+    // the note of the step's channel stands beside its number: step 2 is on channel 6
+    const headers = [...page.querySelectorAll('lm-sequences-view table.steps thead th')];
+    expect(headers.map((header) => header.textContent?.trim()).slice(0, 5)).toEqual([
+      'Step',
+      'Channel or memory',
+      'Number',
+      'Notes',
+      'Value',
+    ]);
+    expect(rows()[1].querySelector('td.note')?.textContent?.trim()).toBe('Front left');
+    expect(rows()[0].querySelector('td.note')?.textContent?.trim()).toBe('');
+
+    // a row holds the long list only while its field is in use
+    expect(second.value).toBe('6');
+    expect(second.options.length).toBe(1);
+    second.dispatchEvent(new Event('focus'));
+    expect(second.options.length).toBe(512); // at once, before the browser opens the list
+    expect(second.value).toBe('6');
+    expect(second.options[4].text).toBe('5');
+    expect(second.options[5].text.startsWith('6')).toBe(true);
+    expect(second.options[5].text.endsWith('Front left')).toBe(true);
+
+    second.value = '70';
+    second.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(connection.last('SetSequence')).toEqual([3, false, [step(5, 200), step(70, 100, { wait: 0 })]]);
+
+    // another row takes the list over
+    numberOf(0)?.dispatchEvent(new Event('focus'));
+    await fixture.whenStable();
+    expect(numberOf(0)?.options.length).toBe(512);
+    expect(second.options.length).toBe(1);
+    expect(second.value).toBe('70');
+
+    // a step switched to "memory": only the memories that hold a look are on offer, and it lands on one
+    const kind = rows()[0].querySelector<HTMLSelectElement>('select[aria-label="Step 1, channel or memory"]');
+    if (!kind) throw new Error('no kind field in step 1');
+    kind.value = 'memory';
+    kind.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(store.sequences()[3].steps[0]).toEqual(step(2, 200, { target: 'memory' }));
+    const memories = rows()[0].querySelector<HTMLSelectElement>('select[aria-label="Step 1, number of the memory"]');
+    memories?.dispatchEvent(new Event('focus'));
+    expect([...(memories?.options ?? [])].map((option) => option.value)).toEqual(['2']);
+    expect(memories?.options[0].text.endsWith('Wash')).toBe(true);
+    expect(rows()[0].querySelector('td.note')?.textContent?.trim()).toBe('Wash');
   });
 
   it('the stack view shows the steps with the current and the next one, and goes through them', async () => {
     await show('/stack');
+    await stackStands(LIVE);
     const rows = () => [...page.querySelectorAll('lm-stack-view table.steps tbody tr')];
     expect(rows().length).toBe(2);
     expect(rows().map((row) => row.classList.contains('current'))).toEqual([true, false]);
@@ -611,7 +799,8 @@ describe('the desk page', () => {
     expect(page.querySelector('.card.current .what')?.textContent).toContain('1.0');
     expect(page.querySelector('.card.current .what')?.textContent).toContain('Channel 7 at 255');
     expect(page.querySelector('.card.current .how')?.textContent).toContain('waits for Play');
-    expect(page.querySelector('.card.next .what')?.textContent).toContain('Memory 2 at 128');
+    expect(page.querySelector('.card.next .what')?.textContent).toContain('Memory 2 (Wash) at 128');
+    expect(rows()[1].querySelector('td.note')?.textContent?.trim()).toBe('Wash'); // the note under that fader
 
     await press(button('Play'));
     await press(button('Pause'));
@@ -619,23 +808,110 @@ describe('the desk page', () => {
     await press(button('Previous step'));
     expect(connection.methods()).toEqual(['StackPlay', 'StackPause', 'StackNext', 'StackPrevious']);
 
-    // the desk reports a fade and then a pause
-    connection.emit('PlaybackChanged', {
-      ...connection.playback,
-      stack: { currentId: 12, nextId: null, state: 'fading', paused: false, remaining: 0.6 },
-    });
-    await fixture.whenStable();
+    // the desk reports a fade on the last step, and then a pause; after the last step comes the first
+    await stackStands({ ...LIVE, currentId: 12, nextId: 11, state: 'fading', remaining: 0.6 });
     expect(page.querySelector('.card.current .how')?.textContent).toContain('0.6 s left');
     expect(button('Play').className).toContain('level-3');
-    expect(page.querySelector('.card.next .what')?.textContent).toContain('at its end');
+    expect(page.querySelector('.card.next .what')?.textContent).toContain('1.0');
+    expect(rows().map((row) => row.classList.contains('next'))).toEqual([true, false]);
 
-    connection.emit('PlaybackChanged', {
-      ...connection.playback,
-      stack: { currentId: 12, nextId: null, state: 'fading', paused: true, remaining: 0.6 },
-    });
-    await fixture.whenStable();
+    await stackStands({ ...LIVE, currentId: 12, nextId: 11, state: 'fading', paused: true, remaining: 0.6 });
     expect(button('Pause').getAttribute('aria-pressed')).toBe('true');
     expect(page.querySelector('.card.current .how')?.textContent).toContain('Paused');
+  });
+
+  it('the Stack key takes the stack live, and a live stack locks everything that is stored', async () => {
+    await show('/stack');
+    const liveTag = () => page.querySelector('nav[aria-label="Views"] .live');
+
+    // not live: the stack does not run, and its steps can be changed
+    expect(button('Stack live').getAttribute('aria-pressed')).toBe('false');
+    expect(button('Stack live').className).toContain('level-1');
+    for (const key of ['Play', 'Pause', 'Next step', 'Previous step']) {
+      expect(button(key).disabled).toBe(true);
+    }
+    expect(button('Add a step').disabled).toBe(false);
+    expect(liveTag()).toBeNull();
+    expect(page.querySelector('.card.next .what')?.textContent).toContain('1.0'); // where live starts
+
+    store.setChannel(4, 90); // a fader move that is still waiting to be sent
+    await press(button('Stack live'));
+    expect(connection.methods()).toEqual(['SetStackLive']); // the waiting move is dropped: every fader goes down
+    expect(connection.last('SetStackLive')).toEqual([true]);
+
+    await stackStands(LIVE);
+    expect(button('Stack live').getAttribute('aria-pressed')).toBe('true');
+    expect(button('Stack live').className).toContain('level-3');
+    expect(liveTag()?.textContent?.trim()).toBe('Live');
+    expect(page.querySelector('.summary')?.textContent).toContain('It is live');
+    expect(button('Play').disabled).toBe(false);
+    expect(button('Add a step').disabled).toBe(true);
+    const fields = (view: string) => [
+      ...page.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLButtonElement>(
+        `${view} table.steps input, ${view} table.steps select, ${view} table.steps button`,
+      ),
+    ];
+    // per row: the number of the step, the two lists, four typed fields and three keys
+    expect(fields('lm-stack-view').length).toBe(2 * 10);
+    expect(fields('lm-stack-view').every((field) => field.disabled)).toBe(true);
+    expect(page.querySelector('lm-stack-view .grip')?.getAttribute('draggable')).toBeNull();
+
+    // the main view: the record keys, the notes, the independent keys and the project keys
+    await show('/');
+    expect(liveTag()).toBeTruthy();
+    for (const key of [
+      'Save memory',
+      'Edit memory',
+      'Record sequence',
+      'Copy memory',
+      'Delete memory',
+      'New project',
+      'Load project',
+      'Edit the channels of the independent keys',
+    ]) {
+      expect(button(key).disabled).toBe(true);
+    }
+    expect(page.querySelector<HTMLInputElement>('input[aria-label="Note for Channel 5"]')?.readOnly).toBe(true);
+    expect(page.querySelector<HTMLInputElement>('input[aria-label="Note for Memory 2"]')?.readOnly).toBe(true);
+    store.pressFunction('save'); // a press that gets through anyway starts nothing
+    expect(store.mode()).toEqual(IDLE);
+    // what a show needs is not locked
+    for (const key of ['Save project', 'Clear', 'Blackout', 'Independent 3, channel 3']) {
+      expect(button(key).disabled).toBe(false);
+    }
+
+    // the sequences view only shows
+    await show('/sequences');
+    await press(button('Work on memory 3'));
+    expect(page.querySelector('.summary')?.textContent).toContain('The stack is live');
+    expect(button('Add a step').disabled).toBe(true);
+    expect(button('Once').disabled).toBe(true);
+    expect(fields('lm-sequences-view').length).toBeGreaterThan(0);
+    expect(fields('lm-sequences-view').every((field) => field.disabled)).toBe(true);
+
+    // Stack again switches it off: the lock is gone
+    await show('/stack');
+    await press(button('Stack live'));
+    expect(connection.last('SetStackLive')).toEqual([false]);
+    await stackStands(NOT_LIVE);
+    expect(liveTag()).toBeNull();
+    expect(button('Add a step').disabled).toBe(false);
+    expect(button('Play').disabled).toBe(true);
+    expect(fields('lm-stack-view').some((field) => !field.disabled)).toBe(true);
+  });
+
+  it('a stack that goes live ends an unfinished recording and the editing of the independent keys', async () => {
+    await press(button('Record sequence'));
+    await press(memoryKey(9));
+    await press(button('Edit the channels of the independent keys'));
+    expect(channelKey(7)).toBeTruthy();
+    expect(page.querySelector('input[aria-label="Channel of independent key 2"]')).toBeTruthy();
+
+    await stackStands(LIVE); // switched live on another page
+
+    expect(store.mode()).toEqual(IDLE);
+    expect(channelKey(7)).toBeNull();
+    expect(page.querySelector('input[aria-label="Channel of independent key 2"]')).toBeNull();
   });
 
   it('the stack view adds, changes, renumbers, moves and takes out steps', async () => {

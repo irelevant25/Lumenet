@@ -11,7 +11,14 @@
       {{ store.box().connected ? 'Box connected' : 'No box' }}
     </span>
   </div>
-  <button lmLamp type="button" tone="system" aria-label="New project" (click)="dialog().open('new')">
+  <button
+    lmLamp
+    type="button"
+    tone="system"
+    aria-label="New project"
+    [disabled]="store.live()"
+    (click)="dialog().open('new')"
+  >
     New
   </button>
 </div>
@@ -28,7 +35,15 @@
   </a>
   <a routerLink="/memories" routerLinkActive="shown" ariaCurrentWhenActive="page">Memories</a>
   <a routerLink="/sequences" routerLinkActive="shown" ariaCurrentWhenActive="page">Sequences</a>
-  <a routerLink="/stack" routerLinkActive="shown" ariaCurrentWhenActive="page">Stack</a>
+  <a routerLink="/stack" routerLinkActive="shown" ariaCurrentWhenActive="page">
+    Stack
+    @if (store.live()) {
+      <!-- seen from every view: the stack is running, and what is stored is locked -->
+      <span class="live" title="The stack is live. Nothing that is stored can be changed until Stack is switched off.">
+        Live
+      </span>
+    }
+  </a>
 </nav>
 
 <div class="project">
@@ -44,7 +59,14 @@
   <button lmLamp type="button" tone="system" aria-label="Save project" (click)="dialog().open('save')">
     Save
   </button>
-  <button lmLamp type="button" tone="system" aria-label="Load project" (click)="dialog().open('load')">
+  <button
+    lmLamp
+    type="button"
+    tone="system"
+    aria-label="Load project"
+    [disabled]="store.live()"
+    (click)="dialog().open('load')"
+  >
     Load
   </button>
 </div>

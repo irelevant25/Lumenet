@@ -39,12 +39,26 @@ export class MemorySection {
   });
 
   protected lamp(memory: number): LampLevel {
-    // The memory being edited or copied from stays fully lit, so it is clear which one it is.
+    // The memory being edited, copied from or recorded into stays fully lit, so it is clear which one it is.
     if (heldMemory(this.store.mode()) === memory) return 3;
     return memoryLamp(this.store.memoryLevels()[memory - 1], this.store.memoryStored()[memory - 1]);
   }
 
   protected blinks(memory: number): boolean {
-    return memoryBlinks(this.store.mode(), memory, this.store.memoryStored()[memory - 1]);
+    return memoryBlinks(this.store.mode(), memory, this.store.memoryContent(memory));
+  }
+
+  /**
+   * True for a memory that holds a sequence, and for the one a sequence is being recorded
+   * into, which holds none until its first step: its key runs from red to yellow at once.
+   */
+  protected isSequence(memory: number): boolean {
+    const mode = this.store.mode();
+    return this.store.memorySequence()[memory - 1] || (mode.kind === 'recording' && mode.memory === memory);
+  }
+
+  /** The steps of the sequence being recorded that use this memory. */
+  protected steps(memory: number): readonly number[] | undefined {
+    return this.store.recordedSteps()?.memories.get(memory);
   }
 }

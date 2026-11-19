@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, linkedSignal } from '@angular/core';
 import { DeskStore } from '../desk/desk-store';
 import { CHANNEL_COUNT } from '../desk/desk-types';
 import { LampButton } from '../lamp-button/lamp-button';
@@ -16,8 +16,14 @@ import { LampButton } from '../lamp-button/lamp-button';
 export class Independents {
   protected readonly store = inject(DeskStore);
 
-  /** True while the channel numbers on the keys can be changed. */
-  protected readonly editing = signal(false);
+  /**
+   * True while the channel numbers on the keys can be changed. A stack that goes live ends
+   * the editing: then nothing that is stored can be changed, and Edit is locked.
+   */
+  protected readonly editing = linkedSignal({
+    source: this.store.live,
+    computation: () => false,
+  });
 
   /** The sixteen keys: which channel each one switches, and whether that channel is up. */
   protected readonly keys = computed(() => {

@@ -1,5 +1,6 @@
-/* One section over the whole view: the title, a line with the keys and the two cards that say
-   where the stack stands, and under it the table of steps. */
+/* One section over the whole view: the title, a line with the keys (Stack, the four that go
+   through the stack, Add step) and the two cards that say where the stack stands, and under it
+   the table of steps. */
 :host {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
@@ -114,15 +115,18 @@ h3 {
   line-height: 1.3;
 }
 
-/* the table scrolls when it has more steps than the window has room for */
+/* The table scrolls when it has more steps than the window has room for. The box is the
+   reference for what is placed out of sight inside it (the texts for screen readers): without
+   that, such a text at the far end of a wide table would make the whole page scroll sideways. */
 .table-box {
+  position: relative;
   min-height: 0;
   overflow: auto;
   scrollbar-width: thin;
 }
 
 table {
-  max-width: 1060px;
+  max-width: 1260px;
 }
 
 /* the grip a step is dragged by */
@@ -138,6 +142,12 @@ table {
 
 .grip:active {
   cursor: grabbing;
+}
+
+/* a live stack keeps its order: the grips are there, but nothing can be dragged by them */
+table.locked .grip {
+  opacity: 0.35;
+  cursor: default;
 }
 
 .cue {

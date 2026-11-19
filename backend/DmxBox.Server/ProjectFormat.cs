@@ -30,6 +30,7 @@ namespace DmxBox.Server;
 /// The notes and the independents may be missing: then there are no notes, and the keys are
 /// on channels 1 to 16. That keeps the files from before these existed readable. Version 2
 /// added the sequences and the stack; a file of version 1 has neither, and is still read.
+/// A sequence that does not say whether it loops is played in a loop.
 /// </remarks>
 internal static class ProjectFormat
 {
@@ -62,7 +63,7 @@ internal static class ProjectFormat
             MemoryNotes = NotesThatAreNotEmpty(project.MemoryNotes),
             Independents = project.Independents.ToList(),
             Sequences = [],
-            Stack = project.Stack.Select(step => FileStep(step.Step, step.Cue.ToString())).ToList(),
+            Stack = project.Stack.Select(step => FileStep(step.Step, step.Cue.ToString())).ToList<ProjectFileStep?>(),
         };
 
         for (int index = 0; index < project.Looks.Length; index++)
@@ -79,7 +80,7 @@ internal static class ProjectFormat
                 {
                     Number = index + 1,
                     Loop = sequence.Loop,
-                    Steps = sequence.Steps.Select(step => FileStep(step, cue: null)).ToList(),
+                    Steps = sequence.Steps.Select(step => FileStep(step, cue: null)).ToList<ProjectFileStep?>(),
                 });
             }
         }
@@ -273,7 +274,7 @@ internal static class ProjectFormat
 
             string where = $"of the sequence of memory {number}";
             sequences[number - 1] = new Sequence(
-                entry.Loop ?? false,
+                entry.Loop ?? Sequence.DefaultLoop,
                 steps.Select((step, index) => StepOf(step, $"Step {index + 1} {where}")).ToArray());
         }
 

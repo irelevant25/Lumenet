@@ -94,6 +94,22 @@ h1 {
   color: #fff;
 }
 
+/* The tag beside "Stack" while the stack is live: an "on air" sign that every view shows. */
+.views .live {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 5px 1px;
+  border-radius: 3px;
+  background: var(--live);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--live) 60%, transparent);
+  color: #0b0d10;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  vertical-align: 1px;
+}
+
 /* ---- right: the project */
 .project {
   display: flex;
@@ -161,6 +177,19 @@ h1 {
 :host-context(.phone) .left,
 :host-context(.phone) .project {
   justify-content: space-between;
+}
+
+/* The four links fill the line, so the "live" tag has no room beside its word: it sits on the
+   upper right corner of the link instead, and the links stay in one row of the same height. */
+:host-context(.phone) .views a {
+  position: relative;
+}
+
+:host-context(.phone) .views .live {
+  position: absolute;
+  top: -7px;
+  right: 0;
+  margin: 0;
 }
 
 :host-context(.phone) .file {

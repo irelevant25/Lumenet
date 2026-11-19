@@ -165,6 +165,18 @@ internal sealed class DeskHub : Hub<IDeskClient>
         return TellDeskAsync();
     }
 
+    /// <summary>
+    /// Puts one more step at the end of the sequence of a memory. An empty memory gets a new
+    /// sequence, played in a loop.
+    /// </summary>
+    /// <param name="memory">Memory number, 1-128.</param>
+    /// <param name="step">The step.</param>
+    public Task AddSequenceStep(int memory, Step step)
+    {
+        _desk.AddSequenceStep(memory, step);
+        return TellDeskAsync();
+    }
+
     /// <summary>The stack: its steps in the order of their numbers.</summary>
     public StackState GetStack()
     {
@@ -220,6 +232,21 @@ internal sealed class DeskHub : Hub<IDeskClient>
     {
         _desk.RenumberStackStep(id, cue);
         return TellStackAsync();
+    }
+
+    /// <summary>
+    /// Switches the stack live or off. Going live brings every fader down to 0, goes to the
+    /// first step and locks everything that is stored; switching it off stops the stack and
+    /// leaves the faders where they are.
+    /// </summary>
+    /// <param name="on">True for live.</param>
+    public async Task SetStackLive(bool on)
+    {
+        _desk.SetStackLive(on);
+        if (on)
+            await Clients.All.DeskChanged(_desk.GetState());   // every fader went to 0
+
+        await TellPlaybackAsync();
     }
 
     /// <summary>Play: goes on after a pause, or goes to the next step.</summary>
@@ -312,8 +339,8 @@ internal sealed class DeskHub : Hub<IDeskClient>
         await TellProjectAsync();
     }
 
-    // After Play, Pause, Next or Previous: every UI learns at once where the stack stands. The
-    // faders it moves follow from the desk clock.
+    // After Play, Pause, Next, Previous or the live switch: every UI learns at once where the
+    // stack stands. The faders it moves follow from the desk clock.
     private Task TellPlaybackAsync()
     {
         return Clients.All.PlaybackChanged(_desk.GetPlayback());

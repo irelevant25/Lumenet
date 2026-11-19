@@ -51,6 +51,10 @@
   --lamp: var(--blue-lamp);
 }
 
+:host(.tone-live) {
+  --lamp: var(--live);
+}
+
 /* Level 2: half lit. */
 :host(.level-2) {
   border-color: color-mix(in srgb, var(--lamp) 80%, transparent);

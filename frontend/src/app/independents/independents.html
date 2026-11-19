@@ -8,6 +8,7 @@
     aria-label="Edit the channels of the independent keys"
     [level]="editing() ? 3 : 1"
     [blink]="editing()"
+    [disabled]="store.live()"
     [attr.aria-pressed]="editing()"
     (click)="toggleEditing()"
   >

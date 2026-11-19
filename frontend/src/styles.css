@@ -19,6 +19,7 @@
   --system: #ffb020;
   --white-lamp: #f1f3f6;
   --blue-lamp: #4aa3ff;
+  --live: #ff5247; /* the stack is live: the red of an "on air" sign, on the Stack key and in the top bar */
 
   --cap: #d9dde3;
   --focus: #8ab4ff;
@@ -224,6 +225,19 @@ table.steps select:hover {
 table.steps input:focus-visible,
 table.steps select:focus-visible {
   outline-offset: 0;
+}
+
+/* while the stack is live a step cannot be changed: its fields are lettering only */
+table.steps input:disabled,
+table.steps select:disabled {
+  border-color: transparent;
+  background: none;
+  cursor: default;
+  opacity: 1; /* the browser would grey the text out; it has to stay readable during a show */
+}
+
+table.steps select:disabled {
+  appearance: none; /* no arrow: there is nothing to open */
 }
 
 /* the small keys at the end of a row: up, down, take out */

@@ -14,4 +14,10 @@ public sealed record Sequence(bool Loop, Step[] Steps)
 {
     /// <summary>The most steps a sequence can have.</summary>
     public const int MaxSteps = 99;
+
+    /// <summary>
+    /// How a sequence is played unless its owner says otherwise: in a loop. It is what a new
+    /// sequence gets, and what a project file means that does not say.
+    /// </summary>
+    public const bool DefaultLoop = true;
 }

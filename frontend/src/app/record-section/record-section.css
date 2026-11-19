@@ -1,4 +1,4 @@
-/* A small section under the independents: the title and the four record keys. */
+/* A small section under the independents: the title and the five record keys. */
 :host {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -21,13 +21,17 @@ h2 {
   text-transform: uppercase;
 }
 
-/* one column: save, edit, copy, del. On a low window the keys get flatter. */
+/* One column: save mem, edit mem, rec seq, copy, del. On a low window the keys get flatter.
+   The column is a size container, so that the lettering of the two-line keys can follow
+   their height; for that it needs a width of its own. */
 .keys {
+  container-type: size;
   display: grid;
-  grid-template-rows: repeat(4, minmax(0, var(--key-h)));
+  grid-template-rows: repeat(5, minmax(0, var(--key-h)));
   align-content: start;
   justify-items: center;
   gap: var(--strip-gap);
+  width: var(--key-w);
   min-height: 0;
 }
 
@@ -35,7 +39,28 @@ h2 {
   height: auto;
 }
 
-/* ---- mobile: one line. The title at the left, the four keys in the last four columns of the faders. */
+/* Two lines of lettering need 2.1 times their size in height. A key is a fifth of the column
+   less the gaps; the lettering takes 0.42 of that when it is less than the usual size. */
+.words.two {
+  font-size: min(var(--key-word), calc((100cqh - 4 * var(--strip-gap)) / 5 * 0.42));
+}
+
+/* Keys flatter than about 21px (five of them and the gaps: 123px) would make that lettering
+   smaller than 9px. Then the two words stand on one line instead, in narrow lettering sized
+   by the key's width: "SAVE MEM", the longest, is a little over four times its size wide. */
+@container (max-height: 123px) {
+  .words.two {
+    font-size: max(8px, calc(var(--key-w) * 0.22));
+    font-stretch: 75%;
+    white-space: nowrap;
+  }
+
+  .words.two br {
+    display: none;
+  }
+}
+
+/* ---- mobile: one line. The title at the left, the five keys in the last five columns of the faders. */
 :host-context(.mobile) {
   grid-template-columns: repeat(var(--line), var(--strip));
   grid-template-rows: none;
@@ -46,7 +71,7 @@ h2 {
 }
 
 :host-context(.mobile) h2 {
-  grid-column: 1 / -5; /* all columns but the last four */
+  grid-column: 1 / -6; /* all columns but the last five */
   justify-self: start;
 }
 
@@ -56,4 +81,9 @@ h2 {
 
 :host-context(.mobile) .keys [lmLamp] {
   height: var(--key-h);
+}
+
+/* the keys have their full height here, and the column is no container any more */
+:host-context(.mobile) .words.two {
+  font-size: inherit;
 }

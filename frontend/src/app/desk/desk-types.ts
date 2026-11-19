@@ -91,6 +91,9 @@ export interface Sequence {
   steps: TimedStep[];
 }
 
+/** How a new sequence is played until its owner says otherwise: in a loop. The backend starts one the same way. */
+export const DEFAULT_LOOP = true;
+
 /** The sequences, by the number of the memory that holds each. */
 export type Sequences = Readonly<Record<number, Sequence>>;
 
@@ -108,17 +111,23 @@ export interface StackState {
 /**
  * Where the stack stands. idle: no step is on. fading: the current step is on its way up.
  * waiting: it is up and the stack goes on by itself when its wait is over. holding: it is up
- * and the stack waits for Play, or is at its end.
+ * and the stack waits for Play.
  */
 export type StackPhase = 'idle' | 'fading' | 'waiting' | 'holding';
 
 export interface StackPlayback {
   currentId: number | null;
+  /** The step Play goes to. After the last step that is the first one; null if there is no other step. */
   nextId: number | null;
   state: StackPhase;
   paused: boolean;
   /** Seconds left of the fade or of the wait; 0 otherwise. */
   remaining: number;
+  /**
+   * True while the stack is live: it runs, and nothing that is stored can be changed. Missing
+   * from a desk program that knows no live switch.
+   */
+  live?: boolean;
 }
 
 /** What changes with time, as the backend reports it several times a second while something runs. */
@@ -133,6 +142,14 @@ export interface Playback {
 /** The first step of a new list, and the pattern for the next ones. */
 export function firstStep(wait: number): TimedStep {
   return { target: 'channel', number: 1, value: MAX_LEVEL, up: 1, wait, down: 1 };
+}
+
+/**
+ * The step that recording a sequence puts in for a pressed key: that channel or memory at
+ * full, with the times a new sequence starts with.
+ */
+export function recordedStep(target: StepTarget, number: number): TimedStep {
+  return { ...firstStep(1), target, number };
 }
 
 /**

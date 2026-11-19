@@ -32,6 +32,35 @@ public sealed class PlaybackHubTests
     }
 
     [Fact]
+    public async Task StepIsAddedToASequenceThroughTheHubAndEveryUiGetsTheDesk()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await using HubClient other = await server.ConnectAsync();
+
+        var step = new { target = "channel", number = 5, value = 255, up = 1, wait = 1, down = 1 };
+        await ui.InvokeAsync("AddSequenceStep", 9, step);
+        await ui.InvokeAsync("AddSequenceStep", 9, new { target = "memory", number = 2, value = 255, up = 1, wait = 1, down = 1 });
+
+        foreach (HubClient client in new[] { ui, other })
+        {
+            HubMessage changed = await client.NextMessageAsync();
+            Assert.Equal("DeskChanged", changed.Name);
+            Assert.True(changed.Arguments[0].GetProperty("memorySequence")[8].GetBoolean());
+        }
+
+        JsonElement sequence = (await other.InvokeAsync("GetSequences")).GetProperty("9");
+        Assert.True(sequence.GetProperty("loop").GetBoolean());
+        Assert.Equal(
+            ["channel", "memory"],
+            sequence.GetProperty("steps").EnumerateArray().Select(item => item.GetProperty("target").GetString()));
+
+        await ui.InvokeAsync("SaveMemory", 3);
+        var error = await Assert.ThrowsAsync<HubCallException>(() => ui.InvokeAsync("AddSequenceStep", 3, step));
+        Assert.Contains("Memory 3 holds a look. Empty it first.", error.Message);
+    }
+
+    [Fact]
     public async Task StackStepsAreChangedThroughTheHubAndEveryUiGetsTheStack()
     {
         await using TestServer server = await TestServer.StartAsync();
@@ -76,24 +105,88 @@ public sealed class PlaybackHubTests
         Assert.Equal(["levels", "sequenceSteps", "stack"], idle.EnumerateObject().Select(property => property.Name));
         Assert.Equal(512, idle.GetProperty("levels").GetArrayLength());
         Assert.Equal(
-            """{"currentId":null,"nextId":null,"state":"idle","paused":false,"remaining":0}""",
+            """{"currentId":null,"nextId":null,"state":"idle","paused":false,"remaining":0,"live":false}""",
             idle.GetProperty("stack").GetRawText());
 
-        // A step that takes an hour to come up, so that the test finds it on its way whenever it looks.
+        // A step that takes a quarter of an hour to come up, so that the test finds it on its way whenever it looks.
         var slow = new { target = "channel", number = 1, value = 255, up = 900, wait = 0, down = 0 };
         int id = (await ui.InvokeAsync("AddStackStep", slow)).GetInt32();
-        await ui.InvokeAsync("StackPlay");
+        int second = (await ui.InvokeAsync("AddStackStep", slow)).GetInt32();
+        await ui.InvokeAsync("SetStackLive", true);
 
         JsonElement stack = (await ui.InvokeAsync("GetPlayback")).GetProperty("stack");
+        Assert.True(stack.GetProperty("live").GetBoolean());
         Assert.Equal(id, stack.GetProperty("currentId").GetInt32());
+        Assert.Equal(second, stack.GetProperty("nextId").GetInt32());
         Assert.Equal("fading", stack.GetProperty("state").GetString());
         Assert.True(stack.GetProperty("remaining").GetDouble() > 800);
 
         await ui.InvokeAsync("StackPause");
         Assert.True((await ui.InvokeAsync("GetPlayback")).GetProperty("stack").GetProperty("paused").GetBoolean());
 
-        await ui.InvokeAsync("StackPrevious");       // back to "no step is on"
-        Assert.Equal("idle", (await ui.InvokeAsync("GetPlayback")).GetProperty("stack").GetProperty("state").GetString());
+        await ui.InvokeAsync("StackNext");
+        await ui.InvokeAsync("StackPlay");           // a fade is running: Play leaves it alone
+        await ui.InvokeAsync("StackPrevious");
+        Assert.Equal(id, (await ui.InvokeAsync("GetPlayback")).GetProperty("stack").GetProperty("currentId").GetInt32());
+
+        await ui.InvokeAsync("SetStackLive", false);
+        Assert.Equal(
+            $$"""{"currentId":null,"nextId":{{id}},"state":"idle","paused":false,"remaining":0,"live":false}""",
+            (await ui.InvokeAsync("GetPlayback")).GetProperty("stack").GetRawText());
+    }
+
+    [Fact]
+    public async Task GoingLiveSendsEveryUiTheDeskAndLocksWhatIsStored()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await using HubClient other = await server.ConnectAsync();
+
+        var step = new { target = "channel", number = 7, value = 255, up = 900, wait = 0, down = 0 };
+        var noSteps = await Assert.ThrowsAsync<HubCallException>(() => ui.InvokeAsync("SetStackLive", true));
+        Assert.Contains("The stack has no steps yet. Add a step first.", noSteps.Message);
+        var notLive = await Assert.ThrowsAsync<HubCallException>(() => ui.InvokeAsync("StackPlay"));
+        Assert.Contains("The stack is not live. Press Stack first.", notLive.Message);
+
+        await ui.InvokeAsync("AddStackStep", step);
+        await ui.InvokeAsync("SetChannel", 3, 200);
+        await ui.InvokeAsync("SetStackLive", true);
+
+        foreach (HubClient client in new[] { ui, other })
+        {
+            HubMessage message = await client.NextMessageAsync();
+            while (message.Name != "DeskChanged")
+                message = await client.NextMessageAsync();
+
+            Assert.Equal(0, message.Arguments[0].GetProperty("channels")[2].GetInt32());   // every fader went down
+
+            HubMessage playback = await client.NextMessageAsync();
+            Assert.Equal("PlaybackChanged", playback.Name);
+            Assert.True(playback.Arguments[0].GetProperty("stack").GetProperty("live").GetBoolean());
+        }
+
+        const string locked = "The stack is live, so nothing that is stored can be changed. Switch Stack off first.";
+        (string Method, object?[] Arguments)[] changes =
+        [
+            ("SaveMemory", [1]),
+            ("SetChannelNote", [1, "Front"]),
+            ("SetIndependent", [1, 40]),
+            ("AddStackStep", [step]),
+            ("AddSequenceStep", [2, step]),
+            ("NewProject", []),
+            ("LoadProject", ["show"]),
+        ];
+        await ui.InvokeAsync("SaveProject", "show");     // saving reads the desk and changes nothing on it
+        foreach ((string method, object?[] arguments) in changes)
+        {
+            var error = await Assert.ThrowsAsync<HubCallException>(() => ui.InvokeAsync(method, arguments));
+            Assert.Contains(locked, error.Message);
+        }
+
+        await ui.InvokeAsync("SetChannel", 3, 90);       // the faders are free
+        await ui.InvokeAsync("Clear");
+        await ui.InvokeAsync("SetStackLive", false);
+        await ui.InvokeAsync("SaveMemory", 1);           // and with the stack off the lock is gone
     }
 
     [Fact]
@@ -109,7 +202,7 @@ public sealed class PlaybackHubTests
 
         desk.AddStackStep(new Step("channel", 7, 200, Up: 1, Wait: 0, Down: 0));
         desk.AddStackStep(new Step("memory", 3, 100, Up: 0, Wait: 0, Down: 0));
-        desk.StackPlay();
+        desk.SetStackLive(true);
         time.Pass(0.5);
         await clock.StepAsync();
         Assert.Contains("ChannelChanged 7 100", uis.Messages);
@@ -158,6 +251,18 @@ public sealed class PlaybackHubTests
         Assert.Equal(["0.5", "1.0"], loaded.GetStack().Steps.Select(step => step.Cue));
         Assert.Equal("memory", loaded.GetStack().Steps[0].Target);
         Assert.Equal(3, loaded.GetStack().Steps[1].Down);
+    }
+
+    [Fact]
+    public void SequenceInAFileThatDoesNotSayIsPlayedInALoop()
+    {
+        ProjectContent read = Read(
+            """
+            { "format": "lumenet-project", "version": 2, "memories": [], "sequences": [
+              { "number": 1, "steps": [] }, { "number": 2, "loop": false, "steps": [] }, { "number": 3, "loop": true, "steps": [] } ] }
+            """);
+
+        Assert.Equal([true, false, true], read.Sequences.Take(3).Select(sequence => sequence!.Loop));
     }
 
     [Fact]

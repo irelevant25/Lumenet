@@ -18,22 +18,50 @@ internal sealed partial class Desk
     /// <param name="memory">Memory number, 1-128.</param>
     /// <param name="loop">True to start again after the last step, false to play once.</param>
     /// <param name="steps">The steps, at most 99. None at all is allowed: such a sequence gives nothing.</param>
-    /// <exception cref="DeskException">The memory holds a look, or a step is out of range.</exception>
+    /// <exception cref="DeskException">The memory holds a look, a step is out of range, or the stack is live.</exception>
     public void SetSequence(int memory, bool loop, Step[]? steps)
     {
         RequireMemory(memory);
         steps ??= [];
         if (steps.Length > Sequence.MaxSteps)
-            throw new DeskException($"A sequence can have at most {Sequence.MaxSteps} steps.");
+            throw TooManySteps();
 
         Step[] checkedSteps = Array.ConvertAll(steps, step => (step ?? throw new DeskException("A step is missing.")).Checked());
 
         lock (_lock)
         {
-            if (_memories[memory - 1] is not null)
-                throw new DeskException($"Memory {memory} holds a look. Empty it first.");
-
+            RequireUnlocked();
+            RequireNoLook(memory);
             StoreSequence(memory, new Sequence(loop, checkedSteps));
+            CountLookChange();
+        }
+    }
+
+    /// <summary>
+    /// Puts one more step at the end of the sequence a memory holds. An empty memory gets a new
+    /// sequence with this one step, played in a loop. This is what recording a sequence key by
+    /// key does. If the memory's fader is up, the sequence starts from its first step.
+    /// </summary>
+    /// <param name="memory">Memory number, 1-128.</param>
+    /// <param name="step">The step.</param>
+    /// <exception cref="DeskException">
+    /// The memory holds a look, the sequence is full, the step is out of range, or the stack is live.
+    /// </exception>
+    public void AddSequenceStep(int memory, Step? step)
+    {
+        RequireMemory(memory);
+        Step checkedStep = (step ?? throw new DeskException("A step is missing.")).Checked();
+
+        lock (_lock)
+        {
+            RequireUnlocked();
+            RequireNoLook(memory);
+
+            Sequence old = _sequences[memory - 1] ?? new Sequence(Sequence.DefaultLoop, []);
+            if (old.Steps.Length >= Sequence.MaxSteps)
+                throw TooManySteps();
+
+            StoreSequence(memory, old with { Steps = [.. old.Steps, checkedStep] });
             CountLookChange();
         }
     }
@@ -60,6 +88,19 @@ internal sealed partial class Desk
     {
         _sequences[memory - 1] = sequence;
         _sequenceStarts[memory - 1] = Now;
+    }
+
+    // Call with the lock held. A look is not turned into a sequence unasked: its owner empties
+    // the memory first.
+    private void RequireNoLook(int memory)
+    {
+        if (_memories[memory - 1] is not null)
+            throw new DeskException($"Memory {memory} holds a look. Empty it first.");
+    }
+
+    private static DeskException TooManySteps()
+    {
+        return new DeskException($"A sequence can have at most {Sequence.MaxSteps} steps.");
     }
 
     // Call with the lock held. Every move of a memory fader goes through here, by hand or by

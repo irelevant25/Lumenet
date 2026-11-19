@@ -13,12 +13,17 @@
     lmLamp
     type="button"
     class="number"
+    [class.marked]="steps().length > 0"
     [tone]="keyTone()"
     [level]="lampLevel()"
     [blink]="blink()"
-    [attr.aria-label]="name() + ' key'"
+    [attr.aria-label]="keyName()"
     (click)="keyPress.emit()"
   >
+    @if (steps().length) {
+      <!-- the steps of the sequence being recorded that use this key -->
+      <span class="steps" aria-hidden="true">{{ steps().join(',') }}</span>
+    }
     {{ number() }}
   </button>
 } @else {
@@ -35,6 +40,7 @@
     spellcheck="false"
     [attr.maxlength]="lineLength"
     [value]="lines()[0]"
+    [readOnly]="locked()"
     [attr.aria-label]="'Note for ' + name()"
     (change)="onLineChange(0, $event)"
     (keydown.enter)="finishNote($event)"
@@ -46,6 +52,7 @@
     spellcheck="false"
     [attr.maxlength]="lineLength"
     [value]="lines()[1]"
+    [readOnly]="locked()"
     [attr.aria-label]="'Note for ' + name() + ', second line'"
     (change)="onLineChange(1, $event)"
     (keydown.enter)="finishNote($event)"

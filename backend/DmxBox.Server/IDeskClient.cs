@@ -70,7 +70,7 @@ public interface IDeskClient
     /// <summary>
     /// What changes with time: what the running sequences give, and where the stack stands.
     /// It comes about 10 times a second while something moves, once more when it has stopped,
-    /// and after Play, Pause, Next and Previous.
+    /// and after Play, Pause, Next, Previous and the switch that takes the stack live.
     /// </summary>
     /// <param name="playback">The state of this moment.</param>
     Task PlaybackChanged(Playback playback);

@@ -24,3 +24,8 @@ export function joinNote(first: string, second: string): string {
   const bottom = second.trim();
   return bottom === '' ? top : top + NOTE_LINE_SEPARATOR + bottom;
 }
+
+/** A note as one line of text: its two lines with a space between them. Empty for no note. */
+export function noteInOneLine(note: string): string {
+  return splitNote(note).join(' ').trim();
+}

@@ -93,9 +93,17 @@ export class DeskConnection {
 /**
  * SignalR wraps the backend's message in a sentence of its own
  * ("An unexpected error occurred invoking ... HubException: <message>"). Keep only the message.
+ *
+ * A backend that does not know the method at all is a desk program from before the page
+ * learned to ask for it: the page is served fresh while the program keeps running. Say that,
+ * instead of SignalR's "Unknown hub method".
  */
 function plainMessage(error: unknown): string {
   const text = error instanceof Error ? error.message : String(error);
+  if (text.includes('Unknown hub method')) {
+    return 'The desk program is older than this page and cannot do that yet. Start run.cmd again.';
+  }
+
   const marker = 'HubException: ';
   const at = text.indexOf(marker);
   return at >= 0 ? text.slice(at + marker.length) : text;

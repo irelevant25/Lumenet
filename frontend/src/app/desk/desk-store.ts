@@ -3,9 +3,11 @@ import { DeskConnection } from './desk-connection';
 import {
   BoxStatus,
   CHANNEL_COUNT,
+  DEFAULT_LOOP,
   DeskState,
   INDEPENDENT_COUNT,
   MAX_LEVEL,
+  MAX_SEQUENCE_STEPS,
   MEDIUM_BELOW_PX,
   MEMORY_COUNT,
   MOBILE_BELOW_HEIGHT_PX,
@@ -23,16 +25,28 @@ import {
   TimedStep,
   Welcome,
   pageStart,
+  recordedStep,
 } from './desk-types';
 import {
   DeskCommand,
   FunctionMode,
   FunctionName,
   IDLE,
+  MemoryContent,
   Step,
+  pressChannel,
   pressFunction,
   pressMemory,
 } from './function-mode';
+
+/**
+ * While a sequence is recorded: for every channel and memory it uses, the numbers of the
+ * steps that use it, counted from 1. The keys show them.
+ */
+export interface RecordedSteps {
+  readonly channels: ReadonlyMap<number, readonly number[]>;
+  readonly memories: ReadonlyMap<number, readonly number[]>;
+}
 
 /** Fader moves are collected for this long and then sent together, the newest value of each fader only. */
 const SEND_DELAY_MS = 15;
@@ -117,6 +131,13 @@ export class DeskStore {
     return shown ?? own;
   });
 
+  /**
+   * True while the stack is live. Then the desk plays a show and nothing that is stored can be
+   * changed: no memory, sequence, step of the stack, note or independent key. The faders, the
+   * master, Clear and Blackout work as always.
+   */
+  readonly live = computed(() => this.playback().stack.live === true);
+
   // ---- what only this page knows
   /** Faders in one row: 32 on a wide window, 16 on a narrower one (the limit is in desk-types.ts). */
   readonly stripsPerRow = signal(STRIPS_PER_ROW_WIDE);
@@ -137,8 +158,23 @@ export class DeskStore {
   readonly firstChannel = computed(() => pageStart(this.wantedChannel(), this.channelsPerPage()));
   /** The first memory of the page that is shown. */
   readonly firstMemory = computed(() => pageStart(this.wantedMemory(), this.memoriesPerPage()));
-  /** Where a memory function (save, edit, copy, delete) stands. */
+  /** Where a record key (save or edit a memory, record a sequence, copy, delete) stands. */
   readonly mode = signal<FunctionMode>(IDLE);
+  /** The steps of the sequence that is being recorded, by what they use; null while none is recorded. */
+  readonly recordedSteps = computed<RecordedSteps | null>(() => {
+    const mode = this.mode();
+    if (mode.kind !== 'recording') return null;
+
+    const channels = new Map<number, number[]>();
+    const memories = new Map<number, number[]>();
+    (this.sequences()[mode.memory]?.steps ?? []).forEach((step, index) => {
+      const users = step.target === 'channel' ? channels : memories;
+      const numbers = users.get(step.number);
+      if (numbers) numbers.push(index + 1);
+      else users.set(step.number, [index + 1]);
+    });
+    return { channels, memories };
+  });
   /** A short message for the top bar, for example an error from the backend. */
   readonly notice = signal('');
 
@@ -176,7 +212,7 @@ export class DeskStore {
     connection.on<[BoxStatus]>('BoxChanged', (box) => this.box.set(box));
     connection.on<[ProjectInfo]>('ProjectChanged', (project) => this.project.set(project));
     connection.on<[StackState]>('StackChanged', (stack) => this.stack.set(stack));
-    connection.on<[Playback]>('PlaybackChanged', (playback) => this.playback.set(playback));
+    connection.on<[Playback]>('PlaybackChanged', (playback) => this.takePlayback(playback));
 
     connection.whenConnected(() => void this.refresh());
     connection.start();
@@ -265,14 +301,26 @@ export class DeskStore {
     this.run('Clear');
   }
 
-  // ---------------------------------------------------------------- memory functions
+  // ---------------------------------------------------------------- the record keys
 
   pressFunction(name: FunctionName): void {
+    if (this.live()) return; // a live stack locks what is stored
     this.follow(pressFunction(this.mode(), name));
   }
 
   pressMemory(memory: number): void {
-    this.follow(pressMemory(this.mode(), memory, this.memoryStored()[memory - 1]));
+    this.follow(pressMemory(this.mode(), memory, this.memoryContent(memory)));
+  }
+
+  /** The key under a channel fader. It does something only while a sequence is recorded. */
+  pressChannel(channel: number): void {
+    this.follow(pressChannel(this.mode(), channel));
+  }
+
+  /** What a memory holds: nothing, a look, or a sequence. */
+  memoryContent(memory: number): MemoryContent {
+    if (!this.memoryStored()[memory - 1]) return 'nothing';
+    return this.memorySequence()[memory - 1] ? 'sequence' : 'look';
   }
 
   // ---------------------------------------------------------------- sequences
@@ -280,14 +328,42 @@ export class DeskStore {
   /** Stores a sequence in a memory that is empty or holds a sequence already. */
   setSequence(memory: number, sequence: Sequence): void {
     this.sequences.update((all) => ({ ...all, [memory]: sequence }));
-    this.memoryStored.update((flags) => withItem(flags, memory - 1, true));
-    this.memorySequence.update((flags) => withItem(flags, memory - 1, true));
+    this.markStored(memory, 'sequence');
     this.run('SetSequence', memory, sequence.loop, sequence.steps);
+  }
+
+  /**
+   * Puts one more step at the end of the sequence in a memory. An empty memory gets a new
+   * sequence, played in a loop. The backend adds the step by itself, so that two quick
+   * presses cannot lose one.
+   */
+  addSequenceStep(memory: number, step: TimedStep): void {
+    const old = this.sequences()[memory];
+    if (old && old.steps.length >= MAX_SEQUENCE_STEPS) {
+      this.say(`A sequence can have at most ${MAX_SEQUENCE_STEPS} steps.`);
+      return;
+    }
+
+    const sequence: Sequence = { loop: old?.loop ?? DEFAULT_LOOP, steps: [...(old?.steps ?? []), step] };
+    this.sequences.update((all) => ({ ...all, [memory]: sequence }));
+    this.markStored(memory, 'sequence');
+    this.run('AddSequenceStep', memory, step);
   }
 
   // ---------------------------------------------------------------- the stack
   // The backend keeps the steps in order and gives them their numbers. After every change it
   // sends the whole stack to every page, this one included.
+
+  /**
+   * Switches the stack live or off. Going live brings every fader to zero and starts the first
+   * step; from then on nothing that is stored can be changed. Switching it off stops the stack
+   * and leaves the faders where they are.
+   */
+  setStackLive(on: boolean): void {
+    this.mode.set(IDLE);
+    if (on) this.dropOutbox(); // fader moves that are still waiting must not arrive after the faders went down
+    this.run('SetStackLive', on);
+  }
 
   addStackStep(step: TimedStep): void {
     this.run('AddStackStep', step);
@@ -357,6 +433,7 @@ export class DeskStore {
 
   private follow(step: Step): void {
     this.mode.set(step.mode);
+    if (step.notice) this.say(step.notice);
     if (step.command) this.carryOut(step.command);
   }
 
@@ -366,26 +443,33 @@ export class DeskStore {
 
     switch (command.kind) {
       case 'saveMemory':
-        this.markStored(command.memory, true);
+        this.markStored(command.memory, 'look');
         this.run('SaveMemory', command.memory);
         break;
       case 'loadMemory':
         this.run('LoadMemory', command.memory);
         break;
       case 'copyMemory':
-        this.markStored(command.to, true);
+        this.markStored(command.to, this.memoryContent(command.from));
         this.run('CopyMemory', command.from, command.to);
         break;
       case 'deleteMemory':
-        this.markStored(command.memory, false);
+        this.markStored(command.memory, 'nothing');
         this.run('DeleteMemory', command.memory);
+        break;
+      case 'addStep':
+        this.addSequenceStep(command.memory, recordedStep(command.target, command.number));
         break;
     }
   }
 
-  /** Lights the memory's lamp right away. The backend confirms with the full state a moment later. */
-  private markStored(memory: number, stored: boolean): void {
-    this.memoryStored.update((flags) => withItem(flags, memory - 1, stored));
+  /**
+   * Gives the memory's key its look right away: lit or not, red or running into yellow. The
+   * backend confirms with the full state a moment later.
+   */
+  private markStored(memory: number, holds: MemoryContent): void {
+    this.memoryStored.update((flags) => withItem(flags, memory - 1, holds !== 'nothing'));
+    this.memorySequence.update((flags) => withItem(flags, memory - 1, holds === 'sequence'));
   }
 
   /** Asks the backend to do something and shows its message if it refuses. */
@@ -485,7 +569,7 @@ export class DeskStore {
       ]);
       this.sequences.set(sequences ?? {});
       this.stack.set(stack ?? { steps: [] });
-      this.playback.set(playback ?? NO_PLAYBACK);
+      this.takePlayback(playback ?? NO_PLAYBACK);
       this.playbackKnown.set(true);
     } catch {
       // An older desk program knows neither sequences nor the stack. The two views say so.
@@ -494,6 +578,12 @@ export class DeskStore {
       this.playback.set(NO_PLAYBACK);
       this.playbackKnown.set(false);
     }
+  }
+
+  private takePlayback(playback: Playback): void {
+    this.playback.set(playback);
+    // A live stack locks the record keys: whatever was begun with one of them is over.
+    if (playback.stack.live) this.mode.set(IDLE);
   }
 
   private async fetchMemoryLooks(): Promise<void> {

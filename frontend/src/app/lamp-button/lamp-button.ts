@@ -4,10 +4,11 @@ import { LampLevel } from '../desk/lamps';
 
 /**
  * The colour of a lamp: green for channels, red for memories, red running into yellow for a
- * memory that holds a sequence, amber for the memory functions and the project buttons,
- * white for Clear, blue for Blackout.
+ * memory that holds a sequence, amber for the record keys and the project buttons,
+ * white for Clear, blue for Blackout, and the red of "on air" for the key that takes the
+ * stack live.
  */
-export type LampTone = 'channel' | 'memory' | 'sequence' | 'system' | 'white' | 'blue';
+export type LampTone = 'channel' | 'memory' | 'sequence' | 'system' | 'white' | 'blue' | 'live';
 
 /**
  * A square key that is lit from behind, like the keys of a lighting desk.

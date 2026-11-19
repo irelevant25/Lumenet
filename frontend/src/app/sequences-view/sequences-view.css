@@ -98,15 +98,18 @@ h2 {
   font-size: 14px;
 }
 
-/* the table scrolls when it has more steps than the window has room for */
+/* The table scrolls when it has more steps than the window has room for. The box is the
+   reference for what is placed out of sight inside it (the texts for screen readers): without
+   that, such a text at the far end of a wide table would make the whole page scroll sideways. */
 .table-box {
+  position: relative;
   min-height: 0;
   overflow: auto;
   scrollbar-width: thin;
 }
 
 table {
-  max-width: 980px;
+  max-width: 1180px;
 }
 
 /* for screen readers only */
@@ -170,7 +173,7 @@ table {
   flex-wrap: wrap;
 }
 
-/* a table of seven columns is wider than a phone: it scrolls sideways in its box */
+/* a table of nine columns is wider than a phone: it scrolls sideways in its box */
 :host-context(.mobile) .table-box {
   overflow-x: auto;
   overflow-y: visible;

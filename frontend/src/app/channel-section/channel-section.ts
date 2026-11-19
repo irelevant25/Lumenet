@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { DeskStore } from '../desk/desk-store';
 import { CHANNEL_COUNT, stripNumbers } from '../desk/desk-types';
+import { channelKeysArmed } from '../desk/function-mode';
 import { LampLevel, channelLamp, channelPageLamp } from '../desk/lamps';
 import { FaderStrip } from '../fader-strip/fader-strip';
 import { LampButton } from '../lamp-button/lamp-button';
@@ -38,8 +39,19 @@ export class ChannelSection {
     });
   });
 
+  /**
+   * True while a sequence is recorded: then the channel keys blink and can be pressed, and
+   * each press puts that channel into the sequence as a step.
+   */
+  protected readonly armed = computed(() => channelKeysArmed(this.store.mode()));
+
   /** Lit when the channel is above zero, whether by its own fader or by a memory. */
   protected lamp(channel: number): LampLevel {
     return channelLamp(this.store.shownChannels()[channel - 1]);
+  }
+
+  /** The steps of the sequence being recorded that use this channel. */
+  protected steps(channel: number): readonly number[] | undefined {
+    return this.store.recordedSteps()?.channels.get(channel);
   }
 }

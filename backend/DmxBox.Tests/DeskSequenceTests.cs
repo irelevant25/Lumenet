@@ -99,6 +99,60 @@ public sealed class DeskSequenceTests
     }
 
     [Fact]
+    public void AddingAStepStartsASequencePlayedInALoopOrGoesOnWithTheOneThatIsThere()
+    {
+        long before = _desk.ProjectChanges;
+        _desk.AddSequenceStep(4, new Step("channel", 1, 255, 1, 1.04, 1));
+
+        Sequence started = _desk.GetSequences()[4];
+        Assert.True(started.Loop);                   // a new sequence loops unless its owner says otherwise
+        Assert.Equal([new Step("channel", 1, 255, 1, 1, 1)], started.Steps);
+        Assert.True(_desk.GetState().MemorySequence[3]);
+        Assert.Equal(before + 1, _desk.ProjectChanges);
+
+        _desk.SetSequence(4, loop: false, started.Steps);
+        _desk.AddSequenceStep(4, new Step("memory", 2, 100, 0, 0, 0));
+
+        Sequence longer = _desk.GetSequences()[4];
+        Assert.False(longer.Loop);                   // one that is there stays what it was
+        Assert.Equal(["channel", "memory"], longer.Steps.Select(step => step.Target));
+
+        _desk.SaveMemory(6);
+        var error = Assert.Throws<DeskException>(() => _desk.AddSequenceStep(6, new Step("channel", 1, 1, 0, 0, 0)));
+        Assert.Equal("Memory 6 holds a look. Empty it first.", error.Message);
+        Assert.Throws<DeskException>(() => _desk.AddSequenceStep(4, new Step("channel", 513, 1, 0, 0, 0)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => _desk.AddSequenceStep(129, new Step("channel", 1, 1, 0, 0, 0)));
+    }
+
+    [Fact]
+    public void SequenceThatIsFullTakesNoMoreSteps()
+    {
+        var step = new Step("channel", 1, 1, 0, 0, 0);
+        _desk.SetSequence(1, loop: true, Enumerable.Repeat(step, Sequence.MaxSteps).ToArray());
+
+        var error = Assert.Throws<DeskException>(() => _desk.AddSequenceStep(1, step));
+
+        Assert.Equal("A sequence can have at most 99 steps.", error.Message);
+        Assert.Equal(99, _desk.GetSequences()[1].Steps.Length);
+    }
+
+    [Fact]
+    public void StepAddedWhileTheFaderIsUpStartsTheSequenceFromItsFirstStep()
+    {
+        _desk.AddSequenceStep(2, new Step("channel", 5, 200, Up: 2, Wait: 0, Down: 0));
+        _desk.SetMemoryLevel(2, 255);
+        _time.Pass(1);
+        Assert.Equal(100, _desk.GetOutput()[4]);     // half way up
+
+        _desk.AddSequenceStep(2, new Step("channel", 6, 200, Up: 2, Wait: 0, Down: 0));
+
+        Assert.Equal(0, _desk.GetOutput()[4]);       // from the top again
+        _time.Pass(0.5);
+        Assert.Equal(50, _desk.GetOutput()[4]);
+        Assert.Equal(0, _desk.GetOutput()[5]);
+    }
+
+    [Fact]
     public void StepsOutOfRangeAreRefused()
     {
         AssertRefused("stands for a channel or a memory", new Step("light", 1, 1, 0, 0, 0));

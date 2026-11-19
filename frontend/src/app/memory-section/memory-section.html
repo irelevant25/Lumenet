@@ -6,12 +6,14 @@
       <lm-fader-strip
         kind="memory"
         pressable
-        [sequence]="store.memorySequence()[memory - 1]"
+        [sequence]="isSequence(memory)"
+        [steps]="steps(memory)"
         [number]="memory"
         [value]="store.memoryLevels()[memory - 1]"
         [lampLevel]="lamp(memory)"
         [blink]="blinks(memory)"
         [note]="store.memoryNotes()[memory - 1]"
+        [locked]="store.live()"
         (valueChange)="store.setMemoryLevel(memory, $event)"
         (noteChange)="store.setMemoryNote(memory, $event)"
         (keyPress)="store.pressMemory(memory)"

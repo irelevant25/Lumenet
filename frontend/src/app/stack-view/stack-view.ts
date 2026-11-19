@@ -1,7 +1,8 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DeskStore } from '../desk/desk-store';
 import { StackStep, TimedStep, firstStep, stepAfter } from '../desk/desk-types';
-import { splitNote } from '../desk/notes';
+import { noteInOneLine } from '../desk/notes';
+import { StepChoices, stepChoices } from '../desk/step-choices';
 import { LampButton } from '../lamp-button/lamp-button';
 import { StepRow } from '../step-row/step-row';
 
@@ -12,9 +13,14 @@ interface DropMark {
 }
 
 /**
- * The Stack view: the one stack of the project. Its steps are gone through with Play, Pause,
- * Next and Previous. Going to a step moves the real fader of its channel or memory up to the
- * step's value; leaving it moves that fader back to zero.
+ * The Stack view: the one stack of the project. The Stack key takes it live: every fader goes
+ * to zero and the first step starts. From then on it is gone through with Play, Pause, Next and
+ * Previous, round and round: after the last step comes the first. Going to a step moves the
+ * real fader of its channel or memory up to the step's value; leaving it moves that fader back
+ * to zero.
+ *
+ * While the stack is live, nothing that is stored can be changed, here or anywhere on the
+ * desk. While it is not live it does not run, and that is the time to change its steps.
  *
  * The steps stand in the order of their numbers ("2.0", "2.1"). A step is moved by dragging
  * its grip, or with the arrow keys at the end of its row; the desk then gives it a number
@@ -32,6 +38,8 @@ export class StackView {
   protected readonly steps = computed(() => this.store.stack().steps);
   private readonly playback = computed(() => this.store.playback().stack);
 
+  /** True while the stack is live: it runs, and its steps are locked. */
+  protected readonly live = this.store.live;
   protected readonly current = computed(() => this.stepWithId(this.playback().currentId));
   protected readonly next = computed(() => this.stepWithId(this.playback().nextId));
   protected readonly paused = computed(() => this.playback().paused);
@@ -46,17 +54,32 @@ export class StackView {
   private readonly dragged = signal<number | null>(null);
   protected readonly dropMark = signal<DropMark | null>(null);
 
+  /**
+   * What the number of a step is chosen from: every channel, and the memories that hold
+   * something, a look or a sequence.
+   */
+  protected readonly choices = computed<StepChoices>(() => ({
+    channel: stepChoices(this.store.channelNotes()),
+    memory: stepChoices(this.store.memoryNotes(), (memory) => this.store.memoryStored()[memory - 1]),
+  }));
+
   protected readonly summary = computed(() => {
     if (!this.store.playbackKnown()) {
       return 'The desk program is older than this page and knows no stack. Start run.cmd again.';
     }
     const count = this.steps().length;
     if (count === 0) return 'The stack is empty. Add step puts in the first step.';
-    return `The stack has ${count} ${count === 1 ? 'step' : 'steps'}. Going to a step moves the fader of its channel or memory.`;
+
+    const size = `The stack has ${count} ${count === 1 ? 'step' : 'steps'}.`;
+    return this.live()
+      ? `${size} It is live: nothing that is stored can be changed until Stack is pressed again.`
+      : `${size} Stack takes it live: every fader goes to zero and the first step starts.`;
   });
 
   /** What the stack is doing with the current step, in a few words. */
   protected readonly progress = computed(() => {
+    if (!this.live()) return this.steps().length > 0 ? 'The stack is not live.' : '';
+
     const { state, paused, remaining } = this.playback();
     const left = `${remaining.toFixed(1)} s`;
     if (paused) return remaining > 0 ? `Paused, with ${left} left. Play goes on.` : 'Paused. Play goes on.';
@@ -67,16 +90,21 @@ export class StackView {
       case 'waiting':
         return `Up. The stack goes on by itself in ${left}.`;
       case 'holding':
-        return this.next() ? 'Up. The stack waits for Play.' : 'Up. This is the last step.';
+        return this.next() ? 'Up. The stack waits for Play.' : 'Up. It is the only step.';
       default:
-        return this.steps().length > 0 ? 'Play goes to the next step.' : '';
+        return 'Play goes to the first step.';
     }
   });
 
+  /** The note under the fader of the step's channel or memory, in one line. */
+  protected noteOf(step: TimedStep): string {
+    const notes = step.target === 'channel' ? this.store.channelNotes() : this.store.memoryNotes();
+    return noteInOneLine(notes[step.number - 1] ?? '');
+  }
+
   /** A step in words: "Channel 5 (PAR 1 red) at 200". */
   protected describe(step: TimedStep): string {
-    const notes = step.target === 'channel' ? this.store.channelNotes() : this.store.memoryNotes();
-    const note = splitNote(notes[step.number - 1] ?? '').join(' ').trim();
+    const note = this.noteOf(step);
     const name = `${step.target === 'channel' ? 'Channel' : 'Memory'} ${step.number}`;
     return `${note ? `${name} (${note})` : name} at ${step.value}`;
   }
@@ -132,6 +160,11 @@ export class StackView {
   // ---------------------------------------------------------------- dragging a step by its grip
 
   protected onDragStart(event: DragEvent, step: StackStep): void {
+    if (this.live()) {
+      event.preventDefault(); // a live stack keeps its order
+      return;
+    }
+
     const row = (event.target as HTMLElement).closest('tr');
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';

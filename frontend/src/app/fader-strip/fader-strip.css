@@ -30,6 +30,38 @@ lm-fader {
   color: #fff;
 }
 
+/* While a sequence is recorded, a key shows the numbers of the steps that use it: small and
+   yellow in its top left corner, on a dark tag so that they read on a lit key too. More
+   numbers than fit are cut off; the key's name for screen readers lists them all. */
+.number {
+  position: relative;
+}
+
+/* a key that carries step numbers moves its own number down a little, out of their way */
+.number.marked {
+  padding-top: 9px;
+}
+
+.steps {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  box-sizing: border-box;
+  max-width: calc(100% - 2px);
+  padding: 0 2px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: rgb(11 13 16 / 85%);
+  color: var(--sequence-end);
+  font-size: 9px;
+  font-stretch: 75%;
+  font-weight: 700;
+  line-height: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 /* The note under the key: two lines, each a field of its own, empty until something is typed.
    They look like lettering on the desk, and only show that they are fields when the pointer
    is on them or they are being typed in. */
@@ -65,4 +97,11 @@ lm-fader {
 .note input:focus {
   outline-offset: 0;
   background: var(--well);
+}
+
+/* while the stack is live a note cannot be changed: it is lettering only */
+.note input:read-only {
+  border-bottom-color: transparent;
+  background: none;
+  cursor: default;
 }

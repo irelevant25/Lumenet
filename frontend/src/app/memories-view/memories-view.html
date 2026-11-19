@@ -22,18 +22,29 @@
       }
     </div>
 
-    <ol class="matrix" [attr.aria-label]="'The channels of memory ' + store.inspectedMemory()">
-      @for (cell of cells(); track cell.channel) {
-        <li
-          [class.up]="cell.level > 0"
-          [style.--part]="cell.level / 255"
-          [attr.aria-label]="'Channel ' + cell.channel + ': ' + cell.level"
-        >
-          <span class="channel" aria-hidden="true">{{ cell.channel }}</span>
-          <span class="level" aria-hidden="true">{{ cell.level }}</span>
-        </li>
-      }
-    </ol>
+    <!-- One cell for each channel: the level in the middle, the channel number (drawn by the
+         style sheet from data-channel) small in the corner. One element a cell, nothing more. -->
+    <div class="table-box">
+      <table class="matrix">
+        <caption>The channels of memory {{ store.inspectedMemory() }}</caption>
+        <tbody>
+          @for (row of rows(); track $index) {
+            <tr>
+              @for (cell of row; track cell.channel) {
+                <td
+                  [class.up]="cell.level > 0"
+                  [style.--part]="cell.level > 0 ? cell.level / 255 : null"
+                  [attr.data-channel]="cell.channel"
+                  [attr.aria-label]="'Channel ' + cell.channel + ': ' + cell.level"
+                >
+                  {{ cell.level }}
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <nav class="rail" aria-label="Memory pages">

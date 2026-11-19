@@ -82,7 +82,7 @@ html.mobile body {
   overflow: visible; /* the page scrolls */
 }
 
-/* phone: a row of 16 faders breaks into two lines of 8 */
+/* phone: a row of 16 faders breaks into two lines of 8 (STRIPS_PER_LINE_PHONE in desk-types.ts) */
 html.phone {
   --line: 8;
 }

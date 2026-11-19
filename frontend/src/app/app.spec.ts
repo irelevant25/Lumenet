@@ -417,9 +417,13 @@ describe('the desk page', () => {
 
   it('the memories view shows what a memory holds and changes nothing', async () => {
     await show('/memories');
-    const cells = () => [...page.querySelectorAll('lm-memories-view .matrix li')];
-    const levelOf = (channel: number) => cells()[channel - 1].querySelector('.level')?.textContent?.trim();
+    const cells = () => [...page.querySelectorAll('lm-memories-view table.matrix td')];
+    const levelOf = (channel: number) => cells()[channel - 1].textContent?.trim();
     expect(cells().length).toBe(512);
+    expect(page.querySelectorAll('lm-memories-view table.matrix tr').length).toBe(16); // 16 rows of 32
+    expect(cells()[69].getAttribute('data-channel')).toBe('70');
+    // a cell is one element: the table is light enough for the browser's developer tools
+    expect(page.querySelectorAll('lm-memories-view table.matrix td *').length).toBe(0);
     expect(page.querySelectorAll('lm-memories-view .keys button').length).toBe(32);
     expect(page.querySelectorAll('nav[aria-label="Memory pages"] button').length).toBe(4);
 

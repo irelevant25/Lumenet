@@ -55,41 +55,50 @@ h2 {
   min-height: 0;
 }
 
-/* The memory keys and the table share the columns of the faders in the main view:
-   as many in a line as faders in a row. */
-.keys,
-.matrix {
-  display: grid;
-  grid-template-columns: repeat(var(--line), var(--strip));
-  justify-content: space-between;
-  gap: var(--strip-gap);
-}
-
+/* The memory keys stand over the columns of the table: as many in a line as faders in a row.
+   The table has a gap at its two edges as well, so the keys get the same room there. */
 .keys {
+  display: grid;
+  grid-template-columns: repeat(var(--line), minmax(0, 1fr));
   justify-items: center;
+  gap: var(--strip-gap);
+  padding: 0 var(--strip-gap);
 }
 
-/* 512 cells. The rows share the height; when the window is too low for that, the table scrolls. */
-.matrix {
-  grid-auto-rows: minmax(20px, 1fr);
-  row-gap: 2px;
+/* The table fills the room under the keys. When the window is too low for all its rows,
+   this box scrolls. */
+.table-box {
   min-height: 0;
-  margin: 0;
-  padding: 0;
   overflow-y: auto;
-  list-style: none;
   scrollbar-width: thin;
 }
 
-/* One channel: its number small in the corner, its level at the right, where numbers of a
-   table stand. --part is the level from 0 to 1; the cell gets brighter with it. */
-.matrix li {
+/* 512 cells in columns of equal width. The rows share the height that is there. */
+.matrix {
+  width: 100%;
+  height: 100%;
+  border-collapse: separate;
+  border-spacing: var(--strip-gap) 2px;
+  table-layout: fixed;
+}
+
+/* for screen readers only */
+caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* One channel: its level in the middle of the cell. --part is the level from 0 to 1, set on
+   the cells that are above zero; such a cell gets brighter with it. */
+.matrix td {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  min-height: 0;
-  padding-right: 5px;
+  box-sizing: border-box;
+  height: 20px; /* at least: a row of a table grows with the room there is */
+  padding: 0;
   border: 1px solid color-mix(in srgb, var(--edge) 60%, transparent);
   border-radius: 3px;
   background: var(--well);
@@ -97,16 +106,21 @@ h2 {
   font-size: var(--readout);
   font-stretch: 87.5%;
   line-height: 1;
+  text-align: center;
+  vertical-align: middle;
 }
 
-.matrix li.up {
+.matrix td.up {
   border-color: color-mix(in srgb, var(--channel) 70%, transparent);
   background: color-mix(in srgb, var(--channel) calc(14% + var(--part) * 46%), var(--well));
   color: #fff;
   font-weight: 600;
 }
 
-.channel {
+/* The channel number, small in the corner. It is drawn from the cell's data-channel, so a
+   cell is one element and not three. */
+.matrix td::before {
+  content: attr(data-channel);
   position: absolute;
   top: 2px;
   left: 3px;
@@ -115,7 +129,7 @@ h2 {
   font-weight: 400;
 }
 
-.matrix li.up .channel {
+.matrix td.up::before {
   color: color-mix(in srgb, #fff 80%, transparent);
 }
 
@@ -162,7 +176,14 @@ h2 {
   overflow: visible;
 }
 
-:host-context(.mobile) .matrix {
-  grid-auto-rows: 34px;
+:host-context(.mobile) .table-box {
   overflow: visible;
+}
+
+:host-context(.mobile) .matrix {
+  height: auto;
+}
+
+:host-context(.mobile) .matrix td {
+  height: 34px;
 }

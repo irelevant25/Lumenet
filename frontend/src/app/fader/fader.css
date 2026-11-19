@@ -3,7 +3,6 @@
   --lamp: var(--channel);
 
   position: relative;
-  container-type: size; /* lets the handle below measure itself against the fader's height */
   display: block;
   min-width: 0;
   min-height: 0;
@@ -26,10 +25,12 @@
 
 /* The size of the handle along the direction of travel: 48px, so it is easy to grab. On a low
    window, where the whole fader is short, it is at most a third of the fader, so that the
-   handle still has room to travel. */
+   handle still has room to travel. Everywhere this length is used (top, bottom, height) a
+   percentage counts against the fader's height. A percentage, and not a container query unit:
+   making all 96 faders query containers cost about 10 ms of style work on every fader move. */
 .slot,
 .cap {
-  --cap-length: min(48px, 33cqh);
+  --cap-length: min(48px, 33%);
 }
 
 /* The slot is cut into the panel. It lights up from the bottom to the cap, like a level meter. */

@@ -1,12 +1,18 @@
 import { Component, computed, inject } from '@angular/core';
 import { DeskStore } from '../desk/desk-store';
-import { CHANNEL_COUNT, MEMORY_COUNT, stripNumbers } from '../desk/desk-types';
+import { CHANNEL_COUNT, MEMORY_COUNT, STRIPS_PER_LINE_PHONE, stripNumbers } from '../desk/desk-types';
 import { LampLevel, memoryPageLamp } from '../desk/lamps';
 import { splitNote } from '../desk/notes';
 import { LampButton } from '../lamp-button/lamp-button';
 
 /** No fader counts here: a page key is half lit when its page holds a stored memory. */
 const NO_LEVELS: readonly number[] = [];
+
+/** One cell of the table: a channel and the level the memory holds for it. */
+interface Cell {
+  channel: number;
+  level: number;
+}
 
 /**
  * The Memories view: what one memory holds, as a table of all 512 channels. It only shows;
@@ -47,13 +53,20 @@ export class MemoriesView {
     () => this.store.memoryLooks()[this.store.inspectedMemory()] ?? null,
   );
 
-  /** One cell for each of the 512 channels, in rows as long as a row of faders. */
-  protected readonly cells = computed(() => {
+  /**
+   * The rows of the table: all 512 channels, as many in a row as memory keys stand in a line
+   * (32, 16, or 8 on a phone).
+   */
+  protected readonly rows = computed(() => {
     const look = this.look();
-    return Array.from({ length: CHANNEL_COUNT }, (_, index) => ({
-      channel: index + 1,
-      level: look?.[index] ?? 0,
-    }));
+    const perRow = this.store.phone() ? STRIPS_PER_LINE_PHONE : this.store.stripsPerRow();
+    const rows: Cell[][] = [];
+    for (let first = 1; first <= CHANNEL_COUNT; first += perRow) {
+      rows.push(
+        stripNumbers(first, perRow).map((channel) => ({ channel, level: look?.[channel - 1] ?? 0 })),
+      );
+    }
+    return rows;
   });
 
   /** One sentence about the memory that is looked at. */

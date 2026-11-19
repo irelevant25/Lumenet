@@ -91,6 +91,8 @@ export class DeskStore {
   readonly stripsPerRow = signal(STRIPS_PER_ROW_WIDE);
   /** True in the mobile layout, where the sections stand under each other and the page scrolls. */
   readonly mobile = signal(false);
+  /** True on a phone held upright, where a row of faders is shown as lines of 8. */
+  readonly phone = signal(false);
   /** The memory the Memories view shows the content of. */
   readonly inspectedMemory = signal(1);
   /** A page of channels is two rows of faders; a page of memories is one row. */
@@ -358,6 +360,7 @@ export class DeskStore {
     const update = (): void => {
       this.stripsPerRow.set(medium.matches ? STRIPS_PER_ROW_MEDIUM : STRIPS_PER_ROW_WIDE);
       this.mobile.set(mobile.matches);
+      this.phone.set(phone.matches);
       classes.toggle('medium', medium.matches);
       classes.toggle('mobile', mobile.matches);
       classes.toggle('phone', phone.matches);

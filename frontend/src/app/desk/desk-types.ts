@@ -8,6 +8,8 @@ export const INDEPENDENT_COUNT = 16;
 /** How many faders stand in one row: 32 on a wide window, 16 on a narrower one. */
 export const STRIPS_PER_ROW_WIDE = 32;
 export const STRIPS_PER_ROW_MEDIUM = 16;
+/** On a phone a row is shown as lines of this many. The same number is "--line" in styles.css. */
+export const STRIPS_PER_LINE_PHONE = 8;
 
 /*
  * The limits of the window sizes, in pixels. They stand only here: the page marks <html> with

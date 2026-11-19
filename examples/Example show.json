@@ -1,0 +1,863 @@
+{
+  "format": "lumenet-project",
+  "version": 3,
+  "memories": [
+    {
+      "number": 1,
+      "levels": {
+        "3": 220,
+        "4": 255,
+        "5": 220,
+        "11": 255,
+        "12": 110,
+        "14": 150
+      }
+    },
+    {
+      "number": 2,
+      "levels": {
+        "3": 180,
+        "4": 200,
+        "5": 180,
+        "6": 255,
+        "7": 255,
+        "8": 255,
+        "9": 255,
+        "13": 255,
+        "14": 140
+      }
+    },
+    {
+      "number": 3,
+      "levels": {
+        "4": 50,
+        "10": 255
+      }
+    },
+    {
+      "number": 4,
+      "levels": {
+        "3": 255,
+        "4": 255,
+        "5": 255,
+        "6": 255,
+        "7": 255,
+        "8": 255,
+        "9": 255,
+        "10": 255,
+        "11": 255,
+        "12": 255,
+        "13": 255,
+        "14": 255
+      }
+    },
+    {
+      "number": 5,
+      "levels": {
+        "4": 30,
+        "6": 150,
+        "7": 150,
+        "8": 150,
+        "9": 150,
+        "13": 180
+      }
+    },
+    {
+      "number": 6,
+      "levels": {
+        "1": 255,
+        "2": 255,
+        "3": 90,
+        "5": 90,
+        "11": 255
+      }
+    },
+    {
+      "number": 7,
+      "levels": {
+        "1": 120,
+        "2": 120,
+        "3": 140,
+        "5": 140,
+        "6": 60,
+        "7": 60,
+        "8": 60,
+        "9": 60,
+        "11": 255,
+        "12": 90
+      }
+    },
+    {
+      "number": 8,
+      "levels": {
+        "1": 80,
+        "2": 80
+      }
+    },
+    {
+      "number": 9,
+      "levels": {
+        "17": 255
+      }
+    },
+    {
+      "number": 10,
+      "levels": {
+        "3": 110,
+        "4": 130,
+        "5": 110,
+        "11": 130,
+        "12": 55,
+        "14": 75
+      }
+    }
+  ],
+  "channelNotes": {
+    "1": "Pot\u2028red left",
+    "2": "Pot\u2028red right",
+    "3": "Front\u2028left",
+    "4": "Front\u2028middle",
+    "5": "Front\u2028right",
+    "6": "Back\u2028blue 1",
+    "7": "Back\u2028blue 2",
+    "8": "Back\u2028blue 3",
+    "9": "Back\u2028blue 4",
+    "10": "Spot\u2028middle",
+    "11": "LED bar\u2028red",
+    "12": "LED bar\u2028green",
+    "13": "LED bar\u2028blue",
+    "14": "LED bar\u2028white",
+    "15": "Hazer\u2028output",
+    "16": "Mirror\u2028ball",
+    "17": "House\u2028light"
+  },
+  "memoryNotes": {
+    "1": "Warm\u2028wash",
+    "2": "Cold\u2028wash",
+    "3": "Spot\u2028middle",
+    "4": "Full\u2028stage",
+    "5": "Blue\u2028night",
+    "6": "Red\u2028alert",
+    "7": "Sunset\u2028ending",
+    "8": "Pot glow\u2028for fire",
+    "9": "House\u2028lights",
+    "10": "Warm\u2028half",
+    "11": "Fire\u2028pot 1+2",
+    "12": "Chase\u2028back",
+    "13": "Breathe\u2028blue",
+    "14": "Strobe\u2028white",
+    "15": "Storm\u2028back",
+    "16": "Colours\u2028slow",
+    "17": "Intro\u2028once",
+    "18": "Rainbow\u2028LED bar",
+    "19": "Haze\u2028timer",
+    "20": "Party\u2028recorded",
+    "21": "Finale\u2028once"
+  },
+  "independents": [
+    17,
+    15,
+    16,
+    10,
+    14,
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "memoryIndependents": [
+    9,
+    8,
+    11,
+    19,
+    1,
+    2,
+    4,
+    12,
+    14,
+    15
+  ],
+  "sequences": [
+    {
+      "number": 11,
+      "loop": true,
+      "random": true,
+      "speed": 1,
+      "steps": [
+        {
+          "target": "channel",
+          "number": 1,
+          "value": 112,
+          "up": 0,
+          "wait": 0.1,
+          "down": 0.4
+        },
+        {
+          "target": "channel",
+          "number": 2,
+          "value": 97,
+          "up": 0,
+          "wait": 0,
+          "down": 0.3
+        },
+        {
+          "target": "channel",
+          "number": 1,
+          "value": 200,
+          "up": 0,
+          "wait": 0.2,
+          "down": 0.4
+        },
+        {
+          "target": "channel",
+          "number": 2,
+          "value": 206,
+          "up": 0.1,
+          "wait": 0,
+          "down": 0.5
+        },
+        {
+          "target": "channel",
+          "number": 1,
+          "value": 219,
+          "up": 0,
+          "wait": 0.1,
+          "down": 0.5
+        },
+        {
+          "target": "channel",
+          "number": 2,
+          "value": 159,
+          "up": 0.1,
+          "wait": 0.1,
+          "down": 0.4
+        },
+        {
+          "target": "channel",
+          "number": 1,
+          "value": 166,
+          "up": 0,
+          "wait": 0.1,
+          "down": 0.5
+        },
+        {
+          "target": "channel",
+          "number": 2,
+          "value": 90,
+          "up": 0,
+          "wait": 0.2,
+          "down": 0.4
+        },
+        {
+          "target": "channel",
+          "number": 1,
+          "value": 244,
+          "up": 0,
+          "wait": 0.1,
+          "down": 0.4
+        },
+        {
+          "target": "channel",
+          "number": 2,
+          "value": 202,
+          "up": 0,
+          "wait": 0.1,
+          "down": 0.5
+        },
+        {
+          "target": "channel",
+          "number": 1,
+          "value": 107,
+          "up": 0,
+          "wait": 0.1,
+          "down": 0.6
+        },
+        {
+          "target": "channel",
+          "number": 2,
+          "value": 151,
+          "up": 0.1,
+          "wait": 0.1,
+          "down": 0.4
+        },
+        {
+          "target": "channel",
+          "number": 1,
+          "value": 234,
+          "up": 0,
+          "wait": 0.1,
+          "down": 0.4
+        },
+        {
+          "target": "channel",
+          "number": 2,
+          "value": 248,
+          "up": 0.1,
+          "wait": 0.2,
+          "down": 0.3
+        },
+        {
+          "target": "channel",
+          "number": 1,
+          "value": 164,
+          "up": 0,
+          "wait": 0.1,
+          "down": 0.3
+        },
+        {
+          "target": "channel",
+          "number": 2,
+          "value": 236,
+          "up": 0.1,
+          "wait": 0.1,
+          "down": 0.5
+        }
+      ]
+    },
+    {
+      "number": 12,
+      "loop": true,
+      "random": false,
+      "speed": 1.5,
+      "steps": [
+        {
+          "target": "channel",
+          "number": 6,
+          "value": 255,
+          "up": 0,
+          "wait": 0.5,
+          "down": 0.3
+        },
+        {
+          "target": "channel",
+          "number": 7,
+          "value": 255,
+          "up": 0,
+          "wait": 0.5,
+          "down": 0.3
+        },
+        {
+          "target": "channel",
+          "number": 8,
+          "value": 255,
+          "up": 0,
+          "wait": 0.5,
+          "down": 0.3
+        },
+        {
+          "target": "channel",
+          "number": 9,
+          "value": 255,
+          "up": 0,
+          "wait": 0.5,
+          "down": 0.3
+        }
+      ]
+    },
+    {
+      "number": 13,
+      "loop": true,
+      "random": false,
+      "speed": 0.75,
+      "steps": [
+        {
+          "target": "memory",
+          "number": 5,
+          "value": 255,
+          "up": 2,
+          "wait": 0,
+          "down": 2
+        },
+        {
+          "target": "memory",
+          "number": 5,
+          "value": 0,
+          "up": 0,
+          "wait": 2,
+          "down": 0
+        }
+      ]
+    },
+    {
+      "number": 14,
+      "loop": true,
+      "random": false,
+      "speed": 1,
+      "steps": [
+        {
+          "target": "channel",
+          "number": 14,
+          "value": 255,
+          "up": 0,
+          "wait": 0,
+          "down": 0
+        },
+        {
+          "target": "channel",
+          "number": 14,
+          "value": 0,
+          "up": 0,
+          "wait": 0.3,
+          "down": 0
+        }
+      ]
+    },
+    {
+      "number": 15,
+      "loop": true,
+      "random": true,
+      "speed": 1.25,
+      "steps": [
+        {
+          "target": "channel",
+          "number": 6,
+          "value": 0,
+          "up": 0,
+          "wait": 1.8,
+          "down": 0
+        },
+        {
+          "target": "channel",
+          "number": 6,
+          "value": 0,
+          "up": 0,
+          "wait": 2.8,
+          "down": 0
+        },
+        {
+          "target": "channel",
+          "number": 6,
+          "value": 0,
+          "up": 0,
+          "wait": 3.3,
+          "down": 0
+        },
+        {
+          "target": "channel",
+          "number": 6,
+          "value": 255,
+          "up": 0,
+          "wait": 0,
+          "down": 0.2
+        },
+        {
+          "target": "channel",
+          "number": 6,
+          "value": 242,
+          "up": 0,
+          "wait": 0,
+          "down": 0.3
+        },
+        {
+          "target": "channel",
+          "number": 6,
+          "value": 63,
+          "up": 0,
+          "wait": 0.1,
+          "down": 0.3
+        },
+        {
+          "target": "channel",
+          "number": 7,
+          "value": 255,
+          "up": 0,
+          "wait": 0,
+          "down": 0.1
+        },
+        {
+          "target": "channel",
+          "number": 7,
+          "value": 228,
+          "up": 0,
+          "wait": 0,
+          "down": 0.3
+        },
+        {
+          "target": "channel",
+          "number": 7,
+          "value": 120,
+          "up": 0,
+          "wait": 0.1,
+          "down": 0.3
+        },
+        {
+          "target": "channel",
+          "number": 8,
+          "value": 255,
+          "up": 0,
+          "wait": 0,
+          "down": 0.2
+        },
+        {
+          "target": "channel",
+          "number": 8,
+          "value": 235,
+          "up": 0,
+          "wait": 0,
+          "down": 0.3
+        },
+        {
+          "target": "channel",
+          "number": 8,
+          "value": 147,
+          "up": 0,
+          "wait": 0.1,
+          "down": 0.3
+        },
+        {
+          "target": "channel",
+          "number": 9,
+          "value": 255,
+          "up": 0,
+          "wait": 0,
+          "down": 0.2
+        },
+        {
+          "target": "channel",
+          "number": 9,
+          "value": 242,
+          "up": 0,
+          "wait": 0,
+          "down": 0.2
+        },
+        {
+          "target": "channel",
+          "number": 9,
+          "value": 131,
+          "up": 0,
+          "wait": 0.1,
+          "down": 0.3
+        }
+      ]
+    },
+    {
+      "number": 16,
+      "loop": true,
+      "random": false,
+      "speed": 0.5,
+      "steps": [
+        {
+          "target": "memory",
+          "number": 5,
+          "value": 255,
+          "up": 4,
+          "wait": 4,
+          "down": 4
+        },
+        {
+          "target": "memory",
+          "number": 7,
+          "value": 255,
+          "up": 4,
+          "wait": 4,
+          "down": 4
+        },
+        {
+          "target": "memory",
+          "number": 6,
+          "value": 255,
+          "up": 4,
+          "wait": 4,
+          "down": 4
+        }
+      ]
+    },
+    {
+      "number": 17,
+      "loop": false,
+      "random": false,
+      "speed": 1,
+      "steps": [
+        {
+          "target": "channel",
+          "number": 17,
+          "value": 255,
+          "up": 0,
+          "wait": 2,
+          "down": 3
+        },
+        {
+          "target": "channel",
+          "number": 10,
+          "value": 255,
+          "up": 2,
+          "wait": 3,
+          "down": 2
+        },
+        {
+          "target": "memory",
+          "number": 1,
+          "value": 255,
+          "up": 3,
+          "wait": 0,
+          "down": 0
+        }
+      ]
+    },
+    {
+      "number": 18,
+      "loop": true,
+      "random": false,
+      "speed": 1,
+      "steps": [
+        {
+          "target": "channel",
+          "number": 11,
+          "value": 255,
+          "up": 1.5,
+          "wait": 0,
+          "down": 1.5
+        },
+        {
+          "target": "channel",
+          "number": 12,
+          "value": 255,
+          "up": 1.5,
+          "wait": 0,
+          "down": 1.5
+        },
+        {
+          "target": "channel",
+          "number": 13,
+          "value": 255,
+          "up": 1.5,
+          "wait": 0,
+          "down": 1.5
+        }
+      ]
+    },
+    {
+      "number": 19,
+      "loop": true,
+      "random": false,
+      "speed": 1,
+      "steps": [
+        {
+          "target": "channel",
+          "number": 15,
+          "value": 180,
+          "up": 0,
+          "wait": 5,
+          "down": 0
+        },
+        {
+          "target": "channel",
+          "number": 15,
+          "value": 0,
+          "up": 0,
+          "wait": 55,
+          "down": 0
+        }
+      ]
+    },
+    {
+      "number": 20,
+      "loop": true,
+      "random": true,
+      "speed": 2,
+      "steps": [
+        {
+          "target": "memory",
+          "number": 6,
+          "value": 255,
+          "up": 1,
+          "wait": 1,
+          "down": 1
+        },
+        {
+          "target": "memory",
+          "number": 2,
+          "value": 255,
+          "up": 1,
+          "wait": 1,
+          "down": 1
+        },
+        {
+          "target": "channel",
+          "number": 16,
+          "value": 255,
+          "up": 1,
+          "wait": 1,
+          "down": 1
+        },
+        {
+          "target": "memory",
+          "number": 7,
+          "value": 255,
+          "up": 1,
+          "wait": 1,
+          "down": 1
+        },
+        {
+          "target": "channel",
+          "number": 14,
+          "value": 255,
+          "up": 1,
+          "wait": 1,
+          "down": 1
+        }
+      ]
+    },
+    {
+      "number": 21,
+      "loop": false,
+      "random": false,
+      "speed": 1,
+      "steps": [
+        {
+          "target": "channel",
+          "number": 14,
+          "value": 255,
+          "up": 0,
+          "wait": 0.2,
+          "down": 0.5
+        },
+        {
+          "target": "memory",
+          "number": 4,
+          "value": 255,
+          "up": 1,
+          "wait": 3,
+          "down": 2
+        },
+        {
+          "target": "memory",
+          "number": 7,
+          "value": 255,
+          "up": 5,
+          "wait": 0,
+          "down": 0
+        }
+      ]
+    }
+  ],
+  "stack": [
+    {
+      "cue": "1.0",
+      "target": "memory",
+      "number": 9,
+      "value": 255,
+      "up": 0,
+      "wait": 0,
+      "down": 3
+    },
+    {
+      "cue": "2.0",
+      "target": "memory",
+      "number": 17,
+      "value": 255,
+      "up": 0,
+      "wait": 0,
+      "down": 2
+    },
+    {
+      "cue": "3.0",
+      "target": "memory",
+      "number": 8,
+      "value": 255,
+      "up": 3,
+      "wait": 0,
+      "down": 2
+    },
+    {
+      "cue": "3.5",
+      "target": "memory",
+      "number": 11,
+      "value": 255,
+      "up": 2,
+      "wait": 0,
+      "down": 2
+    },
+    {
+      "cue": "4.0",
+      "target": "memory",
+      "number": 1,
+      "value": 255,
+      "up": 3,
+      "wait": 0,
+      "down": 3
+    },
+    {
+      "cue": "4.1",
+      "target": "memory",
+      "number": 3,
+      "value": 255,
+      "up": 1,
+      "wait": 8,
+      "down": 2
+    },
+    {
+      "cue": "5.0",
+      "target": "memory",
+      "number": 12,
+      "value": 200,
+      "up": 0,
+      "wait": 0,
+      "down": 1
+    },
+    {
+      "cue": "6.0",
+      "target": "memory",
+      "number": 15,
+      "value": 255,
+      "up": 0,
+      "wait": 12,
+      "down": 2
+    },
+    {
+      "cue": "7.0",
+      "target": "memory",
+      "number": 13,
+      "value": 255,
+      "up": 2,
+      "wait": 0,
+      "down": 2
+    },
+    {
+      "cue": "8.0",
+      "target": "channel",
+      "number": 15,
+      "value": 150,
+      "up": 0,
+      "wait": 5,
+      "down": 0
+    },
+    {
+      "cue": "9.0",
+      "target": "memory",
+      "number": 16,
+      "value": 255,
+      "up": 3,
+      "wait": 0,
+      "down": 3
+    },
+    {
+      "cue": "10.0",
+      "target": "memory",
+      "number": 20,
+      "value": 255,
+      "up": 0,
+      "wait": 0,
+      "down": 1
+    },
+    {
+      "cue": "11.0",
+      "target": "memory",
+      "number": 21,
+      "value": 255,
+      "up": 0,
+      "wait": 0,
+      "down": 3
+    },
+    {
+      "cue": "12.0",
+      "target": "memory",
+      "number": 9,
+      "value": 255,
+      "up": 5,
+      "wait": 0,
+      "down": 0
+    }
+  ]
+}

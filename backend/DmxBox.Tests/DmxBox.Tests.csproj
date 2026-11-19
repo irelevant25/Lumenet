@@ -18,6 +18,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The example project of the repository, for ExampleProjectTests -->
+    <None Include="..\..\examples\Example show.json" Link="examples\Example show.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\DmxBox\DmxBox.csproj" />
     <ProjectReference Include="..\DmxBox.Server\DmxBox.Server.csproj" />
   </ItemGroup>

@@ -22,6 +22,7 @@ at **192.168.7.1**. So the box is controlled over UDP like a network device, but
 | `backend/` | .NET: the `DmxBox` library, the `dmxbox` command-line tool, the server of the Lumenet desk, and the tests. |
 | `frontend/` | Angular: the page of the Lumenet fader desk. |
 | `run.cmd` | Starts the Lumenet desk: backend and frontend together. |
+| `examples/` | An example project for the desk, to load and look at. |
 | `schematic/` | The schematic, the breadboard plan and the perfboard plan (SVG, PNG, PDF for printing), and the scripts that draw them. |
 | `3d/` | Blender model, renders, and a drawing of the board's tracks. |
 | [BOM.md](BOM.md) | Parts list for ordering. |
@@ -483,6 +484,13 @@ level) with **Record** under it, and at the right edge, over the whole height, t
   independent keys are bound to, not the fader positions, so loading a project never switches a light on by
   itself. New empties the desk; it asks first. A project saved before the independents had memory keys
   (16 channel keys) keeps its first 10 channel keys; its memory keys start on memories 1 to 10.
+* **Example:** `examples/Example show.json` is a small show to look at, for 17 channels: two red lights in a
+  pot, a front wash, four blue back lights, a spot, an RGBW LED bar, a hazer, a mirror ball and the house
+  light. It has notes on every light and memory, ten looks (memory 10 is a copy of 1, made dimmer), eleven
+  sequences (every template, some made by hand and some recorded with Rec seq; in a loop, once and at random;
+  at speeds from 0.5× to 2×), all twenty independent keys bound, and a stack of 14 steps with steps put in
+  between (3.5, 4.1), waits that go on by themselves and a channel step for the hazer. Copy it into
+  `Documents\Lumenet` and load "Example show".
 * **LAN** (top left, beside the name) lets a phone or a tablet in the same network use the desk; see below.
 
 **Steps.** A sequence and the stack are both made of steps. A step stands for a channel or a memory, has the
@@ -616,9 +624,9 @@ page cannot move a light. In the small-screen layout the mouse wheel scrolls the
   to the pages listed in `Server:AllowedOrigins`, plus the page the backend hands out itself. With `Urls` set
   to `http://localhost:5080` the desk stays on this PC for good.
 
-**Tests:** `dotnet test backend/DmxBox.sln` (315 tests: the client, the desk, sequences and the stack with a
-clock the tests set by hand, project files, the link to the box, the hub, LAN with a pretend PC and a
-pretend phone), and in `frontend/`: `npm test -- --watch=false` (69 tests of the page).
+**Tests:** `dotnet test backend/DmxBox.sln` (319 tests: the client, the desk, sequences and the stack with a
+clock the tests set by hand, project files and the example project, the link to the box, the hub, LAN with a
+pretend PC and a pretend phone), and in `frontend/`: `npm test -- --watch=false` (70 tests of the page).
 
 ---
 ## 5. The DX protocol (UDP 7000)
@@ -729,6 +737,10 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
   the parts list, not from measuring the parts. **Nothing has been soldered after this plan yet.**
 * **Lumenet on small screens (2026-11-19):** the layout was looked at in Chrome at seven window sizes, from
   320 × 568 to 1920 × 1080, with an emulated finger and with the mouse.
+* **Example project (2026-11-19):** made on a test copy without a box, through the hub and the template
+  window of the page, and saved by the desk itself. The backend passes 319 tests, among them four that load
+  the example, save it again unchanged and check that no step or key points at an empty memory; the page
+  passes 70. The notes were checked in Chrome at 1920 × 1080: none is cut off under its fader.
 * **Templates, random order and speed (2026-11-19):** the backend passes 315 tests and the page 69. On a
   test copy without a box a Fire template on channels 1 and 2 was made and run: the two channels flickered
   each on its own (about 20 different levels each in 2 seconds), the running step was marked in the table

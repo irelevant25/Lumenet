@@ -109,13 +109,29 @@ internal sealed class DeskHub : Hub<IDeskClient>
         await TellProjectAsync();
     }
 
-    /// <summary>Binds an independent key to a channel. Switching that channel is the UI's business: it uses SetChannel.</summary>
-    /// <param name="index">Number of the key, 1-16.</param>
+    /// <summary>
+    /// Binds a channel key of the independents to a channel. Switching that channel is the UI's
+    /// business: it uses SetChannel.
+    /// </summary>
+    /// <param name="index">Number of the key, 1-10.</param>
     /// <param name="channel">The channel the key switches from now on, 1-512.</param>
     public async Task SetIndependent(int index, int channel)
     {
         _desk.SetIndependent(index, channel);
         await Clients.Others.IndependentChanged(index, channel);
+        await TellProjectAsync();
+    }
+
+    /// <summary>
+    /// Binds a memory key of the independents to a memory. Switching that memory's fader is the
+    /// UI's business: it uses SetMemoryLevel.
+    /// </summary>
+    /// <param name="index">Number of the key, 1-10.</param>
+    /// <param name="memory">The memory whose fader the key switches from now on, 1-128.</param>
+    public async Task SetMemoryIndependent(int index, int memory)
+    {
+        _desk.SetMemoryIndependent(index, memory);
+        await Clients.Others.MemoryIndependentChanged(index, memory);
         await TellProjectAsync();
     }
 

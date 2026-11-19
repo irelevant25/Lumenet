@@ -430,8 +430,8 @@ soon as a box answers.
 
 The top bar has four links: **Main**, **Memories**, **Sequences** and **Stack**. Main is the desk itself.
 Memories only shows what is stored. Sequences and Stack are for the two things that run by themselves (see
-below). At the right edge of Main stands the **Master** section: Clear, Black out and the master fader with
-its level.
+below). At the right of Main stand the **Master** section (Clear, Black out and the master fader with its
+level) with **Record** under it, and at the right edge, over the whole height, the **Independents**.
 
 * **Channels:** two rows of faders. The keys at the right choose which of the 512 channels they show.
 * **Memories:** one row of faders, with page keys for the 128 memories. A memory holds a look:
@@ -449,8 +449,8 @@ its level.
   that is shown and half lit for another page with something on it.
 * **Notes:** under each key are two lines to type into: which light or which look it is (11 characters per
   line). Each line stays where it was typed; the second can be used without the first.
-* **Record** (bottom right) has Save mem, Edit mem, Rec seq, Copy and Del: press one, and the keys that can
-  be used blink between their normal light and full.
+* **Record** (under the master section) has Save mem, Edit mem, Rec seq, Copy and Del: press one, and the
+  keys that can be used blink between their normal light and full.
   * **Save mem:** press a memory key, and the channel faders are stored there as a look.
   * **Edit mem:** press a memory that holds a look, and it is loaded into the channel faders. Change it, press
     Edit mem again, and it is stored back. A memory that holds a sequence does not blink: it is changed in
@@ -468,18 +468,21 @@ its level.
 * **Black out** sends zero to every address but leaves the desk as it is; the key blinks while it is active.
   The blackout button on the box does the same, and the desk shows it.
 * **Master** dims the whole output.
-* **Independents:** sixteen keys in a column at the right. Each switches one channel between zero and full,
-  and that channel's fader follows. The keys start on channels 1 to 16. Press Edit there, type other channel
-  numbers onto the keys, and press Edit again. A key is lit when its channel's own fader is up; a memory
-  that holds the channel does not light it.
+* **Independents:** twenty keys in a column at the right edge, over the whole height: ten green ones for
+  channels and ten red ones for memories. A green key switches its channel between zero and full, and that
+  channel's fader follows; a red key does the same with the fader of its memory. The keys start on channels
+  1 to 10 and memories 1 to 10. Press Edit there, type other numbers onto the keys, and press Edit again. A
+  green key is lit when its channel's own fader is up (a memory that holds the channel does not light it);
+  a red key is lit like the key under its memory's fader, and runs from red to yellow for a sequence.
 * **The Memories view** is for looking only; nothing there changes the desk. The memory keys along the top
-  choose a memory, and the table under them shows the level that memory holds for each of the 512 channels,
-  in rows as long as a row of faders (32 by 16, or 16 by 32 in a narrower window). The page keys at the
-  right choose which memories the keys show.
+  choose a memory, each with the two lines of its note under it, and the table under them shows the level
+  that memory holds for each of the 512 channels, in rows as long as a row of faders (32 by 16, or 16 by 32
+  in a narrower window). The page keys at the right choose which memories the keys show.
 * **Project:** New, Save and Load at the top right. A project is one JSON file in
-  `Documents\Lumenet`. It holds the memories (looks and sequences), the stack, the notes and the channels of
-  the independent keys, not the fader positions, so loading a project never switches a light on by itself.
-  New empties the desk; it asks first.
+  `Documents\Lumenet`. It holds the memories (looks and sequences), the stack, the notes and what the
+  independent keys are bound to, not the fader positions, so loading a project never switches a light on by
+  itself. New empties the desk; it asks first. A project saved before the independents had memory keys
+  (16 channel keys) keeps its first 10 channel keys; its memory keys start on memories 1 to 10.
 * **LAN** (top left, beside the name) lets a phone or a tablet in the same network use the desk; see below.
 
 **Steps.** A sequence and the stack are both made of steps. A step stands for a channel or a memory, has the
@@ -499,9 +502,9 @@ yellow. A sequence runs while the fader of its memory is up: it starts at its fi
 leaves zero, and the fader dims what it gives, like a look. It moves no fader; the channel faders show what
 it gives in red.
 
-* Choose a memory with the keys along the top. Add step puts in a step like the last one, on the next
-  channel or memory. Every change goes to the desk at once. Rec seq in the main view is the other way to
-  put in steps: by pressing keys.
+* Choose a memory with the keys along the top; the two lines of its note stand under each. Add step puts
+  in a step like the last one, on the next channel or memory. Every change goes to the desk at once. Rec
+  seq in the main view is the other way to put in steps: by pressing keys.
 * **Once** or **Loop:** played once, the last step stays on; in a loop the first step follows the last.
   A new sequence is played in a loop until you choose Once.
 * A wait of 0 means the next step starts as soon as this one is up.
@@ -596,9 +599,9 @@ page cannot move a light. In the small-screen layout the mouse wheel scrolls the
   to the pages listed in `Server:AllowedOrigins`, plus the page the backend hands out itself. With `Urls` set
   to `http://localhost:5080` the desk stays on this PC for good.
 
-**Tests:** `dotnet test backend/DmxBox.sln` (303 tests: the client, the desk, sequences and the stack with a
+**Tests:** `dotnet test backend/DmxBox.sln` (306 tests: the client, the desk, sequences and the stack with a
 clock the tests set by hand, project files, the link to the box, the hub, LAN with a pretend PC and a
-pretend phone), and in `frontend/`: `npm test -- --watch=false` (55 tests of the page).
+pretend phone), and in `frontend/`: `npm test -- --watch=false` (59 tests of the page).
 
 ---
 ## 5. The DX protocol (UDP 7000)
@@ -709,6 +712,11 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
   the parts list, not from measuring the parts. **Nothing has been soldered after this plan yet.**
 * **Lumenet on small screens (2026-11-19):** the layout was looked at in Chrome at seven window sizes, from
   320 × 568 to 1920 × 1080, with an emulated finger and with the mouse.
+* **Independents with memory keys (2026-11-19):** the backend passes 306 tests and the page 59. On a test copy
+  without a box the new main layout (master and record in one column, the twenty independents at the right
+  edge) and the notes under the memory keys of the Memories and Sequences views were looked at in Chrome at
+  five window sizes, from 390 × 844 to 1920 × 1080: every key in its section, nothing out of the window.
+  Not yet used by the owner.
 * **LAN (2026-11-19):** the backend passes 303 tests and the page 55. The tests play a phone over this PC's
   own connection: refused while LAN is off, asked for the password, let in with the cookie (and not with the
   password as a cookie), cut off when LAN goes off, stopped after 5 wrong passwords, and all devices stopped

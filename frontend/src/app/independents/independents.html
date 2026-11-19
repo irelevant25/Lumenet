@@ -5,7 +5,7 @@
     lmLamp
     type="button"
     tone="system"
-    aria-label="Edit the channels of the independent keys"
+    aria-label="Edit the channels and memories of the independent keys"
     [level]="editing() ? 3 : 1"
     [blink]="editing()"
     [disabled]="store.live()"
@@ -15,10 +15,11 @@
     Edit
   </button>
 
-  @for (item of keys(); track item.number) {
+  <!-- ten green keys for channels -->
+  @for (item of channelKeys(); track item.number) {
     @if (editing()) {
       <input
-        class="channel"
+        class="field channel"
         type="text"
         inputmode="numeric"
         maxlength="3"
@@ -40,6 +41,38 @@
         (click)="store.toggleIndependent(item.number)"
       >
         {{ item.channel }}
+      </button>
+    }
+  }
+
+  <!-- ten red keys for memories -->
+  @for (item of memoryKeys(); track item.number) {
+    @if (editing()) {
+      <input
+        class="field memory"
+        type="text"
+        inputmode="numeric"
+        maxlength="3"
+        autocomplete="off"
+        [class.first-memory]="$first"
+        [value]="item.memory"
+        [attr.aria-label]="'Memory of independent key ' + item.name"
+        (change)="onMemoryTyped(item.number, $event)"
+        (keydown.enter)="leaveField($event)"
+      />
+    } @else {
+      <button
+        lmLamp
+        type="button"
+        class="number"
+        [class.first-memory]="$first"
+        [tone]="item.tone"
+        [level]="item.lamp"
+        [attr.aria-pressed]="item.on"
+        [attr.aria-label]="'Independent ' + item.name + ', memory ' + item.memory"
+        (click)="store.toggleMemoryIndependent(item.number)"
+      >
+        {{ item.memory }}
       </button>
     }
   }

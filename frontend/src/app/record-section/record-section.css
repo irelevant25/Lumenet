@@ -1,4 +1,4 @@
-/* A small section under the independents: the title and the five record keys. */
+/* A small section under the master section: the title and the five record keys. */
 :host {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);

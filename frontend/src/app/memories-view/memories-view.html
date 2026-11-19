@@ -7,18 +7,21 @@
   <div class="content">
     <div class="keys" role="group" aria-label="Memory to look at">
       @for (memory of numbers(); track memory) {
-        <button
-          lmLamp
-          type="button"
-          class="number"
-          [tone]="keyTone(memory)"
-          [level]="keyLamp(memory)"
-          [attr.aria-pressed]="memory === store.inspectedMemory()"
-          [attr.aria-label]="'Look at memory ' + memory"
-          (click)="store.inspectedMemory.set(memory)"
-        >
-          {{ memory }}
-        </button>
+        <div class="key">
+          <button
+            lmLamp
+            type="button"
+            class="number"
+            [tone]="keyTone(memory)"
+            [level]="keyLamp(memory)"
+            [attr.aria-pressed]="memory === store.inspectedMemory()"
+            [attr.aria-label]="'Look at memory ' + memory"
+            (click)="store.inspectedMemory.set(memory)"
+          >
+            {{ memory }}
+          </button>
+          <lm-note-lines [note]="store.memoryNotes()[memory - 1]" />
+        </div>
       }
     </div>
 

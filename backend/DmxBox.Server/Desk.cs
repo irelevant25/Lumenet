@@ -2,7 +2,8 @@ namespace DmxBox.Server;
 
 /// <summary>
 /// The fader desk: 512 channel faders, 128 memories with a fader each, a master fader, a
-/// blackout switch, a note under every fader, and 16 independent keys. It holds this state
+/// blackout switch, a note under every fader, and 20 independent keys (10 for channels, 10 for
+/// memories). It holds this state
 /// and computes the DMX output from it. It knows nothing about the box, the project files or
 /// the UI.
 /// </summary>
@@ -38,10 +39,16 @@ internal sealed partial class Desk
     public const int MaxLevel = 255;
 
     /// <summary>
-    /// Number of independent keys. Each is bound to one channel, which the UI switches between
-    /// 0 and full with the key. The desk only remembers the bindings.
+    /// Number of independent keys for channels. Each is bound to one channel, which the UI
+    /// switches between 0 and full with the key. The desk only remembers the bindings.
     /// </summary>
-    public const int IndependentCount = 16;
+    public const int ChannelIndependentCount = 10;
+
+    /// <summary>
+    /// Number of independent keys for memories. Each is bound to one memory, whose fader the UI
+    /// switches between 0 and full with the key.
+    /// </summary>
+    public const int MemoryIndependentCount = 10;
 
     private readonly Lock _lock = new();
     private readonly byte[] _channels = new byte[ChannelCount];
@@ -54,8 +61,9 @@ internal sealed partial class Desk
     private readonly string[] _channelNotes = NoNotes(ChannelCount);
     private readonly string[] _memoryNotes = NoNotes(MemoryCount);
 
-    // The channel number each independent key is bound to.
+    // The channel each channel key and the memory each memory key of the independents is bound to.
     private readonly int[] _independents = DefaultIndependents();
+    private readonly int[] _memoryIndependents = DefaultMemoryIndependents();
 
     private byte _master = MaxLevel;
     private bool _blackout;
@@ -130,12 +138,18 @@ internal sealed partial class Desk
     }
 
     /// <summary>
-    /// The bindings of the independent keys on a new desk, and in a project that does not
-    /// say otherwise: key 1 on channel 1, and so on up to key 16 on channel 16.
+    /// The bindings of the channel keys of the independents on a new desk, and in a project that
+    /// does not say otherwise: key 1 on channel 1, and so on up to key 10 on channel 10.
     /// </summary>
     public static int[] DefaultIndependents()
     {
-        return Enumerable.Range(1, IndependentCount).ToArray();
+        return Enumerable.Range(1, ChannelIndependentCount).ToArray();
+    }
+
+    /// <summary>The bindings of the memory keys of the independents on a new desk: key 1 on memory 1, and so on.</summary>
+    public static int[] DefaultMemoryIndependents()
+    {
+        return Enumerable.Range(1, MemoryIndependentCount).ToArray();
     }
 
     /// <summary>
@@ -245,25 +259,33 @@ internal sealed partial class Desk
         return note;
     }
 
-    /// <summary>Binds an independent key to a channel.</summary>
-    /// <param name="independent">Number of the key, 1-16.</param>
+    /// <summary>Binds a channel key of the independents to a channel.</summary>
+    /// <param name="independent">Number of the key, 1-10.</param>
     /// <param name="channel">The channel the key switches from now on, 1-512.</param>
     /// <exception cref="DeskException">The stack is live.</exception>
     public void SetIndependent(int independent, int channel)
     {
-        RequireRange("independent", independent, 1, IndependentCount);
+        RequireRange("independent", independent, 1, ChannelIndependentCount);
         RequireChannel(channel);
 
         lock (_lock)
         {
-            RequireUnlocked();
+            Bind(_independents, independent, channel);
+        }
+    }
 
-            // Binding a key to the channel it has already is no change for the project.
-            if (_independents[independent - 1] == channel)
-                return;
+    /// <summary>Binds a memory key of the independents to a memory.</summary>
+    /// <param name="independent">Number of the key, 1-10.</param>
+    /// <param name="memory">The memory whose fader the key switches from now on, 1-128.</param>
+    /// <exception cref="DeskException">The stack is live.</exception>
+    public void SetMemoryIndependent(int independent, int memory)
+    {
+        RequireRange("memory independent", independent, 1, MemoryIndependentCount);
+        RequireMemory(memory);
 
-            _independents[independent - 1] = channel;
-            _projectChanges++;
+        lock (_lock)
+        {
+            Bind(_memoryIndependents, independent, memory);
         }
     }
 
@@ -380,7 +402,8 @@ internal sealed partial class Desk
     /// <summary>
     /// Makes the desk clean for a new project: every channel fader and memory fader down to 0,
     /// every memory empty, an empty stack, no notes, the independent keys back on channels 1 to
-    /// 16. The master and blackout stay: they belong to the evening, not to the project.
+    /// 10 and memories 1 to 10. The master and blackout stay: they belong to the evening, not to
+    /// the project.
     /// </summary>
     /// <returns><see cref="ProjectChanges"/> right after the change.</returns>
     /// <exception cref="DeskException">The stack is live.</exception>
@@ -397,6 +420,7 @@ internal sealed partial class Desk
             Array.Fill(_channelNotes, "");
             Array.Fill(_memoryNotes, "");
             DefaultIndependents().CopyTo(_independents, 0);
+            DefaultMemoryIndependents().CopyTo(_memoryIndependents, 0);
             CountLookChange();
             return _projectChanges;
         }
@@ -429,6 +453,7 @@ internal sealed partial class Desk
             project.ChannelNotes.CopyTo(_channelNotes, 0);
             project.MemoryNotes.CopyTo(_memoryNotes, 0);
             project.Independents.CopyTo(_independents, 0);
+            project.MemoryIndependents.CopyTo(_memoryIndependents, 0);
             Array.Clear(_memoryLevels);
             CountLookChange();
             return _projectChanges;
@@ -448,6 +473,7 @@ internal sealed partial class Desk
 
             var content = new ProjectContent(looks, Copy(_channelNotes), Copy(_memoryNotes), Copy(_independents))
             {
+                MemoryIndependents = Copy(_memoryIndependents),
                 Sequences = Copy(_sequences),
                 Stack = _stack.Select(entry => new ProjectStep(entry.Cue, entry.Step)).ToArray(),
             };
@@ -477,7 +503,8 @@ internal sealed partial class Desk
                 ChannelNotes: Copy(_channelNotes),
                 MemoryNotes: Copy(_memoryNotes),
                 Independents: Copy(_independents),
-                MemorySequence: sequence);
+                MemorySequence: sequence,
+                MemoryIndependents: Copy(_memoryIndependents));
         }
     }
 
@@ -589,6 +616,17 @@ internal sealed partial class Desk
         _moved.Clear();
     }
 
+    // Call with the lock held. Binding a key to what it has already is no change for the project.
+    private void Bind(int[] keys, int key, int number)
+    {
+        RequireUnlocked();
+        if (keys[key - 1] == number)
+            return;
+
+        keys[key - 1] = number;
+        _projectChanges++;
+    }
+
     // Call with the lock held, before anything a project holds is changed. While the stack is
     // live the desk plays a show, and what the show is made of must not change under it.
     private void RequireUnlocked()
@@ -607,8 +645,10 @@ internal sealed partial class Desk
             throw new ArgumentException($"Every look must have {ChannelCount} levels.", nameof(project));
         if (project.ChannelNotes.Length != ChannelCount || project.MemoryNotes.Length != MemoryCount)
             throw new ArgumentException("There must be a note, or an empty text, for every fader.", nameof(project));
-        if (project.Independents.Length != IndependentCount)
-            throw new ArgumentException($"There must be {IndependentCount} independents.", nameof(project));
+        if (project.Independents.Length != ChannelIndependentCount)
+            throw new ArgumentException($"There must be {ChannelIndependentCount} channel independents.", nameof(project));
+        if (project.MemoryIndependents.Length != MemoryIndependentCount)
+            throw new ArgumentException($"There must be {MemoryIndependentCount} memory independents.", nameof(project));
         if (project.Sequences.Length != MemoryCount)
             throw new ArgumentException($"There must be {MemoryCount} entries for sequences, one per memory.", nameof(project));
         for (int index = 0; index < MemoryCount; index++)

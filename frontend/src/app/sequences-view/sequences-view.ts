@@ -14,6 +14,7 @@ import { storedMemoryPages } from '../desk/memory-pages';
 import { noteInOneLine } from '../desk/notes';
 import { StepChoices, stepChoices } from '../desk/step-choices';
 import { LampButton, LampTone } from '../lamp-button/lamp-button';
+import { NoteLines } from '../note-lines/note-lines';
 import { StepRow } from '../step-row/step-row';
 
 /**
@@ -27,7 +28,7 @@ import { StepRow } from '../step-row/step-row';
  * While the stack is live the view only shows: nothing that is stored can be changed then.
  */
 @Component({
-  imports: [LampButton, StepRow],
+  imports: [LampButton, NoteLines, StepRow],
   selector: 'lm-sequences-view',
   styleUrl: './sequences-view.css',
   templateUrl: './sequences-view.html',

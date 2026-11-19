@@ -55,13 +55,20 @@ h2 {
   min-height: 0;
 }
 
-/* the memory keys, as many in a line as faders in a row */
+/* the memory keys, as many in a line as faders in a row, each with the two lines of its
+   memory's note under it */
 .keys {
   display: grid;
   grid-template-columns: repeat(var(--line), minmax(0, 1fr));
-  justify-items: center;
   gap: var(--strip-gap);
   padding: 0 var(--strip-gap);
+}
+
+.key {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  min-width: 0;
 }
 
 /* Once and Loop belong together; Add step stands a little apart; the explanation fills the rest */

@@ -1,0 +1,20 @@
+/* The same measures as the two note fields under a fader (fader-strip.css): a line of 16px,
+   13px lettering, narrow, in the middle. */
+:host {
+  display: grid;
+  width: 100%;
+  color: var(--legend);
+  font-size: 13px;
+  font-stretch: 75%;
+  line-height: 15px;
+  text-align: center;
+}
+
+.line {
+  box-sizing: border-box;
+  height: 16px;
+  padding: 0 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -5,6 +5,7 @@ import { LampLevel } from '../desk/lamps';
 import { storedMemoryPages } from '../desk/memory-pages';
 import { splitNote } from '../desk/notes';
 import { LampButton, LampTone } from '../lamp-button/lamp-button';
+import { NoteLines } from '../note-lines/note-lines';
 
 /** One cell of the table: a channel and the level the memory holds for it. */
 interface Cell {
@@ -14,10 +15,11 @@ interface Cell {
 
 /**
  * The Memories view: what one memory holds, as a table of all 512 channels. It only shows;
- * nothing here changes the desk. A memory key chooses the memory to look at.
+ * nothing here changes the desk. A memory key chooses the memory to look at; under each key
+ * stands the note of its memory, to read.
  */
 @Component({
-  imports: [LampButton],
+  imports: [LampButton, NoteLines],
   selector: 'lm-memories-view',
   styleUrl: './memories-view.css',
   templateUrl: './memories-view.html',

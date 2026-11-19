@@ -11,13 +11,14 @@ namespace DmxBox.Server;
 /// <code>
 /// {
 ///   "format": "lumenet-project",
-///   "version": 2,
+///   "version": 3,
 ///   "memories": [
 ///     { "number": 1, "levels": { "5": 255, "6": 128 } }
 ///   ],
 ///   "channelNotes": { "5": "Front left" },
 ///   "memoryNotes": { "1": "Blue wash" },
-///   "independents": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ],
+///   "independents": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ],
+///   "memoryIndependents": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ],
 ///   "sequences": [
 ///     { "number": 2, "loop": true, "steps": [
 ///       { "target": "channel", "number": 5, "value": 255, "up": 1, "wait": 0.5, "down": 1 } ] }
@@ -28,16 +29,21 @@ namespace DmxBox.Server;
 /// }
 /// </code>
 /// The notes and the independents may be missing: then there are no notes, and the keys are
-/// on channels 1 to 16. That keeps the files from before these existed readable. Version 2
-/// added the sequences and the stack; a file of version 1 has neither, and is still read.
-/// A sequence that does not say whether it loops is played in a loop.
+/// on channels 1 to 10 and memories 1 to 10. That keeps the files from before these existed
+/// readable. Version 2 added the sequences and the stack; a file of version 1 has neither, and
+/// is still read. A sequence that does not say whether it loops is played in a loop. Version 3
+/// has 10 keys for channels and 10 for memories among the independents; versions 1 and 2 had
+/// 16 keys for channels, of which the first 10 are used.
 /// </remarks>
 internal static class ProjectFormat
 {
     private const string FormatName = "lumenet-project";
 
     // The version this program writes, and the newest it can read.
-    private const int CurrentVersion = 2;
+    private const int CurrentVersion = 3;
+
+    // The channel keys of the independents in a file of version 1 or 2.
+    private const int OldIndependentCount = 16;
 
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -62,6 +68,7 @@ internal static class ProjectFormat
             ChannelNotes = NotesThatAreNotEmpty(project.ChannelNotes),
             MemoryNotes = NotesThatAreNotEmpty(project.MemoryNotes),
             Independents = project.Independents.ToList(),
+            MemoryIndependents = project.MemoryIndependents.ToList(),
             Sequences = [],
             Stack = project.Stack.Select(step => FileStep(step.Step, step.Cue.ToString())).ToList<ProjectFileStep?>(),
         };
@@ -97,15 +104,16 @@ internal static class ProjectFormat
     public static ProjectContent Read(Stream stream)
     {
         ProjectFile file = Parse(stream);
-        RequireFormat(file);
+        int version = RequireFormat(file);
 
         byte[]?[] looks = LooksOf(file);
         return new ProjectContent(
             looks,
             NotesOf(file.ChannelNotes, Desk.ChannelCount, "channel"),
             NotesOf(file.MemoryNotes, Desk.MemoryCount, "memory"),
-            IndependentsOf(file.Independents))
+            IndependentsOf(file.Independents, version))
         {
+            MemoryIndependents = MemoryIndependentsOf(file.MemoryIndependents),
             Sequences = SequencesOf(file.Sequences, looks),
             Stack = StackOf(file.Stack),
         };
@@ -125,7 +133,8 @@ internal static class ProjectFormat
         }
     }
 
-    private static void RequireFormat(ProjectFile file)
+    // The version of the format the file has, once it is clear that this program can read it.
+    private static int RequireFormat(ProjectFile file)
     {
         if (file.Format != FormatName)
             throw Bad("The file is not a Lumenet project.");
@@ -137,6 +146,8 @@ internal static class ProjectFormat
                 $"The file has version {version} of the project format, and this program reads up to " +
                 $"version {CurrentVersion}. A newer Lumenet wrote the file.");
         }
+
+        return version;
     }
 
     // One entry per memory: its look, or null for a memory the file does not list.
@@ -234,26 +245,47 @@ internal static class ProjectFormat
         }
     }
 
-    // The channel of each independent key. A file may leave the list out: then the keys are
-    // where they are on a new desk. A list that is there has to be whole.
-    private static int[] IndependentsOf(List<int>? listed)
+    // The channel of each channel key of the independents. A file may leave the list out: then
+    // the keys are where they are on a new desk. A list that is there has to be whole: 10 keys,
+    // or 16 in a file of version 1 or 2, which had that many; of those the first 10 are kept.
+    private static int[] IndependentsOf(List<int>? listed, int version)
     {
         if (listed is null)
             return Desk.DefaultIndependents();
-        if (listed.Count != Desk.IndependentCount)
-            throw Bad($"The file lists {listed.Count} independents; there must be {Desk.IndependentCount}.");
 
+        int count = version < 3 ? OldIndependentCount : Desk.ChannelIndependentCount;
+        if (listed.Count != count)
+            throw Bad($"The file lists {listed.Count} independents; there must be {count}.");
+
+        CheckKeys(listed, "Independent", ("channel", "channels"), Desk.ChannelCount);
+        return listed.Take(Desk.ChannelIndependentCount).ToArray();
+    }
+
+    // The memory of each memory key of the independents, like the channels above. Files from
+    // before version 3 have none: then the keys are on memories 1 to 10.
+    private static int[] MemoryIndependentsOf(List<int>? listed)
+    {
+        if (listed is null)
+            return Desk.DefaultMemoryIndependents();
+        if (listed.Count != Desk.MemoryIndependentCount)
+            throw Bad($"The file lists {listed.Count} memory independents; there must be {Desk.MemoryIndependentCount}.");
+
+        CheckKeys(listed, "Memory independent", ("memory", "memories"), Desk.MemoryCount);
+        return listed.ToArray();
+    }
+
+    // "key" names the keys and "fader" what they are bound to, one and many, for the message.
+    private static void CheckKeys(List<int> listed, string key, (string One, string Many) fader, int highest)
+    {
         for (int index = 0; index < listed.Count; index++)
         {
-            if (listed[index] < 1 || listed[index] > Desk.ChannelCount)
+            if (listed[index] < 1 || listed[index] > highest)
             {
                 throw Bad(
-                    $"Independent {index + 1} in the file is on channel {listed[index]}; " +
-                    $"channels go from 1 to {Desk.ChannelCount}.");
+                    $"{key} {index + 1} in the file is on {fader.One} {listed[index]}; " +
+                    $"{fader.Many} go from 1 to {highest}.");
             }
         }
-
-        return listed.ToArray();
     }
 
     // One entry per memory: its sequence, or null for a memory the file lists none for. A file

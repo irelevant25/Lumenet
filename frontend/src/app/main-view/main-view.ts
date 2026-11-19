@@ -6,8 +6,8 @@ import { MemorySection } from '../memory-section/memory-section';
 import { RecordSection } from '../record-section/record-section';
 
 /**
- * The main view: the channels, the memories, the independents with the record keys, and at
- * the right edge the master section.
+ * The main view: the channels, the memories, the master section with the record keys under
+ * it, and at the right edge the independents.
  */
 @Component({
   imports: [ChannelSection, Independents, MasterSection, MemorySection, RecordSection],

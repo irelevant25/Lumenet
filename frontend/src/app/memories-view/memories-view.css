@@ -56,13 +56,20 @@ h2 {
 }
 
 /* The memory keys stand over the columns of the table: as many in a line as faders in a row.
-   The table has a gap at its two edges as well, so the keys get the same room there. */
+   The table has a gap at its two edges as well, so the keys get the same room there. Under
+   each key, the two lines of its memory's note, as wide as the column. */
 .keys {
   display: grid;
   grid-template-columns: repeat(var(--line), minmax(0, 1fr));
-  justify-items: center;
   gap: var(--strip-gap);
   padding: 0 var(--strip-gap);
+}
+
+.key {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  min-width: 0;
 }
 
 /* The table fills the room under the keys. When the window is too low for all its rows,

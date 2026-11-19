@@ -1,4 +1,5 @@
-/* A narrow section at the right edge: the title, Edit, and sixteen keys in one column. */
+/* A narrow section at the right edge, over the whole height: the title, Edit, ten keys for
+   channels and ten for memories, in one column. */
 :host {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -21,10 +22,10 @@ h2 {
   text-transform: uppercase;
 }
 
-/* Edit and the sixteen keys. On a low window they get flatter instead of running out of the window. */
+/* Edit and the twenty keys. On a low window they get flatter instead of running out of the window. */
 .keys {
   display: grid;
-  grid-template-rows: repeat(17, minmax(0, var(--key-h)));
+  grid-template-rows: repeat(21, minmax(0, var(--key-h)));
   align-content: start;
   justify-items: center;
   gap: var(--strip-gap);
@@ -35,8 +36,8 @@ h2 {
   height: auto;
 }
 
-/* While editing, a key becomes a field for its channel number. */
-.channel {
+/* While editing, a key becomes a field for its number, framed in the colour of its key. */
+.field {
   box-sizing: border-box;
   width: var(--key-w);
   min-height: 0;
@@ -53,8 +54,13 @@ h2 {
   user-select: text;
 }
 
-/* ---- mobile: the section lies down. The title and Edit share the first line; the sixteen
-   keys stand under them, in the columns of the faders. */
+.field.memory {
+  border-color: var(--memory);
+}
+
+/* ---- mobile: the section lies down. The title and Edit share the first line; the channel
+   keys stand under them in the columns of the faders, and the memory keys start a line of
+   their own. */
 :host-context(.mobile) {
   grid-template-columns: repeat(var(--line), var(--strip));
   grid-template-rows: none;
@@ -73,7 +79,11 @@ h2 {
   display: contents; /* the keys take their places in the section's own columns */
 }
 
+:host-context(.mobile) .first-memory {
+  grid-column-start: 1;
+}
+
 :host-context(.mobile) .keys [lmLamp],
-:host-context(.mobile) .channel {
+:host-context(.mobile) .field {
   height: var(--key-h);
 }

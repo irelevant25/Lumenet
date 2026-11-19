@@ -450,11 +450,13 @@ public sealed class DeskTests
         project.Looks[1]![9] = 77;
         project.ChannelNotes[511] = "Back right";
         project.MemoryNotes[0] = "Blue wash";
-        project.Independents[15] = 400;
+        project.Independents[9] = 400;
+        project.MemoryIndependents[9] = 99;
         long changes = desk.ReplaceProject(project);
         project.Looks[1]![9] = 1;   // the desk has copies of its own
         project.ChannelNotes[511] = "changed afterwards";
-        project.Independents[15] = 1;
+        project.Independents[9] = 1;
+        project.MemoryIndependents[9] = 1;
 
         DeskState state = desk.GetState();
         Assert.False(state.MemoryStored[0]);
@@ -465,7 +467,8 @@ public sealed class DeskTests
         Assert.Equal("Blue wash", state.MemoryNotes[0]);
         Assert.Equal("", state.MemoryNotes[127]);
         Assert.Equal(1, state.Independents[0]);           // and so is the old binding
-        Assert.Equal(400, state.Independents[15]);
+        Assert.Equal(400, state.Independents[9]);
+        Assert.Equal(99, state.MemoryIndependents[9]);
         Assert.Equal(new int[128], state.MemoryLevels);
         Assert.Equal(55, state.Channels[4]);              // the channel faders stay
         Assert.Equal(changes, desk.ProjectChanges);
@@ -483,7 +486,8 @@ public sealed class DeskTests
         Assert.Throws<ArgumentException>(() => desk.ReplaceProject(whole with { Looks = shortLook }));
         Assert.Throws<ArgumentException>(() => desk.ReplaceProject(whole with { ChannelNotes = NoNotes(511) }));
         Assert.Throws<ArgumentException>(() => desk.ReplaceProject(whole with { MemoryNotes = NoNotes(129) }));
-        Assert.Throws<ArgumentException>(() => desk.ReplaceProject(whole with { Independents = new int[15] }));
+        Assert.Throws<ArgumentException>(() => desk.ReplaceProject(whole with { Independents = new int[16] }));
+        Assert.Throws<ArgumentException>(() => desk.ReplaceProject(whole with { MemoryIndependents = new int[9] }));
     }
 
     [Fact]
@@ -721,11 +725,12 @@ public sealed class DeskTests
     // ---------------------------------------------------------------- independent keys
 
     [Fact]
-    public void IndependentKeysStartOnTheFirstSixteenChannels()
+    public void IndependentKeysStartOnTheFirstTenChannelsAndTheFirstTenMemories()
     {
         var desk = new Desk();
 
-        Assert.Equal([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], desk.GetState().Independents);
+        Assert.Equal([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], desk.GetState().Independents);
+        Assert.Equal([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], desk.GetState().MemoryIndependents);
     }
 
     [Fact]
@@ -734,14 +739,30 @@ public sealed class DeskTests
         var desk = new Desk();
 
         desk.SetIndependent(1, 512);
-        desk.SetIndependent(16, 1);
-        desk.SetIndependent(8, 16);   // two keys on one channel are no mistake
+        desk.SetIndependent(10, 1);
+        desk.SetIndependent(8, 10);   // two keys on one channel are no mistake
 
         int[] independents = desk.GetState().Independents;
         Assert.Equal(512, independents[0]);
-        Assert.Equal(16, independents[7]);
-        Assert.Equal(1, independents[15]);
+        Assert.Equal(10, independents[7]);
+        Assert.Equal(1, independents[9]);
         Assert.Equal(2, independents[1]);   // the others stay
+    }
+
+    [Fact]
+    public void MemoryKeyOfTheIndependentsCanBeBoundToAnyMemory()
+    {
+        var desk = new Desk();
+
+        desk.SetMemoryIndependent(1, 128);
+        desk.SetMemoryIndependent(10, 1);
+
+        int[] keys = desk.GetState().MemoryIndependents;
+        Assert.Equal(128, keys[0]);
+        Assert.Equal(1, keys[9]);
+        Assert.Equal(2, keys[1]);
+        Assert.Equal(Desk.DefaultIndependents(), desk.GetState().Independents);   // the channel keys are others
+        Assert.Equal(keys, desk.GetProject().Content.MemoryIndependents);
     }
 
     [Fact]
@@ -749,15 +770,21 @@ public sealed class DeskTests
     {
         var desk = new Desk();
 
-        var noSuchKey = Assert.Throws<ArgumentOutOfRangeException>(() => desk.SetIndependent(17, 1));
-        Assert.Equal("The independent must be from 1 to 16, not 17.", noSuchKey.Message);
-        AssertOutOfRange("from 1 to 16", () => desk.SetIndependent(0, 1));
+        var noSuchKey = Assert.Throws<ArgumentOutOfRangeException>(() => desk.SetIndependent(11, 1));
+        Assert.Equal("The independent must be from 1 to 10, not 11.", noSuchKey.Message);
+        AssertOutOfRange("from 1 to 10", () => desk.SetIndependent(0, 1));
 
         var noSuchChannel = Assert.Throws<ArgumentOutOfRangeException>(() => desk.SetIndependent(1, 513));
         Assert.Equal("The channel must be from 1 to 512, not 513.", noSuchChannel.Message);
         AssertOutOfRange("from 1 to 512", () => desk.SetIndependent(1, 0));
 
+        var noSuchMemoryKey = Assert.Throws<ArgumentOutOfRangeException>(() => desk.SetMemoryIndependent(11, 1));
+        Assert.Equal("The memory independent must be from 1 to 10, not 11.", noSuchMemoryKey.Message);
+        var noSuchMemory = Assert.Throws<ArgumentOutOfRangeException>(() => desk.SetMemoryIndependent(1, 129));
+        Assert.Equal("The memory must be from 1 to 128, not 129.", noSuchMemory.Message);
+
         Assert.Equal(Desk.DefaultIndependents(), desk.GetState().Independents);
+        Assert.Equal(Desk.DefaultMemoryIndependents(), desk.GetState().MemoryIndependents);
     }
 
     [Fact]
@@ -767,10 +794,12 @@ public sealed class DeskTests
         long outputChanges = desk.OutputChanges;
 
         AssertMovesProjectCounter(desk, () => desk.SetIndependent(1, 200));
+        AssertMovesProjectCounter(desk, () => desk.SetMemoryIndependent(1, 50));
 
         long projectChanges = desk.ProjectChanges;
-        desk.SetIndependent(1, 200);   // the channel it has already
-        desk.SetIndependent(2, 2);     // where it was from the start
+        desk.SetIndependent(1, 200);         // the channel it has already
+        desk.SetIndependent(2, 2);           // where it was from the start
+        desk.SetMemoryIndependent(1, 50);    // the memory it has already
         Assert.Equal(projectChanges, desk.ProjectChanges);
         Assert.Equal(outputChanges, desk.OutputChanges);
     }
@@ -804,6 +833,7 @@ public sealed class DeskTests
         desk.SetChannelNote(1, "Front left");
         desk.SetMemoryNote(1, "Blue wash");
         desk.SetIndependent(1, 300);
+        desk.SetMemoryIndependent(1, 30);
         desk.SetMaster(100);
         desk.SetBlackout(true);
         long outputChanges = desk.OutputChanges;
@@ -817,6 +847,7 @@ public sealed class DeskTests
         Assert.Equal(NoNotes(512), state.ChannelNotes);
         Assert.Equal(NoNotes(128), state.MemoryNotes);
         Assert.Equal(Desk.DefaultIndependents(), state.Independents);
+        Assert.Equal(Desk.DefaultMemoryIndependents(), state.MemoryIndependents);
         Assert.Equal(100, state.Master);
         Assert.True(state.Blackout);
         Assert.Equal(new byte[512], desk.GetOutput());

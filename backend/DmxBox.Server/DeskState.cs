@@ -11,8 +11,9 @@ namespace DmxBox.Server;
 /// <param name="Blackout">True while blackout is on.</param>
 /// <param name="ChannelNotes">The 512 notes under the channel faders; an empty text where there is none.</param>
 /// <param name="MemoryNotes">The 128 notes under the memory faders; an empty text where there is none.</param>
-/// <param name="Independents">The channel number, 1-512, each of the 16 independent keys is bound to; key 1 is at index 0.</param>
+/// <param name="Independents">The channel number, 1-512, each of the 10 channel keys of the independents is bound to; key 1 is at index 0.</param>
 /// <param name="MemorySequence">For each of the 128 memories, whether what it holds is a sequence.</param>
+/// <param name="MemoryIndependents">The memory number, 1-128, each of the 10 memory keys of the independents is bound to; key 1 is at index 0.</param>
 /// <remarks>Public only because <see cref="IDeskClient"/> has to be.</remarks>
 public sealed record DeskState(
     int[] Channels,
@@ -23,4 +24,5 @@ public sealed record DeskState(
     string[] ChannelNotes,
     string[] MemoryNotes,
     int[] Independents,
-    bool[] MemorySequence);
+    bool[] MemorySequence,
+    int[] MemoryIndependents);

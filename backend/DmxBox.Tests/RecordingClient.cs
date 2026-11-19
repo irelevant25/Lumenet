@@ -74,6 +74,9 @@ internal sealed class RecordingClient : IDeskClient
     public Task IndependentChanged(int index, int channel) => throw new NotSupportedException();
 
     /// <inheritdoc />
+    public Task MemoryIndependentChanged(int index, int memory) => throw new NotSupportedException();
+
+    /// <inheritdoc />
     public Task ChannelNoteChanged(int channel, string text) => throw new NotSupportedException();
 
     /// <inheritdoc />

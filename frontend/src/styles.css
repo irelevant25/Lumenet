@@ -31,7 +31,7 @@
      A wide window shows 32 faders in a row. The width of one fader strip follows the window:
      32 strips and the one column of page keys beside them are 32.82 strips (a key is 0.82
      strips wide); the other 365px are the gaps, the paddings and the two columns at the right
-     (independents with record, and the master section). */
+     (the master section with record, and the independents). */
   --gap: 10px;
   --strip-gap: 4px;
   --strips: 32; /* faders in one row */

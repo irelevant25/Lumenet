@@ -28,10 +28,17 @@ internal sealed class ProjectFile
     public SortedDictionary<int, string?>? MemoryNotes { get; set; }
 
     /// <summary>
-    /// The channel number (1-512) of each of the 16 independent keys, key 1 first. Files from
+    /// The channel number (1-512) of each channel key of the independents, key 1 first: 10 of
+    /// them from version 3 on, 16 in older files (of those, the first 10 are used). Files from
     /// before there were independent keys do not have the property.
     /// </summary>
     public List<int>? Independents { get; set; }
+
+    /// <summary>
+    /// The memory number (1-128) of each of the 10 memory keys of the independents, key 1 first.
+    /// Files from before version 3 do not have the property.
+    /// </summary>
+    public List<int>? MemoryIndependents { get; set; }
 
     /// <summary>
     /// The memories that hold a sequence. Files of version 1, from before there were

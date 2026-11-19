@@ -479,6 +479,7 @@ public sealed class DeskStackTests
             () => _desk.SetChannelNote(1, "Front"),
             () => _desk.SetMemoryNote(1, "Wash"),
             () => _desk.SetIndependent(1, 40),
+            () => _desk.SetMemoryIndependent(1, 40),
             () => _desk.StartNewProject(),
             () => _desk.ReplaceProject(project),
         ];

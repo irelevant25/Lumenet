@@ -171,6 +171,7 @@ public sealed class PlaybackHubTests
             ("SaveMemory", [1]),
             ("SetChannelNote", [1, "Front"]),
             ("SetIndependent", [1, 40]),
+            ("SetMemoryIndependent", [1, 40]),
             ("AddStackStep", [step]),
             ("AddSequenceStep", [2, step]),
             ("NewProject", []),
@@ -316,6 +317,8 @@ public sealed class PlaybackHubTests
         public Task MemoryNoteChanged(int memory, string text) => throw new NotSupportedException();
 
         public Task IndependentChanged(int index, int channel) => throw new NotSupportedException();
+
+        public Task MemoryIndependentChanged(int index, int memory) => throw new NotSupportedException();
 
         public Task BlackoutChanged(bool on) => throw new NotSupportedException();
 

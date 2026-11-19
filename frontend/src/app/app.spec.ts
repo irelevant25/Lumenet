@@ -35,7 +35,8 @@ class FakeConnection {
       memoryStored: new Array<boolean>(MEMORY_COUNT).fill(false),
       channelNotes: new Array<string>(CHANNEL_COUNT).fill(''),
       memoryNotes: new Array<string>(MEMORY_COUNT).fill(''),
-      independents: Array.from({ length: 16 }, (_, index) => index + 1),
+      independents: Array.from({ length: 10 }, (_, index) => index + 1),
+      memoryIndependents: Array.from({ length: 10 }, (_, index) => index + 1),
       master: 255,
       blackout: false,
     },
@@ -452,8 +453,77 @@ describe('the desk page', () => {
     expect(store.channels()[2]).toBe(0);
   });
 
+  it('the independents stand at the right edge: ten keys for channels and ten for memories', () => {
+    const main = page.querySelector('lm-main-view');
+    expect(main?.lastElementChild?.tagName.toLowerCase()).toBe('lm-independents');
+    // the record keys stand under the master section
+    const side = [...(page.querySelector('lm-main-view .side')?.children ?? [])].map((part) => part.tagName.toLowerCase());
+    expect(side).toEqual(['lm-master-section', 'lm-record-section']);
+
+    const keys = [...page.querySelectorAll<HTMLButtonElement>('lm-independents button.number')];
+    expect(keys.length).toBe(20);
+    expect(keys.slice(0, 10).every((key) => key.className.includes('tone-channel'))).toBe(true);
+    expect(keys.slice(10).every((key) => key.className.includes('tone-memory') || key.className.includes('tone-sequence'))).toBe(true);
+    expect(keys[10].getAttribute('aria-label')).toBe('Independent 11, memory 1');
+    expect(keys[12].className).toContain('tone-sequence'); // memory 3 holds a sequence
+  });
+
+  it('a memory key of the independents switches the fader of its memory between zero and full', async () => {
+    await press(button('Independent 12, memory 2'));
+    expect(store.memoryLevels()[1]).toBe(255);
+    expect(button('Independent 12, memory 2').getAttribute('aria-pressed')).toBe('true');
+    expect(button('Independent 12, memory 2').className).toContain('level-3');
+    // the memory's look shows on the channel faders, as with its own fader
+    expect(page.querySelector('lm-fader[aria-label="Channel 5"]')?.getAttribute('aria-valuenow')).toBe('200');
+
+    await press(button('Independent 12, memory 2'));
+    expect(store.memoryLevels()[1]).toBe(0);
+    expect(button('Independent 12, memory 2').className).toContain('level-2'); // stored, fader down
+  });
+
+  it('edit lets the memory of a memory key be changed', async () => {
+    await press(button('Edit the channels and memories of the independent keys'));
+    const field = page.querySelector<HTMLInputElement>('input[aria-label="Memory of independent key 12"]');
+    if (!field) throw new Error('no field for independent key 12');
+
+    field.value = '129'; // there is no memory 129: the key keeps its memory
+    field.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(store.memoryIndependents()[1]).toBe(2);
+    expect(field.value).toBe('2');
+
+    field.value = '77';
+    field.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(store.memoryIndependents()[1]).toBe(77);
+    expect(connection.calls).toContainEqual({ method: 'SetMemoryIndependent', args: [2, 77] });
+
+    await press(button('Edit the channels and memories of the independent keys'));
+    await press(button('Independent 12, memory 77'));
+    expect(store.memoryLevels()[76]).toBe(255);
+  });
+
+  it('the memory keys of the memories view and the sequences view carry the notes of their memories', async () => {
+    connection.emit('MemoryNoteChanged', 4, 'Chase' + NOTE_LINE_SEPARATOR + 'blue');
+    await fixture.whenStable();
+
+    for (const view of ['/memories', '/sequences']) {
+      await show(view);
+      const lines = (memory: number) =>
+        [...(page.querySelectorAll('lm-note-lines')[memory - 1]?.querySelectorAll('.line') ?? [])].map((line) =>
+          line.textContent?.trim(),
+        );
+      expect(page.querySelectorAll('.keys lm-note-lines').length).toBe(32);
+      expect(lines(2)).toEqual(['Wash', '']);
+      expect(lines(4)).toEqual(['Chase', 'blue']);
+      expect(lines(1)).toEqual(['', '']);
+      expect(page.querySelectorAll('lm-note-lines')[3].getAttribute('title')).toBe('Chase blue');
+      expect(page.querySelectorAll('.keys input').length).toBe(0); // to read only: notes are written in the main view
+    }
+  });
+
   it('edit lets the channel of an independent key be changed', async () => {
-    await press(button('Edit the channels of the independent keys'));
+    await press(button('Edit the channels and memories of the independent keys'));
     const field = page.querySelector<HTMLInputElement>(
       'input[aria-label="Channel of independent key 2"]',
     );
@@ -471,7 +541,7 @@ describe('the desk page', () => {
     expect(store.independents()[1]).toBe(40);
     expect(connection.calls).toContainEqual({ method: 'SetIndependent', args: [2, 40] });
 
-    await press(button('Edit the channels of the independent keys'));
+    await press(button('Edit the channels and memories of the independent keys'));
     await press(button('Independent 2, channel 40'));
     expect(store.channels()[39]).toBe(255);
   });
@@ -914,7 +984,7 @@ describe('the desk page', () => {
       'Delete memory',
       'New project',
       'Load project',
-      'Edit the channels of the independent keys',
+      'Edit the channels and memories of the independent keys',
     ]) {
       expect(button(key).disabled).toBe(true);
     }
@@ -950,7 +1020,7 @@ describe('the desk page', () => {
   it('a stack that goes live ends an unfinished recording and the editing of the independent keys', async () => {
     await press(button('Record sequence'));
     await press(memoryKey(9));
-    await press(button('Edit the channels of the independent keys'));
+    await press(button('Edit the channels and memories of the independent keys'));
     expect(channelKey(7)).toBeTruthy();
     expect(page.querySelector('input[aria-label="Channel of independent key 2"]')).toBeTruthy();
 

@@ -42,10 +42,15 @@ public interface IDeskClient
     /// <param name="text">The note as it is stored now; empty if it was taken away.</param>
     Task MemoryNoteChanged(int memory, string text);
 
-    /// <summary>An independent key was bound to another channel.</summary>
-    /// <param name="index">Number of the key, 1-16.</param>
+    /// <summary>A channel key of the independents was bound to another channel.</summary>
+    /// <param name="index">Number of the key, 1-10.</param>
     /// <param name="channel">The channel the key switches now, 1-512.</param>
     Task IndependentChanged(int index, int channel);
+
+    /// <summary>A memory key of the independents was bound to another memory.</summary>
+    /// <param name="index">Number of the key, 1-10.</param>
+    /// <param name="memory">The memory whose fader the key switches now, 1-128.</param>
+    Task MemoryIndependentChanged(int index, int memory);
 
     /// <summary>Blackout was switched, on a UI or with the button on the box.</summary>
     /// <param name="on">True for dark.</param>

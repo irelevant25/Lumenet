@@ -1,5 +1,5 @@
-/* A narrow section at the right edge: the title, Clear, Blackout, and the master fader with
-   its level above it. The fader takes the height that is left. */
+/* A narrow section above the record keys: the title, Clear, Blackout, and the master fader
+   with its level above it. The fader takes the height that is left. */
 :host {
   display: grid;
   grid-template-rows: auto auto auto auto minmax(0, 1fr);

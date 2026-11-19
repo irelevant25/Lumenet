@@ -3,14 +3,15 @@ import { DeskConnection } from './desk-connection';
 import {
   BoxStatus,
   CHANNEL_COUNT,
+  CHANNEL_INDEPENDENT_COUNT,
   DEFAULT_LOOP,
   DeskState,
-  INDEPENDENT_COUNT,
   LanAccess,
   MAX_LEVEL,
   MAX_SEQUENCE_STEPS,
   MEDIUM_BELOW_PX,
   MEMORY_COUNT,
+  MEMORY_INDEPENDENT_COUNT,
   MOBILE_BELOW_HEIGHT_PX,
   MOBILE_BELOW_WIDTH_PX,
   MemoryLooks,
@@ -93,8 +94,10 @@ export class DeskStore {
   /** The notes under the faders, like tape labels on a desk. An empty text means no note. */
   readonly channelNotes = signal<readonly string[]>(noNotes(CHANNEL_COUNT));
   readonly memoryNotes = signal<readonly string[]>(noNotes(MEMORY_COUNT));
-  /** The channel each of the 16 independent keys switches: 1 to 16 until the owner changes them. */
-  readonly independents = signal<readonly number[]>(defaultIndependents());
+  /** The channel each of the 10 channel keys of the independents switches: 1 to 10 until the owner changes them. */
+  readonly independents = signal<readonly number[]>(oneToCount(CHANNEL_INDEPENDENT_COUNT));
+  /** The memory each of the 10 memory keys of the independents switches: 1 to 10 until the owner changes them. */
+  readonly memoryIndependents = signal<readonly number[]>(oneToCount(MEMORY_INDEPENDENT_COUNT));
   readonly master = signal(MAX_LEVEL);
   readonly blackout = signal(false);
   readonly box = signal<BoxStatus>({ connected: false, host: '', firmware: null });
@@ -213,6 +216,9 @@ export class DeskStore {
     connection.on<[number, number]>('IndependentChanged', (key, channel) =>
       this.independents.update((channels) => withItem(channels, key - 1, channel)),
     );
+    connection.on<[number, number]>('MemoryIndependentChanged', (key, memory) =>
+      this.memoryIndependents.update((memories) => withItem(memories, key - 1, memory)),
+    );
     connection.on<[number]>('MasterChanged', (level) => this.master.set(level));
     connection.on<[boolean]>('BlackoutChanged', (on) => this.blackout.set(on));
     connection.on<[DeskState]>('DeskChanged', (desk) => this.takeDesk(desk));
@@ -278,17 +284,30 @@ export class DeskStore {
 
   // ---------------------------------------------------------------- independent keys
 
-  /** An independent key switches its channel: to zero when it is up, to full when it is at zero. */
+  /** A channel key of the independents switches its channel: to zero when it is up, to full when it is at zero. */
   toggleIndependent(key: number): void {
     const channel = this.independents()[key - 1];
     this.setChannel(channel, this.channels()[channel - 1] > 0 ? 0 : MAX_LEVEL);
   }
 
-  /** Binds an independent key to another channel. */
+  /** A memory key of the independents switches the fader of its memory, the same way. */
+  toggleMemoryIndependent(key: number): void {
+    const memory = this.memoryIndependents()[key - 1];
+    this.setMemoryLevel(memory, this.memoryLevels()[memory - 1] > 0 ? 0 : MAX_LEVEL);
+  }
+
+  /** Binds a channel key of the independents to another channel. */
   setIndependent(key: number, channel: number): void {
     if (this.independents()[key - 1] === channel) return;
     this.independents.update((channels) => withItem(channels, key - 1, channel));
     this.run('SetIndependent', key, channel);
+  }
+
+  /** Binds a memory key of the independents to another memory. */
+  setMemoryIndependent(key: number, memory: number): void {
+    if (this.memoryIndependents()[key - 1] === memory) return;
+    this.memoryIndependents.update((memories) => withItem(memories, key - 1, memory));
+    this.run('SetMemoryIndependent', key, memory);
   }
 
   // ---------------------------------------------------------------- top bar buttons
@@ -584,6 +603,7 @@ export class DeskStore {
     if (desk.channelNotes) this.channelNotes.set(desk.channelNotes);
     if (desk.memoryNotes) this.memoryNotes.set(desk.memoryNotes);
     if (desk.independents) this.independents.set(desk.independents);
+    if (desk.memoryIndependents) this.memoryIndependents.set(desk.memoryIndependents);
     this.master.set(desk.master);
     this.blackout.set(desk.blackout);
     // The whole desk comes when a memory was stored, copied or emptied, or a project loaded:
@@ -634,9 +654,9 @@ function zeros(count: number): number[] {
   return new Array<number>(count).fill(0);
 }
 
-/** Independent key 1 switches channel 1, key 2 channel 2, and so on. */
-function defaultIndependents(): number[] {
-  return Array.from({ length: INDEPENDENT_COUNT }, (_, index) => index + 1);
+/** 1, 2, 3 ... count: where the independent keys start, key 1 on channel or memory 1, and so on. */
+function oneToCount(count: number): number[] {
+  return Array.from({ length: count }, (_, index) => index + 1);
 }
 
 function noNotes(count: number): string[] {

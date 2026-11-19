@@ -50,6 +50,7 @@ public sealed class ProjectStoreTests : IDisposable
         _desk.SetChannelNote(512, "Smoke machine");
         _desk.SetMemoryNote(3, "Blue wash");
         _desk.SetIndependent(2, 300);
+        _desk.SetMemoryIndependent(10, 128);
         _desk.SetSequence(7, loop: true, [new Step("channel", 5, 255, 1, 0.5, 2)]);
         _desk.AddStackStep(new Step("memory", 1, 200, 3, 0, 4));
 
@@ -58,7 +59,7 @@ public sealed class ProjectStoreTests : IDisposable
         string expected = """
             {
               "format": "lumenet-project",
-              "version": 2,
+              "version": 3,
               "memories": [
                 {
                   "number": 1,
@@ -89,13 +90,19 @@ public sealed class ProjectStoreTests : IDisposable
                 7,
                 8,
                 9,
-                10,
-                11,
-                12,
-                13,
-                14,
-                15,
-                16
+                10
+              ],
+              "memoryIndependents": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                128
               ],
               "sequences": [
                 {
@@ -130,20 +137,23 @@ public sealed class ProjectStoreTests : IDisposable
     }
 
     [Fact]
-    public void NewProjectHasEmptyListsAndTheSixteenFirstChannelsInItsFile()
+    public void NewProjectHasEmptyListsAndTheTenFirstChannelsAndMemoriesInItsFile()
     {
         _store.Save("show");
 
-        string independents = string.Join(",\n    ", Enumerable.Range(1, 16));
+        string keys = string.Join(",\n    ", Enumerable.Range(1, 10));
         string expected = $$"""
             {
               "format": "lumenet-project",
-              "version": 2,
+              "version": 3,
               "memories": [],
               "channelNotes": {},
               "memoryNotes": {},
               "independents": [
-                {{independents}}
+                {{keys}}
+              ],
+              "memoryIndependents": [
+                {{keys}}
               ],
               "sequences": [],
               "stack": []
@@ -381,27 +391,47 @@ public sealed class ProjectStoreTests : IDisposable
     public void SaveAndLoadBringTheIndependentKeysBack()
     {
         _desk.SetIndependent(1, 512);
-        _desk.SetIndependent(16, 1);
+        _desk.SetIndependent(10, 1);
+        _desk.SetMemoryIndependent(3, 77);
         int[] saved = _desk.GetState().Independents;
+        int[] savedMemoryKeys = _desk.GetState().MemoryIndependents;
         _store.Save("show");
         _desk.SetIndependent(1, 77);   // changed after the save: the load has to undo it
+        _desk.SetMemoryIndependent(3, 3);
 
         _store.Load("show");
 
         Assert.Equal(saved, _desk.GetState().Independents);
+        Assert.Equal(savedMemoryKeys, _desk.GetState().MemoryIndependents);
         Assert.Equal(saved, LoadIntoNewDesk("show").GetState().Independents);
+        Assert.Equal(savedMemoryKeys, LoadIntoNewDesk("show").GetState().MemoryIndependents);
     }
 
     [Fact]
-    public void FileWithoutIndependentsPutsTheKeysOnTheFirstSixteenChannels()
+    public void FileWithoutIndependentsPutsTheKeysOnTheFirstTenChannelsAndMemories()
     {
         // A file from before there were independent keys.
         File.WriteAllText(PathOf("old"), ProjectWith("""{ "number": 4, "levels": { "9": 90 } }"""));
         _desk.SetIndependent(1, 300);
+        _desk.SetMemoryIndependent(1, 30);
 
         _store.Load("old");
 
         Assert.Equal(Desk.DefaultIndependents(), _desk.GetState().Independents);
+        Assert.Equal(Desk.DefaultMemoryIndependents(), _desk.GetState().MemoryIndependents);
+    }
+
+    [Fact]
+    public void FileFromBeforeTheMemoryKeysKeepsItsFirstTenChannelKeys()
+    {
+        // Versions 1 and 2 had sixteen channel keys and no memory keys.
+        string sixteen = string.Join(", ", Enumerable.Range(101, 16));
+        File.WriteAllText(PathOf("old"), $$"""{ "format": "lumenet-project", "version": 2, "memories": [], "independents": [{{sixteen}}] }""");
+
+        _store.Load("old");
+
+        Assert.Equal(Enumerable.Range(101, 10), _desk.GetState().Independents);
+        Assert.Equal(Desk.DefaultMemoryIndependents(), _desk.GetState().MemoryIndependents);
     }
 
     [Fact]
@@ -436,7 +466,7 @@ public sealed class ProjectStoreTests : IDisposable
     [Fact]
     public void FileOfANewerVersionIsRefused()
     {
-        AssertRefused("version 3", """{ "format": "lumenet-project", "version": 3, "memories": [] }""");
+        AssertRefused("version 4", """{ "format": "lumenet-project", "version": 4, "memories": [] }""");
     }
 
     [Fact]
@@ -586,6 +616,22 @@ public sealed class ProjectStoreTests : IDisposable
         AssertRefused("damaged", ProjectWithIndependents($"[{firstFifteen}, null]"));
         AssertRefused("damaged", ProjectWithIndependents("{ \"1\": 1 }"));
         AssertRefused("damaged", ProjectWithIndependents("16"));
+    }
+
+    [Fact]
+    public void FileOfVersionThreeWithWrongKeysIsRefused()
+    {
+        string ten = string.Join(", ", Enumerable.Range(1, 10));
+        string sixteen = string.Join(", ", Enumerable.Range(1, 16));
+        string nine = string.Join(", ", Enumerable.Range(1, 9));
+        string Version3(string keys) => $$"""{ "format": "lumenet-project", "version": 3, "memories": [], {{keys}} }""";
+
+        AssertRefused("lists 16 independents; there must be 10", Version3($"\"independents\": [{sixteen}]"));
+        AssertRefused("lists 9 memory independents; there must be 10", Version3($"\"memoryIndependents\": [{nine}]"));
+        AssertRefused(
+            "Memory independent 10 in the file is on memory 129; memories go from 1 to 128",
+            Version3($"\"memoryIndependents\": [{nine}, 129]"));
+        AssertRefused("Memory independent 1 in the file is on memory 0", Version3($"\"independents\": [{ten}], \"memoryIndependents\": [0, {nine}]"));
     }
 
     // ---------------------------------------------------------------- the list of projects
@@ -851,7 +897,8 @@ public sealed class ProjectStoreTests : IDisposable
         _desk.SetChannel(2, 20);
         _desk.SetChannelNote(1, "Front left");
         _desk.SetMemoryNote(1, "Blue wash");
-        _desk.SetIndependent(16, 400);
+        _desk.SetIndependent(10, 400);
+        _desk.SetMemoryIndependent(10, 40);
         _store.Save("good");
         DeskState stateBefore = _desk.GetState();
         (ProjectContent contentBefore, long changesBefore) = _desk.GetProject();
@@ -870,6 +917,7 @@ public sealed class ProjectStoreTests : IDisposable
         Assert.Equal(stateBefore.ChannelNotes, stateAfter.ChannelNotes);
         Assert.Equal(stateBefore.MemoryNotes, stateAfter.MemoryNotes);
         Assert.Equal(stateBefore.Independents, stateAfter.Independents);
+        Assert.Equal(stateBefore.MemoryIndependents, stateAfter.MemoryIndependents);
         Assert.Equal(changesBefore, changesAfter);
         Assert.Equal(contentBefore.Looks[0], contentAfter.Looks[0]);
         Assert.Equal(new ProjectInfo("good", PathOf("good"), Unsaved: false), _store.Current);

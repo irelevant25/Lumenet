@@ -2,8 +2,9 @@
 export const CHANNEL_COUNT = 512;
 export const MEMORY_COUNT = 128;
 export const MAX_LEVEL = 255;
-/** The independent keys: each switches one channel between zero and full. */
-export const INDEPENDENT_COUNT = 16;
+/** The independent keys: 10 that each switch a channel, 10 that each switch a memory's fader, between zero and full. */
+export const CHANNEL_INDEPENDENT_COUNT = 10;
+export const MEMORY_INDEPENDENT_COUNT = 10;
 
 /** How many faders stand in one row: 32 on a wide window, 16 on a narrower one. */
 export const STRIPS_PER_ROW_WIDE = 32;
@@ -51,8 +52,10 @@ export interface DeskState {
   channelNotes: string[];
   /** The note under each memory fader. */
   memoryNotes: string[];
-  /** The channel each independent key switches. */
+  /** The channel each channel key of the independents switches. */
   independents: number[];
+  /** The memory each memory key of the independents switches. Missing from a desk program from before those keys. */
+  memoryIndependents?: number[];
   master: number;
   blackout: boolean;
 }

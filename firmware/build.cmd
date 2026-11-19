@@ -1,5 +1,6 @@
 @echo off
-rem Builds the firmware on Windows. Result: firmware\build\dmxbox.uf2
+rem Builds the firmware on Windows. Result: firmware\build\dmxbox.uf2, and a copy of it
+rem in firmware\ for flash.cmd.
 rem
 rem It expects the Pico SDK, the ARM compiler and Raspberry Pi's two helper
 rem programs (picotool, pioasm) in the folder .pico-sdk in your user folder.
@@ -43,5 +44,8 @@ rem CMake wants forward slashes in the paths it is given.
     "-Dpicotool_DIR=%PICOTOOL:\=/%" "-Dpioasm_DIR=%PIOASM:\=/%" ^
     -DCMAKE_BUILD_TYPE=Release %* || exit /b 1
 "%CMAKE%" --build "%~dp0build" || exit /b 1
+rem A copy next to flash.cmd, which puts it onto the Pico
+copy /y "%~dp0build\dmxbox.uf2" "%~dp0dmxbox.uf2" >nul || exit /b 1
 echo.
 echo Done: %~dp0build\dmxbox.uf2
+echo A copy is next to flash.cmd, which puts it onto the Pico.

@@ -17,7 +17,7 @@ at **192.168.7.1**. So the box is controlled over UDP like a network device, but
 
 | Folder / file | Contents |
 |---|---|
-| `firmware/` | Pico SDK project (C). Builds `dmxbox.uf2`. `firmware/test/` tests the network code on a PC. |
+| `firmware/` | Pico SDK project (C). Builds `dmxbox.uf2`; `flash.cmd` puts it onto the Pico. `firmware/test/` tests the network code on a PC. |
 | `sim/` | The **same** engine and protocol C code as the firmware, running on a PC over normal sockets. Use it to develop software before the hardware exists. |
 | `backend/` | .NET: the `DmxBox` library, the `dmxbox` command-line tool, the server of the Lumenet desk, and the tests. |
 | `frontend/` | Angular: the page of the Lumenet fader desk. |
@@ -249,15 +249,23 @@ PICO_SDK_PATH=/path/to/pico-sdk cmake ..
 make -j
 ```
 
-Both produce `build/dmxbox.uf2`. For a Pico W or Pico 2 add `-DPICO_BOARD=pico_w` or `-DPICO_BOARD=pico2`
-after `build.cmd` or to the `cmake` line, and start with an empty `build` folder. On a Pico W the LED stays dark.
+Both produce `build/dmxbox.uf2`; `build.cmd` also puts a copy into `firmware/`, next to `flash.cmd`. For a
+Pico W or Pico 2 add `-DPICO_BOARD=pico_w` or `-DPICO_BOARD=pico2` after `build.cmd` or to the `cmake` line,
+and start with an empty `build` folder. On a Pico W the LED stays dark.
 
 ### Flash
 
-Hold **BOOTSEL** while plugging the Pico into USB. It mounts as a drive named RPI-RP2; copy `dmxbox.uf2` onto
-it. The Pico then restarts by itself and the drive disappears. If the drive stays, wait a few seconds and
-copy the file again. Flashing replaces whatever was on the Pico before, for example MicroPython and the
-scripts stored with it.
+Flashing replaces whatever was on the Pico before, for example MicroPython and the scripts stored with it.
+
+**Windows:** `firmware\flash.cmd` does it. It takes the `dmxbox.uf2` in its own folder, so the two files can
+also be copied together to another computer. Start it, then unplug the box, hold **BOOTSEL** on the Pico and
+plug the USB cable in again. It finds the Pico's drive by itself (if there are several, it asks which one),
+writes the file, waits until the Pico has restarted and then until the box answers at 192.168.7.1, showing
+each of the four steps as it goes. At the end it says whether it was successful and waits for a key.
+
+**By hand:** hold **BOOTSEL** while plugging the Pico into USB. It mounts as a drive named RPI-RP2; copy
+`dmxbox.uf2` onto it. The Pico then restarts by itself and the drive disappears. If the drive stays, wait a
+few seconds and copy the file again.
 
 ### Configure
 

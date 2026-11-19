@@ -1,0 +1,3 @@
+# Batch files get Windows line endings wherever they are checked out, and in the ZIP that GitHub
+# offers for download: with Unix line endings cmd.exe can miss a label that goto or call looks for.
+*.cmd text eol=crlf

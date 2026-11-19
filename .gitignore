@@ -7,6 +7,8 @@ build/
 *.obj
 .vs/
 TestResults/
+# the copy of the firmware that build.cmd puts next to flash.cmd
+firmware/dmxbox.uf2
 
 # Python's compiled copies of scripts
 __pycache__/

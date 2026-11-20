@@ -38,7 +38,7 @@
 
 h1 {
   margin: 0;
-  font-size: 24px;
+  font-size: calc(24px * var(--font-scale));
   font-weight: 600;
   letter-spacing: 0.02em;
   line-height: 1;
@@ -46,7 +46,7 @@ h1 {
 
 .version {
   color: var(--legend-dim);
-  font-size: 13px;
+  font-size: calc(13px * var(--font-scale));
 }
 
 .box {
@@ -55,7 +55,7 @@ h1 {
   align-items: center;
   gap: 7px;
   color: var(--legend-dim);
-  font-size: 13px;
+  font-size: calc(13px * var(--font-scale));
 }
 
 .box .light {
@@ -84,7 +84,7 @@ h1 {
   align-items: baseline;
   gap: 6px;
   color: var(--legend-dim);
-  font-size: 13px;
+  font-size: calc(13px * var(--font-scale));
   white-space: nowrap;
 }
 
@@ -122,7 +122,7 @@ h1 {
   padding: 9px 14px 7px;
   border-bottom: 3px solid var(--edge);
   color: var(--legend-dim);
-  font-size: 15px;
+  font-size: calc(15px * var(--font-scale));
   font-stretch: 87.5%;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -150,7 +150,7 @@ h1 {
   background: var(--live);
   box-shadow: 0 0 8px color-mix(in srgb, var(--live) 60%, transparent);
   color: #0b0d10;
-  font-size: 11px;
+  font-size: calc(11px * var(--font-scale));
   font-weight: 700;
   letter-spacing: 0.08em;
   line-height: 1;
@@ -164,6 +164,11 @@ h1 {
   justify-content: flex-end;
   gap: var(--strip-gap);
   min-width: 0;
+}
+
+/* The keys keep their size when the bar gets tight; the name and the path give way instead. */
+.project > [lmLamp] {
+  flex: none;
 }
 
 .file {
@@ -180,7 +185,7 @@ h1 {
   justify-content: flex-end;
   gap: 8px;
   min-width: 0; /* a long name is cut short with "…" rather than running under the keys */
-  font-size: 16px;
+  font-size: calc(16px * var(--font-scale));
 }
 
 .name strong {
@@ -193,13 +198,13 @@ h1 {
 .unsaved {
   flex: none;
   color: var(--system);
-  font-size: 12px;
+  font-size: calc(12px * var(--font-scale));
 }
 
 .path {
   overflow: hidden;
   color: var(--legend-dim);
-  font-size: 12px;
+  font-size: calc(12px * var(--font-scale));
   text-overflow: ellipsis;
   white-space: nowrap;
   direction: rtl; /* a long path is cut at its start, so the file name stays readable */
@@ -231,10 +236,26 @@ h1 {
   justify-self: end;
 }
 
-/* The four links fill the line, so the "live" tag has no room beside its word: it sits on the
+/* The six links share the line: narrow lettering, little room around the words, and the line
+   shared out among them. Should bigger lettering (Settings) make them wider than the line, the
+   line scrolls sideways, not the page; its room at the top keeps the "live" tag in sight. */
+:host-context(.phone) .views {
+  gap: 0;
+  padding-top: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+/* The links fill the line, so the "live" tag has no room beside its word: it sits on the
    upper right corner of the link instead, and the links stay in one row of the same height. */
 :host-context(.phone) .views a {
   position: relative;
+  flex: 1 0 auto;
+  padding-inline: 3px;
+  font-size: calc(14px * var(--font-scale));
+  font-stretch: 75%;
+  letter-spacing: 0;
+  text-align: center;
 }
 
 :host-context(.phone) .views .live {

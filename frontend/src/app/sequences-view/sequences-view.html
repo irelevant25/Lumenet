@@ -42,6 +42,7 @@
               [disabled]="locked()"
               [attr.aria-pressed]="mode() === item.mode"
               [attr.aria-label]="item.name"
+              [attr.data-action]="'sequence.' + item.mode"
               (click)="setMode(item.mode)"
             >
               @for (line of item.lines; track $index) {
@@ -59,6 +60,7 @@
             type="button"
             tone="system"
             aria-label="Add a step"
+            data-action="sequence.add"
             [disabled]="full() || locked()"
             (click)="addStep()"
           >
@@ -69,6 +71,7 @@
             type="button"
             tone="system"
             aria-label="Make the steps from a template"
+            data-action="sequence.template"
             [disabled]="locked()"
             (click)="openTemplate()"
           >
@@ -96,6 +99,7 @@
             type="button"
             tone="system"
             aria-label="Normal speed"
+            data-action="sequence.speed"
             [disabled]="!sequence() || locked() || speed() === 1"
             (click)="resetSpeed()"
           >
@@ -193,9 +197,10 @@
         [level]="item.lamp"
         [attr.aria-pressed]="item.shown"
         [attr.aria-label]="'Memories ' + item.first + ' to ' + item.last"
+        [attr.data-action]="'page.memory.' + ($index + 1)"
         (click)="store.showMemoryPage(item.first)"
       >
-        {{ item.first }}-{{ item.last }}
+        {{ item.first }}-<wbr />{{ item.last }}
       </button>
     }
   </nav>

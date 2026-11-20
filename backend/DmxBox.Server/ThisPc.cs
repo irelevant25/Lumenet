@@ -72,8 +72,12 @@ internal class ThisPc : IDisposable
             NetworkChange.NetworkAddressChanged -= OnAddressChanged;
     }
 
-    // A server that listens on IPv6 and IPv4 at once sees an IPv4 client as "::ffff:192.168.1.5".
-    private static IPAddress Plain(IPAddress address)
+    /// <summary>
+    /// An address as the PC's own lists have it. A server that listens on IPv6 and IPv4 at once
+    /// sees an IPv4 address as "::ffff:192.168.1.5"; this gives back "192.168.1.5".
+    /// </summary>
+    /// <param name="address">The address.</param>
+    public static IPAddress Plain(IPAddress address)
     {
         return address.IsIPv4MappedToIPv6 ? address.MapToIPv4() : address;
     }

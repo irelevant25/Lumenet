@@ -1,5 +1,5 @@
-/* A narrow section at the right edge, over the whole height: the title, Edit, ten keys for
-   channels and ten for memories, in one column. */
+/* A narrow section at the right edge, over the whole height: the title, Edit, the keys for
+   channels and the keys for memories, in one column, or in more when one cannot hold them. */
 :host {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -14,7 +14,7 @@
 h2 {
   margin: 0;
   color: var(--legend-dim);
-  font-size: 12px;
+  font-size: calc(12px * var(--font-scale));
   font-stretch: 75%;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -22,10 +22,13 @@ h2 {
   text-transform: uppercase;
 }
 
-/* Edit and the twenty keys. On a low window they get flatter instead of running out of the window. */
+/* Edit and the keys. On a low window they get flatter, and when even then they do not fit, they
+   go on in another column beside the first (key-columns.ts sets --key-columns and --key-rows). */
 .keys {
   display: grid;
-  grid-template-rows: repeat(21, minmax(0, var(--key-h)));
+  grid-auto-flow: column;
+  grid-template-columns: repeat(var(--key-columns, 1), var(--key-w));
+  grid-template-rows: repeat(var(--key-rows, 21), minmax(0, var(--key-h)));
   align-content: start;
   justify-items: center;
   gap: var(--strip-gap);
@@ -62,7 +65,7 @@ h2 {
    keys stand under them in the columns of the faders, and the memory keys start a line of
    their own. */
 :host-context(.mobile) {
-  grid-template-columns: repeat(var(--line), var(--strip));
+  grid-template-columns: repeat(var(--fit-line), var(--strip));
   grid-template-rows: none;
   align-items: center;
   justify-content: space-between;

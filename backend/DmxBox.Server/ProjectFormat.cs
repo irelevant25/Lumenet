@@ -11,14 +11,14 @@ namespace DmxBox.Server;
 /// <code>
 /// {
 ///   "format": "lumenet-project",
-///   "version": 3,
+///   "version": 4,
 ///   "memories": [
 ///     { "number": 1, "levels": { "5": 255, "6": 128 } }
 ///   ],
 ///   "channelNotes": { "5": "Front left" },
 ///   "memoryNotes": { "1": "Blue wash" },
-///   "independents": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ],
-///   "memoryIndependents": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ],
+///   "independents": [ 1, 2, 3, ... 32 ],
+///   "memoryIndependents": [ 1, 2, 3, ... 32 ],
 ///   "sequences": [
 ///     { "number": 2, "loop": true, "random": false, "speed": 1, "steps": [
 ///       { "target": "channel", "number": 5, "value": 255, "up": 1, "wait": 0.5, "down": 1 } ] }
@@ -29,22 +29,25 @@ namespace DmxBox.Server;
 /// }
 /// </code>
 /// The notes and the independents may be missing: then there are no notes, and the keys are
-/// on channels 1 to 10 and memories 1 to 10. That keeps the files from before these existed
+/// on channels 1 to 32 and memories 1 to 32. That keeps the files from before these existed
 /// readable. Version 2 added the sequences and the stack; a file of version 1 has neither, and
 /// is still read. A sequence that does not say whether it loops is played in a loop, one that
-/// does not say "random" in turn, and one without a speed at speed 1. Version 3
-/// has 10 keys for channels and 10 for memories among the independents; versions 1 and 2 had
-/// 16 keys for channels, of which the first 10 are used.
+/// does not say "random" in turn, and one without a speed at speed 1. Version 4 has 32 keys for
+/// channels and 32 for memories among the independents; version 3 had 10 of each, versions 1
+/// and 2 had 16 keys for channels and none for memories. The keys an older file does not have
+/// are where they are on a new desk: key 11 on channel 11, and so on.
 /// </remarks>
 internal static class ProjectFormat
 {
     private const string FormatName = "lumenet-project";
 
     // The version this program writes, and the newest it can read.
-    private const int CurrentVersion = 3;
+    private const int CurrentVersion = 4;
 
-    // The channel keys of the independents in a file of version 1 or 2.
-    private const int OldIndependentCount = 16;
+    // The channel keys of the independents in a file of version 1 or 2, and the keys of each
+    // kind in a file of version 3.
+    private const int FirstIndependentCount = 16;
+    private const int ThirdIndependentCount = 10;
 
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -116,7 +119,7 @@ internal static class ProjectFormat
             NotesOf(file.MemoryNotes, Desk.MemoryCount, "memory"),
             IndependentsOf(file.Independents, version))
         {
-            MemoryIndependents = MemoryIndependentsOf(file.MemoryIndependents),
+            MemoryIndependents = MemoryIndependentsOf(file.MemoryIndependents, version),
             Sequences = SequencesOf(file.Sequences, looks),
             Stack = StackOf(file.Stack),
         };
@@ -249,32 +252,40 @@ internal static class ProjectFormat
     }
 
     // The channel of each channel key of the independents. A file may leave the list out: then
-    // the keys are where they are on a new desk. A list that is there has to be whole: 10 keys,
-    // or 16 in a file of version 1 or 2, which had that many; of those the first 10 are kept.
+    // the keys are where they are on a new desk. A list that is there has to be whole for its
+    // version: 32 keys, 10 in a file of version 3, 16 in one of version 1 or 2. The keys an older
+    // file does not have are where they are on a new desk.
     private static int[] IndependentsOf(List<int>? listed, int version)
     {
         if (listed is null)
             return Desk.DefaultIndependents();
 
-        int count = version < 3 ? OldIndependentCount : Desk.ChannelIndependentCount;
+        int count = version switch
+        {
+            < 3 => FirstIndependentCount,
+            3 => ThirdIndependentCount,
+            _ => Desk.ChannelIndependentCount,
+        };
         if (listed.Count != count)
             throw Bad($"The file lists {listed.Count} independents; there must be {count}.");
 
         CheckKeys(listed, "Independent", ("channel", "channels"), Desk.ChannelCount);
-        return listed.Take(Desk.ChannelIndependentCount).ToArray();
+        return [.. listed, .. Desk.DefaultIndependents().Skip(count)];
     }
 
     // The memory of each memory key of the independents, like the channels above. Files from
-    // before version 3 have none: then the keys are on memories 1 to 10.
-    private static int[] MemoryIndependentsOf(List<int>? listed)
+    // before version 3 have none: then the keys are where they are on a new desk.
+    private static int[] MemoryIndependentsOf(List<int>? listed, int version)
     {
         if (listed is null)
             return Desk.DefaultMemoryIndependents();
-        if (listed.Count != Desk.MemoryIndependentCount)
-            throw Bad($"The file lists {listed.Count} memory independents; there must be {Desk.MemoryIndependentCount}.");
+
+        int count = version == 3 ? ThirdIndependentCount : Desk.MemoryIndependentCount;
+        if (listed.Count != count)
+            throw Bad($"The file lists {listed.Count} memory independents; there must be {count}.");
 
         CheckKeys(listed, "Memory independent", ("memory", "memories"), Desk.MemoryCount);
-        return listed.ToArray();
+        return [.. listed, .. Desk.DefaultMemoryIndependents().Skip(count)];
     }
 
     // "key" names the keys and "fader" what they are bound to, one and many, for the message.

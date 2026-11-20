@@ -1,0 +1,189 @@
+<header>
+  <h2>Settings</h2>
+  <p class="summary">
+    Layout and lettering belong to this browser on this device, as the shortcuts of Keyboard do.
+    LAN belongs to the desk program, and only the PC can change it.
+  </p>
+</header>
+
+<div class="panels">
+  <!-- ---------------------------------------------------------------- the main view -->
+  <section class="panel" aria-labelledby="layout-title">
+    <h3 id="layout-title">Main view</h3>
+
+    <div class="field">
+      <label for="channel-size">Channels on a page</label>
+      <select id="channel-size" (change)="onSize($event)">
+        @for (size of sizes; track size) {
+          <option [value]="size" [selected]="size === settings.channelSize()">{{ sizeName(size) }}</option>
+        }
+      </select>
+    </div>
+    <div class="field">
+      <label for="channel-rows">Rows of channel faders</label>
+      <select id="channel-rows" (change)="onChannelRows($event)">
+        @for (count of rowCounts; track count) {
+          <option [value]="count" [selected]="count === settings.channelRows()">{{ rowsName(count) }}</option>
+        }
+      </select>
+    </div>
+    <div class="field">
+      <label for="memory-rows">Rows of memory faders</label>
+      <select id="memory-rows" (change)="onMemoryRows($event)">
+        @for (count of rowCounts; track count) {
+          <option [value]="count" [selected]="count === settings.memoryRows()">{{ rowsName(count) }}</option>
+        }
+      </select>
+    </div>
+    <p class="hint">
+      {{ sizeSaid() }} The Memories and Sequences views keep the rows the window gives them.
+    </p>
+
+    <div class="field">
+      <label for="wheel-size">Steps the stack wheel shows</label>
+      <select id="wheel-size" (change)="onWheelSize($event)">
+        @for (size of wheelSizes; track size) {
+          <option [value]="size" [selected]="size === settings.wheelSize()">{{ size }}</option>
+        }
+      </select>
+    </div>
+    <p class="hint">
+      The step that is on in the middle, the one before it above, the next ones under it. On a low
+      window the wheel shows fewer.
+    </p>
+
+    <div class="field">
+      <label for="channel-keys">Channel keys of the independents</label>
+      <input
+        id="channel-keys"
+        type="number"
+        min="0"
+        [max]="maxChannelKeys"
+        step="1"
+        [value]="settings.channelKeys()"
+        (change)="onChannelKeys($event)"
+      />
+    </div>
+    <div class="field">
+      <label for="memory-keys">Memory keys of the independents</label>
+      <input
+        id="memory-keys"
+        type="number"
+        min="0"
+        [max]="maxMemoryKeys"
+        step="1"
+        [value]="settings.memoryKeys()"
+        (change)="onMemoryKeys($event)"
+      />
+    </div>
+    <p class="hint">
+      0 to {{ maxChannelKeys }} of each; with 0 of both the main view has no independents. Keys
+      that do not fit into one column go on in another.
+    </p>
+  </section>
+
+  <!-- ---------------------------------------------------------------- lettering -->
+  <section class="panel" aria-labelledby="lettering-title">
+    <h3 id="lettering-title">Lettering</h3>
+    <div class="scale" role="group" aria-label="Size of all lettering">
+      <button
+        type="button"
+        class="step"
+        aria-label="Smaller lettering"
+        [disabled]="settings.fontScale() <= smallest"
+        (click)="settings.stepFontScale(-1)"
+      >
+        −
+      </button>
+      <output class="value" aria-live="polite">{{ fontScaleSaid() }}</output>
+      <button
+        type="button"
+        class="step"
+        aria-label="Bigger lettering"
+        [disabled]="settings.fontScale() >= biggest"
+        (click)="settings.stepFontScale(1)"
+      >
+        +
+      </button>
+      <button type="button" class="plain" [disabled]="settings.fontScale() === 1" (click)="settings.resetFontScale()">
+        Reset
+      </button>
+    </div>
+    <p class="hint">
+      All lettering of the page, from ×{{ smallest }} to ×{{ biggest }}, numbers on keys as well.
+      The keys keep their size, so words on them grow by 15 % at most; a word too long for its key
+      goes on two lines.
+    </p>
+  </section>
+
+  <!-- ---------------------------------------------------------------- LAN -->
+  <section class="panel" aria-labelledby="lan-title">
+    <h3 id="lan-title">Network (LAN)</h3>
+    @if (lan(); as lan) {
+      @if (lan.on) {
+        <div class="field">
+          <label for="lan-address">Address for phones and tablets</label>
+          <select id="lan-address" (change)="onAddress($event)">
+            <option value="" [selected]="!lan.chosen">Automatic{{ lan.addresses[0] ? ' (' + lan.addresses[0] + ')' : '' }}</option>
+            @for (address of lan.addresses; track address) {
+              <option [value]="address.split(':')[0]" [selected]="lan.chosen === address.split(':')[0]">
+                {{ address }}
+              </option>
+            }
+            @if (chosenGone()) {
+              <option [value]="lan.chosen" selected>{{ lan.chosen }} (not in the network now)</option>
+            }
+          </select>
+        </div>
+        <p class="hint">
+          @if (lan.chosen && !chosenGone()) {
+            Devices come in at {{ addressInUse() }} only.
+          } @else if (chosenGone()) {
+            This PC does not have {{ lan.chosen }} now, so devices come in at any of its addresses
+            until it has it again.
+          } @else {
+            Devices come in at any address of this PC; the top bar shows the first.
+          }
+        </p>
+
+        <div class="field">
+          <label for="lan-password">New password</label>
+          <input
+            #password
+            id="lan-password"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="24"
+            [attr.placeholder]="lan.password ?? ''"
+            (keydown.enter)="setPassword(password)"
+          />
+          <button type="button" class="plain" (click)="setPassword(password)">Set</button>
+          <button type="button" class="plain" (click)="newPassword()">New random</button>
+        </div>
+        @if (passwordProblem()) {
+          <p class="problem" role="alert">{{ passwordProblem() }}</p>
+        } @else if (passwordDone()) {
+          <p class="done" role="status">{{ passwordDone() }}</p>
+        }
+        <p class="hint">
+          5 to 20 letters and digits; spaces, dashes and small letters do not count. A new password
+          logs every phone and tablet out until it gives the new one.
+        </p>
+      } @else {
+        <p class="hint">
+          LAN is off. Switch it on with the LAN key at the top left; then the address and the
+          password can be changed here.
+        </p>
+      }
+    } @else {
+      <p class="hint">
+        @if (store.lan()) {
+          Only the PC the desk program runs on can change LAN.
+        } @else {
+          The desk program is older than this page and knows no LAN settings.
+        }
+      </p>
+    }
+  </section>
+</div>

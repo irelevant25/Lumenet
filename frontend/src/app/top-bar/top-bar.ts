@@ -1,13 +1,14 @@
 import { Component, computed, inject, viewChild } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { DeskStore } from '../desk/desk-store';
+import { lanAddressInUse } from '../desk/desk-types';
 import { ImportDialog } from '../import-dialog/import-dialog';
 import { LampButton } from '../lamp-button/lamp-button';
 import { ProjectDialog } from '../project-dialog/project-dialog';
 
 /**
  * The strip along the top: name and version with the box light and the LAN key, the links to
- * the views, and the project with its keys New, Save, Load and Import.
+ * the views (Settings the last), and the project with its keys New, Save, Load and Import.
  */
 @Component({
   host: {
@@ -36,19 +37,24 @@ export class TopBar {
     return lan?.local ? lan : null;
   });
 
-  /** The line under the box light while LAN is lit: the address to open on a phone, and the password. */
+  /**
+   * The line under the box light while LAN is lit: the address to open on a phone (the one
+   * chosen in Settings, or the best one), and the password.
+   */
   protected readonly lanLine = computed(() => {
     const lan = this.lanSwitch();
     if (!lan?.on) return null;
 
-    const [best, ...others] = lan.addresses;
+    const address = lanAddressInUse(lan);
+    // With an address chosen, devices come in there only; without, at the others as well.
+    const others = lan.chosen && address?.split(':')[0] === lan.chosen ? [] : lan.addresses.filter((other) => other !== address);
     const more = others.length > 0 ? ` It can also be reached at ${others.join(', ')}.` : '';
     return {
-      address: best ?? 'no network',
+      address: address ?? 'no network',
       // A moment after the key was pressed, until the desk has answered
       password: lan.password ?? '…',
-      hint: best
-        ? `On a phone or tablet in the same network, open http://${best} and give the password.${more}`
+      hint: address
+        ? `On a phone or tablet in the same network, open http://${address} and give the password.${more}`
         : 'This PC is in no network that a phone could reach it through.',
     };
   });

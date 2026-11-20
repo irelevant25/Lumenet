@@ -437,13 +437,17 @@ soon as a box answers.
 
 **What is on the page**
 
-The top bar has four links: **Main**, **Memories**, **Sequences** and **Stack**. Main is the desk itself.
-Memories only shows what is stored. Sequences and Stack are for the two things that run by themselves (see
-below). At the right of Main stand the **Master** section (Clear, Black out and the master fader with its
-level) with **Record** under it, and at the right edge, over the whole height, the **Independents**.
+The top bar has six links: **Main**, **Memories**, **Sequences**, **Stack**, **Settings** and **Keyboard**.
+Main is the desk itself. Memories only shows what is stored. Sequences and Stack are for the two things that
+run by themselves (see below), Settings for how this browser shows the desk (see [Settings](#settings)),
+Keyboard for its shortcuts. At the right of Main stands a column: the **Master** section (Clear, Black out and
+the master fader with its level), the **Stack** under it, and **Record** at the bottom; at the right edge, over
+the whole height, the **Independents** (unless Settings shows none of their keys).
 
-* **Channels:** two rows of faders. The keys at the right choose which of the 512 channels they show.
-* **Memories:** one row of faders, with page keys for the 128 memories. A memory holds a look:
+* **Channels:** two rows of faders (or one, as Settings says). The keys at the right choose which of the 512
+  channels they show. When they do not fit into one column, they get flatter, and then they go on in another
+  column beside it.
+* **Memories:** one row of faders (or two), with page keys for the 128 memories. A memory holds a look:
   the levels the channel faders were set to at the moment it was saved. Its fader plays that look at the
   fader's level. For every channel the highest value wins, whether it comes from the channel fader or from
   a memory.
@@ -453,9 +457,13 @@ level) with **Record** under it, and at the right edge, over the whole height, t
   bring the memory down, and the fader goes back to it. While a memory holds a channel up, its fader can
   still be moved; the handle stays where the memory holds it, and the green part shows what you set.
   Save mem stores the faders' own levels, not the part a memory adds.
-* **Keys under the faders:** a channel key is lit when the channel is above zero. A memory key is half lit
-  when something is stored in it and fully lit when its fader is up. A page key is fully lit for the page
-  that is shown and half lit for another page with something on it.
+* **Keys under the faders:** a press puts the fader to full, and back to zero when it is at full already (a
+  fader somewhere between goes to full). It works the fader's own level: a channel that a memory holds at
+  full still goes to full by its key. While a record key waits for a memory, the memory keys are for that
+  (see Record); while a sequence is recorded, the channel keys put in steps. A channel key is lit when the
+  channel is above zero. A memory key is half lit when something is stored in it and fully lit when its
+  fader is up. A page key is fully lit for the page that is shown and half lit for another page with
+  something on it.
 * **Notes:** under each key are two lines to type into: which light or which look it is (11 characters per
   line). Each line stays where it was typed; the second can be used without the first.
 * **Record** (under the master section) has Save mem, Edit mem, Rec seq, Copy and Del: press one, and the
@@ -477,21 +485,33 @@ level) with **Record** under it, and at the right edge, over the whole height, t
 * **Black out** sends zero to every address but leaves the desk as it is; the key blinks while it is active.
   The blackout button on the box does the same, and the desk shows it.
 * **Master** dims the whole output.
-* **Independents:** twenty keys in a column at the right edge, over the whole height: ten green ones for
-  channels and ten red ones for memories. A green key switches its channel between zero and full, and that
-  channel's fader follows; a red key does the same with the fader of its memory. The keys start on channels
-  1 to 10 and memories 1 to 10. Press Edit there, type other numbers onto the keys, and press Edit again. A
-  green key is lit when its channel's own fader is up (a memory that holds the channel does not light it);
-  a red key is lit like the key under its memory's fader, and runs from red to yellow for a sequence.
+* **Stack** (under the master section) is the stack at hand on Main: Stack takes it live, Prev, Play, Pause
+  and Next go through it, as on the Stack view. Under the keys stands a wheel of the stack's steps: the one
+  that is on in the middle (green, with an arrow beside it), the step before it above (blue), the one Play
+  goes to below (yellow), the others grey. It shows 3 steps, or 1, 5, 7 or 9 as Settings says, and rolls
+  on when another step comes on. The stack goes round, and so does the wheel, but a step stands in it once
+  only. While no step is on, the middle is empty and the step Play goes to stands under it. On a low window
+  the wheel shows fewer steps (3 at least) and the keys of the column get flatter.
+* **Independents:** keys in a column at the right edge, over the whole height: green ones for channels and
+  red ones for memories, ten of each unless Settings says otherwise (0 to 32 of each; with none of either
+  the column is left out). A green key switches
+  its channel between zero and full, and that channel's fader follows; a red key does the same with the fader
+  of its memory. The keys start on channels 1, 2, 3 ... and memories 1, 2, 3 ... Press Edit there, type
+  other numbers onto the keys, and press Edit again. A green key is lit when its channel's own fader is up (a
+  memory that holds the channel does not light it); a red key is lit like the key under its memory's fader,
+  and runs from red to yellow for a sequence. Keys that do not fit into the column go on in another one.
 * **The Memories view** is for looking only; nothing there changes the desk. The memory keys along the top
   choose a memory, each with the two lines of its note under it, and the table under them shows the level
-  that memory holds for each of the 512 channels, in rows as long as a row of faders (32 by 16, or 16 by 32
-  in a narrower window). The page keys at the right choose which memories the keys show.
+  that memory holds for each of the 512 channels, with each channel's note under its level, in rows of 32
+  (16 in a narrower window). All cells have the same size: when channels have notes, every cell keeps room
+  for two lines of one. The page keys at the right choose which memories the keys show. This view and
+  the Sequences view go by the window only: what Settings says about Main does not change them.
 * **Project:** New, Save, Load and Import at the top right. A project is one JSON file in
   `Documents\Lumenet`. It holds the memories (looks and sequences), the stack, the notes and what the
   independent keys are bound to, not the fader positions, so loading a project never switches a light on by
-  itself. New empties the desk; it asks first. A project saved before the independents had memory keys
-  (16 channel keys) keeps its first 10 channel keys; its memory keys start on memories 1 to 10.
+  itself. New empties the desk; it asks first. A project keeps 32 channel keys and 32 memory keys of the
+  independents, however many the page shows. An older project keeps the keys it has (10 of each, or 16
+  channel keys from before there were memory keys); the others are where they are on a new desk.
 * **Example:** `examples/Example show.json` is a small show to look at, for 17 channels: two red lights in a
   pot, a front wash, four blue back lights, a spot, an RGBW LED bar, a hazer, a mirror ball and the house
   light. It has notes on every light and memory, ten looks (memory 10 is a copy of 1, made dimmer), eleven
@@ -607,8 +627,9 @@ back to zero. A memory that holds a sequence starts running, because its fader g
   on by itself. Prev from the first step goes to the last.
 * A wait of 0 means the stack stays on the step until Play. With a wait above 0 it goes on by itself that
   many seconds after the step is up.
-* The view shows all steps, the **current** one in green and the **next** one with an amber edge, and for
-  the current one how far it is.
+* The view shows all steps, the **current** one in green, the **next** one with an amber edge and the
+  **previous** one (the step before the current one, where Prev goes) in blue, and for the current one
+  how far it is. Prev, Play, Pause and Next are bigger than the other keys of the desk, Play the biggest.
 * A fader the stack is moving and that you move by hand is yours from then on. Clear brings every fader down
   and takes the stack off its step; it stays live, and Play starts with the first step again.
 * **Step numbers** look like 1.0, 2.0, 2.1. A new step gets the next whole number. Drag a step by its grip
@@ -618,8 +639,8 @@ back to zero. A memory that holds a sequence starts running, because its fader g
 
 **Window width:** a window at least 1850 pixels wide shows 32 faders in a row, so 64 channels and 32 memories
 at a time. A narrower window shows 16 in a row (32 channels and 16 memories) and twice as many page keys.
-The page keys stand in one column at the right; when they are too many for the height, they get flatter and
-then the column scrolls.
+Settings can fix another number, and the rows, for Main. The page keys stand in a column at the right; when
+they are too many for the height, they get flatter and then go on in another column.
 
 **Small screens:** in a window narrower than 900 pixels or lower than 600 pixels (a phone, a tablet held
 upright) the sections stand under each other and the page scrolls. The page keys lie under the section titles,
@@ -638,7 +659,12 @@ limits are in `frontend/src/app/desk/desk-types.ts`, and only there.
   has no LAN key.
 * The password has 5 letters and digits (no 0, O, 1, I or L, which are easily mixed up). It is made once and
   kept in `%LOCALAPPDATA%\Lumenet\lan-password.txt`, so a phone that knows it gets in again next time.
-  Delete that file for a new password; every phone then has to give the new one.
+  Settings can type another one (5 to 20 letters and digits) or make a new one; delete that file for a new
+  one too. Every phone then has to give the new password, and the connected ones lose the desk.
+* When the PC is in more than one network (a cable and Wi-Fi), Settings can choose the address that phones
+  use: the desk then lets devices in at that address only. Without a choice it lets them in at every address
+  and shows the first. A chosen address that the PC no longer has (the router gave it another one) counts as
+  no choice until it is back. The choice is kept in the same file.
 * A phone is remembered by a cookie that holds a long random key, not the password, so the cookie cannot be
   guessed. Guessing the password is slowed down instead: after 5 wrong passwords within a minute a device
   has to wait, and after 20 from all devices together every device has to wait. So someone in the network
@@ -656,6 +682,45 @@ in steps of 5 (with Shift: 1). With the keyboard: the arrows, Page Up, Page Down
 With a finger a fader moves only by its handle: a touch in the slot does nothing, so a thumb that scrolls the
 page cannot move a light. In the small-screen layout the mouse wheel scrolls the page and leaves the faders alone.
 
+### Settings
+
+What is set here belongs to this browser on this device (it is kept in the browser), so a phone and the PC
+each have their own; only LAN belongs to the desk program.
+
+* **Channels on a page** (Main): Auto (a row of 32 or 16 by the window, as above), or 8, 16, 32, 64 or 128.
+* **Rows of channel faders** and **rows of memory faders** (Main): 1 or 2 of each, at first 2 and 1. A
+  channel size is spread over the rows of channels, and a row of memories is as long as a row of channels:
+  with 8 in two rows, rows of 4, and 4 memories on a page, so 64 channel pages and 32 memory pages. The two
+  sections share the height in the proportion of their rows. The faders keep the width the window gives
+  them; when the rows are then wider than the window, they scroll sideways, the channels and the memories
+  each on their own, with a big scrollbar. The Memories and Sequences views keep the rows of the window.
+* **Steps the stack wheel shows** (Main): 1, 3, 5, 7 or 9; at first 3.
+* **Keys of the independents:** how many green keys and how many red keys the column shows, 0 to 32 of each;
+  with 0 of both, Main has no independents.
+* **Lettering:** the minus and plus keys make all lettering of the page smaller or bigger, from ×0.7 to ×1.5
+  in steps of 0.1, numbers on keys too. The keys keep their size, so words on them grow by 15 % at most; a
+  word too long for its key goes on in a second line, and so does a page range, after its dash (flat page
+  keys then go on in another column sooner, so that the two lines fit).
+* **Network (LAN):** while LAN is on, the address phones use and the password; see above. On the PC only.
+
+### Keyboard
+
+The Keyboard view gives a shortcut to any key of the desk: the view links, New, Save, Load, Import, LAN,
+Clear, Black out, the keys of the stack and of Record, those of the Sequences view, Edit and every key of the
+independents, every page key, and the key under every channel and memory fader. The shortcuts belong to this
+browser, like the settings.
+
+* The list has the keys at the left and their shortcuts at the right. **Set**, then press the keys of the
+  shortcut (with Ctrl, Alt or Shift as wanted; Esc stops, Tab and Esc cannot be shortcuts). A shortcut that
+  another key had moves over, and the page says so.
+* **Listen** shows the desk; the next key you click there is not pressed but picked, and the Keyboard view
+  comes back with it chosen in the list and scrolled into sight (Esc stops listening).
+* A shortcut is the physical key, whatever letter the keyboard's language puts on it. It presses its key on
+  the page as a click would, and a locked key stays locked; when the key is not on the view that is shown (a
+  page of faders that is not shown, another view), it does what that key does, except the keys of the
+  Sequences view and Edit of the independents, which work only where they are. Shortcuts rest while a note
+  or another field is typed into and while a window such as Load is open.
+
 **How it is built**
 
 * `backend/DmxBox.Server` is the desk itself. It holds the state (levels, memories, sequences, the stack,
@@ -672,9 +737,9 @@ page cannot move a light. In the small-screen layout the mouse wheel scrolls the
   to the pages listed in `Server:AllowedOrigins`, plus the page the backend hands out itself. With `Urls` set
   to `http://localhost:5080` the desk stays on this PC for good.
 
-**Tests:** `dotnet test backend/DmxBox.sln` (379 tests: the client, the desk, sequences and the stack with a
+**Tests:** `dotnet test backend/DmxBox.sln` (384 tests: the client, the desk, sequences and the stack with a
 clock the tests set by hand, project files and the example project, the import of show files, the link to the
-box, the hub, LAN with a pretend PC and a pretend phone), and in `frontend/`: `npm test -- --watch=false` (75
+box, the hub, LAN with a pretend PC and a pretend phone), and in `frontend/`: `npm test -- --watch=false` (109
 tests of the page).
 
 ---
@@ -795,6 +860,25 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
   project, the hub, and a file of 3 MB. The page passes 75. On a test copy without a box the example show file
   was imported in Chrome at 1920 × 1080 and 1366 × 768: the report, the memories with their notes and the 14
   steps of the stack came out as planned, and a file that is no show was refused with a message.
+* **Settings, keyboard and the stack on Main (2026-11-20):** the backend passes 384 tests (32 + 32 keys of
+  the independents in project format 4, projects of versions 1 to 3 still read; the LAN address and password),
+  the page 95. On a test copy without a box, in Chrome at 1920 × 1080: the stack section on Main and the
+  previous step on the Stack view, Play 93 × 67 pixels beside Prev, Pause and Next at 58 × 50; 8 channels on
+  a page (64 page keys in three columns, no scrollbar), 128 (the rows scroll sideways, the memories with the
+  channels, the page itself does not); 32 + 32 independent keys in two columns; the lettering from ×0.7 to
+  ×1.5 with every key's lettering inside its key; a shortcut recorded and used (Ctrl+B for Black out);
+  listening picked a key without pressing it, a locked Play included. Phones of 390 and 360 pixels: the five
+  view links fit, and no view scrolls sideways (before, the four links were 3 pixels too wide at 360).
+* **The stack wheel, keys under the faders and the Keyboard view (2026-11-20):** the page passes 109 tests
+  (the backend did not change). On a test copy without a box, in Chrome: at 1920 × 1080 the wheel of 3 and of
+  9 steps with every key of the side column at full height and the master fader 260 pixels high, the wheel
+  rolling to the next step; at 1366 × 768 a wheel of 3 (also when 9 are asked for) with all keys 28 pixels
+  high (before, the stack keys were about 12). A channel key to full and back to zero; one row of channels
+  over two of memories; 128 channels on a page with scrollbars 18 pixels high, the channels scrolled without
+  the memories; the Memories and Sequences views unchanged by it, the notes in the cells of the Memories
+  view; no independents with 0 + 0 keys; Listen picked a key low in the list of the Keyboard view, which
+  scrolled to it while the page and its top bar stayed in place; at ×1.5 with 64 channel pages every key
+  holds its lettering. Phones of 390 and 360 pixels: the six view links fit, nothing scrolls sideways.
 * **Show files of a real console (2026-11-19):** 30 show files that ETC SmartFades wrote (software 3.0.1 and
   3.0.2) went through the import. The first version read them wrongly: their "FOLLOWON 0" (no wait) as a
   follow at once, their patch the wrong way round, and it lost their labels. With the SmartFade's dialect

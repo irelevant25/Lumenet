@@ -30,9 +30,10 @@ internal static class LanGate
             return;
         }
 
-        // LAN is off: another device gets nothing at all. Its connection is normally refused when
-        // it is made; this is for one that was opened while LAN was still on.
-        if (!lan.On)
+        // LAN is off, or the device came in at an address of this PC other than the one chosen
+        // for LAN: it gets nothing at all. Its connection is normally refused when it is made;
+        // this is for one that was opened while LAN was still on, or before another address was chosen.
+        if (!lan.MayConnect(remote, context.Connection.LocalIpAddress))
         {
             context.Abort();
             return;

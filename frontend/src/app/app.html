@@ -18,3 +18,11 @@
 @if (store.notice()) {
   <p class="notice" role="status">{{ store.notice() }}</p>
 }
+
+@if (keyboard.listening()) {
+  <!-- The Keyboard view is waiting for a key of the desk to be clicked: it gets picked, not pressed. -->
+  <p class="listening" role="status">
+    Listening: click the key you want a shortcut for. It is not pressed, only picked.
+    <button type="button" (click)="keyboard.stopListening()">Stop (Esc)</button>
+  </p>
+}

@@ -359,6 +359,44 @@ internal sealed class DeskHub : Hub<IDeskClient>
         await _lan.TellPcAsync();
     }
 
+    /// <summary>
+    /// Chooses the address of this PC at which devices in the network may use the desk, or lets
+    /// the desk choose by itself again. Only a UI on this PC can do this.
+    /// </summary>
+    /// <param name="address">One of the PC's addresses in the network, like "192.168.1.20"; null or empty for "choose by yourself".</param>
+    public async Task SetLanAddress(string? address)
+    {
+        if (!IsLocal)
+            throw new DeskException("The LAN address can only be chosen on the PC.");
+
+        _lan.Choose(address);
+        await _lan.TellPcAsync();
+    }
+
+    /// <summary>
+    /// Makes a typed text the LAN password. Every device has to give the new one; those that are
+    /// connected lose their connection. Only a UI on this PC can do this.
+    /// </summary>
+    /// <param name="password">5 to 20 letters and digits.</param>
+    public async Task SetLanPassword(string password)
+    {
+        if (!IsLocal)
+            throw new DeskException("The LAN password can only be changed on the PC.");
+
+        _lan.ChangePassword(password);
+        await _lan.TellPcAsync();
+    }
+
+    /// <summary>Makes a new random LAN password, as <see cref="SetLanPassword"/> does with a typed one.</summary>
+    public async Task NewLanPassword()
+    {
+        if (!IsLocal)
+            throw new DeskException("The LAN password can only be changed on the PC.");
+
+        _lan.RenewPassword();
+        await _lan.TellPcAsync();
+    }
+
     /// <summary>Lists the projects that can be loaded, the newest first.</summary>
     public ProjectList GetProjects()
     {

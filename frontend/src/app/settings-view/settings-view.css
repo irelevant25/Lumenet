@@ -1,0 +1,195 @@
+/* The title, then the panels: side by side as far as the window allows. They scroll when they
+   are higher than the window. */
+:host {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: var(--panel-raised);
+}
+
+header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  min-width: 0;
+}
+
+h2 {
+  flex: none;
+  margin: 0;
+  color: var(--legend-dim);
+  font-size: calc(12px * var(--font-scale));
+  font-stretch: 75%;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.summary {
+  margin: 0;
+  color: var(--legend-dim);
+  font-size: calc(14px * var(--font-scale));
+  line-height: 1.3;
+}
+
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  align-content: start;
+  gap: 12px;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+  user-select: text;
+}
+
+.panel {
+  min-width: 0;
+  padding: 10px 14px 12px;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: var(--well);
+}
+
+h3 {
+  margin: 0 0 10px;
+  color: var(--legend-dim);
+  font-size: calc(12px * var(--font-scale));
+  font-stretch: 75%;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* a label with its field: the label at the left, the field and its keys after it */
+.field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 0 0 8px;
+}
+
+.field label {
+  flex: 1 1 190px;
+  font-size: calc(14px * var(--font-scale));
+}
+
+select,
+input,
+button {
+  box-sizing: border-box;
+  height: calc(30px * var(--font-scale));
+  margin: 0;
+  padding: 0 8px;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--legend);
+  font: inherit;
+  font-size: calc(14px * var(--font-scale));
+  font-variant-numeric: tabular-nums;
+}
+
+select {
+  min-width: 170px;
+  cursor: pointer;
+}
+
+input[type='number'] {
+  width: 76px;
+  text-align: right;
+}
+
+input[type='text'] {
+  width: 150px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+input::placeholder {
+  color: var(--legend-dim);
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+select:hover,
+input:hover,
+button:hover:not(:disabled) {
+  border-color: var(--legend-dim);
+}
+
+.hint,
+.problem,
+.done {
+  max-width: 70ch;
+  margin: 2px 0 10px;
+  font-size: calc(13px * var(--font-scale));
+  line-height: 1.35;
+}
+
+.hint {
+  color: var(--legend-dim);
+}
+
+.problem {
+  color: var(--memory);
+}
+
+.done {
+  color: var(--channel);
+}
+
+/* the lettering: - ×1.0 + */
+.scale {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+/* - and + keep their size and place while the lettering changes: + can be pressed again and again */
+.scale .step {
+  width: 38px;
+  height: 30px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.scale .value {
+  width: 72px;
+  font-size: calc(20px * var(--font-scale));
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ---- mobile: the page scrolls as a whole */
+:host-context(.mobile) {
+  grid-template-rows: none;
+}
+
+:host-context(.mobile) header {
+  display: block;
+}
+
+:host-context(.mobile) .summary {
+  margin-top: 6px;
+}
+
+:host-context(.mobile) .panels {
+  overflow: visible;
+}

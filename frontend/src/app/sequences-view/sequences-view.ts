@@ -58,17 +58,20 @@ export class SequencesView {
   protected readonly speedPositions = SPEED_POSITIONS;
   protected readonly speedKeyStep = SPEED_KEY_STEP;
 
-  /** The memory numbers on the page that is shown: as many as memory faders stand in a row. */
+  /**
+   * The memory numbers on the page that is shown: as many as faders stand in a row on this window.
+   * What Settings says about the main view does not count here.
+   */
   protected readonly numbers = computed(() =>
-    stripNumbers(this.store.firstMemory(), this.store.memoriesPerPage()),
+    stripNumbers(this.store.viewFirstMemory(), this.store.viewMemoriesPerPage()),
   );
 
   /** The page keys: full for the page that is shown, half for a page with a stored memory. */
   protected readonly pages = computed(() =>
     storedMemoryPages(
       this.store.memoryStored(),
-      this.store.memoriesPerPage(),
-      this.store.firstMemory(),
+      this.store.viewMemoriesPerPage(),
+      this.store.viewFirstMemory(),
     ),
   );
 

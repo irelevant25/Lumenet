@@ -25,13 +25,13 @@ form {
 
 h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: calc(20px * var(--font-scale));
   font-weight: 600;
 }
 
 label {
   color: var(--legend-dim);
-  font-size: 13px;
+  font-size: calc(13px * var(--font-scale));
 }
 
 input {
@@ -44,13 +44,13 @@ input {
   background: var(--well);
   color: var(--legend);
   font: inherit;
-  font-size: 16px;
+  font-size: calc(16px * var(--font-scale));
 }
 
 .hint {
   margin: 0;
   color: var(--legend-dim);
-  font-size: 13px;
+  font-size: calc(13px * var(--font-scale));
   overflow-wrap: anywhere;
 }
 
@@ -79,7 +79,7 @@ input {
   background: none;
   color: inherit;
   font: inherit;
-  font-size: 15px;
+  font-size: calc(15px * var(--font-scale));
   text-align: left;
   cursor: pointer;
 }
@@ -95,7 +95,7 @@ input {
 .modified {
   flex: none;
   color: var(--legend-dim);
-  font-size: 13px;
+  font-size: calc(13px * var(--font-scale));
 }
 
 .empty {

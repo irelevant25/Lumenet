@@ -725,12 +725,12 @@ public sealed class DeskTests
     // ---------------------------------------------------------------- independent keys
 
     [Fact]
-    public void IndependentKeysStartOnTheFirstTenChannelsAndTheFirstTenMemories()
+    public void IndependentKeysStartOnTheFirst32ChannelsAndTheFirst32Memories()
     {
         var desk = new Desk();
 
-        Assert.Equal([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], desk.GetState().Independents);
-        Assert.Equal([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], desk.GetState().MemoryIndependents);
+        Assert.Equal(Enumerable.Range(1, 32), desk.GetState().Independents);
+        Assert.Equal(Enumerable.Range(1, 32), desk.GetState().MemoryIndependents);
     }
 
     [Fact]
@@ -770,16 +770,16 @@ public sealed class DeskTests
     {
         var desk = new Desk();
 
-        var noSuchKey = Assert.Throws<ArgumentOutOfRangeException>(() => desk.SetIndependent(11, 1));
-        Assert.Equal("The independent must be from 1 to 10, not 11.", noSuchKey.Message);
-        AssertOutOfRange("from 1 to 10", () => desk.SetIndependent(0, 1));
+        var noSuchKey = Assert.Throws<ArgumentOutOfRangeException>(() => desk.SetIndependent(33, 1));
+        Assert.Equal("The independent must be from 1 to 32, not 33.", noSuchKey.Message);
+        AssertOutOfRange("from 1 to 32", () => desk.SetIndependent(0, 1));
 
         var noSuchChannel = Assert.Throws<ArgumentOutOfRangeException>(() => desk.SetIndependent(1, 513));
         Assert.Equal("The channel must be from 1 to 512, not 513.", noSuchChannel.Message);
         AssertOutOfRange("from 1 to 512", () => desk.SetIndependent(1, 0));
 
-        var noSuchMemoryKey = Assert.Throws<ArgumentOutOfRangeException>(() => desk.SetMemoryIndependent(11, 1));
-        Assert.Equal("The memory independent must be from 1 to 10, not 11.", noSuchMemoryKey.Message);
+        var noSuchMemoryKey = Assert.Throws<ArgumentOutOfRangeException>(() => desk.SetMemoryIndependent(33, 1));
+        Assert.Equal("The memory independent must be from 1 to 32, not 33.", noSuchMemoryKey.Message);
         var noSuchMemory = Assert.Throws<ArgumentOutOfRangeException>(() => desk.SetMemoryIndependent(1, 129));
         Assert.Equal("The memory must be from 1 to 128, not 129.", noSuchMemory.Message);
 

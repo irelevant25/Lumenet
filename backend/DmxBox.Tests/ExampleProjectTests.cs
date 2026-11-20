@@ -97,12 +97,15 @@ public sealed class ExampleProjectTests : IDisposable
         ProjectContent content = _desk.GetProject().Content;
         bool Stored(int memory) => content.Looks[memory - 1] is not null || content.Sequences[memory - 1] is not null;
 
+        // The memory keys of the independents that a desk shows unless its settings show more:
+        // the example chose memories for these. The others are where a new desk has them.
+        const int shownMemoryKeys = 10;
         IEnumerable<int> used = content.Sequences.OfType<Sequence>()
             .SelectMany(sequence => sequence.Steps)
             .Concat(_desk.GetStack().Steps.Select(step => new Step(step.Target, step.Number, step.Value, step.Up, step.Wait, step.Down)))
             .Where(step => step.Target == Step.Memory)
             .Select(step => step.Number)
-            .Concat(content.MemoryIndependents);
+            .Concat(content.MemoryIndependents.Take(shownMemoryKeys));
         Assert.All(used.Distinct(), memory => Assert.True(Stored(memory), $"memory {memory} is used but empty"));
 
         for (int memory = 1; memory <= Desk.MemoryCount; memory++)

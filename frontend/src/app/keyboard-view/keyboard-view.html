@@ -1,0 +1,92 @@
+<header>
+  <h2>Keyboard</h2>
+  <p class="summary">
+    A shortcut for any key of the desk. The shortcuts belong to this browser on this device.
+    {{ mapped() }} {{ mapped() === 1 ? 'key has' : 'keys have' }} a shortcut.
+  </p>
+</header>
+
+<div class="top">
+  <button type="button" class="listen" (click)="keyboard.listen()">Listen</button>
+  <p class="hint">
+    Listen shows the desk; the next key you click there is not pressed but picked, and comes back
+    here. Set, then press the keys of the shortcut (Esc stops). Shortcuts rest while a note is
+    typed or a window is open.
+  </p>
+  <input
+    class="search"
+    type="search"
+    placeholder="Find a key or a shortcut"
+    aria-label="Find a key or a shortcut"
+    autocomplete="off"
+    [value]="search()"
+    (input)="onSearch($event)"
+  />
+</div>
+
+<div class="list">
+  @if (keyboard.lastMove()) {
+    <p class="done" role="status">{{ keyboard.lastMove() }}</p>
+  }
+
+  @for (entry of groups(); track entry.group) {
+    <div class="group">
+      <button
+        type="button"
+        class="group-title"
+        [attr.aria-expanded]="entry.open"
+        (click)="toggleGroup(entry.group)"
+      >
+        <span class="arrow" aria-hidden="true">{{ entry.open ? '▾' : '▸' }}</span>
+        {{ entry.group }}
+        <span class="count">{{ entry.count }}</span>
+      </button>
+      @if (entry.open) {
+        <table>
+          <caption class="for-readers">Shortcuts: {{ entry.group }}</caption>
+          <tbody>
+            @for (action of entry.rows; track action.id) {
+              <tr
+                [attr.data-row]="action.id"
+                [class.picked]="keyboard.picked() === action.id"
+                [class.recording]="keyboard.recording() === action.id"
+              >
+                <th scope="row">{{ label(action) }}</th>
+                <td class="keys">
+                  @if (keyboard.recording() === action.id) {
+                    <span class="waiting">Press the keys… (Esc stops)</span>
+                  } @else {
+                    {{ shortcutOf(action) }}
+                  }
+                </td>
+                <td class="row-keys">
+                  <button
+                    type="button"
+                    class="set"
+                    [attr.aria-label]="'Set the shortcut of ' + label(action)"
+                    (click)="keyboard.record(action.id)"
+                  >
+                    Set
+                  </button>
+                  <button
+                    type="button"
+                    [attr.aria-label]="'Take the shortcut of ' + label(action) + ' away'"
+                    [disabled]="!shortcutOf(action)"
+                    (click)="keyboard.clear(action.id)"
+                  >
+                    ✕
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        @if (entry.cut) {
+          <p class="hint">More are found: type a little more to see them.</p>
+        }
+      }
+    </div>
+  } @empty {
+    <p class="hint">No key or shortcut has these letters.</p>
+  }
+</div>

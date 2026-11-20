@@ -56,10 +56,12 @@ public sealed class ProjectStoreTests : IDisposable
 
         _store.Save("show");
 
-        string expected = """
+        string channelKeys = string.Join(",\n    ", Enumerable.Range(1, 32).Select(key => key == 2 ? 300 : key));
+        string memoryKeys = string.Join(",\n    ", Enumerable.Range(1, 32).Select(key => key == 10 ? 128 : key));
+        string expected = $$"""
             {
               "format": "lumenet-project",
-              "version": 3,
+              "version": 4,
               "memories": [
                 {
                   "number": 1,
@@ -81,28 +83,10 @@ public sealed class ProjectStoreTests : IDisposable
                 "3": "Blue wash"
               },
               "independents": [
-                1,
-                300,
-                3,
-                4,
-                5,
-                6,
-                7,
-                8,
-                9,
-                10
+                {{channelKeys}}
               ],
               "memoryIndependents": [
-                1,
-                2,
-                3,
-                4,
-                5,
-                6,
-                7,
-                8,
-                9,
-                128
+                {{memoryKeys}}
               ],
               "sequences": [
                 {
@@ -139,15 +123,15 @@ public sealed class ProjectStoreTests : IDisposable
     }
 
     [Fact]
-    public void NewProjectHasEmptyListsAndTheTenFirstChannelsAndMemoriesInItsFile()
+    public void NewProjectHasEmptyListsAndThe32FirstChannelsAndMemoriesInItsFile()
     {
         _store.Save("show");
 
-        string keys = string.Join(",\n    ", Enumerable.Range(1, 10));
+        string keys = string.Join(",\n    ", Enumerable.Range(1, 32));
         string expected = $$"""
             {
               "format": "lumenet-project",
-              "version": 3,
+              "version": 4,
               "memories": [],
               "channelNotes": {},
               "memoryNotes": {},
@@ -424,16 +408,32 @@ public sealed class ProjectStoreTests : IDisposable
     }
 
     [Fact]
-    public void FileFromBeforeTheMemoryKeysKeepsItsFirstTenChannelKeys()
+    public void FileFromBeforeTheMemoryKeysKeepsItsSixteenChannelKeys()
     {
-        // Versions 1 and 2 had sixteen channel keys and no memory keys.
+        // Versions 1 and 2 had sixteen channel keys and no memory keys. Keys 17 to 32 are where
+        // they are on a new desk.
         string sixteen = string.Join(", ", Enumerable.Range(101, 16));
         File.WriteAllText(PathOf("old"), $$"""{ "format": "lumenet-project", "version": 2, "memories": [], "independents": [{{sixteen}}] }""");
 
         _store.Load("old");
 
-        Assert.Equal(Enumerable.Range(101, 10), _desk.GetState().Independents);
+        Assert.Equal(Enumerable.Range(101, 16).Concat(Enumerable.Range(17, 16)), _desk.GetState().Independents);
         Assert.Equal(Desk.DefaultMemoryIndependents(), _desk.GetState().MemoryIndependents);
+    }
+
+    [Fact]
+    public void FileOfVersion3KeepsItsTenKeysOfEachKind()
+    {
+        string channels = string.Join(", ", Enumerable.Range(201, 10));
+        string memories = string.Join(", ", Enumerable.Range(41, 10));
+        File.WriteAllText(
+            PathOf("old"),
+            $$"""{ "format": "lumenet-project", "version": 3, "memories": [], "independents": [{{channels}}], "memoryIndependents": [{{memories}}] }""");
+
+        _store.Load("old");
+
+        Assert.Equal(Enumerable.Range(201, 10).Concat(Enumerable.Range(11, 22)), _desk.GetState().Independents);
+        Assert.Equal(Enumerable.Range(41, 10).Concat(Enumerable.Range(11, 22)), _desk.GetState().MemoryIndependents);
     }
 
     [Fact]
@@ -468,7 +468,7 @@ public sealed class ProjectStoreTests : IDisposable
     [Fact]
     public void FileOfANewerVersionIsRefused()
     {
-        AssertRefused("version 4", """{ "format": "lumenet-project", "version": 4, "memories": [] }""");
+        AssertRefused("version 5", """{ "format": "lumenet-project", "version": 5, "memories": [] }""");
     }
 
     [Fact]

@@ -2,13 +2,20 @@ import { Component, computed, inject } from '@angular/core';
 import { DeskStore } from '../desk/desk-store';
 import { MEMORY_COUNT, stripNumbers } from '../desk/desk-types';
 import { heldMemory, memoryBlinks } from '../desk/function-mode';
+import { KeyColumns } from '../desk/key-columns';
 import { LampLevel, memoryLamp, memoryPageLamp } from '../desk/lamps';
 import { FaderStrip } from '../fader-strip/fader-strip';
 import { LampButton } from '../lamp-button/lamp-button';
 
-/** The memories: one row of faders, and the keys that choose which memories the row shows. */
+/**
+ * The memories: one row of faders (or two, as Settings says), and the keys that choose which
+ * memories the rows show. Like the channels, the page keys go on in further columns, and the
+ * rows scroll sideways when they are wider than the window (on their own, not with the
+ * channels). The key under a fader puts it to full and back to zero, or does what the lit
+ * record key wants.
+ */
 @Component({
-  imports: [FaderStrip, LampButton],
+  imports: [FaderStrip, KeyColumns, LampButton],
   selector: 'lm-memory-section',
   styleUrl: './memory-section.css',
   templateUrl: './memory-section.html',
@@ -16,10 +23,13 @@ import { LampButton } from '../lamp-button/lamp-button';
 export class MemorySection {
   protected readonly store = inject(DeskStore);
 
-  /** The memory numbers on the page that is shown. */
-  protected readonly numbers = computed(() =>
-    stripNumbers(this.store.firstMemory(), this.store.memoriesPerPage()),
-  );
+  /** The memory numbers of the rows on the page that is shown. */
+  protected readonly rows = computed(() => {
+    const first = this.store.firstMemory();
+    const perRow = this.store.stripsPerRow();
+    const count = this.store.memoriesPerPage() / perRow;
+    return Array.from({ length: count }, (_, row) => stripNumbers(first + row * perRow, perRow));
+  });
 
   /** The page keys: full for the page that is shown, half for a page that holds or plays something. */
   protected readonly pages = computed(() => {

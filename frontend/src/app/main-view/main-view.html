@@ -2,6 +2,9 @@
 <lm-memory-section />
 <div class="side">
   <lm-master-section />
+  <lm-stack-section />
   <lm-record-section />
 </div>
-<lm-independents />
+@if (independents()) {
+  <lm-independents />
+}

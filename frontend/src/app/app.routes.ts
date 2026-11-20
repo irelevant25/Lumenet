@@ -23,5 +23,15 @@ export const routes: Routes = [
     loadComponent: () => import('./stack-view/stack-view').then((file) => file.StackView),
     title: 'Lumenet: stack',
   },
+  {
+    path: 'settings',
+    loadComponent: () => import('./settings-view/settings-view').then((file) => file.SettingsView),
+    title: 'Lumenet: settings',
+  },
+  {
+    path: 'keyboard',
+    loadComponent: () => import('./keyboard-view/keyboard-view').then((file) => file.KeyboardView),
+    title: 'Lumenet: keyboard',
+  },
   { path: '**', redirectTo: '' },
 ];

@@ -53,4 +53,12 @@ internal sealed class PretendPc : ThisPc
         _lan = [address];
         RaiseChanged();
     }
+
+    /// <summary>The PC is in more than one network at once, for example by cable and by Wi-Fi.</summary>
+    /// <param name="addresses">Its addresses, the best one first.</param>
+    public void Have(params IPAddress[] addresses)
+    {
+        _lan = addresses;
+        RaiseChanged();
+    }
 }

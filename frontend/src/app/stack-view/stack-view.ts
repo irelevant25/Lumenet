@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DeskStore } from '../desk/desk-store';
-import { StackStep, TimedStep, firstStep, stepAfter } from '../desk/desk-types';
+import { StackStep, TimedStep } from '../desk/desk-types';
 import { noteInOneLine } from '../desk/notes';
 import { StepChoices, stepChoices } from '../desk/step-choices';
 import { LampButton } from '../lamp-button/lamp-button';
@@ -40,15 +40,13 @@ export class StackView {
 
   /** True while the stack is live: it runs, and its steps are locked. */
   protected readonly live = this.store.live;
-  protected readonly current = computed(() => this.stepWithId(this.playback().currentId));
-  protected readonly next = computed(() => this.stepWithId(this.playback().nextId));
-  protected readonly paused = computed(() => this.playback().paused);
+  protected readonly previous = computed(() => this.store.stackPosition().previous);
+  protected readonly current = computed(() => this.store.stackPosition().current);
+  protected readonly next = computed(() => this.store.stackPosition().next);
+  protected readonly paused = this.store.stackPaused;
 
   /** True while the stack moves by itself: a fade or a countdown that is not paused. */
-  protected readonly running = computed(() => {
-    const { state, paused } = this.playback();
-    return !paused && (state === 'fading' || state === 'waiting');
-  });
+  protected readonly running = this.store.stackRunning;
 
   /** The step that is being dragged, and where it would land. */
   private readonly dragged = signal<number | null>(null);
@@ -117,9 +115,7 @@ export class StackView {
 
   /** Puts a step at the end: the first one, or one like the last on the next channel or memory. */
   protected addStep(): void {
-    const last = this.steps().at(-1);
-    // A wait of 0 is the stack's usual case: it stays on a step until Play is pressed.
-    this.store.addStackStep(last ? stepAfter(last) : firstStep(0));
+    this.store.addStackStepAtEnd();
   }
 
   /** A row hands back its step with one field changed. Only the step itself goes to the desk, not its name and number. */
@@ -201,9 +197,5 @@ export class StackView {
   protected onDragEnd(): void {
     this.dragged.set(null);
     this.dropMark.set(null);
-  }
-
-  private stepWithId(id: number | null): StackStep | null {
-    return id === null ? null : (this.steps().find((step) => step.id === id) ?? null);
   }
 }

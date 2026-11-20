@@ -20,12 +20,17 @@
   --white-lamp: #f1f3f6;
   --blue-lamp: #4aa3ff;
   --live: #ff5247; /* the stack is live: the red of an "on air" sign, on the Stack key and in the top bar */
+  --previous: var(--blue-lamp); /* the step of the stack before the one that is on: blue */
 
   --cap: #d9dde3;
   --focus: #8ab4ff;
 
   /* DIN-style lettering, as on equipment panels. Bahnschrift comes with Windows, DIN Alternate with Apple devices. */
   --font: 'Bahnschrift', 'DIN Alternate', 'Roboto Condensed', 'Arial Narrow', system-ui, sans-serif;
+
+  /* The size of all lettering, as chosen in Settings: every font size of the page is multiplied
+     by it. The page sets it on <html> (desk-settings.ts); 1 until then. */
+  --font-scale: 1;
 
   /* ---- layout ----
      A wide window shows 32 faders in a row. The width of one fader strip follows the window:
@@ -36,6 +41,11 @@
   --strip-gap: 4px;
   --strips: 32; /* faders in one row */
   --line: var(--strips); /* faders side by side: fewer than a row only on a phone, where a row breaks in two */
+  /* The faders side by side that the width of a strip is made for. The same as --line, but for
+     a channel size chosen in Settings: then --line is the faders of that size in a row (the
+     page sets it on <html>), the strips keep the width they have here, and a row that is too
+     wide for the window scrolls sideways. */
+  --fit-line: var(--strips);
   --strip: clamp(28px, calc((100vw - 365px) / 32.82), 60px);
 
   /* A column of keys that is too high for its place first gets flatter keys, down to this
@@ -47,11 +57,20 @@
   --key-w: min(var(--strip), max(32px, calc(var(--strip) * 0.82)));
   --key-h: calc(var(--key-w) * 0.86);
 
-  /* lettering sizes that grow with the keys */
-  --key-number: max(11px, calc(var(--key-w) * 0.36));
-  --key-word: max(10px, calc(var(--key-w) * 0.3));
-  --key-range: max(9px, calc(var(--key-w) * 0.26));
-  --readout: max(11px, calc(var(--key-w) * 0.31));
+  /* Lettering sizes that grow with the keys, and with the size of all lettering (Settings).
+     Numbers follow it all the way: a channel number or a range (on two lines, broken after the
+     dash) still fits into a key at x1.5. The keys keep their size, so words grow by 15 % at most:
+     more would not fit two lines into a key. Smaller they follow all the way. */
+  --key-scale: min(var(--font-scale), 1.15);
+  --key-number: calc(max(11px, var(--key-w) * 0.36) * var(--font-scale));
+  --key-word: calc(max(10px, var(--key-w) * 0.3) * var(--key-scale));
+  --key-range: calc(max(9px, var(--key-w) * 0.26) * var(--font-scale));
+  --readout: calc(max(11px, var(--key-w) * 0.31) * var(--font-scale));
+
+  /* The wheel of the stack on the main view: a place for each step, numbers that follow the
+     size of all lettering fully. The main view sizes its side column with them. */
+  --wheel-number: calc(max(11px, var(--key-w) * 0.26) * var(--font-scale));
+  --place-h: calc(var(--wheel-number) * 1.4);
 }
 
 /* ---- window sizes ----
@@ -71,7 +90,7 @@ html.medium {
 html.mobile {
   --strip: clamp(
     28px,
-    calc((100cqw - 2 * var(--gap) - 20px - (var(--line) - 1) * var(--strip-gap)) / var(--line)),
+    calc((100cqw - 2 * var(--gap) - 20px - (var(--fit-line) - 1) * var(--strip-gap)) / var(--fit-line)),
     60px
   );
   --key-w: min(var(--strip), 48px); /* as wide as a strip: a finger needs the room */
@@ -87,6 +106,7 @@ html.mobile body {
 /* phone: a row of 16 faders breaks into two lines of 8 (STRIPS_PER_LINE_PHONE in desk-types.ts) */
 html.phone {
   --line: 8;
+  --fit-line: 8;
 }
 
 html,
@@ -99,7 +119,7 @@ body {
   background: var(--panel);
   color: var(--legend);
   font-family: var(--font);
-  font-size: 14px;
+  font-size: calc(14px * var(--font-scale));
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent; /* the keys show a press themselves */
@@ -113,13 +133,37 @@ body {
   outline-offset: 2px;
 }
 
+/* A scrollbar big enough to take hold of: the rows of faders on the main view have one when a
+   channel size chosen in Settings makes them wider than the window. (Firefox, which knows no
+   such styles, shows its own of the usual size.) */
+.big-scrollbar::-webkit-scrollbar {
+  width: 18px;
+  height: 18px;
+}
+
+.big-scrollbar::-webkit-scrollbar-track {
+  border-radius: 9px;
+  background: var(--well);
+}
+
+.big-scrollbar::-webkit-scrollbar-thumb {
+  border: 3px solid var(--well);
+  border-radius: 9px;
+  background: var(--legend-dim);
+}
+
+.big-scrollbar::-webkit-scrollbar-thumb:hover,
+.big-scrollbar::-webkit-scrollbar-thumb:active {
+  background: var(--legend);
+}
+
 /* ---- tables of steps (the Sequences view and the Stack view) ----
    One row is one step. The rows are their own strips with a little room between them. */
 table.steps {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0 3px;
-  font-size: 14px;
+  font-size: calc(14px * var(--font-scale));
 }
 
 /* for screen readers only */
@@ -135,7 +179,7 @@ table.steps caption {
 table.steps thead th {
   padding: 0 6px 2px;
   color: var(--legend-dim);
-  font-size: 12px;
+  font-size: calc(12px * var(--font-scale));
   font-stretch: 75%;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -156,7 +200,7 @@ table.steps td {
 table.steps tbody th {
   width: 1%;
   padding: 0 10px;
-  font-size: 15px;
+  font-size: calc(15px * var(--font-scale));
   font-weight: 600;
   text-align: right;
   white-space: nowrap;
@@ -173,7 +217,13 @@ table.steps tbody tr > :last-child {
 }
 
 /* The step that is on right now is green, like a channel that is up. The step that comes
-   next has the amber edge of the keys that act on the desk. */
+   next has the amber edge of the keys that act on the desk. The step before the one that is on
+   is dim grey: it is done. (With two steps it is also the next one: then its edge is amber.) */
+table.steps tr.previous > * {
+  border-color: var(--previous);
+  background: color-mix(in srgb, var(--previous) 12%, var(--well));
+}
+
 table.steps tr.current > * {
   border-color: var(--channel);
   background: color-mix(in srgb, var(--channel) 20%, var(--well));
@@ -204,7 +254,7 @@ table.steps select {
   background: var(--panel);
   color: var(--legend);
   font: inherit;
-  font-size: 14px;
+  font-size: calc(14px * var(--font-scale));
   font-variant-numeric: tabular-nums;
 }
 
@@ -256,7 +306,7 @@ table.steps .row-keys button {
   background: var(--panel);
   color: var(--legend);
   font: inherit;
-  font-size: 13px;
+  font-size: calc(13px * var(--font-scale));
   line-height: 1;
   cursor: pointer;
 }

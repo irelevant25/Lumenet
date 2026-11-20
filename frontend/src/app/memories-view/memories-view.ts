@@ -7,10 +7,14 @@ import { splitNote } from '../desk/notes';
 import { LampButton, LampTone } from '../lamp-button/lamp-button';
 import { NoteLines } from '../note-lines/note-lines';
 
-/** One cell of the table: a channel and the level the memory holds for it. */
+/** One cell of the table: a channel, the level the memory holds for it, and the channel's note. */
 interface Cell {
   channel: number;
   level: number;
+  /** The lines of the channel's note, one under the other; null without a note. */
+  note: string | null;
+  /** What a screen reader says: "Channel 5 (Front left): 255". */
+  name: string;
 }
 
 /**
@@ -27,17 +31,20 @@ interface Cell {
 export class MemoriesView {
   protected readonly store = inject(DeskStore);
 
-  /** The memory numbers on the page that is shown: as many as memory faders stand in a row. */
+  /**
+   * The memory numbers on the page that is shown: as many as faders stand in a row on this window.
+   * What Settings says about the main view does not count here.
+   */
   protected readonly numbers = computed(() =>
-    stripNumbers(this.store.firstMemory(), this.store.memoriesPerPage()),
+    stripNumbers(this.store.viewFirstMemory(), this.store.viewMemoriesPerPage()),
   );
 
   /** The page keys: full for the page that is shown, half for a page with a stored memory. */
   protected readonly pages = computed(() =>
     storedMemoryPages(
       this.store.memoryStored(),
-      this.store.memoriesPerPage(),
-      this.store.firstMemory(),
+      this.store.viewMemoriesPerPage(),
+      this.store.viewFirstMemory(),
     ),
   );
 
@@ -46,17 +53,35 @@ export class MemoriesView {
     () => this.store.memoryLooks()[this.store.inspectedMemory()] ?? null,
   );
 
+  /** True when any channel has a note: then every cell of the table keeps room for one. */
+  protected readonly withNotes = computed(() =>
+    this.store.channelNotes().some((note) => note.trim() !== ''),
+  );
+
   /**
    * The rows of the table: all 512 channels, as many in a row as memory keys stand in a line
-   * (32, 16, or 8 on a phone).
+   * (32, 16, or 8 on a phone), each with the note of its channel.
    */
   protected readonly rows = computed(() => {
     const look = this.look();
-    const perRow = this.store.phone() ? STRIPS_PER_LINE_PHONE : this.store.stripsPerRow();
+    const notes = this.store.channelNotes();
+    const perRow = this.store.phone() ? STRIPS_PER_LINE_PHONE : this.store.windowStripsPerRow();
     const rows: Cell[][] = [];
     for (let first = 1; first <= CHANNEL_COUNT; first += perRow) {
       rows.push(
-        stripNumbers(first, perRow).map((channel) => ({ channel, level: look?.[channel - 1] ?? 0 })),
+        stripNumbers(first, perRow).map((channel) => {
+          const level = look?.[channel - 1] ?? 0;
+          const lines = splitNote(notes[channel - 1] ?? '')
+            .map((line) => line.trim())
+            .filter((line) => line !== '');
+          const said = lines.length ? ` (${lines.join(' ')})` : '';
+          return {
+            channel,
+            level,
+            note: lines.length ? lines.join('\n') : null,
+            name: `Channel ${channel}${said}: ${level}`,
+          };
+        }),
       );
     }
     return rows;

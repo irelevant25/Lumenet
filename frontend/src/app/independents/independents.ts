@@ -1,22 +1,30 @@
 import { Component, computed, inject, linkedSignal } from '@angular/core';
+import { DeskSettings } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
-import { CHANNEL_COUNT, CHANNEL_INDEPENDENT_COUNT, MEMORY_COUNT } from '../desk/desk-types';
+import { CHANNEL_COUNT, MEMORY_COUNT } from '../desk/desk-types';
+import { KeyColumns } from '../desk/key-columns';
 import { memoryLamp } from '../desk/lamps';
 import { LampButton, LampTone } from '../lamp-button/lamp-button';
 
 /**
- * The independents: twenty keys in one column at the right edge. The ten green ones each switch
- * a channel between zero and full, the ten red ones each switch the fader of a memory. The
- * channel or memory a key switches is printed on it; Edit lets the owner change those numbers.
+ * The independents: a column at the right edge. The green keys each switch a channel between
+ * zero and full, the red ones each switch the fader of a memory; Settings says how many of each
+ * are shown (0 to 32, 10 at first; with none of either the main view leaves the section out).
+ * The channel or memory a key switches is printed on it; Edit lets the owner change those
+ * numbers. Keys that do not fit into one column go on in another.
  */
 @Component({
-  imports: [LampButton],
+  imports: [KeyColumns, LampButton],
   selector: 'lm-independents',
   styleUrl: './independents.css',
   templateUrl: './independents.html',
 })
 export class Independents {
   protected readonly store = inject(DeskStore);
+  private readonly settings = inject(DeskSettings);
+
+  /** Edit, and the keys of both kinds that are shown. */
+  protected readonly keyCount = computed(() => 1 + this.settings.channelKeys() + this.settings.memoryKeys());
 
   /**
    * True while the numbers on the keys can be changed. A stack that goes live ends the
@@ -27,32 +35,40 @@ export class Independents {
     computation: () => false,
   });
 
-  /** The ten channel keys: which channel each one switches, and whether that channel is up. */
+  /** The channel keys that are shown: which channel each one switches, and whether that channel is up. */
   protected readonly channelKeys = computed(() => {
     const levels = this.store.channels();
-    return this.store.independents().map((channel, index) => ({
-      number: index + 1,
-      channel,
-      on: levels[channel - 1] > 0,
-    }));
+    return this.store
+      .independents()
+      .slice(0, this.settings.channelKeys())
+      .map((channel, index) => ({
+        number: index + 1,
+        channel,
+        on: levels[channel - 1] > 0,
+      }));
   });
 
   /**
-   * The ten memory keys: which memory each one switches, and how lit it is, like the key under
-   * that memory's fader. Their numbers for screen readers follow those of the channel keys: 11 to 20.
+   * The memory keys that are shown: which memory each one switches, and how lit it is, like the
+   * key under that memory's fader. Their numbers for screen readers follow those of the channel
+   * keys that are shown: with 10 of those, 11 and on.
    */
   protected readonly memoryKeys = computed(() => {
     const levels = this.store.memoryLevels();
     const stored = this.store.memoryStored();
     const sequence = this.store.memorySequence();
-    return this.store.memoryIndependents().map((memory, index) => ({
-      number: index + 1,
-      name: CHANNEL_INDEPENDENT_COUNT + index + 1,
-      memory,
-      on: levels[memory - 1] > 0,
-      lamp: memoryLamp(levels[memory - 1], stored[memory - 1]),
-      tone: (sequence[memory - 1] ? 'sequence' : 'memory') as LampTone,
-    }));
+    const channelKeys = this.settings.channelKeys();
+    return this.store
+      .memoryIndependents()
+      .slice(0, this.settings.memoryKeys())
+      .map((memory, index) => ({
+        number: index + 1,
+        name: channelKeys + index + 1,
+        memory,
+        on: levels[memory - 1] > 0,
+        lamp: memoryLamp(levels[memory - 1], stored[memory - 1]),
+        tone: (sequence[memory - 1] ? 'sequence' : 'memory') as LampTone,
+      }));
   });
 
   protected toggleEditing(): void {

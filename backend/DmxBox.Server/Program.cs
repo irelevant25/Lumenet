@@ -199,7 +199,8 @@ internal static class Program
             return connection =>
             {
                 IPAddress? remote = (connection.RemoteEndPoint as IPEndPoint)?.Address;
-                return lan.MayConnect(remote) ? next(connection) : Task.CompletedTask;
+                IPAddress? local = (connection.LocalEndPoint as IPEndPoint)?.Address;
+                return lan.MayConnect(remote, local) ? next(connection) : Task.CompletedTask;
             };
         })));
     }

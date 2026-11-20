@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { App } from './app';
 import { routes } from './app.routes';
+import { actionWithId } from './desk/desk-actions';
 import { DeskConnection } from './desk/desk-connection';
 import { DeskStore } from './desk/desk-store';
 import {
@@ -144,6 +145,10 @@ describe('the desk page', () => {
   let store: DeskStore;
 
   beforeEach(async () => {
+    // Settings belong to the browser: each test starts with none, and with nothing set on <html>.
+    localStorage.clear();
+    document.documentElement.removeAttribute('style');
+
     connection = new FakeConnection();
     connection.welcome.desk.memoryStored[1] = true; // memory 2 holds a look: channel 5 at 200, channel 70 full
     const look = new Array<number>(CHANNEL_COUNT).fill(0);
@@ -204,7 +209,7 @@ describe('the desk page', () => {
     return found;
   }
 
-  /** The key under a channel fader. It is a button only while a sequence is recorded. */
+  /** The key under a channel fader, if its channel is on the page that is shown. */
   function channelKey(channel: number): HTMLButtonElement | null {
     return page.querySelector<HTMLButtonElement>(`button[aria-label^="Channel ${channel} key"]`);
   }
@@ -283,10 +288,42 @@ describe('the desk page', () => {
     expect(page.querySelector('lm-fader[aria-label="Channel 1"]')).toBeNull();
   });
 
-  it('save: a press on a memory key stores the channel faders there', async () => {
-    await press(memoryKey(5));
-    expect(connection.methods()).toEqual([]); // outside a function the keys do nothing
+  it('a key under a fader puts the fader to full, and back to zero when it is at full', async () => {
+    const channel = (number: number) => store.channels()[number - 1];
+    const memory = (number: number) => store.memoryLevels()[number - 1];
 
+    await press(channelKey(5));
+    expect(channel(5)).toBe(255);
+    await press(channelKey(5));
+    expect(channel(5)).toBe(0);
+
+    // A fader somewhere between goes to full first.
+    store.setChannel(6, 100);
+    await press(channelKey(6));
+    expect(channel(6)).toBe(255);
+
+    await press(memoryKey(3));
+    expect(memory(3)).toBe(255);
+    await press(memoryKey(3));
+    expect(memory(3)).toBe(0);
+    await new Promise((resolve) => setTimeout(resolve, 40)); // fader moves are sent a moment later
+    expect(connection.calls).toContainEqual({ method: 'SetChannel', args: [6, 255] });
+    expect(connection.calls).toContainEqual({ method: 'SetMemoryLevel', args: [3, 255] });
+    expect(connection.last('SetMemoryLevel')).toEqual([3, 0]);
+
+    // While a record key waits for a memory, the memory keys are for that, not for their faders.
+    await press(button('Save memory'));
+    await press(memoryKey(3));
+    expect(memory(3)).toBe(0);
+    expect(connection.calls).toContainEqual({ method: 'SaveMemory', args: [3] });
+    // A channel key still works its fader: a look can be built with the keys before it is saved.
+    await press(button('Save memory'));
+    await press(channelKey(7));
+    expect(channel(7)).toBe(255);
+    expect(store.mode()).toEqual({ kind: 'save' });
+  });
+
+  it('save: a press on a memory key stores the channel faders there', async () => {
     await press(button('Save memory'));
     expect(button('Save memory').getAttribute('aria-pressed')).toBe('true');
 
@@ -359,13 +396,10 @@ describe('the desk page', () => {
   });
 
   it('rec seq: after the memory, every pressed key becomes a step of its sequence', async () => {
-    expect(channelKey(7)).toBeNull(); // a channel key is a lamp, not a key, until a sequence is recorded
-
     await press(button('Record sequence'));
     await press(memoryKey(2)); // holds a look: no place for a sequence
     expect(store.mode()).toEqual({ kind: 'record-pick' });
     expect(store.notice()).toContain('Memory 2 holds a look');
-    expect(channelKey(7)).toBeNull();
 
     await press(memoryKey(9));
     expect(store.mode()).toEqual({ kind: 'recording', memory: 9 });
@@ -405,7 +439,6 @@ describe('the desk page', () => {
 
     await press(button('Record sequence')); // done
     expect(store.mode()).toEqual(IDLE);
-    expect(channelKey(7)).toBeNull();
     expect(page.querySelector('.steps')).toBeNull();
     expect(connection.methods()).not.toContain('SetSequence');
   });
@@ -470,7 +503,7 @@ describe('the desk page', () => {
   });
 
   it('a medium window shows 16 faders in a row and twice as many page keys', async () => {
-    store.stripsPerRow.set(16);
+    store.windowStripsPerRow.set(16);
     await fixture.whenStable();
     expect(page.querySelectorAll('lm-channel-section lm-fader-strip').length).toBe(32);
     expect(page.querySelectorAll('lm-memory-section lm-fader-strip').length).toBe(16);
@@ -482,7 +515,7 @@ describe('the desk page', () => {
     expect(page.querySelector('lm-fader[aria-label="Channel 1"]')).toBeNull();
 
     // wide again: the page that holds channel 33 is the one from 1 to 64
-    store.stripsPerRow.set(32);
+    store.windowStripsPerRow.set(32);
     await fixture.whenStable();
     expect(page.querySelector('lm-fader[aria-label="Channel 1"]')).toBeTruthy();
     expect(page.querySelector('lm-fader[aria-label="Channel 64"]')).toBeTruthy();
@@ -500,9 +533,9 @@ describe('the desk page', () => {
   it('the independents stand at the right edge: ten keys for channels and ten for memories', () => {
     const main = page.querySelector('lm-main-view');
     expect(main?.lastElementChild?.tagName.toLowerCase()).toBe('lm-independents');
-    // the record keys stand under the master section
+    // the stack and then the record keys stand under the master section
     const side = [...(page.querySelector('lm-main-view .side')?.children ?? [])].map((part) => part.tagName.toLowerCase());
-    expect(side).toEqual(['lm-master-section', 'lm-record-section']);
+    expect(side).toEqual(['lm-master-section', 'lm-stack-section', 'lm-record-section']);
 
     const keys = [...page.querySelectorAll<HTMLButtonElement>('lm-independents button.number')];
     expect(keys.length).toBe(20);
@@ -809,6 +842,8 @@ describe('the desk page', () => {
       'Memories',
       'Sequences',
       'Stack',
+      'Settings',
+      'Keyboard',
     ]);
     expect(links[0].getAttribute('aria-current')).toBe('page');
     expect(links[1].getAttribute('aria-current')).toBeNull();
@@ -847,6 +882,21 @@ describe('the desk page', () => {
 
     expect(connection.methods()).toEqual([]); // looking sends nothing to the desk
     expect(store.channels()[4]).toBe(0);
+  });
+
+  it('the cells of the memories view carry the notes of their channels', async () => {
+    connection.emit('ChannelNoteChanged', 5, 'Front' + NOTE_LINE_SEPARATOR + 'left');
+    connection.emit('ChannelNoteChanged', 6, 'Wash');
+    await show('/memories');
+    const cell = (channel: number) => page.querySelectorAll('lm-memories-view table.matrix td')[channel - 1];
+
+    // every cell keeps room for a note, so that all have the same size
+    expect(page.querySelector('lm-memories-view table.matrix')?.classList).toContain('with-notes');
+    expect(cell(5).getAttribute('data-note')).toBe('Front\nleft'); // the style sheet shows it, one line under the other
+    expect(cell(5).getAttribute('aria-label')).toMatch(/^Channel 5 \(Front left\): \d+$/);
+    expect(cell(6).getAttribute('data-note')).toBe('Wash');
+    expect(cell(7).hasAttribute('data-note')).toBe(false);
+    expect(cell(7).getAttribute('aria-label')).toMatch(/^Channel 7: \d+$/);
   });
 
   it('a memory that holds a sequence has a key that runs from red to yellow', async () => {
@@ -1218,13 +1268,12 @@ describe('the desk page', () => {
     await press(button('Record sequence'));
     await press(memoryKey(9));
     await press(button('Edit the channels and memories of the independent keys'));
-    expect(channelKey(7)).toBeTruthy();
+    expect(store.mode()).toEqual({ kind: 'recording', memory: 9 });
     expect(page.querySelector('input[aria-label="Channel of independent key 2"]')).toBeTruthy();
 
     await stackStands(LIVE); // switched live on another page
 
     expect(store.mode()).toEqual(IDLE);
-    expect(channelKey(7)).toBeNull();
     expect(page.querySelector('input[aria-label="Channel of independent key 2"]')).toBeNull();
   });
 
@@ -1283,5 +1332,337 @@ describe('the desk page', () => {
     await fixture.whenStable();
     expect(connection.last('MoveStackStep')).toEqual([12, null]); // before the first step: the very top
     expect(rows[0].classList.contains('drop-before')).toBe(false);
+  });
+
+  // ---------------------------------------------------------------- the stack: previous, and the main view
+
+  it('the stack view shows the step before the current one, and its keys are bigger, Play the biggest', async () => {
+    await show('/stack');
+    const rows = () => [...page.querySelectorAll('lm-stack-view table.steps tbody tr')];
+
+    // On the second step the first is the one before it.
+    await stackStands({ ...LIVE, currentId: 12, nextId: 11 });
+    expect(rows().map((row) => row.classList.contains('previous'))).toEqual([true, false]);
+    expect(page.querySelector('.card.previous')?.classList.contains('on')).toBe(true);
+    expect(page.querySelector('.card.previous .what')?.textContent).toContain('1.0');
+
+    // On the first step it is the last: Prev goes round, as Play does.
+    await stackStands(LIVE);
+    expect(page.querySelector('.card.previous .what')?.textContent).toContain('2.0');
+
+    // Not live: no step is on, so none is before it.
+    await stackStands(NOT_LIVE);
+    expect(page.querySelector('.card.previous')?.classList.contains('on')).toBe(false);
+    expect(rows().some((row) => row.classList.contains('previous'))).toBe(false);
+
+    expect(button('Play').classList).toContain('play');
+    expect(button('Play').closest('.transport')).toBeTruthy();
+    expect(button('Previous step').closest('.transport')).toBeTruthy();
+  });
+
+  it('the main view has the stack between the master and the record keys, with a wheel of its steps', async () => {
+    const section = page.querySelector('lm-stack-section');
+    if (!section) throw new Error('no stack section on the main view');
+    // The places in the window of the wheel, from the top: one more on each side only rolls in.
+    const wheel = () =>
+      [...section.querySelectorAll('.roller li')].slice(1, -1).map((place) => place.textContent?.trim());
+
+    expect(wheel()).toEqual(['', '-', '1.0']); // nothing is on; Play goes to the first step
+    expect(section.querySelector('.roller .next')?.getAttribute('aria-label')).toBe('Next step: 1.0');
+    expect(section.querySelector('.pointer')).toBeTruthy(); // the arrow beside the middle
+    expect(button('Play').disabled).toBe(true); // only while the stack is live
+
+    await press(button('Stack live'));
+    expect(connection.last('SetStackLive')).toEqual([true]);
+
+    // Two steps: the other one stands above and below, as Prev and Play both go to it.
+    await stackStands(LIVE);
+    expect(wheel()).toEqual(['2.0', '1.0', '2.0']);
+    expect(section.querySelector('.roller .current')?.classList.contains('empty')).toBe(false);
+    expect(section.querySelector('.roller .current')?.getAttribute('aria-label')).toBe('Current step: 1.0');
+    expect(section.querySelector('.roller .previous')?.getAttribute('aria-label')).toBe('Previous step: 2.0');
+
+    await press(button('Play'));
+    await press(button('Pause'));
+    await press(button('Next step'));
+    await press(button('Previous step'));
+    expect(connection.methods()).toEqual(['SetStackLive', 'StackPlay', 'StackPause', 'StackNext', 'StackPrevious']);
+  });
+
+  it('Settings says how many steps the stack wheel shows', async () => {
+    const steps = Array.from({ length: 9 }, (_, index) => ({
+      id: 21 + index,
+      cue: String(index + 1),
+      target: 'memory' as const,
+      number: index + 1,
+      value: 255,
+      up: 1,
+      wait: 0,
+      down: 1,
+    }));
+    connection.emit('StackChanged', { steps });
+    await stackStands({ ...LIVE, currentId: 25, nextId: 26 }); // step 5 is on
+    const seen = () =>
+      [...page.querySelectorAll('lm-stack-section .roller li')]
+        .filter((place) => place.getAttribute('aria-hidden') !== 'true')
+        .map((place) => place.textContent?.trim());
+    expect(seen()).toEqual(['4', '5', '6']);
+
+    await show('/settings');
+    const size = page.querySelector<HTMLSelectElement>('#wheel-size')!;
+    size.value = '7';
+    size.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    await show('/');
+    expect(seen()).toEqual(['2', '3', '4', '5', '6', '7', '8']);
+    // the main view sizes its side column with it, the section its window
+    expect(page.querySelector('lm-main-view')?.getAttribute('style')).toContain('--wheel-size: 7');
+  });
+
+  // ---------------------------------------------------------------- settings
+
+  it('the channel size of Settings sets how many faders a page holds, and the page keys follow', async () => {
+    await show('/settings');
+    const size = page.querySelector<HTMLSelectElement>('#channel-size');
+    if (!size) throw new Error('no channel size');
+    expect(size.value).toBe('auto');
+
+    size.value = '8';
+    size.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(store.stripsPerRow()).toBe(4);
+    expect(JSON.parse(localStorage.getItem('lumenet-settings') ?? '{}').channelSize).toBe(8);
+
+    await show('/');
+    const line = () => page.querySelector<HTMLElement>('lm-main-view')?.style.getPropertyValue('--line');
+    expect(line()).toBe('4'); // on the main view only
+    expect(document.documentElement.style.getPropertyValue('--line')).toBe('');
+    expect(page.querySelectorAll('lm-channel-section lm-fader-strip').length).toBe(8); // two rows of 4
+    expect(page.querySelectorAll('lm-memory-section lm-fader-strip').length).toBe(4); // one row
+    expect(page.querySelectorAll('nav[aria-label="Channel pages"] button').length).toBe(64);
+    expect(page.querySelectorAll('nav[aria-label="Memory pages"] button').length).toBe(32);
+    await press(button('Channels 9 to 16'));
+    expect(page.querySelector('lm-fader[aria-label="Channel 9"]')).toBeTruthy();
+
+    // The Memories and Sequences views keep the row the window gives them.
+    await show('/memories');
+    expect(page.querySelectorAll('lm-memories-view .keys button').length).toBe(32);
+    expect(page.querySelectorAll('lm-memories-view table.matrix tr')[0].children.length).toBe(32);
+    await show('/sequences');
+    expect(page.querySelectorAll('lm-sequences-view nav[aria-label="Memory pages"] button').length).toBe(4);
+
+    await show('/settings');
+    const again = page.querySelector<HTMLSelectElement>('#channel-size')!;
+    again.value = 'auto';
+    again.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(store.stripsPerRow()).toBe(32);
+    await show('/');
+    expect(line()).toBe('');
+  });
+
+  it('Settings says how many rows of channel faders and of memory faders the main view has', async () => {
+    await show('/settings');
+    const channelRows = page.querySelector<HTMLSelectElement>('#channel-rows')!;
+    const memoryRows = page.querySelector<HTMLSelectElement>('#memory-rows')!;
+    expect([channelRows.value, memoryRows.value]).toEqual(['2', '1']);
+
+    channelRows.value = '1';
+    channelRows.dispatchEvent(new Event('change'));
+    memoryRows.value = '2';
+    memoryRows.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(page.querySelector('lm-settings-view')?.textContent).toContain(
+      '32 channels on a page now: one row of 32, 16 pages; memories: two rows of 32, 2 pages',
+    );
+
+    await show('/');
+    expect(page.querySelectorAll('lm-channel-section .row').length).toBe(1);
+    expect(page.querySelectorAll('lm-channel-section lm-fader-strip').length).toBe(32);
+    expect(page.querySelectorAll('lm-memory-section .row').length).toBe(2);
+    expect(page.querySelectorAll('lm-memory-section lm-fader-strip').length).toBe(64);
+    expect(button('Channels 33 to 64')).toBeTruthy();
+    expect(button('Memories 65 to 128')).toBeTruthy();
+    const main = page.querySelector<HTMLElement>('lm-main-view')!;
+    expect(main.style.getPropertyValue('--channel-share')).toBe('1fr');
+    expect(main.style.getPropertyValue('--memory-share')).toBe('2fr');
+
+    // On a narrower window a row is 16 faders.
+    store.windowStripsPerRow.set(16);
+    await fixture.whenStable();
+    expect(page.querySelectorAll('lm-channel-section lm-fader-strip').length).toBe(16);
+  });
+
+  it('the rows of the channels and of the memories scroll sideways each on their own, with a big scrollbar', () => {
+    const channelRows = page.querySelector('lm-channel-section .rows');
+    const memoryRows = page.querySelector('lm-memory-section .rows');
+    expect(channelRows?.classList).toContain('big-scrollbar');
+    expect(memoryRows?.classList).toContain('big-scrollbar');
+    expect(page.querySelector('[lmScrollTogether]')).toBeNull();
+  });
+
+  it('Settings says how many keys of each kind the independents show', async () => {
+    await show('/settings');
+    const channels = page.querySelector<HTMLInputElement>('#channel-keys')!;
+    const memories = page.querySelector<HTMLInputElement>('#memory-keys')!;
+    expect([channels.value, memories.value]).toEqual(['10', '10']);
+
+    channels.value = '3';
+    channels.dispatchEvent(new Event('change'));
+    memories.value = '99'; // more than there are: the number stays
+    memories.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(memories.value).toBe('10');
+    memories.value = '2';
+    memories.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+
+    await show('/');
+    const keys = [...page.querySelectorAll('lm-independents button.number')];
+    expect(keys.map((key) => key.getAttribute('aria-label'))).toEqual([
+      'Independent 1, channel 1',
+      'Independent 2, channel 2',
+      'Independent 3, channel 3',
+      'Independent 4, memory 1',
+      'Independent 5, memory 2',
+    ]);
+
+    // 0 keys of one kind: only the other kind; 0 of both: no independents at all.
+    await show('/settings');
+    const channelsAgain = page.querySelector<HTMLInputElement>('#channel-keys')!;
+    channelsAgain.value = '0';
+    channelsAgain.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(channelsAgain.value).toBe('0');
+    await show('/');
+    expect(page.querySelectorAll('lm-independents button.number').length).toBe(2);
+
+    await show('/settings');
+    const memoriesAgain = page.querySelector<HTMLInputElement>('#memory-keys')!;
+    memoriesAgain.value = '0';
+    memoriesAgain.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    await show('/');
+    expect(page.querySelector('lm-independents')).toBeNull();
+    expect(page.querySelector('lm-main-view')?.classList).toContain('no-independents');
+  });
+
+  it('the lettering of the whole page gets bigger and smaller in steps of 0.1', async () => {
+    await show('/settings');
+    const scale = () => document.documentElement.style.getPropertyValue('--font-scale');
+    expect(page.querySelector('.scale output')?.textContent?.trim()).toBe('×1.0');
+
+    await press(button('Bigger lettering'));
+    await press(button('Bigger lettering'));
+    expect(scale()).toBe('1.2');
+    expect(page.querySelector('.scale output')?.textContent?.trim()).toBe('×1.2');
+
+    await press(button('Reset'));
+    await press(button('Smaller lettering'));
+    expect(scale()).toBe('0.9');
+  });
+
+  it('a shortcut is recorded for a key, and then presses that key', async () => {
+    await show('/keyboard');
+    await press(button('Set the shortcut of Blackout'));
+    expect(page.querySelector('tr[data-row="master.blackout"] .waiting')).toBeTruthy();
+
+    // Ctrl alone is held, not a shortcut; Ctrl with B is.
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'ControlLeft', key: 'Control', ctrlKey: true, bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyB', key: 'b', ctrlKey: true, bubbles: true }));
+    await fixture.whenStable();
+    expect(page.querySelector('tr[data-row="master.blackout"] td.keys')?.textContent?.trim()).toBe('Ctrl + B');
+
+    await show('/');
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyB', key: 'b', ctrlKey: true, bubbles: true, cancelable: true }));
+    await fixture.whenStable();
+    expect(connection.last('SetBlackout')).toEqual([true]);
+
+    // While a note is typed, the keys are the note's.
+    const note = page.querySelector<HTMLInputElement>('input[aria-label="Note for Channel 1"]')!;
+    note.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyB', key: 'b', ctrlKey: true, bubbles: true }));
+    await fixture.whenStable();
+    expect(connection.methods().filter((method) => method === 'SetBlackout').length).toBe(1);
+
+    // The same shortcut for another key moves over to it.
+    await show('/keyboard');
+    await press(button('Set the shortcut of Clear'));
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyB', key: 'b', ctrlKey: true, bubbles: true }));
+    await fixture.whenStable();
+    expect(page.querySelector('tr[data-row="master.clear"] td.keys')?.textContent?.trim()).toBe('Ctrl + B');
+    expect(page.querySelector('tr[data-row="master.blackout"] td.keys')?.textContent?.trim()).toBe('');
+    expect(page.textContent).toContain('That shortcut was the one of Blackout before');
+  });
+
+  it('listening picks the key that is clicked on the desk instead of pressing it', async () => {
+    await show('/keyboard');
+    await press(button('Listen'));
+    expect(TestBed.inject(Router).url).toBe('/');
+    expect(page.querySelector('.listening')).toBeTruthy();
+
+    const clear = page.querySelector<HTMLButtonElement>('[data-action="master.clear"]')!;
+    clear.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, cancelable: true }));
+    clear.click();
+    await fixture.whenStable();
+    expect(connection.methods()).not.toContain('Clear'); // picked, not pressed
+    expect(TestBed.inject(Router).url).toBe('/keyboard');
+    expect(page.querySelector('tr[data-row="master.clear"]')?.classList.contains('picked')).toBe(true);
+    // Only the list scrolls to the row; the page itself stays where it is, the top bar in sight.
+    expect(document.scrollingElement?.scrollTop ?? 0).toBe(0);
+
+    // A locked key is picked as well: Play, while the stack is not live.
+    await press(button('Listen'));
+    page.querySelector('[data-action="stack.play"]')!.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    await fixture.whenStable();
+    expect(page.querySelector('tr[data-row="stack.play"]')?.classList.contains('picked')).toBe(true);
+
+    // Esc stops listening.
+    await press(button('Listen'));
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true }));
+    await fixture.whenStable();
+    expect(page.querySelector('.listening')).toBeNull();
+  });
+
+  it('every key on the page that is marked for shortcuts is one the list of the Keyboard view knows', async () => {
+    for (const view of ['/', '/stack', '/sequences', '/memories', '/settings', '/keyboard']) {
+      await show(view);
+      for (const element of page.querySelectorAll('[data-action]')) {
+        expect(actionWithId(element.getAttribute('data-action') ?? ''), element.getAttribute('data-action') ?? '').toBeTruthy();
+      }
+    }
+  });
+
+  it('the LAN address and password are changed in Settings while LAN is on', async () => {
+    await show('/settings');
+    expect(page.querySelector('lm-settings-view')?.textContent).toContain('LAN is off');
+
+    connection.emit('LanAccessChanged', {
+      local: true,
+      on: true,
+      addresses: ['192.168.1.20:5080', '10.0.0.5:5080'],
+      password: 'K7M2Q',
+      chosen: null,
+    } satisfies LanAccess);
+    await fixture.whenStable();
+
+    const address = page.querySelector<HTMLSelectElement>('#lan-address')!;
+    expect([...address.options].map((option) => option.textContent?.trim())).toEqual([
+      'Automatic (192.168.1.20:5080)',
+      '192.168.1.20:5080',
+      '10.0.0.5:5080',
+    ]);
+    address.value = '10.0.0.5';
+    address.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(connection.last('SetLanAddress')).toEqual(['10.0.0.5']);
+
+    const password = page.querySelector<HTMLInputElement>('#lan-password')!;
+    password.value = 'show night 7';
+    await press(button('Set'));
+    expect(connection.last('SetLanPassword')).toEqual(['show night 7']);
+    expect(page.querySelector('lm-settings-view .done')?.textContent).toContain('The new password is set');
+
+    await press(button('New random'));
+    expect(connection.methods()).toContain('NewLanPassword');
   });
 });

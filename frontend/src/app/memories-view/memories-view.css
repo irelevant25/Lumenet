@@ -23,7 +23,7 @@ h2 {
   flex: none;
   margin: 0;
   color: var(--legend-dim);
-  font-size: 12px;
+  font-size: calc(12px * var(--font-scale));
   font-stretch: 75%;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -34,7 +34,7 @@ h2 {
 .summary {
   margin: 0;
   overflow: hidden;
-  font-size: 14px;
+  font-size: calc(14px * var(--font-scale));
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -132,12 +132,40 @@ caption {
   top: 2px;
   left: 3px;
   color: var(--legend-dim);
-  font-size: 9px;
+  font-size: calc(9px * var(--font-scale));
   font-weight: 400;
 }
 
 .matrix td.up::before {
   color: color-mix(in srgb, #fff 80%, transparent);
+}
+
+/* When channels have notes, every cell shows its channel's note under the level: two lines, one
+   under the other, as on the main view, drawn from the cell's data-note as the number from
+   data-channel. Every cell keeps the room for two lines, with a note or without, so that all
+   cells have the same size and the levels stand in line; a line too long for its cell ends in
+   "...". Room at the top keeps the level clear of the channel number. */
+.matrix.with-notes td {
+  padding: 10px 2px 2px;
+}
+
+.matrix.with-notes td::after {
+  content: attr(data-note);
+  display: block;
+  height: 2.2em; /* two lines */
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--legend);
+  font-size: calc(10px * var(--font-scale));
+  font-stretch: 75%;
+  font-weight: 400;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: pre;
+}
+
+.matrix.with-notes td.up::after {
+  color: #fff;
 }
 
 /* The page keys in ONE column, from the top, as in the main view. */

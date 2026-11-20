@@ -38,6 +38,8 @@ export type DeskCommand =
   | { readonly kind: 'loadMemory'; readonly memory: number }
   | { readonly kind: 'copyMemory'; readonly from: number; readonly to: number }
   | { readonly kind: 'deleteMemory'; readonly memory: number }
+  /** The fader of a channel or a memory to full, or to zero when it is at full already. */
+  | { readonly kind: 'toggleFader'; readonly target: StepTarget; readonly number: number }
   /** One more step at the end of the sequence in `memory`: the channel or memory `number`. */
   | {
       readonly kind: 'addStep';
@@ -151,17 +153,23 @@ export function pressMemory(mode: FunctionMode, memory: number, holds: MemoryCon
     case 'delete-pick':
       return holds !== 'nothing' ? { mode: IDLE, command: { kind: 'deleteMemory', memory } } : { mode };
 
-    case 'idle':
     case 'editing':
-      return { mode }; // outside a function the memory keys do nothing
+      return { mode }; // the other memory keys wait until the edit is stored with Edit mem
+
+    case 'idle':
+      // Outside a function the key works its own fader: to full, and back to zero.
+      return { mode, command: { kind: 'toggleFader', target: 'memory', number: memory } };
   }
 }
 
-/** The key under a channel fader was pressed. It does something only while a sequence is recorded. */
+/**
+ * The key under a channel fader was pressed. While a sequence is recorded it adds the channel as
+ * a step; otherwise it works its own fader: to full, and back to zero.
+ */
 export function pressChannel(mode: FunctionMode, channel: number): Step {
   return mode.kind === 'recording'
     ? { mode, command: { kind: 'addStep', memory: mode.memory, target: 'channel', number: channel } }
-    : { mode };
+    : { mode, command: { kind: 'toggleFader', target: 'channel', number: channel } };
 }
 
 /** Whether the key of a memory blinks, which means "you can press this one now". */

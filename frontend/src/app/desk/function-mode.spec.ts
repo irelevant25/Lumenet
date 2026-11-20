@@ -12,9 +12,19 @@ import {
 } from './function-mode';
 
 describe('the record keys', () => {
-  it('outside a function the memory keys and the channel keys do nothing', () => {
-    expect(pressMemory(IDLE, 5, 'look')).toEqual({ mode: IDLE });
-    expect(pressChannel(IDLE, 5)).toEqual({ mode: IDLE });
+  it('outside a function the memory keys and the channel keys work their own faders', () => {
+    expect(pressMemory(IDLE, 5, 'look')).toEqual({
+      mode: IDLE,
+      command: { kind: 'toggleFader', target: 'memory', number: 5 },
+    });
+    expect(pressMemory(IDLE, 6, 'nothing')).toEqual({
+      mode: IDLE,
+      command: { kind: 'toggleFader', target: 'memory', number: 6 },
+    });
+    expect(pressChannel(IDLE, 5)).toEqual({
+      mode: IDLE,
+      command: { kind: 'toggleFader', target: 'channel', number: 5 },
+    });
     expect(memoryBlinks(IDLE, 5, 'look')).toBe(false);
     expect(channelKeysArmed(IDLE)).toBe(false);
     expect(activeFunction(IDLE)).toBeNull();
@@ -104,7 +114,11 @@ describe('the record keys', () => {
     expect(memoryBlinks(picking, 2, 'sequence')).toBe(true);
     expect(memoryBlinks(picking, 3, 'look')).toBe(false);
     expect(channelKeysArmed(picking)).toBe(false);
-    expect(pressChannel(picking, 5)).toEqual({ mode: picking }); // the memory comes first
+    // The memory comes first: a channel key still only works its fader.
+    expect(pressChannel(picking, 5)).toEqual({
+      mode: picking,
+      command: { kind: 'toggleFader', target: 'channel', number: 5 },
+    });
 
     const onLook = pressMemory(picking, 3, 'look');
     expect(onLook.mode).toBe(picking);

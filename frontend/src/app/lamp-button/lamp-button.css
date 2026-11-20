@@ -20,6 +20,9 @@
   line-height: 1.05;
   text-align: center;
   text-transform: uppercase;
+  /* A word too long for the key (with bigger lettering from Settings) goes on in a second line
+     instead of being cut off at the edge. */
+  overflow-wrap: anywhere;
   appearance: none;
 }
 
@@ -28,11 +31,11 @@
   font-size: var(--key-number);
 }
 
-/* a key that carries a range such as 129-192: narrow lettering, so it stays on one line */
+/* A key that carries a range such as 129-192: narrow lettering, so it stays on one line. Only
+   lettering made bigger in Settings breaks it, after the dash (the templates put a <wbr> there). */
 :host(.range) {
   font-size: var(--key-range);
   font-stretch: 75%;
-  white-space: nowrap;
 }
 
 :host(.tone-channel) {

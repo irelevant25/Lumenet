@@ -26,9 +26,10 @@
     </div>
 
     <!-- One cell for each channel: the level in the middle, the channel number (drawn by the
-         style sheet from data-channel) small in the corner. One element a cell, nothing more. -->
+         style sheet from data-channel) small in the corner, and the channel's note under the
+         level (drawn from data-note). One element a cell, nothing more. -->
     <div class="table-box">
-      <table class="matrix">
+      <table class="matrix" [class.with-notes]="withNotes()">
         <caption>The channels of memory {{ store.inspectedMemory() }}</caption>
         <tbody>
           @for (row of rows(); track $index) {
@@ -38,7 +39,8 @@
                   [class.up]="cell.level > 0"
                   [style.--part]="cell.level > 0 ? cell.level / 255 : null"
                   [attr.data-channel]="cell.channel"
-                  [attr.aria-label]="'Channel ' + cell.channel + ': ' + cell.level"
+                  [attr.data-note]="cell.note"
+                  [attr.aria-label]="cell.name"
                 >
                   {{ cell.level }}
                 </td>
@@ -62,7 +64,7 @@
         [attr.aria-label]="'Memories ' + item.first + ' to ' + item.last"
         (click)="store.showMemoryPage(item.first)"
       >
-        {{ item.first }}-{{ item.last }}
+        {{ item.first }}-<wbr />{{ item.last }}
       </button>
     }
   </nav>

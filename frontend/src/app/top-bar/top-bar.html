@@ -25,6 +25,7 @@
       type="button"
       tone="system"
       aria-label="LAN"
+      data-action="lan"
       title="Lets phones and tablets in the same network use the desk, with a password"
       [level]="lan.on ? 3 : 1"
       [attr.aria-pressed]="lan.on"
@@ -41,13 +42,16 @@
     routerLink="/"
     routerLinkActive="shown"
     ariaCurrentWhenActive="page"
+    data-action="view.main"
     [routerLinkActiveOptions]="{ exact: true }"
   >
     Main
   </a>
-  <a routerLink="/memories" routerLinkActive="shown" ariaCurrentWhenActive="page">Memories</a>
-  <a routerLink="/sequences" routerLinkActive="shown" ariaCurrentWhenActive="page">Sequences</a>
-  <a routerLink="/stack" routerLinkActive="shown" ariaCurrentWhenActive="page">
+  <a routerLink="/memories" routerLinkActive="shown" ariaCurrentWhenActive="page" data-action="view.memories">Memories</a>
+  <a routerLink="/sequences" routerLinkActive="shown" ariaCurrentWhenActive="page" data-action="view.sequences">
+    Sequences
+  </a>
+  <a routerLink="/stack" routerLinkActive="shown" ariaCurrentWhenActive="page" data-action="view.stack">
     Stack
     @if (store.live()) {
       <!-- seen from every view: the stack is running, and what is stored is locked -->
@@ -56,6 +60,8 @@
       </span>
     }
   </a>
+  <a routerLink="/settings" routerLinkActive="shown" ariaCurrentWhenActive="page" data-action="view.settings">Settings</a>
+  <a routerLink="/keyboard" routerLinkActive="shown" ariaCurrentWhenActive="page" data-action="view.keyboard">Keyboard</a>
 </nav>
 
 <div class="project">
@@ -73,12 +79,20 @@
     type="button"
     tone="system"
     aria-label="New project"
+    data-action="project.new"
     [disabled]="store.live()"
     (click)="dialog().open('new')"
   >
     New
   </button>
-  <button lmLamp type="button" tone="system" aria-label="Save project" (click)="dialog().open('save')">
+  <button
+    lmLamp
+    type="button"
+    tone="system"
+    aria-label="Save project"
+    data-action="project.save"
+    (click)="dialog().open('save')"
+  >
     Save
   </button>
   <button
@@ -86,6 +100,7 @@
     type="button"
     tone="system"
     aria-label="Load project"
+    data-action="project.load"
     [disabled]="store.live()"
     (click)="dialog().open('load')"
   >
@@ -96,6 +111,7 @@
     type="button"
     tone="system"
     aria-label="Import a show"
+    data-action="project.import"
     title="Opens the show file of a theatre console (USITT ASCII, .asc) as a project"
     [disabled]="store.live()"
     (click)="importDialog().open()"

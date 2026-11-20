@@ -2,9 +2,12 @@
 export const CHANNEL_COUNT = 512;
 export const MEMORY_COUNT = 128;
 export const MAX_LEVEL = 255;
-/** The independent keys: 10 that each switch a channel, 10 that each switch a memory's fader, between zero and full. */
-export const CHANNEL_INDEPENDENT_COUNT = 10;
-export const MEMORY_INDEPENDENT_COUNT = 10;
+/**
+ * The independent keys the desk keeps: 32 that each switch a channel, 32 that each switch a
+ * memory's fader, between zero and full. Settings says how many of each the page shows.
+ */
+export const CHANNEL_INDEPENDENT_COUNT = 32;
+export const MEMORY_INDEPENDENT_COUNT = 32;
 
 /** How many faders stand in one row: 32 on a wide window, 16 on a narrower one. */
 export const STRIPS_PER_ROW_WIDE = 32;
@@ -193,6 +196,22 @@ export interface LanAccess {
   addresses: string[];
   /** The password other devices have to give; null while LAN is off, and on another device. */
   password: string | null;
+  /**
+   * The address of this PC chosen for LAN, like "192.168.1.20": devices come in there only.
+   * Null (or missing, from an older desk program) while the desk chooses by itself: then the
+   * first of `addresses` is the one to give them. Not among `addresses` while the network has
+   * given the PC another address: then the desk chooses by itself until it is back.
+   */
+  chosen?: string | null;
+}
+
+/**
+ * Where devices reach the desk now, like "192.168.1.20:5080": the chosen address while this PC
+ * has it, otherwise the first, the best one. Null without a network.
+ */
+export function lanAddressInUse(lan: LanAccess): string | null {
+  const chosen = lan.chosen ? lan.addresses.find((address) => address.split(':')[0] === lan.chosen) : undefined;
+  return chosen ?? lan.addresses[0] ?? null;
 }
 
 /** Whether the backend reaches the dmxbox. */

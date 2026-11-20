@@ -1,20 +1,41 @@
-/* Channels (two rows of faders) above memories (one row). At the right, over the whole height,
-   two columns: the master section with the record keys under it, and the independents at the
-   right edge. */
+/* Channels (two rows of faders) above memories (one row), or as many rows as Settings says: the
+   two sections share the height in the proportion of their rows (--channel-share and
+   --memory-share, set by main-view.ts). At the right, over the whole height, two columns: the
+   master section with the stack and the record keys under it, and the independents at the right
+   edge, unless Settings shows none of their keys. */
 :host {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
-  grid-template-rows: minmax(0, 2fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, var(--channel-share, 2fr)) minmax(0, var(--memory-share, 1fr));
   gap: var(--gap);
   min-width: 0;
   min-height: 0;
 }
 
-/* The master fader takes what the five record keys leave. In this proportion the keys have
-   their full height on a window of usual height, and get flatter on a low one. */
+:host(.no-independents) {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+/* The stack (five keys and the wheel of steps, --wheel-size of them) and the five record keys
+   get the height they need, and the master fader takes the rest. On a low window the master
+   section keeps a height of its own, and the stack and the record keys get flatter together,
+   down to --key-min-h, while the wheel shows fewer steps, 3 at least. */
 .side {
+  /* a section's title, its gap and its frame */
+  --frame: calc(12px * var(--font-scale) + 8px + 18px);
+  --keys-min: calc(5 * var(--key-min-h) + 4 * var(--strip-gap));
+  --keys-max: calc(5 * var(--key-h) + 4 * var(--strip-gap));
+  --wheel-min: calc(min(var(--wheel-size, 3), 3) * var(--place-h) + 2px);
+  --wheel-max: calc(var(--wheel-size, 3) * var(--place-h) + 2px);
+
   display: grid;
-  grid-template-rows: minmax(0, 3.3fr) minmax(0, 1fr);
+  grid-template-rows:
+    minmax(220px, 1fr)
+    minmax(
+      calc(var(--frame) + 8px + var(--keys-min) + var(--wheel-min)),
+      calc(var(--frame) + 8px + var(--keys-max) + var(--wheel-max))
+    )
+    minmax(calc(var(--frame) + var(--keys-min)), calc(var(--frame) + var(--keys-max)));
   grid-row: 1 / span 2;
   grid-column: 2;
   gap: var(--gap);
@@ -27,7 +48,7 @@ lm-independents {
 }
 
 /* ---- mobile: one column. The master section lies across the top, so that Clear and Blackout
-   are at hand at once; then channels, memories, independents, record. */
+   are at hand at once, and the stack under it; then channels, memories, independents, record. */
 :host-context(.mobile) {
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: none;
@@ -42,7 +63,8 @@ lm-independents {
   grid-column: auto;
 }
 
-:host-context(.mobile) lm-master-section {
+:host-context(.mobile) lm-master-section,
+:host-context(.mobile) lm-stack-section {
   order: -1;
 }
 

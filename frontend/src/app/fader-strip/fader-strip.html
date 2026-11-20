@@ -8,30 +8,24 @@
   (valueChange)="valueChange.emit($event)"
 />
 
-@if (pressable()) {
-  <button
-    lmLamp
-    type="button"
-    class="number"
-    [class.marked]="steps().length > 0"
-    [tone]="keyTone()"
-    [level]="lampLevel()"
-    [blink]="blink()"
-    [attr.aria-label]="keyName()"
-    (click)="keyPress.emit()"
-  >
-    @if (steps().length) {
-      <!-- the steps of the sequence being recorded that use this key -->
-      <span class="steps" aria-hidden="true">{{ steps().join(',') }}</span>
-    }
-    {{ number() }}
-  </button>
-} @else {
-  <!-- The fader above already carries the name; this lamp only shows the state. -->
-  <span lmLamp class="number" aria-hidden="true" [tone]="kind()" [level]="lampLevel()">{{
-    number()
-  }}</span>
-}
+<button
+  lmLamp
+  type="button"
+  class="number"
+  [class.marked]="steps().length > 0"
+  [tone]="keyTone()"
+  [level]="lampLevel()"
+  [blink]="blink()"
+  [attr.aria-label]="keyName()"
+  [attr.data-action]="kind() + '.' + number()"
+  (click)="keyPress.emit()"
+>
+  @if (steps().length) {
+    <!-- the steps of the sequence being recorded that use this key -->
+    <span class="steps" aria-hidden="true">{{ steps().join(',') }}</span>
+  }
+  {{ number() }}
+</button>
 
 <div class="note" [attr.title]="lines()[1] ? lines()[0] + ' ' + lines()[1] : lines()[0] || null">
   <input

@@ -1,5 +1,6 @@
 import { Service, computed, inject, signal } from '@angular/core';
 import { DeskConnection } from './desk-connection';
+import { DeskSettings } from './desk-settings';
 import {
   BoxStatus,
   CHANNEL_COUNT,
@@ -26,10 +27,13 @@ import {
   Sequence,
   Sequences,
   StackState,
+  StackStep,
   TimedStep,
   Welcome,
+  firstStep,
   pageStart,
   recordedStep,
+  stepAfter,
 } from './desk-types';
 import {
   DeskCommand,
@@ -50,6 +54,13 @@ import {
 export interface RecordedSteps {
   readonly channels: ReadonlyMap<number, readonly number[]>;
   readonly memories: ReadonlyMap<number, readonly number[]>;
+}
+
+/** Where the stack stands, see DeskStore.stackPosition. */
+export interface StackPosition {
+  readonly previous: StackStep | null;
+  readonly current: StackStep | null;
+  readonly next: StackStep | null;
 }
 
 /** Fader moves are collected for this long and then sent together, the newest value of each fader only. */
@@ -150,26 +161,69 @@ export class DeskStore {
    */
   readonly live = computed(() => this.playback().stack.live === true);
 
+  /**
+   * Where the stack stands: the step that is on, the one before it in the stack (where Previous
+   * goes; before the first comes the last), and the one Play goes to. Null where there is none:
+   * no step is on, or the stack has no other step.
+   */
+  readonly stackPosition = computed<StackPosition>(() => {
+    const steps = this.stack().steps;
+    const { currentId, nextId } = this.playback().stack;
+    const index = currentId === null ? -1 : steps.findIndex((step) => step.id === currentId);
+    return {
+      previous: index >= 0 && steps.length > 1 ? steps[(index - 1 + steps.length) % steps.length] : null,
+      current: index >= 0 ? steps[index] : null,
+      next: nextId === null ? null : (steps.find((step) => step.id === nextId) ?? null),
+    };
+  });
+
+  /** True while the stack moves by itself: a fade or a countdown that is not paused. */
+  readonly stackRunning = computed(() => {
+    const { state, paused } = this.playback().stack;
+    return !paused && (state === 'fading' || state === 'waiting');
+  });
+
+  /** True while the stack is paused. */
+  readonly stackPaused = computed(() => this.playback().stack.paused);
+
   // ---- what only this page knows
-  /** Faders in one row: 32 on a wide window, 16 on a narrower one (the limit is in desk-types.ts). */
-  readonly stripsPerRow = signal(STRIPS_PER_ROW_WIDE);
+  /** The settings of this browser: the channel size among them. */
+  private readonly settings = inject(DeskSettings);
+  /**
+   * Faders in one row as the window size has it: 32 on a wide window, 16 on a narrower one (the
+   * limit is in desk-types.ts). The store follows the window; the tests set it themselves.
+   */
+  readonly windowStripsPerRow = signal(STRIPS_PER_ROW_WIDE);
+  /**
+   * Faders in one row of the main view: as the window size has it, or the channel size chosen in
+   * Settings spread over the rows of channels. A row that is then too wide for the window
+   * scrolls sideways.
+   */
+  readonly stripsPerRow = computed(() => {
+    const size = this.settings.channelSize();
+    return size === 'auto' ? this.windowStripsPerRow() : size / this.settings.channelRows();
+  });
   /** True in the mobile layout, where the sections stand under each other and the page scrolls. */
   readonly mobile = signal(false);
   /** True on a phone held upright, where a row of faders is shown as lines of 8. */
   readonly phone = signal(false);
   /** The memory the Memories view shows the content of. */
   readonly inspectedMemory = signal(1);
-  /** A page of channels is two rows of faders; a page of memories is one row. */
-  readonly channelsPerPage = computed(() => 2 * this.stripsPerRow());
-  readonly memoriesPerPage = computed(() => this.stripsPerRow());
+  /** A page of channels on the main view is its rows of channel faders (two at first), a page of memories its rows of memory faders (one). */
+  readonly channelsPerPage = computed(() => this.settings.channelRows() * this.stripsPerRow());
+  readonly memoriesPerPage = computed(() => this.settings.memoryRows() * this.stripsPerRow());
+  /** A page of memories on the Memories and Sequences views: one row, as the window has it, whatever Settings says for the main view. */
+  readonly viewMemoriesPerPage = computed(() => this.windowStripsPerRow());
 
   /** A channel and a memory that must be on the pages shown. The pages follow the window size. */
   private readonly wantedChannel = signal(1);
   private readonly wantedMemory = signal(1);
   /** The first channel of the page that is shown. */
   readonly firstChannel = computed(() => pageStart(this.wantedChannel(), this.channelsPerPage()));
-  /** The first memory of the page that is shown. */
+  /** The first memory of the page that is shown on the main view. */
   readonly firstMemory = computed(() => pageStart(this.wantedMemory(), this.memoriesPerPage()));
+  /** The first memory of the page that is shown on the Memories and Sequences views. */
+  readonly viewFirstMemory = computed(() => pageStart(this.wantedMemory(), this.viewMemoriesPerPage()));
   /** Where a record key (save or edit a memory, record a sequence, copy, delete) stands. */
   readonly mode = signal<FunctionMode>(IDLE);
   /** The steps of the sequence that is being recorded, by what they use; null while none is recorded. */
@@ -344,7 +398,7 @@ export class DeskStore {
     this.follow(pressMemory(this.mode(), memory, this.memoryContent(memory)));
   }
 
-  /** The key under a channel fader. It does something only while a sequence is recorded. */
+  /** The key under a channel fader: its fader to full and back to zero, or a step while a sequence is recorded. */
   pressChannel(channel: number): void {
     this.follow(pressChannel(this.mode(), channel));
   }
@@ -422,6 +476,16 @@ export class DeskStore {
     this.run('AddStackStep', step);
   }
 
+  /**
+   * Puts a step at the end of the stack: the first one, or one like the last on the next
+   * channel or memory. A new first step waits for Play, as a step of the stack mostly does.
+   */
+  addStackStepAtEnd(): void {
+    if (this.live()) return; // a live stack keeps its steps
+    const last = this.stack().steps.at(-1);
+    this.addStackStep(last ? stepAfter(last) : firstStep(0));
+  }
+
   updateStackStep(id: number, step: TimedStep): void {
     this.stack.update((stack) => ({
       steps: stack.steps.map((old) => (old.id === id ? { ...old, ...step } : old)),
@@ -471,6 +535,29 @@ export class DeskStore {
     // Lit at once. The desk answers with the address and the password a moment later.
     this.lan.set({ ...lan, on, password: on ? lan.password : null });
     this.run('SetLanAccess', on);
+  }
+
+  /**
+   * Chooses the address of this PC at which devices in the network may come in, or lets the
+   * desk choose by itself (null). The devices that are connected connect again.
+   */
+  setLanAddress(address: string | null): void {
+    if (!this.lan()?.local) return;
+    this.run('SetLanAddress', address);
+  }
+
+  /**
+   * Makes the typed text the LAN password: every device has to give the new one. Resolves when
+   * the desk took it; rejects with the desk's message (too short, other characters) when it did not.
+   */
+  async setLanPassword(password: string): Promise<void> {
+    await this.connection.invoke<void>('SetLanPassword', password);
+  }
+
+  /** Makes a new random LAN password. */
+  newLanPassword(): void {
+    if (!this.lan()?.local) return;
+    this.run('NewLanPassword');
   }
 
   // ---------------------------------------------------------------- projects
@@ -537,6 +624,16 @@ export class DeskStore {
         break;
       case 'addStep':
         this.addSequenceStep(command.memory, recordedStep(command.target, command.number));
+        break;
+      case 'toggleFader':
+        // The fader's own level counts: a channel a memory holds at full still goes to full by its key.
+        if (command.target === 'channel') {
+          const own = this.channels()[command.number - 1];
+          this.setChannel(command.number, own === MAX_LEVEL ? 0 : MAX_LEVEL);
+        } else {
+          const level = this.memoryLevels()[command.number - 1];
+          this.setMemoryLevel(command.number, level === MAX_LEVEL ? 0 : MAX_LEVEL);
+        }
         break;
     }
   }
@@ -618,7 +715,7 @@ export class DeskStore {
 
     const classes = document.documentElement.classList;
     const update = (): void => {
-      this.stripsPerRow.set(medium.matches ? STRIPS_PER_ROW_MEDIUM : STRIPS_PER_ROW_WIDE);
+      this.windowStripsPerRow.set(medium.matches ? STRIPS_PER_ROW_MEDIUM : STRIPS_PER_ROW_WIDE);
       this.mobile.set(mobile.matches);
       this.phone.set(phone.matches);
       classes.toggle('medium', medium.matches);

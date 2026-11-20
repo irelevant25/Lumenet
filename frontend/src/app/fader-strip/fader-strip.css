@@ -53,7 +53,7 @@ lm-fader {
   border-radius: 2px;
   background: rgb(11 13 16 / 85%);
   color: var(--sequence-end);
-  font-size: 9px;
+  font-size: calc(9px * var(--font-scale));
   font-stretch: 75%;
   font-weight: 700;
   line-height: 10px;
@@ -82,7 +82,7 @@ lm-fader {
   background: none;
   color: var(--legend);
   font: inherit;
-  font-size: 13px;
+  font-size: calc(13px * var(--font-scale));
   font-stretch: 75%;
   line-height: 15px;
   text-align: center;

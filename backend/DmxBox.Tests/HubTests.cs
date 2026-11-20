@@ -43,8 +43,8 @@ public sealed class HubTests
         Assert.False(desk.GetProperty("blackout").GetBoolean());
         Assert.Equal(Enumerable.Repeat("", 512), Texts(desk.GetProperty("channelNotes")));
         Assert.Equal(Enumerable.Repeat("", 128), Texts(desk.GetProperty("memoryNotes")));
-        Assert.Equal(Enumerable.Range(1, 10), Numbers(desk.GetProperty("independents")));
-        Assert.Equal(Enumerable.Range(1, 10), Numbers(desk.GetProperty("memoryIndependents")));
+        Assert.Equal(Enumerable.Range(1, 32), Numbers(desk.GetProperty("independents")));
+        Assert.Equal(Enumerable.Range(1, 32), Numbers(desk.GetProperty("memoryIndependents")));
 
         Assert.Equal(
             """{"connected":false,"host":"pretend-box","firmware":null}""",
@@ -113,10 +113,10 @@ public sealed class HubTests
         await AssertRefusedAsync("A note cannot contain a tab, a line break or the like.", ui, "SetChannelNote", 1, "Front\tleft");
         await AssertRefusedAsync("The channel must be from 1 to 512, not 513.", ui, "SetChannelNote", 513, "note");
         await AssertRefusedAsync("The memory must be from 1 to 128, not 0.", ui, "SetMemoryNote", 0, "note");
-        await AssertRefusedAsync("The independent must be from 1 to 10, not 11.", ui, "SetIndependent", 11, 1);
-        await AssertRefusedAsync("The independent must be from 1 to 10, not 0.", ui, "SetIndependent", 0, 1);
+        await AssertRefusedAsync("The independent must be from 1 to 32, not 33.", ui, "SetIndependent", 33, 1);
+        await AssertRefusedAsync("The independent must be from 1 to 32, not 0.", ui, "SetIndependent", 0, 1);
         await AssertRefusedAsync("The channel must be from 1 to 512, not 513.", ui, "SetIndependent", 1, 513);
-        await AssertRefusedAsync("The memory independent must be from 1 to 10, not 11.", ui, "SetMemoryIndependent", 11, 1);
+        await AssertRefusedAsync("The memory independent must be from 1 to 32, not 33.", ui, "SetMemoryIndependent", 33, 1);
         await AssertRefusedAsync("The memory must be from 1 to 128, not 129.", ui, "SetMemoryIndependent", 1, 129);
         await AssertRefusedAsync("This project has no file yet. Save it under a name.", ui, "SaveProject", (object?)null);
         await AssertRefusedAsync("A project name cannot contain the character \"/\".", ui, "SaveProject", "a/b");
@@ -365,12 +365,12 @@ public sealed class HubTests
 
         JsonElement desk = (await watcher.InvokeAsync("Hello")).GetProperty("desk");
         int[] independents = Numbers(desk.GetProperty("independents"));
-        Assert.Equal(10, independents.Length);
+        Assert.Equal(32, independents.Length);
         Assert.Equal(300, independents[2]);
         Assert.Equal(512, independents[9]);
         Assert.Equal(1, independents[0]);
         int[] memoryKeys = Numbers(desk.GetProperty("memoryIndependents"));
-        Assert.Equal([1, 128, 3, 4, 5, 6, 7, 8, 9, 10], memoryKeys);
+        Assert.Equal(Enumerable.Range(1, 32).Select(key => key == 2 ? 128 : key), memoryKeys);
     }
 
     [Fact]
@@ -438,8 +438,8 @@ public sealed class HubTests
             Assert.Equal(new int[128], Numbers(desk.GetProperty("memoryLevels")));
             Assert.Equal(new bool[128], Flags(desk.GetProperty("memoryStored")));
             Assert.Equal(Enumerable.Repeat("", 512), Texts(desk.GetProperty("channelNotes")));
-            Assert.Equal(Enumerable.Range(1, 10), Numbers(desk.GetProperty("independents")));
-            Assert.Equal(Enumerable.Range(1, 10), Numbers(desk.GetProperty("memoryIndependents")));
+            Assert.Equal(Enumerable.Range(1, 32), Numbers(desk.GetProperty("independents")));
+            Assert.Equal(Enumerable.Range(1, 32), Numbers(desk.GetProperty("memoryIndependents")));
             Assert.Equal(100, desk.GetProperty("master").GetInt32());    // master and blackout stay
             Assert.True(desk.GetProperty("blackout").GetBoolean());
             await AssertNextAsync(client, "ProjectChanged", $"[{newProject}]");

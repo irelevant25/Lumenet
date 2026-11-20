@@ -13,7 +13,7 @@
 h2 {
   margin: 0;
   color: var(--legend-dim);
-  font-size: 12px;
+  font-size: calc(12px * var(--font-scale));
   font-stretch: 75%;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -62,7 +62,7 @@ h2 {
 
 /* ---- mobile: one line. The title at the left, the five keys in the last five columns of the faders. */
 :host-context(.mobile) {
-  grid-template-columns: repeat(var(--line), var(--strip));
+  grid-template-columns: repeat(var(--fit-line), var(--strip));
   grid-template-rows: none;
   align-items: center;
   justify-content: space-between;

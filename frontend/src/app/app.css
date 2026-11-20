@@ -52,7 +52,7 @@ router-outlet {
 
 .offline h2 {
   margin: 0 0 8px;
-  font-size: 20px;
+  font-size: calc(20px * var(--font-scale));
   font-weight: 600;
 }
 
@@ -67,7 +67,39 @@ router-outlet {
   border-radius: 4px;
   background: var(--well);
   font-family: Consolas, 'Cascadia Mono', monospace;
-  font-size: 14px;
+  font-size: calc(14px * var(--font-scale));
+}
+
+/* While Settings listens for a key to be clicked: an amber band at the bottom of the window,
+   over the desk, with a key to stop. */
+.listening {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: calc(100vw - 40px);
+  margin: 0;
+  padding: 10px 12px 10px 16px;
+  translate: -50% 0;
+  border: 1px solid var(--system);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--system) 18%, var(--panel-raised));
+  box-shadow: 0 6px 24px rgb(0 0 0 / 50%);
+  font-size: calc(15px * var(--font-scale));
+}
+
+.listening button {
+  flex: none;
+  padding: 5px 10px;
+  border: 1px solid var(--system);
+  border-radius: 4px;
+  background: var(--well);
+  color: var(--legend);
+  font: inherit;
+  cursor: pointer;
 }
 
 /* a short message from the desk, for example "Project saved" or why something was refused */
@@ -83,5 +115,5 @@ router-outlet {
   border-radius: 6px;
   background: var(--panel-raised);
   box-shadow: 0 6px 24px rgb(0 0 0 / 50%);
-  font-size: 15px;
+  font-size: calc(15px * var(--font-scale));
 }

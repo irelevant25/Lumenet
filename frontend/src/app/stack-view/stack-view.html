@@ -10,6 +10,7 @@
     type="button"
     tone="live"
     aria-label="Stack live"
+    data-action="stack.live"
     [level]="live() ? 3 : 1"
     [disabled]="!live() && steps().length === 0"
     [attr.aria-pressed]="live()"
@@ -18,12 +19,14 @@
     Stack
   </button>
 
+  <!-- The keys a show is run with: bigger than the other keys, Play the biggest. -->
   <div class="transport" role="group" aria-label="Going through the stack">
     <button
       lmLamp
       type="button"
       tone="system"
       aria-label="Previous step"
+      data-action="stack.previous"
       [disabled]="!live()"
       (click)="store.stackPrevious()"
     >
@@ -32,8 +35,10 @@
     <button
       lmLamp
       type="button"
+      class="play"
       tone="channel"
       aria-label="Play"
+      data-action="stack.play"
       [level]="running() ? 3 : 1"
       [disabled]="!live()"
       (click)="store.stackPlay()"
@@ -45,6 +50,7 @@
       type="button"
       tone="system"
       aria-label="Pause"
+      data-action="stack.pause"
       [level]="paused() ? 3 : 1"
       [blink]="paused()"
       [disabled]="!live()"
@@ -58,6 +64,7 @@
       type="button"
       tone="system"
       aria-label="Next step"
+      data-action="stack.next"
       [disabled]="!live()"
       (click)="store.stackNext()"
     >
@@ -70,13 +77,27 @@
     type="button"
     tone="system"
     aria-label="Add a step"
+    data-action="stack.add"
     [disabled]="live()"
     (click)="addStep()"
   >
     Add<br />step
   </button>
 
-  <!-- where the stack stands: the step that is on, and the one Play goes to -->
+  <!-- where the stack stands: the step before the one that is on, that one, and the one Play goes to -->
+  <div class="card previous" [class.on]="previous()">
+    <h3>Previous</h3>
+    @if (previous(); as step) {
+      <p class="what">
+        <strong>{{ step.cue }}</strong> {{ describe(step) }}
+      </p>
+      <p class="how">Prev goes back to it.</p>
+    } @else {
+      <p class="what">Nothing.</p>
+      <p class="how"></p>
+    }
+  </div>
+
   <div class="card current" [class.on]="current()">
     <h3>Current</h3>
     @if (current(); as step) {
@@ -131,6 +152,7 @@
           [choices]="choices()"
           [note]="noteOf(step)"
           [locked]="live()"
+          [class.previous]="step.id === previous()?.id"
           [class.current]="step.id === current()?.id"
           [class.next]="step.id === next()?.id"
           [class.drop-before]="dropMark()?.id === step.id && !dropMark()?.after"

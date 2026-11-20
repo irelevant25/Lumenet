@@ -229,7 +229,7 @@ public sealed class LanTests
         int port = server.Address.Port;
 
         Assert.Equal(
-            $$"""{"local":true,"on":false,"addresses":["10.20.30.40:{{port}}"],"password":null}""",
+            $$"""{"local":true,"on":false,"addresses":["10.20.30.40:{{port}}"],"password":null,"chosen":null}""",
             (await pc.InvokeAsync("GetLanAccess")).GetRawText());
 
         await pc.InvokeAsync("SetLanAccess", true);
@@ -237,7 +237,7 @@ public sealed class LanTests
         Assert.Equal("LanAccessChanged", told.Name);
         string password = server.Lan.Password;
         Assert.Equal(
-            $$"""{"local":true,"on":true,"addresses":["10.20.30.40:{{port}}"],"password":"{{password}}"}""",
+            $$"""{"local":true,"on":true,"addresses":["10.20.30.40:{{port}}"],"password":"{{password}}","chosen":null}""",
             told.Arguments[0].GetRawText());
 
         // A phone gets in, and learns nothing about LAN but that it is on. It cannot switch it.
@@ -247,7 +247,7 @@ public sealed class LanTests
         await LogInAsync(browser, password, back: "/");
         await using HubClient phone = await server.ConnectAsync(cookies);
         Assert.Equal(
-            """{"local":false,"on":true,"addresses":[],"password":null}""",
+            """{"local":false,"on":true,"addresses":[],"password":null,"chosen":null}""",
             (await phone.InvokeAsync("GetLanAccess")).GetRawText());
         var error = await Assert.ThrowsAsync<HubCallException>(() => phone.InvokeAsync("SetLanAccess", false));
         Assert.Contains("LAN can only be switched on the PC.", error.Message);
@@ -303,6 +303,111 @@ public sealed class LanTests
         {
             File.Delete(file);
         }
+    }
+
+    // ---------------------------------------------------------------- the owner's choices
+
+    [Fact]
+    public async Task ChosenAddressIsTheOnlyOneAtWhichDevicesComeIn()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        IPAddress cable = PretendPc.HomeAddress;
+        IPAddress wifi = IPAddress.Parse("192.168.50.2");
+        IPAddress phone = IPAddress.Parse("192.168.50.77");
+        server.Pc.Have(cable, wifi);
+        server.Lan.Switch(true);
+
+        // The desk chooses by itself: devices come in at every address of the PC.
+        Assert.True(server.Lan.MayConnect(phone, cable));
+        Assert.True(server.Lan.MayConnect(phone, wifi));
+
+        server.Lan.Choose("192.168.50.2");
+        Assert.False(server.Lan.MayConnect(phone, cable));
+        Assert.True(server.Lan.MayConnect(phone, wifi));
+        Assert.True(server.Lan.MayConnect(phone, IPAddress.Parse("::ffff:192.168.50.2")));   // the same address, as IPv6 sees it
+        Assert.True(server.Lan.MayConnect(IPAddress.Loopback, cable));                        // this PC is never asked
+        Assert.Equal("192.168.50.2", server.Lan.StateFor(local: true).Chosen);
+        Assert.Equal("192.168.50.2", File.ReadAllLines(server.PasswordFile)[2]);   // kept for the next start
+
+        // LAN off lets no device in, whatever address was chosen.
+        server.Lan.Switch(false);
+        Assert.False(server.Lan.MayConnect(phone, wifi));
+        server.Lan.Switch(true);
+
+        server.Lan.Choose(null);
+        Assert.True(server.Lan.MayConnect(phone, cable));
+        Assert.Null(server.Lan.StateFor(local: true).Chosen);
+        Assert.Equal(2, File.ReadAllLines(server.PasswordFile).Length);
+
+        DeskException wrong = Assert.Throws<DeskException>(() => server.Lan.Choose("10.9.9.9"));
+        Assert.Equal("10.9.9.9 is not an address of this PC in the network.", wrong.Message);
+    }
+
+    [Fact]
+    public async Task ChosenAddressThatThePcNoLongerHasLetsDevicesInAtAnyAddressUntilItIsBack()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        IPAddress wifi = IPAddress.Parse("192.168.50.2");
+        IPAddress phone = IPAddress.Parse("192.168.50.77");
+        server.Pc.Have(PretendPc.HomeAddress, wifi);
+        server.Lan.Switch(true);
+        server.Lan.Choose("192.168.50.2");
+
+        IPAddress other = IPAddress.Parse("192.168.50.3");
+        server.Pc.MoveTo(other);   // the router gave the PC another address
+        Assert.True(server.Lan.MayConnect(phone, other));
+        Assert.Equal("192.168.50.2", server.Lan.StateFor(local: true).Chosen);   // the choice is not forgotten
+
+        server.Pc.Have(other, wifi);
+        Assert.False(server.Lan.MayConnect(phone, other));
+        Assert.True(server.Lan.MayConnect(phone, wifi));
+    }
+
+    [Fact]
+    public async Task OwnerCanTypeAPasswordAndEveryDeviceNeedsTheNewOne()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        string old = server.Lan.Password;
+        string oldCookie = server.Lan.CookieValue;
+        IPAddress phone = IPAddress.Parse("10.20.30.99");
+
+        await ui.InvokeAsync("SetLanPassword", "show-night 7");
+
+        Assert.Equal("SHOWNIGHT7", server.Lan.Password);   // as a device gives it: no spaces or dashes, upper case
+        Assert.Equal(["SHOWNIGHT7", server.Lan.CookieValue], File.ReadAllLines(server.PasswordFile));
+        Assert.NotEqual(oldCookie, server.Lan.CookieValue);   // devices that got in with the old one are out
+        Assert.False(server.Lan.AcceptsCookie(oldCookie));
+        Assert.Equal(LanAccess.Answer.Welcome, server.Lan.LogIn(phone, "shownight7"));
+        Assert.Equal(LanAccess.Answer.Wrong, server.Lan.LogIn(phone, old));
+
+        string refusal = "A LAN password has 5 to 20 characters, letters A to Z and digits only.";
+        Assert.Equal(refusal, Assert.Throws<DeskException>(() => server.Lan.ChangePassword("ab1")).Message);
+        Assert.Equal(refusal, Assert.Throws<DeskException>(() => server.Lan.ChangePassword("heslo-čaj")).Message);
+        Assert.Equal(refusal, Assert.Throws<DeskException>(() => server.Lan.ChangePassword(new string('A', 21))).Message);
+        Assert.Equal("SHOWNIGHT7", server.Lan.Password);
+
+        await ui.InvokeAsync("NewLanPassword");
+        Assert.Matches("^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{5}$", server.Lan.Password);
+    }
+
+    [Fact]
+    public async Task OnlyThePcChoosesTheAddressAndThePassword()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        server.Lan.Switch(true);
+        server.Pc.LoopbackIsAnotherDevice = true;
+        var cookies = new CookieContainer();
+        using HttpClient browser = server.CreateBrowser(cookies);
+        await LogInAsync(browser, server.Lan.Password, back: "/");
+        await using HubClient phone = await server.ConnectAsync(cookies);
+
+        var address = await Assert.ThrowsAsync<HubCallException>(() => phone.InvokeAsync("SetLanAddress", "10.20.30.40"));
+        Assert.Contains("The LAN address can only be chosen on the PC.", address.Message);
+        var password = await Assert.ThrowsAsync<HubCallException>(() => phone.InvokeAsync("SetLanPassword", "PHONE123"));
+        Assert.Contains("The LAN password can only be changed on the PC.", password.Message);
+        var renew = await Assert.ThrowsAsync<HubCallException>(() => phone.InvokeAsync("NewLanPassword"));
+        Assert.Contains("The LAN password can only be changed on the PC.", renew.Message);
     }
 
     // ---------------------------------------------------------------- the server's own page and names

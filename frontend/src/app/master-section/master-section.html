@@ -1,11 +1,12 @@
 <h2>Master</h2>
 
-<button lmLamp type="button" tone="white" [level]="3" (click)="store.clear()">Clear</button>
+<button lmLamp type="button" tone="white" data-action="master.clear" [level]="3" (click)="store.clear()">Clear</button>
 <button
   lmLamp
   type="button"
   tone="blue"
   aria-label="Blackout"
+  data-action="master.blackout"
   [level]="1"
   [blink]="store.blackout()"
   [attr.aria-pressed]="store.blackout()"

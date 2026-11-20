@@ -40,15 +40,16 @@ internal sealed partial class Desk
 
     /// <summary>
     /// Number of independent keys for channels. Each is bound to one channel, which the UI
-    /// switches between 0 and full with the key. The desk only remembers the bindings.
+    /// switches between 0 and full with the key. The desk only remembers the bindings; a UI shows
+    /// as many of the keys as its settings say (10 unless its owner chose another number).
     /// </summary>
-    public const int ChannelIndependentCount = 10;
+    public const int ChannelIndependentCount = 32;
 
     /// <summary>
     /// Number of independent keys for memories. Each is bound to one memory, whose fader the UI
-    /// switches between 0 and full with the key.
+    /// switches between 0 and full with the key. A UI shows as many as its settings say.
     /// </summary>
-    public const int MemoryIndependentCount = 10;
+    public const int MemoryIndependentCount = 32;
 
     private readonly Lock _lock = new();
     private readonly byte[] _channels = new byte[ChannelCount];
@@ -139,7 +140,7 @@ internal sealed partial class Desk
 
     /// <summary>
     /// The bindings of the channel keys of the independents on a new desk, and in a project that
-    /// does not say otherwise: key 1 on channel 1, and so on up to key 10 on channel 10.
+    /// does not say otherwise: key 1 on channel 1, and so on up to key 32 on channel 32.
     /// </summary>
     public static int[] DefaultIndependents()
     {

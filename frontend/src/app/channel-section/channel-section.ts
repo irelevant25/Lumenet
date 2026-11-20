@@ -2,13 +2,19 @@ import { Component, computed, inject } from '@angular/core';
 import { DeskStore } from '../desk/desk-store';
 import { CHANNEL_COUNT, stripNumbers } from '../desk/desk-types';
 import { channelKeysArmed } from '../desk/function-mode';
+import { KeyColumns } from '../desk/key-columns';
 import { LampLevel, channelLamp, channelPageLamp } from '../desk/lamps';
 import { FaderStrip } from '../fader-strip/fader-strip';
 import { LampButton } from '../lamp-button/lamp-button';
 
-/** The channels: two rows of faders, and the keys that choose which channels the rows show. */
+/**
+ * The channels: two rows of faders (or one, as Settings says), and the keys that choose which
+ * channels the rows show. The page keys go on in a second column (and a third...) when one
+ * column cannot hold them; the rows scroll sideways when a channel size chosen in Settings makes
+ * them wider than the window. The key under a fader puts it to full, and back to zero.
+ */
 @Component({
-  imports: [FaderStrip, LampButton],
+  imports: [FaderStrip, KeyColumns, LampButton],
   selector: 'lm-channel-section',
   styleUrl: './channel-section.css',
   templateUrl: './channel-section.html',
@@ -16,11 +22,12 @@ import { LampButton } from '../lamp-button/lamp-button';
 export class ChannelSection {
   protected readonly store = inject(DeskStore);
 
-  /** The channel numbers of the two rows on the page that is shown. */
+  /** The channel numbers of the rows on the page that is shown. */
   protected readonly rows = computed(() => {
     const first = this.store.firstChannel();
     const perRow = this.store.stripsPerRow();
-    return [stripNumbers(first, perRow), stripNumbers(first + perRow, perRow)];
+    const count = this.store.channelsPerPage() / perRow;
+    return Array.from({ length: count }, (_, row) => stripNumbers(first + row * perRow, perRow));
   });
 
   /** The page keys: full for the page that is shown, half for a page with a channel above zero. */

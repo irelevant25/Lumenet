@@ -1,4 +1,4 @@
-import { Component, booleanAttribute, computed, input, model, output } from '@angular/core';
+import { Component, computed, input, model, output } from '@angular/core';
 import { LampLevel } from '../desk/lamps';
 import { NOTE_LINE_LENGTH, joinNote, splitNote } from '../desk/notes';
 import { Fader } from '../fader/fader';
@@ -32,11 +32,13 @@ export class FaderStrip {
   readonly ownLevel = input<number | null>(null);
   readonly lampLevel = input<LampLevel>(1);
   readonly blink = input(false);
-  /** A key that can be pressed: a memory key always, a channel key while a sequence is recorded. */
-  readonly pressable = input(false, { transform: booleanAttribute });
   /** True for a memory that holds a sequence: its key is red running into yellow. */
   readonly sequence = input(false);
   protected readonly keyTone = computed<LampTone>(() => (this.sequence() ? 'sequence' : this.kind()));
+  /**
+   * The key under the fader was pressed. What that does is the section's business: the fader to
+   * full and back to zero, or what the lit record key wants.
+   */
   readonly keyPress = output<void>();
   /**
    * While a sequence is recorded: the numbers of its steps that use this channel or memory.

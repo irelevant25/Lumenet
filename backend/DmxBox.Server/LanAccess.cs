@@ -28,12 +28,21 @@ namespace DmxBox.Server;
 /// kept in a file, so a device that knows them gets in again after the next start; deleting
 /// the file makes a new password and shuts every device out.
 /// </para>
+/// <para>
+/// The owner can type a password of their own, or have a new one made. Either comes with a new
+/// key, and the devices that are connected lose their connection: whoever knew the old password
+/// is out. The owner can also choose the address of this PC at which devices may come in, when
+/// the PC has more than one (a cable and Wi-Fi). It is kept in the same file.
+/// </para>
 /// <para>Thread-safe.</para>
 /// </remarks>
 internal sealed class LanAccess : IDisposable
 {
-    /// <summary>How many characters the password has.</summary>
+    /// <summary>How many characters a password the desk makes has. One the owner types has at least as many.</summary>
     public const int PasswordLength = 5;
+
+    /// <summary>The most characters a password the owner types can have.</summary>
+    public const int MaxPasswordLength = 20;
 
     /// <summary>The cookie a device gets for the right password.</summary>
     public const string CookieName = "lumenet-lan";
@@ -78,6 +87,9 @@ internal sealed class LanAccess : IDisposable
     private bool _on;
     private string? _password;
     private string? _cookieKey;
+
+    // The address of this PC the owner chose for LAN; null while the desk chooses by itself.
+    private IPAddress? _chosen;
 
     /// <summary>Puts it together. LAN starts off.</summary>
     /// <param name="pc">This PC: which connections come from it, and its addresses in the network.</param>
@@ -160,11 +172,25 @@ internal sealed class LanAccess : IDisposable
         return remote is not null && _pc.Owns(remote);
     }
 
-    /// <summary>True if a connection from this address may be served at all: from this PC always, from another device while LAN is on.</summary>
+    /// <summary>
+    /// True if a connection may be served at all: from this PC always; from another device while
+    /// LAN is on, and only at the address chosen for LAN if the owner chose one.
+    /// </summary>
     /// <param name="remote">The address of the other end; null when it is not known.</param>
-    public bool MayConnect(IPAddress? remote)
+    /// <param name="local">The address of this PC the connection came in at; null when it is not known.</param>
+    public bool MayConnect(IPAddress? remote, IPAddress? local)
     {
-        return IsLocal(remote) || On;
+        if (IsLocal(remote))
+            return true;
+
+        lock (_lock)
+        {
+            if (!_on)
+                return false;
+
+            Load();
+            return ChosenNow() is not { } chosen || (local is not null && ThisPc.Plain(local).Equals(chosen));
+        }
     }
 
     /// <summary>
@@ -194,6 +220,66 @@ internal sealed class LanAccess : IDisposable
             _log.LogInformation("LAN is on: devices in the same network may use the desk, with the password.");
         else
             _log.LogInformation("LAN is off: only this PC can use the desk.");
+    }
+
+    /// <summary>
+    /// Chooses the address of this PC at which devices may come in, or lets the desk choose by
+    /// itself again. The devices that are connected lose their connection; those that may still
+    /// come in connect again by themselves.
+    /// </summary>
+    /// <param name="address">One of <see cref="ThisPc.LanAddresses"/>, like "192.168.1.20"; null or empty for "choose by yourself".</param>
+    /// <exception cref="DeskException">It is not an address of this PC in the network.</exception>
+    public void Choose(string? address)
+    {
+        IPAddress? chosen = null;
+        if (!string.IsNullOrWhiteSpace(address))
+        {
+            if (!IPAddress.TryParse(address.Trim(), out IPAddress? parsed) || !_pc.LanAddresses.Contains(ThisPc.Plain(parsed)))
+                throw new DeskException($"{address.Trim()} is not an address of this PC in the network.");
+
+            chosen = ThisPc.Plain(parsed);
+        }
+
+        HubCallerContext[] cut;
+        lock (_lock)
+        {
+            Load();
+            if (Equals(_chosen, chosen))
+                return;
+
+            _chosen = chosen;
+            Keep();
+            cut = [.. _devices.Values];
+        }
+
+        foreach (HubCallerContext device in cut)
+            device.Abort();
+
+        _log.LogInformation("LAN address: {Address}.", chosen?.ToString() ?? "chosen by the desk");
+    }
+
+    /// <summary>
+    /// Makes the password the owner typed the password, with a new key: every device has to give
+    /// the new one, and the connected ones lose their connection.
+    /// </summary>
+    /// <param name="typed">The new password. Spaces, dashes and lower case do not matter, as when a device gives it.</param>
+    /// <exception cref="DeskException">It is too short, too long, or has other characters than letters and digits.</exception>
+    public void ChangePassword(string? typed)
+    {
+        string password = Normalize(typed);
+        if (!IsPassword(password))
+        {
+            throw new DeskException(
+                $"A LAN password has {PasswordLength} to {MaxPasswordLength} characters, letters A to Z and digits only.");
+        }
+
+        Replace(password);
+    }
+
+    /// <summary>Makes a new random password, with a new key, as <see cref="ChangePassword"/> does.</summary>
+    public void RenewPassword()
+    {
+        Replace(NewPassword());
     }
 
     /// <summary>
@@ -267,7 +353,13 @@ internal sealed class LanAccess : IDisposable
             if (!local)
                 return new LanState(Local: false, On: _on, Addresses: [], Password: null);
 
-            return new LanState(Local: true, On: _on, Addresses: AddressesForDevices(), Password: _on ? PasswordLocked() : null);
+            Load();
+            return new LanState(
+                Local: true,
+                On: _on,
+                Addresses: AddressesForDevices(),
+                Password: _on ? PasswordLocked() : null,
+                Chosen: _chosen?.ToString());
         }
     }
 
@@ -318,9 +410,38 @@ internal sealed class LanAccess : IDisposable
         return _password!;
     }
 
-    // Call with the lock held. Reads the password and the cookie key from their file, the first
-    // time they are needed. What is missing is made new and kept; a new password always comes
-    // with a new key, so that the devices that knew the old one are out.
+    // Call with the lock held, after Load. The chosen address while this PC has it; null while
+    // none is chosen, and while the network has given the PC another address: then devices come
+    // in at any address, until the chosen one is back.
+    private IPAddress? ChosenNow()
+    {
+        return _chosen is { } chosen && _pc.LanAddresses.Contains(chosen) ? chosen : null;
+    }
+
+    // A new password with a new key, kept in the file. Whoever knew the old one is out.
+    private void Replace(string password)
+    {
+        HubCallerContext[] cut;
+        lock (_lock)
+        {
+            Load();
+            _password = password;
+            _cookieKey = NewCookieKey();
+            _wrong.Clear();
+            _wrongFromAll = default;
+            Keep();
+            cut = [.. _devices.Values];
+        }
+
+        foreach (HubCallerContext device in cut)
+            device.Abort();
+
+        _log.LogInformation("The LAN password was changed: every device has to give the new one.");
+    }
+
+    // Call with the lock held. Reads the password, the cookie key and the chosen address from
+    // their file, the first time they are needed. What is missing is made new and kept; a new
+    // password always comes with a new key, so that the devices that knew the old one are out.
     private void Load()
     {
         if (_password is not null)
@@ -330,9 +451,15 @@ internal sealed class LanAccess : IDisposable
         string? password = lines.Length > 0 && IsPassword(lines[0]) ? lines[0] : null;
         string? key = password is not null && lines.Length > 1 && IsCookieKey(lines[1]) ? lines[1] : null;
         _password = password ?? NewPassword();
-        _cookieKey = key ?? Convert.ToHexString(RandomNumberGenerator.GetBytes(CookieKeyBytes));
+        _cookieKey = key ?? NewCookieKey();
+        _chosen = lines.Length > 2 && IPAddress.TryParse(lines[2], out IPAddress? chosen) ? ThisPc.Plain(chosen) : null;
         if (password is null || key is null)
             Keep();
+    }
+
+    private static string NewCookieKey()
+    {
+        return Convert.ToHexString(RandomNumberGenerator.GetBytes(CookieKeyBytes));
     }
 
     private string[] ReadLines()
@@ -348,13 +475,14 @@ internal sealed class LanAccess : IDisposable
     }
 
     // Call with the lock held. The password on the first line, for a person who looks into the
-    // file; the key on the second.
+    // file; the key on the second; the chosen address, if there is one, on the third.
     private void Keep()
     {
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_passwordFile)!);
-            File.WriteAllLines(_passwordFile, [_password!, _cookieKey!]);
+            string[] lines = _chosen is null ? [_password!, _cookieKey!] : [_password!, _cookieKey!, _chosen.ToString()];
+            File.WriteAllLines(_passwordFile, lines);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
@@ -365,9 +493,11 @@ internal sealed class LanAccess : IDisposable
         }
     }
 
+    // One the desk made, or one the owner typed: letters A to Z and digits, upper case, as Normalize gives them.
     private static bool IsPassword(string text)
     {
-        return text.Length == PasswordLength && text.All(PasswordCharacters.Contains);
+        return text.Length is >= PasswordLength and <= MaxPasswordLength
+            && text.All(character => char.IsAsciiLetterUpper(character) || char.IsAsciiDigit(character));
     }
 
     private static bool IsCookieKey(string text)

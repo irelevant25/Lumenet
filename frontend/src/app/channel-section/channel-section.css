@@ -1,4 +1,4 @@
-/* One section, set into the panel: the title, the two rows of faders, and the page keys at the right. */
+/* One section, set into the panel: the title, the rows of faders, and the page keys at the right. */
 :host {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -13,7 +13,7 @@
 h2 {
   margin: 0;
   color: var(--legend-dim);
-  font-size: 12px;
+  font-size: calc(12px * var(--font-scale));
   font-stretch: 75%;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -29,14 +29,19 @@ h2 {
   min-height: 0;
 }
 
+/* The rows (two, or one as Settings says) share the height, and scroll sideways together when
+   they are wider than the window: with a channel size chosen in Settings that the window is too
+   narrow for. Otherwise they fit, and nothing scrolls. The memories scroll on their own. */
 .rows {
   display: grid;
-  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
   gap: 10px;
   min-height: 0;
+  overflow: auto hidden; /* its scrollbar is a big one: class "big-scrollbar", styles.css */
 }
 
-/* one row of faders: 32 on a wide window, 16 on a narrower one */
+/* one row of faders: 32 on a wide window, 16 on a narrower one, or as the channel size and the
+   rows of Settings have it (--line, set by the main view) */
 .row {
   display: grid;
   grid-template-columns: repeat(var(--line), var(--strip));
@@ -52,17 +57,17 @@ h2 {
   border-top: 1px solid var(--edge);
 }
 
-/* The page keys in ONE column, from the top. When they are too many for the height, they first
-   get flatter and then the column scrolls. */
+/* The page keys in a column, from the top. When they are too many for the height, they first
+   get flatter, and then they go on in another column beside it (key-columns.ts sets
+   --key-columns and --key-rows). */
 .rail {
   display: grid;
-  grid-template-columns: var(--key-w);
-  grid-auto-rows: minmax(var(--key-min-h), var(--key-h));
+  grid-auto-flow: column;
+  grid-template-columns: repeat(var(--key-columns, 1), var(--key-w));
+  grid-template-rows: repeat(var(--key-rows, 1), minmax(0, var(--key-h)));
   align-content: start;
   gap: var(--strip-gap);
   min-height: 0;
-  overflow-y: auto;
-  scrollbar-width: thin;
 }
 
 .rail [lmLamp] {
@@ -77,7 +82,9 @@ h2 {
 
 :host-context(.mobile) .rail {
   order: -1;
-  grid-template-columns: repeat(var(--line), var(--strip));
+  grid-auto-flow: row;
+  grid-template-columns: repeat(var(--fit-line), var(--strip));
+  grid-template-rows: none;
   grid-auto-rows: var(--key-h);
   justify-content: space-between;
   justify-items: center;
@@ -85,7 +92,7 @@ h2 {
 }
 
 :host-context(.mobile) .rows {
-  grid-template-rows: none;
+  grid-auto-rows: auto;
 }
 
 /* on a phone a row of 16 is two lines of 8: more room between the lines than between the strips */

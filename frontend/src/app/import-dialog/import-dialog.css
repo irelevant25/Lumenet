@@ -26,14 +26,14 @@ form {
 
 h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: calc(20px * var(--font-scale));
   font-weight: 600;
 }
 
 .hint {
   margin: 0;
   color: var(--legend-dim);
-  font-size: 13px;
+  font-size: calc(13px * var(--font-scale));
   line-height: 1.35;
 }
 
@@ -47,7 +47,7 @@ h2 {
 
 .file-name {
   overflow: hidden;
-  font-size: 15px;
+  font-size: calc(15px * var(--font-scale));
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -62,7 +62,7 @@ h2 {
   border: 1px solid var(--edge);
   border-radius: 4px;
   background: var(--well);
-  font-size: 14px;
+  font-size: calc(14px * var(--font-scale));
   line-height: 1.4;
 }
 

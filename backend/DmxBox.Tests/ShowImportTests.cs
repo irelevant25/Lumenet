@@ -409,7 +409,7 @@ public class ShowImportTests
         Assert.Equal("", notes[0]);                                 // channel 1 is on DMX 1 and has no label
         Assert.Equal("IND 1" + SecondLine + "SMOKE", notes[96]);
         Assert.Equal("IND 2", notes[97]);
-        Assert.Equal([97, 98, 3, 4, 5, 6, 7, 8, 9, 10], show.Content.Independents);
+        Assert.Equal(new[] { 97, 98 }.Concat(Enumerable.Range(3, 30)), show.Content.Independents);
     }
 
     [Fact]

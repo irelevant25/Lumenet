@@ -4,7 +4,7 @@
   display: grid;
   width: 100%;
   color: var(--legend);
-  font-size: 13px;
+  font-size: calc(13px * var(--font-scale));
   font-stretch: 75%;
   line-height: 15px;
   text-align: center;

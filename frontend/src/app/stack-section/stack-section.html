@@ -1,0 +1,86 @@
+<h2>Stack</h2>
+
+<div class="keys" role="group" aria-label="Stack keys">
+  <!-- Lit: the stack is live, and everything that is stored is locked. -->
+  <button
+    lmLamp
+    type="button"
+    tone="live"
+    aria-label="Stack live"
+    data-action="stack.live"
+    [level]="live() ? 3 : 1"
+    [disabled]="!live() && empty()"
+    [attr.aria-pressed]="live()"
+    (click)="store.setStackLive(!live())"
+  >
+    Stack
+  </button>
+  <button
+    lmLamp
+    type="button"
+    tone="system"
+    aria-label="Previous step"
+    data-action="stack.previous"
+    [disabled]="!live()"
+    (click)="store.stackPrevious()"
+  >
+    Prev
+  </button>
+  <button
+    lmLamp
+    type="button"
+    tone="channel"
+    aria-label="Play"
+    data-action="stack.play"
+    [level]="store.stackRunning() ? 3 : 1"
+    [disabled]="!live()"
+    (click)="store.stackPlay()"
+  >
+    Play
+  </button>
+  <button
+    lmLamp
+    type="button"
+    tone="system"
+    aria-label="Pause"
+    data-action="stack.pause"
+    [level]="store.stackPaused() ? 3 : 1"
+    [blink]="store.stackPaused()"
+    [disabled]="!live()"
+    [attr.aria-pressed]="store.stackPaused()"
+    (click)="store.stackPause()"
+  >
+    Pause
+  </button>
+  <button
+    lmLamp
+    type="button"
+    tone="system"
+    aria-label="Next step"
+    data-action="stack.next"
+    [disabled]="!live()"
+    (click)="store.stackNext()"
+  >
+    Next
+  </button>
+</div>
+
+<!-- Where the stack stands: a wheel of its steps, the one that is on in the middle. -->
+<div class="wheel">
+  <span class="pointer" aria-hidden="true"></span>
+  <div class="window">
+    <ol #roller class="roller" aria-label="Where the stack stands">
+      @for (place of places(); track place.offset) {
+        <li
+          [class]="place.kind"
+          [class.empty]="!place.step"
+          [attr.aria-hidden]="placeName(place) === null ? 'true' : null"
+          [attr.aria-label]="placeName(place)"
+          [attr.title]="placeName(place)"
+        >
+          {{ place.step?.cue ?? (place.offset === 0 ? '-' : '') }}
+        </li>
+      }
+    </ol>
+  </div>
+</div>

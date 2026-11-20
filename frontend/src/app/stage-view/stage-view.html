@@ -1,0 +1,142 @@
+<header>
+  <h2>Stage</h2>
+  <p class="summary">{{ summary() }}</p>
+  <div class="keys">
+    <button
+      lmLamp
+      type="button"
+      tone="stage-edit"
+      aria-label="Edit the plan"
+      data-action="stage.edit"
+      [level]="editing() ? 3 : 1"
+      [attr.aria-pressed]="editing()"
+      [disabled]="!canEdit()"
+      (click)="toggleEdit()"
+    >
+      Edit
+    </button>
+    <button
+      lmLamp
+      type="button"
+      tone="stage-add"
+      aria-label="Add light"
+      data-action="stage.add"
+      [level]="1"
+      [disabled]="!editing() || full()"
+      (click)="addLight()"
+    >
+      Add<br />light
+    </button>
+  </div>
+</header>
+
+<!-- The plan keeps the shape of the stage and the room around it, as big as the window allows. -->
+<div class="room">
+  <div
+    #plan
+    class="plan"
+    role="group"
+    [style.--tw]="totalWidth()"
+    [style.--td]="totalDepth()"
+    [attr.aria-label]="planLabel()"
+    (pointerdown)="onPlanDown($event)"
+  >
+    <div
+      class="stage"
+      [style.left.%]="stageBox().left"
+      [style.top.%]="stageBox().top"
+      [style.width.%]="stageBox().width"
+      [style.height.%]="stageBox().height"
+    ></div>
+    @if (store.stagePicture(); as picture) {
+      <img
+        class="picture"
+        alt=""
+        [src]="picture"
+        [style.opacity]="store.stage().pictureOpacity"
+        [style.left.%]="pictureBox().left"
+        [style.top.%]="pictureBox().top"
+        [style.width.%]="pictureBox().width"
+        [style.height.%]="pictureBox().height"
+      />
+    }
+    <div
+      class="grid"
+      [style.left.%]="stageBox().left"
+      [style.top.%]="stageBox().top"
+      [style.width.%]="stageBox().width"
+      [style.height.%]="stageBox().height"
+    ></div>
+
+    @for (item of shown(); track item.light.id) {
+      <div
+        class="light"
+        role="button"
+        tabindex="0"
+        [class.selected]="selectedId() === item.light.id"
+        [class.movable]="editing()"
+        [style.left.%]="item.left"
+        [style.top.%]="item.top"
+        [attr.aria-label]="item.title"
+        [attr.aria-pressed]="selectedId() === item.light.id"
+        [attr.data-light]="item.light.id"
+        [title]="item.title"
+        (pointerdown)="onLightDown($event, item.light)"
+        (pointermove)="onLightMove($event)"
+        (pointerup)="onLightUp($event)"
+        (pointercancel)="onLightUp($event)"
+        (keydown)="onLightKey($event, item.light)"
+      >
+        <div
+          class="fixture"
+          [class.square]="item.square"
+          [class.device]="item.device"
+          [class.vertical]="item.vertical"
+          [style.--w]="item.width"
+          [style.--d]="item.depth"
+          [style.--gw]="item.glowWidth"
+          [style.--gd]="item.glowDepth"
+          [style.rotate]="item.light.angle + 'deg'"
+        >
+          @for (cell of item.cells; track $index) {
+            <span
+              class="glow"
+              [style.left.%]="cell.x"
+              [style.top.%]="cell.y"
+              [style.--glow]="cell.glow"
+              [style.opacity]="cell.brightness"
+            ></span>
+          }
+          <span class="body">
+            @for (cell of item.cells; track $index) {
+              <span class="lens" [style.--lens]="cell.lens"></span>
+            }
+            @if (item.device) {
+              <span class="level" [style.height.%]="item.level"></span>
+            }
+          </span>
+        </div>
+        @if (item.light.name) {
+          <span class="name" [style.--below]="item.below">{{ item.light.name }}</span>
+        }
+      </div>
+    }
+
+    @if (store.stageKnown() && store.stage().lights.length === 0) {
+      <p class="nothing">
+        @if (editing()) {
+          Add light puts a light on the plan.
+        } @else {
+          No lights yet. Edit, then Add light.
+        }
+      </p>
+    }
+  </div>
+  <!-- under the plan, so that no light can stand on it -->
+  <p class="audience" aria-hidden="true">Audience</p>
+</div>
+
+<!-- The chosen light with its faders; while Edit is lit, what can be changed of it or of the stage -->
+@if (panelShown()) {
+  <lm-stage-panel [(lightId)]="selectedId" [editing]="editing()" />
+}

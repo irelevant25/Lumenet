@@ -370,6 +370,56 @@ internal sealed class DeskHub : Hub<IDeskClient>
         await TellPlaybackAsync();
     }
 
+    /// <summary>The stage plan of the project: the size of the stage and the lights of the rig on it.</summary>
+    public StagePlan GetStage()
+    {
+        return _desk.Stage;
+    }
+
+    /// <summary>
+    /// Takes the stage plan as the owner edited it, whole: a light added, moved, changed or taken
+    /// away, or the stage made bigger. Every UI gets the plan as the desk keeps it. Changes of the
+    /// plan in quick succession are one step of the history.
+    /// </summary>
+    /// <param name="plan">The plan as it is to be.</param>
+    public async Task SetStage(StagePlan plan)
+    {
+        bool changed;
+        using (_history.Change("the stage plan", "stage"))
+            changed = _desk.SetStage(plan);
+
+        if (changed)
+            await Clients.All.StageChanged(_desk.Stage);
+
+        await TellProjectAsync();
+    }
+
+    /// <summary>
+    /// The picture under the stage plan, as a data URL; null without one. A UI asks for it when
+    /// the plan names another picture (<see cref="StagePlan.PictureId"/>).
+    /// </summary>
+    public string? GetStagePicture()
+    {
+        return _desk.StagePicture;
+    }
+
+    /// <summary>
+    /// Puts a picture under the stage plan, or takes it away. Every UI gets the plan, which names
+    /// the new picture, and asks for it.
+    /// </summary>
+    /// <param name="picture">A data URL of a JPEG, PNG or WebP image; null for none.</param>
+    public async Task SetStagePicture(string? picture)
+    {
+        bool changed;
+        using (_history.Change(picture is null ? "taking the picture of the stage away" : "the picture of the stage"))
+            changed = _desk.SetStagePicture(picture);
+
+        if (changed)
+            await Clients.All.StageChanged(_desk.Stage);
+
+        await TellProjectAsync();
+    }
+
     /// <summary>
     /// Undo: the project goes back to how it was before its last change. See <see cref="UndoHistory"/>
     /// for what counts. Every UI gets the whole desk again.

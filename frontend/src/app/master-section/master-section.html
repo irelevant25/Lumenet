@@ -1,20 +1,5 @@
 <h2>Master</h2>
 
-<button lmLamp type="button" tone="clear" data-action="master.clear" [level]="3" (click)="store.clear()">Clear</button>
-<!-- Lit: the keys under the faders and the independent keys hold their fader at full only while they are held. -->
-<button
-  lmLamp
-  type="button"
-  tone="solo"
-  aria-label="Solo"
-  data-action="master.solo"
-  title="While lit, a key under a fader or of the independents puts its fader to full only while it is held"
-  [level]="store.soloMode() ? 3 : 1"
-  [attr.aria-pressed]="store.soloMode()"
-  (click)="store.toggleSolo()"
->
-  Solo
-</button>
 <button
   lmLamp
   type="button"
@@ -39,22 +24,3 @@
   [value]="store.master()"
   (valueChange)="store.setMaster($event)"
 />
-
-<!-- The rate, a speed master for the sequences: RATE switches it, the wheel sets it. -->
-<div class="rate">
-  <button
-    lmLamp
-    type="button"
-    tone="rate"
-    aria-label="Rate"
-    data-action="master.rate"
-    title="While lit, every sequence plays at its own speed times the rate of the wheel"
-    [level]="store.rateOn() ? 3 : 1"
-    [attr.aria-pressed]="store.rateOn()"
-    (click)="store.toggleRate()"
-  >
-    Rate
-  </button>
-  <lm-rate-wheel [value]="store.rate()" [disabled]="!store.rateOn()" (valueChange)="store.setRate($event)" />
-  <output class="rate-value" [class.on]="store.rateOn()">×{{ store.rate().toFixed(2) }}</output>
-</div>

@@ -461,7 +461,8 @@ internal sealed partial class Desk
     /// Makes the desk clean for a new project: every channel fader and memory fader down to 0,
     /// every memory empty, an empty stack, no notes, the independent keys back on channels 1 to
     /// 32 and memories 1 to 32. The master and blackout stay: they belong to the evening, not to
-    /// the project. So do the settings: a new project starts with the layout in use.
+    /// the project. So do the settings: a new project starts with the layout in use. And so does
+    /// the stage plan: the rig does not change with the show.
     /// </summary>
     /// <returns><see cref="ProjectChanges"/> right after the change.</returns>
     /// <exception cref="DeskException">The stack is live.</exception>
@@ -487,7 +488,8 @@ internal sealed partial class Desk
     /// <summary>
     /// Replaces everything a project file holds at once, which is what loading a project does:
     /// the looks and sequences of all memories, the stack, all notes, the bindings of the
-    /// independent keys and the settings (a project without settings keeps those in use). Every
+    /// independent keys, the stage plan and the settings (a project without a plan or settings
+    /// keeps those in use). Every
     /// memory fader goes down to 0 and the stack stands before its first step, so that nothing
     /// of the new project appears on stage unasked. The channel faders stay.
     /// </summary>
@@ -513,7 +515,7 @@ internal sealed partial class Desk
 
     /// <summary>
     /// Puts back what the project held at an earlier moment, for undo and redo: the looks and
-    /// sequences, the stack, the notes and the bindings of the independent keys. Unlike loading,
+    /// sequences, the stack, the notes, the bindings of the independent keys and the stage plan. Unlike loading,
     /// the faders stay where they are, and so do the settings, which undo leaves alone.
     /// </summary>
     /// <param name="project">The project as <see cref="GetProject"/> gave it then.</param>
@@ -549,6 +551,8 @@ internal sealed partial class Desk
                 Sequences = Copy(_sequences),
                 Stack = _stack.Select(entry => new ProjectStep(entry.Cue, entry.Step)).ToArray(),
                 Settings = _settings,
+                Stage = _stage,
+                StagePicture = _stagePicture,
             };
             return (content, _projectChanges);
         }
@@ -681,12 +685,19 @@ internal sealed partial class Desk
         _outputChanges++;
     }
 
-    // Call with the lock held. The looks and sequences, the stack, the notes and the bindings of
-    // the independent keys of a project take the place of the desk's. The project's own arrays
-    // are copied where the desk changes its arrays in place, so that what the project came from
-    // (a file, or an earlier moment kept for undo) stays as it was.
+    // Call with the lock held. The looks and sequences, the stack, the notes, the bindings of the
+    // independent keys and the stage plan (if the project has one) of a project take the place
+    // of the desk's. The project's own arrays are copied where the desk changes its arrays in
+    // place, so that what the project came from (a file, or an earlier moment kept for undo)
+    // stays as it was. The plan is never changed in place.
     private void PutProject(ProjectContent project)
     {
+        if (project.Stage is { } stage)
+        {
+            _stage = stage;
+            _stagePicture = project.StagePicture;
+        }
+
         for (int index = 0; index < MemoryCount; index++)
         {
             _memories[index] = project.Looks[index] is { } look ? Copy(look) : null;

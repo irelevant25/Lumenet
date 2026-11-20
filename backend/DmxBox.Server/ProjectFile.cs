@@ -57,6 +57,73 @@ internal sealed class ProjectFile
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public JsonElement? Settings { get; set; }
+
+    /// <summary>
+    /// The stage plan: the size of the stage and the lights of the rig on it. Files from before
+    /// there were plans do not have the property, nor do imported shows.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ProjectFileStage? Stage { get; set; }
+}
+
+/// <summary>The stage plan, as it stands in a project file.</summary>
+internal sealed class ProjectFileStage
+{
+    /// <summary>How wide the stage is, in squares. A file that does not say means 16.</summary>
+    public int? Width { get; set; }
+
+    /// <summary>How deep the stage is, in squares. A file that does not say means 10.</summary>
+    public int? Depth { get; set; }
+
+    /// <summary>The lights on the plan.</summary>
+    public List<ProjectFileLight?>? Lights { get; set; }
+
+    /// <summary>The picture under the plan, as a data URL of an image; none without one.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Picture { get; set; }
+
+    /// <summary>How brightly the picture shows, 0.1 to 1. A file that does not say means 0.6.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? PictureOpacity { get; set; }
+
+    /// <summary>"stage" or "plan": what the picture lies under. A file that does not say means the stage.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? PictureOver { get; set; }
+}
+
+/// <summary>A light of the stage plan, as it stands in a project file.</summary>
+internal sealed class ProjectFileLight
+{
+    /// <summary>What the owner calls it. A file that does not say means no name.</summary>
+    public string? Name { get; set; }
+
+    /// <summary>Its first channel, 1-512.</summary>
+    public int? Address { get; set; }
+
+    /// <summary>One letter per channel, like "DRGB", see <see cref="StageLight.Channels"/>.</summary>
+    public string? Channels { get; set; }
+
+    /// <summary>The colour of a light without colour channels, like "#ff2000"; none for warm white.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Colour { get; set; }
+
+    /// <summary>Where it hangs: squares from the left edge of the stage.</summary>
+    public double? X { get; set; }
+
+    /// <summary>Where it hangs: squares from the back edge of the stage.</summary>
+    public double? Y { get; set; }
+
+    /// <summary>How it is turned, in degrees clockwise. A file that does not say means 0.</summary>
+    public int? Angle { get; set; }
+
+    /// <summary>"round" or "square". A file that does not say means round.</summary>
+    public string? Shape { get; set; }
+
+    /// <summary>How wide it is, in squares. A file that does not say means 1.</summary>
+    public int? Width { get; set; }
+
+    /// <summary>How deep it is, in squares. A file that does not say means 1.</summary>
+    public int? Depth { get; set; }
 }
 
 /// <summary>A memory that holds a sequence, as it stands in a project file.</summary>

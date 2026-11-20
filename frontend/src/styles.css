@@ -59,6 +59,8 @@
   --key-sequence-add: #ffb020;
   --key-template: #ffb020;
   --key-normal-speed: #ffb020;
+  --key-stage-edit: #ffb020;
+  --key-stage-add: #ffb020;
 
   --cap: #d9dde3;
   --focus: #8ab4ff;
@@ -72,9 +74,9 @@
 
   /* ---- layout ----
      A wide window shows 32 faders in a row. The width of one fader strip follows the window:
-     32 strips and the one column of page keys beside them are 32.82 strips (a key is 0.82
-     strips wide); the other 365px are the gaps, the paddings and the two columns at the right
-     (the master section with record, and the independents). */
+     32 strips, the one column of page keys beside them and the general section's column are
+     33.64 strips (a key is 0.82 strips wide); the other 395px are the gaps, the paddings and
+     the two other columns at the right (the master section with record, and the independents). */
   --gap: 10px;
   --strip-gap: 4px;
   --strips: 32; /* faders in one row */
@@ -84,7 +86,7 @@
      page sets it on <html>), the strips keep the width they have here, and a row that is too
      wide for the window scrolls sideways. */
   --fit-line: var(--strips);
-  --strip: clamp(28px, calc((100vw - 365px) / 32.82), 60px);
+  --strip: clamp(28px, calc((100vw - 395px) / 33.64), 60px);
 
   /* A column of keys that is too high for its place first gets flatter keys, down to this
      height, and after that it scrolls. */
@@ -119,7 +121,7 @@
 /* medium: 16 faders in a row, and twice as many page keys */
 html.medium {
   --strips: 16;
-  --strip: clamp(28px, calc((100vw - 301px) / 16.82), 60px);
+  --strip: clamp(28px, calc((100vw - 331px) / 17.64), 60px);
 }
 
 /* mobile: a small screen, or a window too narrow or too low for the whole desk. The sections

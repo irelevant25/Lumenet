@@ -30,4 +30,14 @@ internal sealed record ProjectContent(byte[]?[] Looks, string[] ChannelNotes, st
     /// without settings of its own, such as one from a file of an older version.
     /// </summary>
     public string? Settings { get; init; }
+
+    /// <summary>
+    /// The stage plan: the lights of the rig and where they hang; null for a project that does not
+    /// say, such as one from a file of an older version or an imported show. Then the plan in use
+    /// stays.
+    /// </summary>
+    public StagePlan? Stage { get; init; }
+
+    /// <summary>The picture under the stage plan, as a data URL; null without one. It goes with <see cref="Stage"/>.</summary>
+    public string? StagePicture { get; init; }
 }

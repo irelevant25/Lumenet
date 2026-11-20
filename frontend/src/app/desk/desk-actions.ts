@@ -33,9 +33,11 @@ export const ACTION_GROUPS = [
   'Views',
   'Project and LAN',
   'Master',
+  'General',
   'Stack',
   'Record',
   'Sequences view',
+  'Stage view',
   'Independents',
   'Channel pages',
   'Memory pages',
@@ -63,6 +65,7 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
   view('memories', 'Memories view', '/memories'),
   view('sequences', 'Sequences view', '/sequences'),
   view('stack', 'Stack view', '/stack'),
+  view('stage', 'Stage view', '/stage'),
   view('settings', 'Settings view', '/settings'),
   view('keyboard', 'Keyboard view', '/keyboard'),
 
@@ -79,10 +82,12 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
     run: ({ store }) => store.setLan(!store.lan()?.on),
   },
 
-  { id: 'master.clear', group: 'Master', label: 'Clear', run: ({ store }) => store.clear() },
+  // Clear, Solo and Rate stood in the master section once: their names say so, and the shortcuts
+  // that projects keep under these names go on working.
   { id: 'master.blackout', group: 'Master', label: 'Blackout', run: ({ store }) => store.toggleBlackout() },
-  { id: 'master.solo', group: 'Master', label: 'Solo', run: ({ store }) => store.toggleSolo() },
-  { id: 'master.rate', group: 'Master', label: 'Rate', run: ({ store }) => store.toggleRate() },
+  { id: 'master.clear', group: 'General', label: 'Clear', run: ({ store }) => store.clear() },
+  { id: 'master.solo', group: 'General', label: 'Solo', run: ({ store }) => store.toggleSolo() },
+  { id: 'master.rate', group: 'General', label: 'Rate', run: ({ store }) => store.toggleRate() },
 
   {
     id: 'stack.live',
@@ -113,6 +118,9 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
   { id: 'sequence.add', group: 'Sequences view', label: 'Add step', run: null },
   { id: 'sequence.template', group: 'Sequences view', label: 'Template', run: null },
   { id: 'sequence.speed', group: 'Sequences view', label: 'Normal speed (1x)', run: null },
+
+  { id: 'stage.edit', group: 'Stage view', label: 'Edit (stage plan)', run: null },
+  { id: 'stage.add', group: 'Stage view', label: 'Add light', run: null },
 
   { id: 'ind.edit', group: 'Independents', label: 'Edit (independents)', run: null },
   ...numbered(CHANNEL_INDEPENDENT_COUNT, (key) => ({

@@ -741,6 +741,95 @@ public sealed class HubTests
         await AssertRefusedAsync("The autosave can keep the work every 5, 30, 60, 300 seconds, not every 7.", ui, "SetAutosave", true, 7);
     }
 
+    // ---------------------------------------------------------------- the stage plan
+
+    [Fact]
+    public async Task TheStagePlanReachesEveryUiIsAStepOfTheHistoryAndGoesWithTheProject()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await using HubClient other = await server.ConnectAsync();
+
+        const string empty = """{"width":16,"depth":10,"lights":[],"pictureId":null,"pictureOpacity":0.6,"pictureOver":"stage"}""";
+        Assert.Equal(empty, (await ui.InvokeAsync("GetStage")).GetRawText());
+
+        var plan = new
+        {
+            width = 20,
+            depth = 12,
+            lights = new object[]
+            {
+                new { id = 1, name = " LED bar ", address = 30, channels = "rgbrgb", colour = (string?)null, x = 8.0, y = 1.0, angle = 450, shape = "Square", width = 4, depth = 1 },
+                new { id = 2, name = "Back blue 1", address = 6, channels = "D", colour = (string?)"#2060FF", x = 2.0, y = 1.5, angle = 0 },
+            },
+        };
+        await ui.InvokeAsync("SetStage", plan);
+        const string kept =
+            """{"width":20,"depth":12,"lights":[""" +
+            """{"id":1,"name":"LED bar","address":30,"channels":"RGBRGB","colour":null,"x":8,"y":1,"angle":90,"shape":"square","width":4,"depth":1},""" +
+            """{"id":2,"name":"Back blue 1","address":6,"channels":"D","colour":"#2060ff","x":2,"y":1.5,"angle":0,"shape":"round","width":1,"depth":1}]""" +
+            ""","pictureId":null,"pictureOpacity":0.6,"pictureOver":"stage"}""";
+        await AssertNextAsync(other, "StageChanged", $"[{kept}]");
+        await AssertNextAsync(other, "ProjectChanged", """[{"name":"Untitled","path":null,"unsaved":true}]""");
+        await AssertNextAsync(other, "HistoryChanged", """[{"undo":"the stage plan","redo":null}]""");
+
+        await AssertRefusedAsync(
+            "Light 1 of the plan at address 510 with 6 channels does not fit into the channels 1 to 512.",
+            ui,
+            "SetStage",
+            new { width = 20, depth = 12, lights = new[] { new { id = 1, name = "", address = 510, channels = "RGBRGB", x = 0.0, y = 0.0, angle = 0 } } });
+
+        // Undo takes it back, redo brings it again.
+        Assert.Equal("the stage plan", (await ui.InvokeAsync("Undo")).GetString());
+        Assert.Equal(empty, (await ui.InvokeAsync("GetStage")).GetRawText());
+        await ui.InvokeAsync("Redo");
+        Assert.Equal(kept, (await ui.InvokeAsync("GetStage")).GetRawText());
+
+        // It goes into the file. A new project keeps it (the rig stays); loading brings the project's.
+        await ui.InvokeAsync("SaveProject", "rig");
+        await ui.InvokeAsync("NewProject");
+        Assert.Equal(kept, (await ui.InvokeAsync("GetStage")).GetRawText());
+        await ui.InvokeAsync("SetStage", new { width = 8, depth = 8, lights = Array.Empty<object>() });
+        await ui.InvokeAsync("LoadProject", "rig");
+        Assert.Equal(kept, (await ui.InvokeAsync("GetStage")).GetRawText());
+    }
+
+    [Fact]
+    public async Task APictureUnderThePlanReachesEveryUiByItsNameAndGoesWithTheProject()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await using HubClient other = await server.ConnectAsync();
+
+        const string picture = "data:image/png;base64,iVBORw0KGgo=";
+        Assert.Equal(JsonValueKind.Null, (await ui.InvokeAsync("GetStagePicture")).ValueKind);
+        await ui.InvokeAsync("SetStagePicture", picture);
+
+        // The plan names the picture; the picture itself comes when a UI asks for it.
+        JsonElement plan = Assert.Single((await NextAsync(other, "StageChanged")).Arguments);
+        string id = plan.GetProperty("pictureId").GetString()!;
+        Assert.Equal(16, id.Length);
+        Assert.Equal(picture, (await other.InvokeAsync("GetStagePicture")).GetString());
+
+        // A plan from a UI keeps the picture, whatever it says about it.
+        await ui.InvokeAsync("SetStage", new { width = 16, depth = 10, lights = Array.Empty<object>(), pictureId = (string?)null, pictureOpacity = 0.3 });
+        JsonElement kept = await ui.InvokeAsync("GetStage");
+        Assert.Equal(id, kept.GetProperty("pictureId").GetString());
+        Assert.Equal(0.3, kept.GetProperty("pictureOpacity").GetDouble());
+
+        await AssertRefusedAsync("The picture must be a JPEG, PNG or WebP image.", ui, "SetStagePicture", "data:image/svg+xml;base64,PHN2Zz4=");
+
+        // It goes into the file, and undo takes it away again.
+        await ui.InvokeAsync("SaveProject", "with picture");
+        await ui.InvokeAsync("SetStagePicture", (string?)null);
+        Assert.Equal(JsonValueKind.Null, (await ui.InvokeAsync("GetStage")).GetProperty("pictureId").ValueKind);
+        Assert.Equal("taking the picture of the stage away", (await ui.InvokeAsync("Undo")).GetString());
+        Assert.Equal(picture, (await ui.InvokeAsync("GetStagePicture")).GetString());
+        await ui.InvokeAsync("SetStagePicture", (string?)null);
+        await ui.InvokeAsync("LoadProject", "with picture");
+        Assert.Equal(picture, (await ui.InvokeAsync("GetStagePicture")).GetString());
+    }
+
     [Fact]
     public async Task NothingWasBroughtBackAtAStartWithoutAnAutosaveFile()
     {

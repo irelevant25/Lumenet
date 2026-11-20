@@ -1,0 +1,38 @@
+/* The faders side by side, in as many lines as they need. */
+.faders {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 4px;
+}
+
+/* a fader: its level above it, under it the letter of its channel and the channel's number */
+.strip {
+  display: grid;
+  grid-template-rows: auto calc(150px * var(--font-scale)) auto auto;
+  justify-items: center;
+  gap: 3px;
+  width: 34px;
+}
+
+lm-fader {
+  width: 26px;
+}
+
+.level,
+.number {
+  color: var(--legend-dim);
+  font-size: calc(12px * var(--font-scale));
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.level.up {
+  color: #fff;
+}
+
+.letter {
+  color: var(--legend);
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 600;
+  line-height: 1;
+}

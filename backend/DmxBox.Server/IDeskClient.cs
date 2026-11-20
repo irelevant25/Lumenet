@@ -114,4 +114,11 @@ public interface IDeskClient
     /// </summary>
     /// <param name="options">The autosave as it is now.</param>
     Task AutosaveChanged(AutosaveOptions options);
+
+    /// <summary>
+    /// The stage plan was changed in a UI. (After undo, redo, a load, a new project or an import
+    /// the UIs get the whole desk instead, and ask for the plan with it.)
+    /// </summary>
+    /// <param name="plan">The plan as the desk keeps it now.</param>
+    Task StageChanged(StagePlan plan);
 }

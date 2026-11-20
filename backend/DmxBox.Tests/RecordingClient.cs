@@ -111,4 +111,7 @@ internal sealed class RecordingClient : IDeskClient
 
     /// <inheritdoc />
     public Task AutosaveChanged(AutosaveOptions options) => throw new NotSupportedException();
+
+    /// <inheritdoc />
+    public Task StageChanged(StagePlan plan) => throw new NotSupportedException();
 }

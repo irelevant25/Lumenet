@@ -1,0 +1,42 @@
+<h3>Picture</h3>
+<div class="field">
+  <button type="button" [disabled]="busy()" (click)="file.click()">
+    {{ store.stagePicture() ? 'Another picture…' : 'Choose a picture…' }}
+  </button>
+  <input #file type="file" accept="image/*" hidden (change)="onFile($event)" />
+</div>
+@if (problem()) {
+  <p class="problem" role="alert">{{ problem() }}</p>
+}
+
+@if (store.stagePicture()) {
+  <div class="field">
+    <label for="picture-over">Lies under</label>
+    <select id="picture-over" (change)="setOver($event)">
+      <option value="stage" [selected]="store.stage().pictureOver === 'stage'">The stage</option>
+      <option value="plan" [selected]="store.stage().pictureOver === 'plan'">The whole plan</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="picture-opacity">Shows through</label>
+    <input
+      id="picture-opacity"
+      type="range"
+      min="10"
+      max="100"
+      step="5"
+      [value]="opacity()"
+      (input)="previewOpacity($event)"
+      (change)="setOpacity($event)"
+    />
+    <output for="picture-opacity">{{ opacity() }} %</output>
+  </div>
+  <div class="field">
+    <button type="button" (click)="fit()">Fit the stage to it</button>
+    <button type="button" (click)="remove()">Remove the picture</button>
+  </div>
+}
+<p class="hint">
+  A photo or a drawing of the stage, under the grid and the lights. A new picture gives the stage
+  its proportions (its depth changes); the page makes it smaller first, to at most 1600 pixels.
+</p>

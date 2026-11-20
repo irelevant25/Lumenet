@@ -374,6 +374,8 @@ public sealed class PlaybackHubTests
 
         public Task AutosaveChanged(AutosaveOptions options) => throw new NotSupportedException();
 
+        public Task StageChanged(StagePlan plan) => throw new NotSupportedException();
+
         private Task Note(string message)
         {
             Messages.Add(message);

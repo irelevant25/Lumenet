@@ -1,17 +1,13 @@
-/* A narrow section above the stack: the title, Clear, Solo and Blackout, the master fader with
-   its level above it, and under the fader Rate with its wheel and the rate. The fader takes the
-   height that is left; on a low window the keys get flatter too, down to --master-key-min (set
-   by the main view), and the fader keeps 50 pixels. */
+/* A narrow section over the record keys: the title, Blackout, and the master fader with its
+   level above it. The fader takes the height that is left; on a low window the key gets flatter
+   too, down to --master-key-min (set by the main view), and the fader keeps 50 pixels. */
 :host {
   display: grid;
   grid-template-rows:
     auto
-    repeat(3, minmax(var(--master-key-min, var(--key-h)), var(--key-h)))
-    auto
-    minmax(50px, 1fr)
     minmax(var(--master-key-min, var(--key-h)), var(--key-h))
     auto
-    auto;
+    minmax(50px, 1fr);
   justify-items: center;
   gap: var(--strip-gap);
   min-height: 0;
@@ -21,8 +17,7 @@
   background: var(--panel-raised);
 }
 
-:host > [lmLamp],
-.rate > [lmLamp] {
+:host > [lmLamp] {
   height: auto;
   align-self: stretch;
 }
@@ -52,34 +47,18 @@ lm-fader {
   line-height: 1;
 }
 
-.readout.up,
-.rate-value.on {
+.readout.up {
   color: #fff;
 }
 
-/* Rate, its wheel and the rate under it: rows of the section's own grid. */
-.rate {
-  display: contents;
-}
-
-.rate-value {
-  color: var(--legend-dim);
-  font-size: var(--readout);
-  font-stretch: 87.5%;
-  line-height: 1;
-}
-
-/* ---- mobile: two lines. Clear, Solo and Blackout first, then the title as the fader's
-   caption, the fader over the room that is left, and its level; under them Rate, the wheel
-   and the rate. */
+/* ---- mobile: one line. Blackout, then the title as the fader's caption, the fader over the
+   room that is left, and its level. */
 :host-context(.mobile) {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
 }
 
-:host-context(.mobile) > [lmLamp],
-:host-context(.mobile) .rate > [lmLamp] {
+:host-context(.mobile) > [lmLamp] {
   flex: none;
   height: var(--key-h);
 }
@@ -104,13 +83,4 @@ lm-fader {
   min-width: 3ch;
   margin: 0 0 0 6px;
   text-align: right;
-}
-
-:host-context(.mobile) .rate {
-  display: flex;
-  flex-basis: 100%;
-  order: 4;
-  align-items: center;
-  gap: 14px;
-  margin-top: 6px;
 }

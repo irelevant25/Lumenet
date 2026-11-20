@@ -10,6 +10,7 @@ import { DeskStore } from './desk/desk-store';
 import {
   AutosaveOptions,
   CHANNEL_COUNT,
+  EMPTY_STAGE,
   ImportAnswer,
   LanAccess,
   MEMORY_COUNT,
@@ -17,6 +18,8 @@ import {
   Sequence,
   StackPlayback,
   StackState,
+  StageLight,
+  StagePlan,
   TimedStep,
   Welcome,
 } from './desk/desk-types';
@@ -85,6 +88,10 @@ class FakeConnection {
   recovered: string | null = null;
   /** The autosave of the desk program, as the backend answers "GetAutosave" (on the PC). */
   autosave: AutosaveOptions = { on: true, seconds: 5 };
+  /** The stage plan, as the backend answers "GetStage": no lights at first. */
+  stagePlan: StagePlan = { ...EMPTY_STAGE };
+  /** The picture under the plan, as the backend answers "GetStagePicture". */
+  stagePicture: string | null = null;
 
   start(): void {
     this.online.set(true);
@@ -122,6 +129,16 @@ class FakeConnection {
     if (method === 'GetRecovered') return this.recovered;
     if (method === 'Undo' || method === 'Redo') return 'storing memory 4';
     if (method === 'GetAutosave') return this.autosave;
+    if (method === 'GetStage') return this.stagePlan;
+    if (method === 'SetStage') {
+      this.stagePlan = args[0] as StagePlan;
+      return undefined;
+    }
+    if (method === 'GetStagePicture') return this.stagePicture;
+    if (method === 'SetStagePicture') {
+      this.stagePicture = args[0] as string | null;
+      return undefined;
+    }
     if (method === 'SetAutosave') {
       this.autosave = { on: args[0] as boolean, seconds: args[1] as number };
       return this.autosave;
@@ -162,6 +179,8 @@ const QUESTIONS = [
   'GetSettings',
   'AdoptSettings',
   'GetAutosave',
+  'GetStage',
+  'GetStagePicture',
 ];
 
 /** A step on a channel, with all three times at one second unless said otherwise. */
@@ -568,9 +587,12 @@ describe('the desk page', () => {
   it('the independents stand at the right edge: ten keys for channels and ten for memories', () => {
     const main = page.querySelector('lm-main-view');
     expect(main?.lastElementChild?.tagName.toLowerCase()).toBe('lm-independents');
-    // the stack and then the record keys stand under the master section
-    const side = [...(page.querySelector('lm-main-view .side')?.children ?? [])].map((part) => part.tagName.toLowerCase());
-    expect(side).toEqual(['lm-master-section', 'lm-stack-section', 'lm-record-section']);
+    // the record keys stand under the master section, the stack under the general section
+    const sides = [...page.querySelectorAll('lm-main-view .side')].map((side) => [...side.children].map((part) => part.tagName.toLowerCase()));
+    expect(sides).toEqual([
+      ['lm-master-section', 'lm-record-section'],
+      ['lm-general-section', 'lm-stack-section'],
+    ]);
 
     const keys = [...page.querySelectorAll<HTMLButtonElement>('lm-independents button.number')];
     expect(keys.length).toBe(20);
@@ -748,12 +770,21 @@ describe('the desk page', () => {
     expect(store.channels()[4]).toBe(255);
   });
 
-  it('the master section has CLEAR, SOLO and BLACKOUT, the fader, then RATE; SOLO and PAUSE are white', async () => {
-    const keys = [...page.querySelectorAll('lm-master-section button')];
-    expect(keys.map((key) => key.getAttribute('aria-label') ?? key.textContent?.trim())).toEqual(['Clear', 'Solo', 'Blackout', 'Rate']);
-    expect(keys.map((key) => /tone-(\S+)/.exec(key.className)?.[1])).toEqual(['clear', 'solo', 'blackout', 'rate']);
-    const order = [...page.querySelectorAll('lm-master-section > *')].map((element) => element.localName);
-    expect(order.indexOf('lm-fader')).toBeLessThan(order.indexOf('div')); // RATE and its wheel under the fader
+  it('at the right of Main: MASTER over RECORD, GENERAL (CLEAR, SOLO, RATE) over STACK, then IND; SOLO and PAUSE are white', async () => {
+    const columns = [...page.querySelectorAll('lm-main-view > .side')].map((side) => [...side.children].map((child) => child.localName));
+    expect(columns).toEqual([
+      ['lm-master-section', 'lm-record-section'],
+      ['lm-general-section', 'lm-stack-section'],
+    ]);
+    expect(page.querySelector('lm-main-view')?.lastElementChild?.localName).toBe('lm-independents');
+
+    const keys = (section: string) => [...page.querySelectorAll(`${section} button`)];
+    expect(keys('lm-master-section').map((key) => key.getAttribute('aria-label'))).toEqual(['Blackout']);
+    expect(keys('lm-general-section').map((key) => key.getAttribute('aria-label') ?? key.textContent?.trim())).toEqual(['Clear', 'Solo', 'Rate']);
+    expect(keys('lm-general-section').map((key) => /tone-(\S+)/.exec(key.className)?.[1])).toEqual(['clear', 'solo', 'rate']);
+    // the rate stands on top of its fader, at the bottom of the section
+    const parts = [...page.querySelectorAll('lm-general-section > *')].map((part) => (part.classList.contains('readout') ? 'rate' : part.localName));
+    expect(parts.slice(-2)).toEqual(['rate', 'lm-fader']);
 
     // White, as CLEAR is: SOLO, and PAUSE on Main and in the Stack view.
     expect(button('Pause').className).toContain('tone-pause');
@@ -761,65 +792,54 @@ describe('the desk page', () => {
     expect(button('Pause').className).toContain('tone-pause');
   });
 
-  it('RATE lit lets the wheel under it set the speed of every sequence; dark, each plays at its own', async () => {
-    const wheel = page.querySelector<HTMLElement>('lm-rate-wheel')!;
-    const shown = () => textOf('lm-master-section .rate-value');
-    const turn = (deltaY: number) => wheel.dispatchEvent(new WheelEvent('wheel', { deltaY, bubbles: true, cancelable: true }));
-    // jsdom knows no PointerEvent; a MouseEvent of that name does the same here.
-    const pointer = (type: string, clientX: number) =>
-      wheel.dispatchEvent(new MouseEvent(type, { clientX, bubbles: true, cancelable: true, button: 0 }));
+  it('RATE lit makes its fader a speed master for every sequence; dark, each plays at its own', async () => {
+    const fader = page.querySelector<HTMLElement>('lm-general-section lm-fader')!;
+    const shown = () => textOf('lm-general-section .readout');
+    const key = (name: string) => fader.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true }));
 
     expect(button('Rate').getAttribute('aria-pressed')).toBe('false');
     expect(button('Rate').className).toContain('level-1');
     expect(shown()).toBe('×1.00');
-
-    // Dark, the wheel stays where it is.
-    expect(wheel.getAttribute('aria-disabled')).toBe('true');
-    turn(-100);
-    await fixture.whenStable();
-    expect(store.rate()).toBe(1);
+    expect(fader.getAttribute('aria-valuenow')).toBe('180'); // x1 in the middle
+    expect(fader.classList).toContain('off'); // dim while RATE is dark
 
     await press(button('Rate'));
     expect(button('Rate').className).toContain('level-3');
-    expect(wheel.getAttribute('aria-disabled')).toBeNull();
+    expect(fader.classList).not.toContain('off');
 
-    // A notch of the mouse wheel: about 6 % faster up, slower down.
-    turn(-100);
+    // Up from x1 in steps of 0.5, as the speed fader of a sequence; from x0.1 at the bottom to x10 at the top.
+    key('ArrowUp');
     await fixture.whenStable();
-    expect(store.rate()).toBe(1.06);
-    expect(shown()).toBe('×1.06');
-    expect(wheel.getAttribute('aria-valuetext')).toBe('x1.06');
-    turn(100);
-    turn(100);
+    expect(store.rate()).toBe(1.5);
+    expect(shown()).toBe('×1.50');
+    key('End');
     await fixture.whenStable();
-    expect(store.rate()).toBe(0.94);
-
-    // Dragged sideways: to the right faster, a step for every 6 pixels.
-    pointer('pointerdown', 100);
-    pointer('pointermove', 160);
-    pointer('pointerup', 160);
+    expect(store.rate()).toBe(10);
+    key('Home');
     await fixture.whenStable();
-    expect(store.rate()).toBe(1.68); // 10 steps up from 0.94
+    expect(store.rate()).toBe(0.1);
     await new Promise((resolve) => setTimeout(resolve, 40)); // the rate is sent a moment later, as fader moves are
-    expect(connection.last('SetRate')).toEqual([true, 1.68]);
+    expect(connection.last('SetRate')).toEqual([true, 0.1]);
 
-    // A double click sets it back to x1.
-    wheel.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    // A double click puts it back to x1.
+    fader.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
     await fixture.whenStable();
     expect(shown()).toBe('×1.00');
 
-    // Dark again: the sequences play at their own speeds; the wheel keeps its rate for the next time.
-    turn(-100);
+    // Dark again: the sequences play at their own speeds; the fader can be set for the next time.
     await press(button('Rate'));
+    key('ArrowUp');
+    await fixture.whenStable();
     await new Promise((resolve) => setTimeout(resolve, 40));
-    expect(connection.last('SetRate')).toEqual([false, 1.06]);
-    expect(page.querySelector('lm-master-section .rate-value')?.classList).not.toContain('on');
+    expect(connection.last('SetRate')).toEqual([false, 1.5]);
+    expect(page.querySelector('lm-general-section .readout')?.classList).not.toContain('up');
 
     // What another page does reaches this one, as a fader does.
     connection.emit('RateChanged', true, 0.5);
     await fixture.whenStable();
     expect(button('Rate').getAttribute('aria-pressed')).toBe('true');
     expect(shown()).toBe('×0.50');
+    expect(fader.getAttribute('aria-valuenow')).toBe('80');
   });
 
   it('on the PC the layout and the shortcuts go with the project', async () => {
@@ -934,6 +954,228 @@ describe('the desk page', () => {
     await fixture.whenStable();
     expect(shown('--key-play')).toBe('#123456');
     expect(TestBed.inject(DeskSettings).colours()).toEqual({ play: '#123456' });
+  });
+
+  // ---------------------------------------------------------------- the stage plan
+
+  /** The colour of each lens of a light on the plan, as "r g b". */
+  function lenses(id: number): string[] {
+    return [...page.querySelectorAll<HTMLElement>(`[data-light="${id}"] .lens`)].map((lens) => lens.style.getPropertyValue('--lens'));
+  }
+
+  /** A round light of one square, as the plan keeps it. */
+  function stageLight(id: number, name: string, address: number, channels: string, colour: string | null, x: number, y: number): StageLight {
+    return { id, name, address, channels, colour, x, y, angle: 0, shape: 'round', width: 1, depth: 1 };
+  }
+
+  /** The desk program sends a plan with these lights, as after another page changed it. */
+  async function planWith(...lights: StageLight[]): Promise<void> {
+    connection.emit('StageChanged', { ...EMPTY_STAGE, lights } satisfies StagePlan);
+    await fixture.whenStable();
+  }
+
+  /** A press on a light of the plan. (jsdom knows no PointerEvent; a MouseEvent of that name does the same here.) */
+  async function pressLight(id: number): Promise<void> {
+    page.querySelector(`[data-light="${id}"]`)!.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }));
+    await fixture.whenStable();
+  }
+
+  it('the Stage view shows every light in the colour its channels give it, after the master, dark in blackout', async () => {
+    await planWith(
+      stageLight(1, 'Pot red', 3, 'D', '#ff2000', 2, 8),
+      stageLight(2, 'LED bar', 11, 'RGBRGB', null, 8, 1),
+      stageLight(3, 'Spot', 5, 'D', null, 8, 5),
+      stageLight(4, 'Hazer', 20, 'X', null, -1, 1),
+    );
+    await show('/stage');
+    expect(page.querySelectorAll('lm-stage-view .light').length).toBe(4);
+    expect(lenses(1)).toEqual(['0 0 0']); // dark until its channel is up
+
+    store.setChannel(3, 255);
+    store.setChannel(11, 255); // red of the first cell of the bar
+    store.setChannel(16, 255); // blue of the second
+    store.setChannel(20, 255);
+    await fixture.whenStable();
+    expect(lenses(1)).toEqual(['255 32 0']);
+    expect(lenses(2)).toEqual(['255 0 0', '0 0 255']);
+    expect(page.querySelector<HTMLElement>('[data-light="4"] .level')?.style.height).toBe('100%'); // the hazer gives no light
+
+    // A memory that holds the channel lights it too: memory 2 has channel 5 at 200.
+    store.setMemoryLevel(2, 255);
+    await fixture.whenStable();
+    expect(lenses(3)).not.toEqual(['0 0 0']);
+
+    // The master dims what goes out; blackout darkens it all.
+    store.setMaster(128);
+    await fixture.whenStable();
+    expect(lenses(1)).toEqual(['186 23 0']);
+    connection.emit('BlackoutChanged', true);
+    await fixture.whenStable();
+    expect(lenses(1)).toEqual(['0 0 0']);
+    expect(textOf('lm-stage-view .summary')).toContain('Blackout is on');
+  });
+
+  it('Edit puts a light on the next free channel, named after its note; it is moved, changed and taken away', async () => {
+    await planWith(stageLight(1, 'Par', 1, 'DRGBS', null, 2, 8));
+    await show('/stage');
+    expect(button('Add light').disabled).toBe(true); // only while editing
+    await press(button('Edit the plan'));
+    expect(button('Edit the plan').getAttribute('aria-pressed')).toBe('true');
+
+    // channels 1 to 5 are the par's: the new light is on 6, which has the note "Front / left"
+    await press(button('Add light'));
+    const added = (connection.last('SetStage')?.[0] as StagePlan).lights[1];
+    expect(added).toMatchObject({ id: 2, name: 'Front left', address: 6, channels: 'D' });
+    expect(page.querySelector<HTMLInputElement>('#light-name')?.value).toBe('Front left'); // chosen, in the panel
+
+    // An RGB bar of four cells, without a dimmer.
+    const kind = page.querySelector<HTMLSelectElement>('#light-type')!;
+    kind.value = 'rgb';
+    kind.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    const cells = page.querySelector<HTMLInputElement>('#light-cells')!;
+    cells.value = '4';
+    cells.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(store.stage().lights[1].channels).toBe('RGBRGBRGBRGB');
+    expect(page.querySelectorAll('[data-light="2"] .lens').length).toBe(4);
+
+    // The arrow keys move it by half a square; Delete takes it away.
+    const element = page.querySelector<HTMLElement>('[data-light="2"]')!;
+    const before = store.stage().lights[1];
+    element.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    await fixture.whenStable();
+    expect(store.stage().lights[1].x).toBe(before.x + 0.5);
+    expect(connection.last('SetStage')?.[0]).toEqual(store.stage());
+
+    element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true }));
+    await fixture.whenStable();
+    expect(store.stage().lights.map((light) => light.id)).toEqual([1]);
+    expect(page.querySelector('#stage-width')).toBeTruthy(); // nothing chosen: the panel shows the stage
+  });
+
+  it('a click on a light shows it at the right with the faders of its channels, which work as those of Main', async () => {
+    await planWith(stageLight(1, 'Par', 11, 'DRGB', null, 2, 8), stageLight(2, 'Spot', 5, 'D', null, 8, 5));
+    await show('/stage');
+    expect(page.querySelector('lm-stage-panel')).toBeNull(); // nothing chosen yet
+
+    await pressLight(1);
+    expect(textOf('lm-stage-panel h3')).toBe('Par');
+    expect(textOf('lm-stage-panel .facts')).toBe('RGB, dimmer first, on channels 11 to 14');
+    expect(page.querySelector('#light-name')).toBeNull(); // out of Edit nothing about it can be changed...
+    const faders = [...page.querySelectorAll<HTMLElement>('lm-light-faders lm-fader')];
+    expect(faders.map((fader) => fader.getAttribute('aria-label'))).toEqual([
+      'Channel 11, dimmer',
+      'Channel 12, red',
+      'Channel 13, green',
+      'Channel 14, blue',
+    ]);
+
+    // ...but its faders work: the dimmer and the red to full, and the light is red.
+    for (const fader of faders.slice(0, 2)) fader.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+    await fixture.whenStable();
+    expect(store.channels().slice(10, 14)).toEqual([255, 255, 0, 0]);
+    expect(lenses(1)).toEqual(['255 0 0']);
+    await new Promise((resolve) => setTimeout(resolve, 40)); // fader moves are sent a moment later
+    expect(connection.calls).toContainEqual({ method: 'SetChannel', args: [12, 255] });
+
+    // A memory that holds a channel holds its fader up here too: memory 2 has channel 5 at 200.
+    await pressLight(2);
+    store.setMemoryLevel(2, 255);
+    await fixture.whenStable();
+    expect(page.querySelector('lm-light-faders lm-fader')?.getAttribute('aria-valuenow')).toBe('200');
+
+    // A press beside the lights, or Close, lets the light go.
+    page.querySelector('lm-stage-view .plan')!.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }));
+    await fixture.whenStable();
+    expect(page.querySelector('lm-stage-panel')).toBeNull();
+    await pressLight(2);
+    await press(button('Close'));
+    expect(page.querySelector('lm-stage-panel')).toBeNull();
+
+    // In Edit the faders stand under what can be changed.
+    await press(button('Edit the plan'));
+    await pressLight(1);
+    expect(page.querySelector('#light-name')).toBeTruthy();
+    expect(page.querySelectorAll('lm-light-faders lm-fader').length).toBe(4);
+  });
+
+  it('a light is round or square and as big as some squares; one cell lights all of it, cells divide it', async () => {
+    await planWith(stageLight(1, 'Bar', 11, 'RGB', null, 3, 2));
+    await show('/stage');
+    await press(button('Edit the plan'));
+    await pressLight(1);
+
+    const shape = page.querySelector<HTMLSelectElement>('#light-shape')!;
+    shape.value = 'square';
+    shape.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    const width = page.querySelector<HTMLInputElement>('#light-width')!;
+    width.value = '4';
+    width.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    // four squares wide and one deep, lying on the lines of the grid (from 2 to 6 across, 2 to 3 deep)
+    expect(store.stage().lights[0]).toMatchObject({ shape: 'square', width: 4, depth: 1, x: 4, y: 2.5 });
+    const fixtureOf = () => page.querySelector<HTMLElement>('[data-light="1"] .fixture')!;
+    expect(fixtureOf().classList).toContain('square');
+    expect(fixtureOf().style.getPropertyValue('--w')).toBe('3.92');
+
+    // One cell: red on its channel, and all of the bar is red.
+    store.setChannel(11, 255);
+    await fixture.whenStable();
+    expect(lenses(1)).toEqual(['255 0 0']);
+
+    // Four cells: they divide it, and only the first is red.
+    const cells = page.querySelector<HTMLInputElement>('#light-cells')!;
+    cells.value = '4';
+    cells.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(lenses(1)).toEqual(['255 0 0', '0 0 0', '0 0 0', '0 0 0']);
+  });
+
+  it('a picture lies under the stage or under the whole plan, and shows through as brightly as set', async () => {
+    await show('/stage');
+    await press(button('Edit the plan'));
+    expect(page.querySelector('lm-stage-view img.picture')).toBeNull();
+
+    // Another page put a picture under the plan: the plan names it, and the page fetches it.
+    connection.stagePicture = 'data:image/png;base64,iVBORw0KGgo=';
+    connection.emit('StageChanged', { ...EMPTY_STAGE, pictureId: '0123456789abcdef' } satisfies StagePlan);
+    await until(() => page.querySelector('lm-stage-view img.picture') !== null);
+    const picture = () => page.querySelector<HTMLImageElement>('lm-stage-view img.picture')!;
+    expect(picture().src).toBe('data:image/png;base64,iVBORw0KGgo=');
+    expect(picture().style.opacity).toBe('0.6');
+    expect(picture().style.left).toBe('10%'); // on the stage: 2 of the 20 squares of the plan beside it
+
+    const over = page.querySelector<HTMLSelectElement>('#picture-over')!;
+    over.value = 'plan';
+    over.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(connection.last('SetStage')?.[0]).toMatchObject({ pictureOver: 'plan' });
+    expect(picture().style.left).toBe('0%');
+
+    const opacity = page.querySelector<HTMLInputElement>('#picture-opacity')!;
+    opacity.value = '30';
+    opacity.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(connection.last('SetStage')?.[0]).toMatchObject({ pictureOpacity: 0.3 });
+    expect(picture().style.opacity).toBe('0.3');
+
+    await press(button('Remove the picture'));
+    expect(connection.last('SetStagePicture')).toEqual([null]);
+    expect(page.querySelector('lm-stage-view img.picture')).toBeNull();
+  });
+
+  it('the stage plan cannot be changed while the stack is live', async () => {
+    await show('/stage');
+    await press(button('Edit the plan'));
+    expect(page.querySelector('lm-stage-panel')).toBeTruthy();
+
+    await stackStands(LIVE);
+    expect(page.querySelector('lm-stage-panel')).toBeNull();
+    expect(button('Edit the plan').disabled).toBe(true);
+    expect(textOf('lm-stage-view .summary')).toContain('The stack is live');
+    expect(textOf('lm-stage-view .nothing')).toBe('No lights yet. Edit, then Add light.');
   });
 
   it('import: a show file becomes the project, and the window says what became of it', async () => {
@@ -1111,14 +1353,14 @@ describe('the desk page', () => {
     expect(channel5.getAttribute('aria-valuenow')).toBe('255');
   });
 
-  it('clear, blackout and the master fader stand in the master section of the main view', async () => {
+  it('blackout and the master fader stand in the master section of the main view, clear in the general section', async () => {
     const inMaster = (selector: string) => page.querySelector(`lm-main-view lm-master-section ${selector}`);
     expect(inMaster('lm-fader[aria-label="Master"]')).toBeTruthy();
     expect(inMaster('button[aria-label="Blackout"]')).toBeTruthy();
-    expect(button('Clear').closest('lm-master-section')).toBeTruthy();
+    expect(button('Clear').closest('lm-general-section')).toBeTruthy();
     expect(page.querySelector('lm-top-bar lm-fader')).toBeNull();
 
-    // from the top: Clear, Blackout, the level, the fader (the level above its fader, as on every strip)
+    // from the top: Blackout, the level, the fader (the level above its fader, as on every strip)
     const order = [...(page.querySelector('lm-master-section')?.children ?? [])].map(
       (part) => part.getAttribute('aria-label') ?? part.className.split(' ')[0] ?? part.tagName,
     );
@@ -1132,13 +1374,14 @@ describe('the desk page', () => {
     expect(page.querySelector('lm-fader[aria-label="Master"]')).toBeNull();
   });
 
-  it('the top bar links to the two views and marks the one that is shown', async () => {
+  it('the top bar links to the views and marks the one that is shown', async () => {
     const links = [...page.querySelectorAll<HTMLAnchorElement>('nav[aria-label="Views"] a')];
     expect(links.map((link) => link.textContent?.trim())).toEqual([
       'Main',
       'Memories',
       'Sequences',
       'Stack',
+      'Stage',
       'Settings',
       'Keyboard',
     ]);
@@ -1881,10 +2124,12 @@ describe('the desk page', () => {
 
     await press(tab('Master'));
     expect(tab('Master').getAttribute('aria-selected')).toBe('true');
-    expect(rows()).toEqual(['Clear', 'Blackout', 'Solo', 'Rate']);
+    expect(rows()).toEqual(['Blackout']);
+    await press(tab('General'));
+    expect(rows()).toEqual(['Clear', 'Solo', 'Rate']);
 
     // The arrow keys go from tab to tab.
-    tab('Master').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    tab('General').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
     await fixture.whenStable();
     expect(tab('Stack').getAttribute('aria-selected')).toBe('true');
 
@@ -1932,11 +2177,12 @@ describe('the desk page', () => {
 
     // The same shortcut for another key moves over to it.
     await show('/keyboard');
-    await press(tab('Master'));
+    await press(tab('General'));
     await press(button('Set the shortcut of Clear'));
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyB', key: 'b', ctrlKey: true, bubbles: true }));
     await fixture.whenStable();
     expect(page.querySelector('tr[data-row="master.clear"] td.keys')?.textContent?.trim()).toBe('Ctrl + B');
+    await press(tab('Master'));
     expect(page.querySelector('tr[data-row="master.blackout"] td.keys')?.textContent?.trim()).toBe('');
     expect(page.textContent).toContain('That shortcut was the one of Blackout before');
   });
@@ -1971,7 +2217,7 @@ describe('the desk page', () => {
   });
 
   it('every key on the page that is marked for shortcuts is one the list of the Keyboard view knows', async () => {
-    for (const view of ['/', '/stack', '/sequences', '/memories', '/settings', '/keyboard']) {
+    for (const view of ['/', '/stack', '/sequences', '/memories', '/stage', '/settings', '/keyboard']) {
       await show(view);
       for (const element of page.querySelectorAll('[data-action]')) {
         expect(actionWithId(element.getAttribute('data-action') ?? ''), element.getAttribute('data-action') ?? '').toBeTruthy();

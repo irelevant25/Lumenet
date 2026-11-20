@@ -903,5 +903,172 @@
       "wait": 0,
       "down": 0
     }
-  ]
+  ],
+  "stage": {
+    "width": 16,
+    "depth": 10,
+    "lights": [
+      {
+        "name": "Pot red left",
+        "address": 1,
+        "channels": "D",
+        "colour": "#ff2a12",
+        "x": 6.5,
+        "y": 7,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Pot red right",
+        "address": 2,
+        "channels": "D",
+        "colour": "#ff2a12",
+        "x": 9.5,
+        "y": 7,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Front left",
+        "address": 3,
+        "channels": "D",
+        "x": 3,
+        "y": 11,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Front middle",
+        "address": 4,
+        "channels": "D",
+        "x": 8,
+        "y": 11,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Front right",
+        "address": 5,
+        "channels": "D",
+        "x": 13,
+        "y": 11,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Back blue 1",
+        "address": 6,
+        "channels": "D",
+        "colour": "#2a55ff",
+        "x": 2,
+        "y": 1,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Back blue 2",
+        "address": 7,
+        "channels": "D",
+        "colour": "#2a55ff",
+        "x": 4.5,
+        "y": 1,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Back blue 3",
+        "address": 8,
+        "channels": "D",
+        "colour": "#2a55ff",
+        "x": 11.5,
+        "y": 1,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Back blue 4",
+        "address": 9,
+        "channels": "D",
+        "colour": "#2a55ff",
+        "x": 14,
+        "y": 1,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Spot middle",
+        "address": 10,
+        "channels": "D",
+        "colour": "#f2f4ff",
+        "x": 8,
+        "y": 12.5,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "LED bar",
+        "address": 11,
+        "channels": "RGBW",
+        "x": 8,
+        "y": 1.5,
+        "angle": 0,
+        "shape": "square",
+        "width": 4,
+        "depth": 1
+      },
+      {
+        "name": "Hazer",
+        "address": 15,
+        "channels": "X",
+        "x": 15.5,
+        "y": 9.5,
+        "angle": 0,
+        "shape": "square",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Mirror ball",
+        "address": 16,
+        "channels": "X",
+        "x": 8,
+        "y": 4.5,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "House light",
+        "address": 17,
+        "channels": "D",
+        "x": 0.5,
+        "y": 12.5,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      }
+    ]
+  }
 }

@@ -21,6 +21,7 @@ import {
   MOBILE_BELOW_WIDTH_PX,
   MemoryLooks,
   NEW_PROJECT_NAME,
+  EMPTY_STAGE,
   NO_HISTORY,
   PHONE_BELOW_PX,
   Playback,
@@ -32,6 +33,7 @@ import {
   Sequences,
   StackState,
   StackStep,
+  StagePlan,
   StepTarget,
   TimedStep,
   Welcome,
@@ -169,6 +171,18 @@ export class DeskStore {
   });
 
   /**
+   * What goes out to the rig for each channel: what the fader shows, scaled by the master and
+   * rounded as the desk program does; all zero during blackout (the box does the blackout, so
+   * the desk program itself leaves it out). The stage plan draws its lights from it.
+   */
+  readonly output = computed<readonly number[]>(() => {
+    if (this.blackout()) return zeros(CHANNEL_COUNT);
+    const master = this.master();
+    const shown = this.shownChannels();
+    return master === MAX_LEVEL ? shown : shown.map((level) => Math.floor((level * master + 127) / MAX_LEVEL));
+  });
+
+  /**
    * True while the stack is live. Then the desk plays a show and nothing that is stored can be
    * changed: no memory, sequence, step of the stack, note or independent key. The faders, the
    * master, Clear and Blackout work as always.
@@ -269,6 +283,14 @@ export class DeskStore {
   readonly rateOn = signal(false);
   /** The autosave of the desk program: on or off, and how often; null while it is not known. */
   readonly autosave = signal<AutosaveOptions | null>(null);
+  /** The stage plan of the project: the lights of the rig and where they hang. */
+  readonly stage = signal<StagePlan>(EMPTY_STAGE);
+  /** False while the plan could not be fetched: a desk program from before stage plans. */
+  readonly stageKnown = signal(false);
+  /** The picture under the plan, as a data URL; null without one (or until it has come). */
+  readonly stagePicture = signal<string | null>(null);
+  // The name of the picture that stagePicture holds or is being fetched.
+  private stagePictureId: string | null = null;
   // True once this page said that unsaved work was brought back.
   private recoveryTold = false;
 
@@ -317,6 +339,7 @@ export class DeskStore {
       this.rate.set(rate);
     });
     connection.on<[AutosaveOptions]>('AutosaveChanged', (options) => this.autosave.set(options));
+    connection.on<[StagePlan]>('StageChanged', (plan) => this.takeStage(plan));
     // The project's settings: another page on the PC changed them, or a project was loaded.
     // A phone keeps its own.
     connection.on<[unknown]>('SettingsChanged', (settings) => {
@@ -481,6 +504,34 @@ export class DeskStore {
     if (kept === this.rate()) return;
     this.rate.set(kept);
     this.sendSoon('rate', 'SetRate', this.rateOn(), kept);
+  }
+
+  // ---------------------------------------------------------------- the stage plan
+
+  /**
+   * Takes the stage plan as the owner edited it: shown at once, and sent whole. The desk
+   * program answers every page with the plan as it keeps it; if it refuses, the page says why
+   * and fetches the plan it has.
+   */
+  setStage(plan: StagePlan): void {
+    this.stage.set(plan);
+    this.connection.invoke<void>('SetStage', plan).catch((error: Error) => {
+      this.say(error.message);
+      void this.fetchStage();
+    });
+  }
+
+  /**
+   * Puts a picture under the plan (a data URL of a JPEG, PNG or WebP image), or takes it away
+   * (null). Shown at once; the desk program answers every page with the plan, which names it.
+   */
+  setStagePicture(picture: string | null): void {
+    this.stagePicture.set(picture);
+    this.connection.invoke<void>('SetStagePicture', picture).catch((error: Error) => {
+      this.say(error.message);
+      this.stagePictureId = null; // fetched again with the plan
+      void this.fetchStage();
+    });
   }
 
   // ---------------------------------------------------------------- autosave
@@ -982,6 +1033,43 @@ export class DeskStore {
     // exactly when a look, a sequence or the stack may be another one.
     void this.fetchMemoryLooks();
     void this.fetchSequencesAndStack();
+    void this.fetchStage();
+  }
+
+  private async fetchStage(): Promise<void> {
+    try {
+      this.takeStage((await this.connection.invoke<StagePlan | undefined>('GetStage')) ?? EMPTY_STAGE);
+      this.stageKnown.set(true);
+    } catch {
+      // A desk program from before stage plans. The Stage view says so.
+      this.takeStage(EMPTY_STAGE);
+      this.stageKnown.set(false);
+    }
+  }
+
+  // The plan as the desk program keeps it, with the picture it names: fetched when that is another one.
+  private takeStage(plan: StagePlan): void {
+    // A desk program from before pictures and shapes leaves them out: a light is then round and one square big.
+    const filled: StagePlan = {
+      ...EMPTY_STAGE,
+      ...plan,
+      lights: (plan.lights ?? []).map((light) => ({ ...light, shape: light.shape ?? 'round', width: light.width ?? 1, depth: light.depth ?? 1 })),
+    };
+    this.stage.set(filled);
+    if (filled.pictureId === this.stagePictureId) return;
+
+    this.stagePictureId = filled.pictureId;
+    if (filled.pictureId === null) {
+      this.stagePicture.set(null);
+      return;
+    }
+    const wanted = filled.pictureId;
+    this.connection
+      .invoke<string | null>('GetStagePicture')
+      .then((picture) => {
+        if (this.stagePictureId === wanted) this.stagePicture.set(picture ?? null);
+      })
+      .catch(() => this.stagePicture.set(null));
   }
 
   private async fetchSequencesAndStack(): Promise<void> {

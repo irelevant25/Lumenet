@@ -15,7 +15,17 @@ export interface KeyColour {
   readonly standard: string;
 }
 
-export const KEY_COLOUR_GROUPS = ['Kinds', 'Master', 'Stack', 'Record', 'Top bar', 'Independents', 'Sequences view'] as const;
+export const KEY_COLOUR_GROUPS = [
+  'Kinds',
+  'Master',
+  'General',
+  'Stack',
+  'Record',
+  'Top bar',
+  'Independents',
+  'Sequences view',
+  'Stage view',
+] as const;
 export type KeyColourGroup = (typeof KEY_COLOUR_GROUPS)[number];
 
 const AMBER = '#ffb020';
@@ -27,10 +37,11 @@ export const KEY_COLOURS: readonly KeyColour[] = [
   colour('memory', 'Kinds', 'Memories: their keys, pages, independent keys and faders', '--memory', '#ff5247'),
   colour('sequence', 'Kinds', 'Sequences: the colour a memory that holds one runs into', '--sequence-end', '#ffd426'),
 
-  key('clear', 'Master', 'Clear', WHITE),
-  key('solo', 'Master', 'Solo', WHITE),
   key('blackout', 'Master', 'Blackout', '#4aa3ff'),
-  key('rate', 'Master', 'Rate', AMBER),
+
+  key('clear', 'General', 'Clear', WHITE),
+  key('solo', 'General', 'Solo', WHITE),
+  key('rate', 'General', 'Rate (and its fader)', AMBER),
 
   colour('stack', 'Stack', 'Stack (live), and the Live mark in the top bar', '--live', '#ff5247'),
   key('prev', 'Stack', 'Prev', AMBER),
@@ -61,6 +72,9 @@ export const KEY_COLOURS: readonly KeyColour[] = [
   key('sequence-add', 'Sequences view', 'Add step', AMBER),
   key('template', 'Sequences view', 'Template', AMBER),
   key('normal-speed', 'Sequences view', '1x (normal speed)', AMBER),
+
+  key('stage-edit', 'Stage view', 'Edit', AMBER),
+  key('stage-add', 'Stage view', 'Add light', AMBER),
 ];
 
 const BY_ID = new Map(KEY_COLOURS.map((entry) => [entry.id, entry]));

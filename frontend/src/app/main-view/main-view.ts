@@ -3,6 +3,7 @@ import { ChannelSection } from '../channel-section/channel-section';
 import { DeskSettings } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
 import { Independents } from '../independents/independents';
+import { GeneralSection } from '../general-section/general-section';
 import { MasterSection } from '../master-section/master-section';
 import { MemorySection } from '../memory-section/memory-section';
 import { RecordSection } from '../record-section/record-section';
@@ -25,7 +26,7 @@ import { StackSection } from '../stack-section/stack-section';
     '[style.--wheel-size]': 'wheelSize()',
     '[class.no-independents]': '!independents()',
   },
-  imports: [ChannelSection, Independents, MasterSection, MemorySection, RecordSection, StackSection],
+  imports: [ChannelSection, GeneralSection, Independents, MasterSection, MemorySection, RecordSection, StackSection],
   selector: 'lm-main-view',
   styleUrl: './main-view.css',
   templateUrl: './main-view.html',

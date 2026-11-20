@@ -116,7 +116,12 @@ public sealed class ProjectStoreTests : IDisposable
                   "wait": 0,
                   "down": 4
                 }
-              ]
+              ],
+              "stage": {
+                "width": 16,
+                "depth": 10,
+                "lights": []
+              }
             }
             """;
         Assert.Equal(expected.ReplaceLineEndings(), File.ReadAllText(PathOf("show")).ReplaceLineEndings());
@@ -142,7 +147,12 @@ public sealed class ProjectStoreTests : IDisposable
                 {{keys}}
               ],
               "sequences": [],
-              "stack": []
+              "stack": [],
+              "stage": {
+                "width": 16,
+                "depth": 10,
+                "lights": []
+              }
             }
             """;
         Assert.Equal(expected.ReplaceLineEndings(), File.ReadAllText(PathOf("show")).ReplaceLineEndings());

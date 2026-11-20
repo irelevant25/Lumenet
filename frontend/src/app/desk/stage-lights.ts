@@ -1,0 +1,339 @@
+import {
+  CHANNEL_COUNT,
+  STAGE_BACK_ROOM,
+  STAGE_FRONT_ROOM,
+  STAGE_MAX_SIZE,
+  STAGE_MIN_SIZE,
+  STAGE_SIDE_ROOM,
+  StageLight,
+  StagePlan,
+} from './desk-types';
+import { NOTE_LINE_SEPARATOR } from './notes';
+
+/**
+ * The lights of the stage plan: what their channels are, and the colour they give at a moment.
+ *
+ * A light's channels are one letter each, from its address on: D dimmer, R red, G green, B blue,
+ * W white, A amber, U ultraviolet; any other letter is a channel that gives no light (S strobe,
+ * M mode). A light of several cells repeats its colour letters: RGBRGB is two cells. A D dims the
+ * cell it stands in, before its colours or after them; a light with one D and several cells
+ * dims all of them with it. A light without colour letters shines in its own colour (a gel), and
+ * one without colour letters and without a D, such as a hazer, gives no light at all.
+ */
+
+/** The colour each colour letter gives at full, as red, green and blue from 0 to 1, in linear light. */
+const COLOURS: Readonly<Record<string, readonly [number, number, number]>> = {
+  R: [1, 0, 0],
+  G: [0, 1, 0],
+  B: [0, 0, 1],
+  W: [1, 1, 1],
+  A: [1, 0.35, 0], // amber: about 590 nm
+  U: [0.12, 0.02, 0.6], // ultraviolet: the deep violet that shows of it
+};
+
+/** The colour of a light without colour channels that has none of its own: warm white, as a lamp with a filament. */
+export const WARM_WHITE = '#ffd9a6';
+
+/** The most cells the form offers, and the most letters a light can have. */
+export const MAX_CELLS = 16;
+export const MAX_LETTERS = 64;
+
+/** A cell of a light: the channels of its colours and its own dimmers, as places from the address (0 is the address). */
+export interface LightCell {
+  readonly colours: readonly { readonly letter: string; readonly offset: number }[];
+  readonly dimmers: readonly number[];
+}
+
+/** What a light is made of. */
+export interface LightParts {
+  /** Its cells: one for a light of one colour, several for a bar of cells; none for a light without colour channels. */
+  readonly cells: readonly LightCell[];
+  /** The dimmers of the whole light. */
+  readonly masters: readonly number[];
+  /** True for a light that gives no light: no colour channel and no dimmer. */
+  readonly device: boolean;
+}
+
+/** Finds the cells and the dimmers in the letters of a light's channels. */
+export function partsOf(channels: string): LightParts {
+  const cells: { colours: { letter: string; offset: number }[]; dimmers: number[] }[] = [];
+  let current: (typeof cells)[number] | null = null;
+  let waiting: number[] = []; // dimmers before the colours of the next cell
+  let dimmerCount = 0;
+
+  for (let offset = 0; offset < channels.length; offset++) {
+    const letter = channels[offset];
+    if (letter in COLOURS) {
+      if (!current || current.colours.some((colour) => colour.letter === letter)) {
+        current = { colours: [], dimmers: waiting };
+        waiting = [];
+        cells.push(current);
+      }
+      current.colours.push({ letter, offset });
+    } else if (letter === 'D') {
+      dimmerCount++;
+      // After the colours of a cell that has no dimmer yet: that cell's. Otherwise the next one's.
+      if (current && current.dimmers.length === 0 && waiting.length === 0) current.dimmers.push(offset);
+      else waiting.push(offset);
+    }
+  }
+
+  if (cells.length === 0) return { cells: [], masters: waiting, device: waiting.length === 0 };
+  cells[cells.length - 1].dimmers.push(...waiting); // dimmers after the last colours
+
+  // One dimmer for a light of several cells: it dims them all.
+  if (dimmerCount === 1 && cells.length > 1) {
+    const master = cells.flatMap((cell) => cell.dimmers);
+    return { cells: cells.map((cell) => ({ ...cell, dimmers: [] })), masters: master, device: false };
+  }
+  return { cells, masters: [], device: false };
+}
+
+/** How a cell of a light looks at a moment. */
+export interface CellLook {
+  /** The colour of its lens, as "r g b" (0 to 255): dark while it is off. */
+  readonly lens: string;
+  /** The colour of its light at full, as "r g b", for the glow around it. */
+  readonly glow: string;
+  /** How bright it is, 0 to 1, as the eye sees it. */
+  readonly brightness: number;
+}
+
+/** How a light looks at a moment. */
+export interface LightLook {
+  /** True for a light that gives no light, such as a hazer: it shows the level of its first channel. */
+  readonly device: boolean;
+  /** One for each cell; one for a light without colour channels; none for a device. */
+  readonly cells: readonly CellLook[];
+  /** For a device: the level of its first channel, 0 to 255. */
+  readonly level: number;
+}
+
+/**
+ * How a light looks with the levels that go out: the colours of its cells, mixed from its colour
+ * channels (or its own colour) and dimmed by its dimmers.
+ */
+export function lookOf(light: StageLight, output: readonly number[]): LightLook {
+  const parts = partsOf(light.channels);
+  const level = (offset: number): number => (output[light.address - 1 + offset] ?? 0) / 255;
+  const dimmed = (dimmers: readonly number[]): number => dimmers.reduce((factor, offset) => factor * level(offset), 1);
+
+  if (parts.device) return { device: true, cells: [], level: Math.round(level(0) * 255) };
+
+  const master = dimmed(parts.masters);
+  if (parts.cells.length === 0) {
+    const [red, green, blue] = rgbOf(light.colour ?? WARM_WHITE);
+    return { device: false, cells: [cellLook(red * master, green * master, blue * master)], level: 0 };
+  }
+
+  const cells = parts.cells.map((cell) => {
+    let red = 0;
+    let green = 0;
+    let blue = 0;
+    for (const { letter, offset } of cell.colours) {
+      const [r, g, b] = COLOURS[letter];
+      const part = level(offset);
+      red += r * part;
+      green += g * part;
+      blue += b * part;
+    }
+    const factor = master * dimmed(cell.dimmers);
+    return cellLook(Math.min(1, red) * factor, Math.min(1, green) * factor, Math.min(1, blue) * factor);
+  });
+  return { device: false, cells, level: 0 };
+}
+
+// Linear light (0 to 1) as the screen shows it: the screen's colours are not linear.
+function cellLook(red: number, green: number, blue: number): CellLook {
+  const strongest = Math.max(red, green, blue);
+  const shown = (part: number) => Math.round(255 * Math.pow(part, 1 / 2.2));
+  const full = (part: number) => (strongest > 0 ? shown(part / strongest) : 0);
+  return {
+    lens: `${shown(red)} ${shown(green)} ${shown(blue)}`,
+    glow: `${full(red)} ${full(green)} ${full(blue)}`,
+    brightness: Math.pow(strongest, 1 / 2.2),
+  };
+}
+
+// "#ffd9a6" as linear light from 0 to 1.
+function rgbOf(colour: string): [number, number, number] {
+  const channel = (start: number) => Math.pow(parseInt(colour.slice(start, start + 2), 16) / 255, 2.2);
+  return [channel(1), channel(3), channel(5)];
+}
+
+// ---------------------------------------------------------------- the form of a light
+
+/** The kinds of lights the form offers. "letters" are the channels typed as letters. */
+export type LightType = 'dimmer' | 'rgb' | 'rgbw' | 'rgba' | 'rgbwa' | 'rgbwu' | 'rgbwau' | 'device' | 'letters';
+
+/** Where a light of colour channels has a dimmer channel for the whole light. */
+export type DimmerPlace = 'none' | 'first' | 'last';
+
+/** A light as the form shows it. */
+export interface LightForm {
+  readonly type: LightType;
+  readonly dimmer: DimmerPlace;
+  readonly cells: number;
+}
+
+/** The kinds of lights, with the letters of one cell. */
+export const LIGHT_TYPES: readonly { readonly type: LightType; readonly label: string; readonly cell: string }[] = [
+  { type: 'dimmer', label: 'Dimmer, one colour', cell: 'D' },
+  { type: 'rgb', label: 'RGB', cell: 'RGB' },
+  { type: 'rgbw', label: 'RGBW', cell: 'RGBW' },
+  { type: 'rgba', label: 'RGBA', cell: 'RGBA' },
+  { type: 'rgbwa', label: 'RGBWA', cell: 'RGBWA' },
+  { type: 'rgbwu', label: 'RGBW + UV', cell: 'RGBWU' },
+  { type: 'rgbwau', label: 'RGBWA + UV', cell: 'RGBWAU' },
+  { type: 'device', label: 'No light (hazer, mirror ball)', cell: 'X' },
+  { type: 'letters', label: 'Channels as letters', cell: '' },
+];
+
+/** True for a kind of light made of colour channels, which has cells and may have a dimmer. */
+export function hasCells(type: LightType): boolean {
+  return type !== 'dimmer' && type !== 'device' && type !== 'letters';
+}
+
+/** The letters of a light of the form; "letters" keeps those it is given. */
+export function lettersOf(form: LightForm, letters: string): string {
+  if (form.type === 'letters') return cleanLetters(letters);
+  const cell = LIGHT_TYPES.find((type) => type.type === form.type)?.cell ?? 'D';
+  if (!hasCells(form.type)) return cell;
+
+  const cells = Math.min(MAX_CELLS, Math.max(1, Math.round(form.cells) || 1));
+  return (form.dimmer === 'first' ? 'D' : '') + cell.repeat(cells) + (form.dimmer === 'last' ? 'D' : '');
+}
+
+/** The form of a light's letters: a kind the form knows, or "letters". */
+export function formOf(channels: string): LightForm {
+  if (channels === 'D') return { type: 'dimmer', dimmer: 'none', cells: 1 };
+  if (channels === 'X') return { type: 'device', dimmer: 'none', cells: 1 };
+
+  for (const kind of LIGHT_TYPES.filter((type) => hasCells(type.type))) {
+    for (const dimmer of ['none', 'first', 'last'] as const) {
+      const body =
+        dimmer === 'first' ? (channels.startsWith('D') ? channels.slice(1) : null)
+        : dimmer === 'last' ? (channels.endsWith('D') ? channels.slice(0, -1) : null)
+        : channels;
+      const cells = body ? body.length / kind.cell.length : 0;
+      if (Number.isInteger(cells) && cells >= 1 && cells <= MAX_CELLS && body === kind.cell.repeat(cells)) {
+        return { type: kind.type, dimmer, cells };
+      }
+    }
+  }
+  return { type: 'letters', dimmer: 'none', cells: 1 };
+}
+
+/** Letters as a light keeps them: capitals A to Z, at most 64. */
+export function cleanLetters(text: string): string {
+  return text.toUpperCase().replace(/[^A-Z]/g, '').slice(0, MAX_LETTERS);
+}
+
+/** True when the light gets its colour from the form's colour field: it has no colour channel but gives light. */
+export function usesOwnColour(channels: string): boolean {
+  const parts = partsOf(channels);
+  return !parts.device && parts.cells.length === 0;
+}
+
+// ---------------------------------------------------------------- lights on the plan
+
+/** The channels of a light, as the page says them: "9", or "30 to 41". */
+export function channelRange(light: Pick<StageLight, 'address' | 'channels'>): string {
+  const last = light.address + light.channels.length - 1;
+  return last === light.address ? `${light.address}` : `${light.address} to ${last}`;
+}
+
+/** The address after the last channel of any light: where a new light goes. */
+export function nextAddress(lights: readonly StageLight[]): number {
+  const after = lights.reduce((end, light) => Math.max(end, light.address + light.channels.length), 1);
+  return after > CHANNEL_COUNT ? 1 : after;
+}
+
+/** A name for a new light at an address: the note of its channel, both lines, or "Light 5". */
+export function nameFor(address: number, note: string): string {
+  const words = note.split(NOTE_LINE_SEPARATOR).map((line) => line.trim()).filter((line) => line !== '').join(' ');
+  return (words || `Light ${address}`).slice(0, 24);
+}
+
+/** A light moves in half squares. */
+export const SNAP = 0.5;
+
+/**
+ * A place on a plan for a light: a square light that is not turned askew lies with its edges on
+ * the lines of the grid, over whole squares; any other light stands on the grid of half
+ * squares. Never beyond the room around the stage.
+ */
+export function keptOn(
+  plan: Pick<StagePlan, 'width' | 'depth'>,
+  x: number,
+  y: number,
+  light?: Pick<StageLight, 'shape' | 'width' | 'depth' | 'angle'>,
+): { x: number; y: number } {
+  let snapX = (value: number) => Math.round(value / SNAP) * SNAP;
+  let snapY = snapX;
+  if (light?.shape === 'square' && light.angle % 90 === 0) {
+    const across = light.angle % 180 === 0 ? light.width : light.depth;
+    const deep = light.angle % 180 === 0 ? light.depth : light.width;
+    snapX = (value) => Math.round(value - across / 2) + across / 2;
+    snapY = (value) => Math.round(value - deep / 2) + deep / 2;
+  }
+  const kept = (value: number, low: number, high: number) => Math.min(high, Math.max(low, value));
+  return {
+    x: kept(snapX(x), -STAGE_SIDE_ROOM, plan.width + STAGE_SIDE_ROOM),
+    y: kept(snapY(y), -STAGE_BACK_ROOM, plan.depth + STAGE_FRONT_ROOM),
+  };
+}
+
+/** An address from 1 on at which a light of this many channels fits. */
+export function fittingAddress(address: number, channels: number): number {
+  return Math.min(CHANNEL_COUNT - channels + 1, Math.max(1, Math.round(address) || 1));
+}
+
+/** The plan with one light changed. */
+export function withLight(plan: StagePlan, id: number, changes: Partial<StageLight>): StagePlan {
+  return { ...plan, lights: plan.lights.map((light) => (light.id === id ? { ...light, ...changes } : light)) };
+}
+
+/** The plan without one light. */
+export function withoutLight(plan: StagePlan, id: number): StagePlan {
+  return { ...plan, lights: plan.lights.filter((light) => light.id !== id) };
+}
+
+/** The plan with a stage of another width or depth (4 to 64 squares); lights beyond its new edge come to the edge. */
+export function resized(plan: StagePlan, side: 'width' | 'depth', size: number): StagePlan {
+  const kept = Math.min(STAGE_MAX_SIZE, Math.max(STAGE_MIN_SIZE, Math.round(size) || plan[side]));
+  const stage = { ...plan, [side]: kept };
+  return { ...stage, lights: plan.lights.map((light) => ({ ...light, ...keptOn(stage, light.x, light.y, light) })) };
+}
+
+/** What each letter of a light's channels stands for, as a fader of the light is named. */
+export const LETTER_NAMES: Readonly<Record<string, string>> = {
+  D: 'dimmer',
+  R: 'red',
+  G: 'green',
+  B: 'blue',
+  W: 'white',
+  A: 'amber',
+  U: 'UV',
+};
+
+/** The colour of a fader of a light: that of its letter; a dimmer and another channel in the colour of the channels. */
+export const LETTER_COLOURS: Readonly<Record<string, string>> = {
+  R: '#ff3b30',
+  G: '#3ddc84',
+  B: '#4a7dff',
+  W: '#f1f3f6',
+  A: '#ffb020',
+  U: '#9b5cff',
+};
+
+/** A place for a new light on the plan: the first free one, going along the rows from the front. */
+export function freeSpot(plan: StagePlan): { x: number; y: number } {
+  const taken = (x: number, y: number) => plan.lights.some((light) => Math.hypot(light.x - x, light.y - y) < 1.4);
+  for (let y = plan.depth - 1.5; y >= 1; y -= 2) {
+    for (let x = 1.5; x <= plan.width - 1; x += 2) {
+      if (!taken(x, y)) return { x, y };
+    }
+  }
+  return { x: plan.width / 2, y: plan.depth / 2 };
+}

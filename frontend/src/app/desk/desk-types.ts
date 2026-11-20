@@ -79,6 +79,70 @@ export interface AutosaveOptions {
   seconds: number;
 }
 
+/**
+ * A light of the rig on the stage plan. Its channels are one letter each, from its address on:
+ * D dimmer, R red, G green, B blue, W white, A amber, U ultraviolet; any other letter is a
+ * channel that gives no light (a strobe, a mode). See stage-lights.ts.
+ */
+export interface StageLight {
+  /** Its number while the plan is edited; no other light of the plan has it. */
+  id: number;
+  name: string;
+  /** Its first channel, 1-512. */
+  address: number;
+  /** One letter per channel, like "DRGB" or "RGBRGBRGBRGB" (four cells). */
+  channels: string;
+  /** The colour of a light without colour channels (a gel), like "#ff2000"; null: warm white. */
+  colour: string | null;
+  /** Where it hangs, in squares: across from the left edge of the stage, and from its back edge. */
+  x: number;
+  y: number;
+  /** How it is turned, in degrees clockwise, 0 to 359. */
+  angle: number;
+  /** A circle (an ellipse when wider than deep) or a square (an oblong over several squares). */
+  shape: LightShape;
+  /** How big it is before it is turned, in whole squares, 1 to 32: across and from back to front. */
+  width: number;
+  depth: number;
+}
+
+export type LightShape = 'round' | 'square';
+
+/** The biggest a light can be, across and from back to front, in squares. */
+export const LIGHT_MAX_SIZE = 32;
+
+/** The stage plan of the project: the stage in squares of its grid, and the lights on it. */
+export interface StagePlan {
+  width: number;
+  depth: number;
+  lights: StageLight[];
+  /** The picture under the plan, by a short name of its content; null without one. GetStagePicture gives it. */
+  pictureId: string | null;
+  /** How brightly the picture shows through, 0.1 to 1. */
+  pictureOpacity: number;
+  /** What the picture lies under: the stage, or the whole plan with the room around the stage. */
+  pictureOver: 'stage' | 'plan';
+}
+
+/** The plan of a desk without one: a stage of 16 by 10 squares, no lights, no picture. */
+export const EMPTY_STAGE: StagePlan = {
+  width: 16,
+  depth: 10,
+  lights: [],
+  pictureId: null,
+  pictureOpacity: 0.6,
+  pictureOver: 'stage',
+};
+
+/** The smallest and biggest stage, across and from back to front, in squares. */
+export const STAGE_MIN_SIZE = 4;
+export const STAGE_MAX_SIZE = 64;
+
+/** Squares around the stage where lights can hang too: beside it, behind it, and in front of it over the audience. */
+export const STAGE_SIDE_ROOM = 2;
+export const STAGE_BACK_ROOM = 2;
+export const STAGE_FRONT_ROOM = 4;
+
 /** What the stored memories hold: for each stored memory, by its number, the level of every channel. */
 export type MemoryLooks = Readonly<Record<number, readonly number[]>>;
 

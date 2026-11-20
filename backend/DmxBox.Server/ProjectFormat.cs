@@ -26,13 +26,22 @@ namespace DmxBox.Server;
 ///   "stack": [
 ///     { "cue": "1.0", "target": "memory", "number": 1, "value": 255, "up": 2, "wait": 0, "down": 2 }
 ///   ],
-///   "settings": { "channelSize": "auto", "shortcuts": { "master.clear": "Ctrl+KeyC" } }
+///   "settings": { "channelSize": "auto", "shortcuts": { "master.clear": "Ctrl+KeyC" } },
+///   "stage": { "width": 16, "depth": 10, "lights": [
+///     { "name": "LED bar", "address": 30, "channels": "RGBRGBRGBRGB", "x": 8, "y": 1, "angle": 0,
+///       "shape": "square", "width": 4, "depth": 1 },
+///     { "name": "Back blue 1", "address": 6, "channels": "D", "colour": "#2060ff", "x": 2, "y": 1.5, "angle": 0,
+///       "shape": "round", "width": 1, "depth": 1 } ],
+///     "picture": "data:image/jpeg;base64,...", "pictureOpacity": 0.6, "pictureOver": "stage" }
 /// }
 /// </code>
 /// "settings" holds the layout and the keyboard shortcuts of the UI on the PC, see
 /// <see cref="ProjectSettings"/>. It is there only for a project that has some, and a reader that
 /// does not know it passes over it, so it needed no new version. Settings that are no JSON
 /// object, or too long, are left out on reading: the project is good without them.
+/// "stage" is the stage plan, see <see cref="StagePlan"/>; it came the same way, without a new
+/// version. A file without it leaves the plan in use as it is. A light without "shape", "width"
+/// and "depth" is round and one square big; a plan without "picture" has none.
 /// The notes and the independents may be missing: then there are no notes, and the keys are
 /// on channels 1 to 32 and memories 1 to 32. That keeps the files from before these existed
 /// readable. Version 2 added the sequences and the stack; a file of version 1 has neither, and
@@ -81,6 +90,7 @@ internal static class ProjectFormat
             Sequences = [],
             Stack = project.Stack.Select(step => FileStep(step.Step, step.Cue.ToString())).ToList<ProjectFileStep?>(),
             Settings = ProjectSettings.Element(project.Settings),
+            Stage = FileStage(project.Stage, project.StagePicture),
         };
 
         for (int index = 0; index < project.Looks.Length; index++)
@@ -119,6 +129,7 @@ internal static class ProjectFormat
         int version = RequireFormat(file);
 
         byte[]?[] looks = LooksOf(file);
+        (StagePlan? stage, string? picture) = StageOf(file.Stage);
         return new ProjectContent(
             looks,
             NotesOf(file.ChannelNotes, Desk.ChannelCount, "channel"),
@@ -129,6 +140,78 @@ internal static class ProjectFormat
             Sequences = SequencesOf(file.Sequences, looks),
             Stack = StackOf(file.Stack),
             Settings = SettingsOf(file.Settings),
+            Stage = stage,
+            StagePicture = picture,
+        };
+    }
+
+    // The stage plan and its picture, with the same rules as for a plan made on the UI; none for
+    // a file without a plan. The lights are numbered from 1 in the order of the file.
+    private static (StagePlan? Stage, string? Picture) StageOf(ProjectFileStage? stage)
+    {
+        if (stage is null)
+            return (null, null);
+
+        List<ProjectFileLight?> listed = stage.Lights ?? [];
+        var lights = new StageLight[listed.Count];
+        for (int index = 0; index < listed.Count; index++)
+        {
+            ProjectFileLight light = listed[index] ?? throw Bad($"Light {index + 1} of the stage plan in the file is empty.");
+            if (light.Address is not int address || light.Channels is null)
+                throw Bad($"Light {index + 1} of the stage plan in the file needs an address and its channels.");
+
+            lights[index] = new StageLight(
+                index + 1, light.Name ?? "", address, light.Channels, light.Colour, light.X ?? 0, light.Y ?? 0, light.Angle ?? 0)
+            {
+                Shape = light.Shape ?? StageLight.Round,
+                Width = light.Width ?? 1,
+                Depth = light.Depth ?? 1,
+            };
+        }
+
+        try
+        {
+            string? picture = StagePicture.Checked(stage.Picture);
+            StagePlan plan = new StagePlan(stage.Width ?? StagePlan.DefaultWidth, stage.Depth ?? StagePlan.DefaultDepth, lights)
+            {
+                PictureId = picture is null ? null : StagePicture.IdOf(picture),
+                PictureOpacity = stage.PictureOpacity ?? StagePlan.DefaultPictureOpacity,
+                PictureOver = stage.PictureOver ?? StagePlan.PictureOverStage,
+            };
+            return (plan.Checked(), picture);
+        }
+        catch (DeskException e)
+        {
+            throw Bad($"The stage plan in the file cannot be used. {e.Message}");
+        }
+    }
+
+    private static ProjectFileStage? FileStage(StagePlan? stage, string? picture)
+    {
+        if (stage is null)
+            return null;
+
+        return new ProjectFileStage
+        {
+            Width = stage.Width,
+            Depth = stage.Depth,
+            Lights = stage.Lights.Select(light => new ProjectFileLight
+            {
+                Name = light.Name,
+                Address = light.Address,
+                Channels = light.Channels,
+                Colour = light.Colour,
+                X = light.X,
+                Y = light.Y,
+                Angle = light.Angle,
+                Shape = light.Shape,
+                Width = light.Width,
+                Depth = light.Depth,
+            }).ToList<ProjectFileLight?>(),
+            // the picture and how it shows only for a plan that has one
+            Picture = picture,
+            PictureOpacity = picture is null ? null : stage.PictureOpacity,
+            PictureOver = picture is null ? null : stage.PictureOver,
         };
     }
 

@@ -137,11 +137,11 @@ h1 {
   display: flex;
   grid-area: views;
   justify-content: center; /* in a line of their own (narrow) in the middle */
-  gap: 6px;
+  gap: 4px;
 }
 
 .views a {
-  padding: 9px 14px 7px;
+  padding: 9px 6px 7px; /* close together: seven links, and the project's name keeps its room */
   border-bottom: 3px solid var(--edge);
   color: var(--legend-dim);
   font-size: calc(15px * var(--font-scale));
@@ -264,7 +264,7 @@ h1 {
   justify-self: end;
 }
 
-/* The six links share the line: narrow lettering, little room around the words, and the line
+/* The seven links share the line: narrow lettering, little room around the words, and the line
    shared out among them. Should bigger lettering (Settings) make them wider than the line, the
    line scrolls sideways, not the page; its room at the top keeps the "live" tag in sight. */
 :host-context(.phone) .views {
@@ -279,8 +279,8 @@ h1 {
 :host-context(.phone) .views a {
   position: relative;
   flex: 1 0 auto;
-  padding-inline: 3px;
-  font-size: calc(14px * var(--font-scale));
+  padding-inline: 2px;
+  font-size: calc(13px * var(--font-scale));
   font-stretch: 75%;
   letter-spacing: 0;
   text-align: center;

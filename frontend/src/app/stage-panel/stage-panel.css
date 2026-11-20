@@ -1,0 +1,128 @@
+/* A panel beside the plan, in the colours of the panels of Settings. */
+:host {
+  display: block;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px 14px 12px;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: var(--well);
+  font-size: calc(14px * var(--font-scale));
+}
+
+/* the name of the light, and the key that closes the panel */
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.head h3 {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.close {
+  flex: none;
+  width: calc(30px * var(--font-scale));
+  padding: 0;
+}
+
+.facts {
+  margin: 0 0 12px;
+  color: var(--legend-dim);
+}
+
+lm-light-faders {
+  display: block;
+  margin-top: 14px;
+}
+
+h3 {
+  margin: 0 0 12px;
+  color: var(--legend-dim);
+  font-size: calc(12px * var(--font-scale));
+  font-stretch: 75%;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* a label with its field */
+.field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin-bottom: 8px;
+}
+
+.field > label,
+.field > .label {
+  flex: 1 1 110px;
+}
+
+input,
+select,
+button {
+  box-sizing: border-box;
+  height: calc(30px * var(--font-scale));
+  padding: 0 8px;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--legend);
+  font: inherit;
+}
+
+input[type='text'],
+select {
+  width: 150px;
+}
+
+input[type='number'] {
+  width: 76px;
+  text-align: right;
+}
+
+/* width × depth of a light, side by side */
+input.size {
+  width: 56px;
+}
+
+input.letters {
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+input[type='color'] {
+  width: 48px;
+  padding: 0 2px;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+select:hover,
+input:hover,
+button:hover:not(:disabled) {
+  border-color: var(--legend-dim);
+}
+
+.hint {
+  margin: 4px 0 10px;
+  color: var(--legend-dim);
+  font-size: calc(13px * var(--font-scale));
+  line-height: 1.35;
+}

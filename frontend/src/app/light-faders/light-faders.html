@@ -1,0 +1,16 @@
+<div class="faders" role="group" aria-label="Faders of the light">
+  @for (fader of faders(); track fader.channel) {
+    <div class="strip">
+      <span class="level" aria-hidden="true" [class.up]="fader.level > 0">{{ fader.level }}</span>
+      <lm-fader
+        [label]="fader.label"
+        [value]="fader.level"
+        [ownLevel]="fader.own"
+        [style.--lamp]="fader.colour"
+        (valueChange)="store.setChannel(fader.channel, $event)"
+      />
+      <span class="letter" aria-hidden="true" [title]="fader.name">{{ fader.letter }}</span>
+      <span class="number" aria-hidden="true">{{ fader.channel }}</span>
+    </div>
+  }
+</div>

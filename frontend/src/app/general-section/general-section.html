@@ -1,0 +1,48 @@
+<h2>General</h2>
+
+<button lmLamp type="button" tone="clear" data-action="master.clear" [level]="3" (click)="store.clear()">Clear</button>
+<!-- Lit: the keys under the faders and the independent keys hold their fader at full only while they are held. -->
+<button
+  lmLamp
+  type="button"
+  tone="solo"
+  aria-label="Solo"
+  data-action="master.solo"
+  title="While lit, a key under a fader or of the independents puts its fader to full only while it is held"
+  [level]="store.soloMode() ? 3 : 1"
+  [attr.aria-pressed]="store.soloMode()"
+  (click)="store.toggleSolo()"
+>
+  Solo
+</button>
+<!-- The rate, a speed master for the sequences: RATE switches it, the fader under it sets it. -->
+<button
+  lmLamp
+  type="button"
+  tone="rate"
+  aria-label="Rate"
+  data-action="master.rate"
+  title="While lit, every sequence plays at its own speed times the rate of the fader"
+  [level]="store.rateOn() ? 3 : 1"
+  [attr.aria-pressed]="store.rateOn()"
+  (click)="store.toggleRate()"
+>
+  Rate
+</button>
+
+<!-- The rate stands above its fader, as the level does above every other fader. -->
+<span class="readout" aria-hidden="true" [class.up]="store.rateOn()">{{ rateText() }}</span>
+<lm-fader
+  tone="system"
+  label="Rate"
+  title="Double click: back to ×1"
+  style="--lamp: var(--key-rate)"
+  [class.off]="!store.rateOn()"
+  [orientation]="store.mobile() ? 'horizontal' : 'vertical'"
+  [max]="positions"
+  [step]="keyStep"
+  [value]="position()"
+  [valueText]="rateSaid()"
+  (valueChange)="onPosition($event)"
+  (dblclick)="store.setRate(1)"
+/>

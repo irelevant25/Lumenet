@@ -1,0 +1,109 @@
+/* A narrow section beside the master section, over the stack: the title, Clear, Solo and Rate,
+   and the rate fader with the rate above it. The fader takes the height that is left; on a low
+   window the keys get flatter too, down to --master-key-min (set by the main view), and the
+   fader keeps 50 pixels. */
+:host {
+  display: grid;
+  grid-template-rows:
+    auto
+    repeat(3, minmax(var(--master-key-min, var(--key-h)), var(--key-h)))
+    auto
+    minmax(50px, 1fr);
+  justify-items: center;
+  gap: var(--strip-gap);
+  min-height: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: var(--panel-raised);
+}
+
+:host > [lmLamp] {
+  height: auto;
+  align-self: stretch;
+}
+
+h2 {
+  justify-self: start;
+  margin: 0 0 4px;
+  color: var(--legend-dim);
+  font-size: calc(12px * var(--font-scale));
+  font-stretch: 75%;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+lm-fader {
+  width: var(--key-w);
+}
+
+/* the mark for x1, in the middle of the slot */
+lm-fader::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  right: 3px;
+  height: 1px;
+  background: var(--legend-dim);
+}
+
+/* dark RATE: the fader can be set for the next time, but counts for nothing now */
+lm-fader.off {
+  opacity: 0.45;
+}
+
+/* the rate above the fader: bright while RATE is lit */
+.readout {
+  margin-top: 6px;
+  color: var(--legend-dim);
+  font-size: var(--readout);
+  font-stretch: 87.5%;
+  line-height: 1;
+}
+
+.readout.up {
+  color: #fff;
+}
+
+/* ---- mobile: one line. Clear, Solo and Rate, the fader over the room that is left, and the
+   rate after it. */
+:host-context(.mobile) {
+  display: flex;
+  align-items: center;
+}
+
+:host-context(.mobile) > [lmLamp] {
+  flex: none;
+  height: var(--key-h);
+}
+
+:host-context(.mobile) h2 {
+  display: none; /* the keys say what this is */
+}
+
+:host-context(.mobile) lm-fader {
+  flex: 1;
+  order: 1;
+  width: auto;
+  height: var(--key-h);
+  margin-left: 10px;
+}
+
+:host-context(.mobile) lm-fader::before {
+  top: 3px;
+  bottom: 3px;
+  left: 50%;
+  right: auto;
+  width: 1px;
+  height: auto;
+}
+
+:host-context(.mobile) .readout {
+  order: 2;
+  min-width: 5ch;
+  margin: 0 0 0 6px;
+  text-align: right;
+}

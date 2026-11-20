@@ -1,5 +1,6 @@
 import { Service, computed, effect, signal } from '@angular/core';
 import { CHANNEL_INDEPENDENT_COUNT, MEMORY_INDEPENDENT_COUNT } from './desk-types';
+import { KEY_COLOURS, isColour, keyColourWithId } from './key-colours';
 
 /**
  * How many channels one page of the channel faders on the main view holds: as the size of the
@@ -30,9 +31,23 @@ export const FONT_SCALE_MAX = 1.5;
 export const FONT_SCALE_STEP = 0.1;
 
 /**
- * What the owner set in the Settings view. It belongs to this browser on this device: a phone
- * and the PC each have their own, for they have different screens and keyboards. (The LAN
- * address and password belong to the desk program; the Settings view changes them there.)
+ * Shortcuts every desk has until its owner changes them: undo and redo, as everywhere. A key
+ * whose shortcut was taken away keeps none (an empty text stands for that).
+ */
+export const DEFAULT_SHORTCUTS: Readonly<Record<string, string>> = {
+  'project.undo': 'Ctrl+KeyZ',
+  'project.redo': 'Ctrl+KeyY',
+};
+
+/**
+ * What the owner set in the Settings view and the Keyboard view.
+ *
+ * On the PC the desk program runs on, the layout of the main view and the shortcuts belong to
+ * the project: they are saved with it, and a project that is loaded brings its own (see
+ * DeskSettings.takeProject). The lettering belongs to this browser on this device. A phone or a
+ * tablet keeps all of its settings itself, for its screen differs. Every browser also keeps the
+ * settings it uses, to start with them. (The LAN address and password belong to the desk
+ * program; the Settings view changes them there.)
  */
 export interface DeskSettingsData {
   readonly channelSize: ChannelSize;
@@ -48,6 +63,8 @@ export interface DeskSettingsData {
   readonly fontScale: number;
   /** The keyboard shortcuts: for each key of the desk that has one, by its name (see desk-actions.ts), the keys that press it. */
   readonly shortcuts: Readonly<Record<string, string>>;
+  /** The colours that differ from the usual ones, by their name (see key-colours.ts): "#3ddc84". */
+  readonly colours: Readonly<Record<string, string>>;
 }
 
 export const DEFAULT_SETTINGS: DeskSettingsData = {
@@ -58,8 +75,26 @@ export const DEFAULT_SETTINGS: DeskSettingsData = {
   channelKeys: DEFAULT_SHOWN_KEYS,
   memoryKeys: DEFAULT_SHOWN_KEYS,
   fontScale: 1,
-  shortcuts: {},
+  shortcuts: DEFAULT_SHORTCUTS,
+  colours: {},
 };
+
+/** The part of the settings that belongs to the project on the PC: all but the lettering. */
+export type ProjectSettingsData = Omit<DeskSettingsData, 'fontScale'>;
+
+/** The project's part of the settings, as the desk program keeps it. */
+export function projectPart(settings: DeskSettingsData): ProjectSettingsData {
+  return {
+    channelSize: settings.channelSize,
+    channelRows: settings.channelRows,
+    memoryRows: settings.memoryRows,
+    wheelSize: settings.wheelSize,
+    channelKeys: settings.channelKeys,
+    memoryKeys: settings.memoryKeys,
+    shortcuts: settings.shortcuts,
+    colours: settings.colours,
+  };
+}
 
 /** Where the settings are kept in the browser. */
 export const SETTINGS_STORAGE_KEY = 'lumenet-settings';
@@ -75,6 +110,11 @@ export function parseSettings(text: string | null): DeskSettingsData {
   } catch {
     raw = null;
   }
+  return settingsOf(raw);
+}
+
+/** The settings from an object, a project's for example: as parseSettings, without the text. */
+export function settingsOf(raw: unknown): DeskSettingsData {
   if (typeof raw !== 'object' || raw === null) return DEFAULT_SETTINGS;
 
   const kept = raw as Record<string, unknown>;
@@ -87,7 +127,18 @@ export function parseSettings(text: string | null): DeskSettingsData {
     memoryKeys: keyCount(kept['memoryKeys'], MEMORY_INDEPENDENT_COUNT),
     fontScale: fontScale(kept['fontScale']),
     shortcuts: shortcuts(kept['shortcuts']),
+    colours: colours(kept['colours']),
   };
+}
+
+/** The colours that make sense: a known name with a colour like "#3ddc84". */
+function colours(value: unknown): Record<string, string> {
+  const kept: Record<string, string> = {};
+  if (typeof value !== 'object' || value === null) return kept;
+  for (const [id, colour] of Object.entries(value)) {
+    if (keyColourWithId(id) && isColour(colour)) kept[id] = colour.toLowerCase();
+  }
+  return kept;
 }
 
 /** A font scale as the Settings view offers it: within the range, on a step of 0.1. */
@@ -109,22 +160,42 @@ function oneOf<T>(value: unknown, choices: readonly T[], otherwise: T): T {
   return choices.includes(value as T) ? (value as T) : otherwise;
 }
 
+/**
+ * The shortcuts that make sense. The usual ones (DEFAULT_SHORTCUTS) come with them, unless their
+ * key was given a shortcut of its own or none, or their keys belong to another key of the desk.
+ */
 function shortcuts(value: unknown): Record<string, string> {
-  if (typeof value !== 'object' || value === null) return {};
   const kept: Record<string, string> = {};
-  for (const [action, keys] of Object.entries(value)) {
-    if (typeof keys === 'string' && keys.length > 0) kept[action] = keys;
+  if (typeof value === 'object' && value !== null) {
+    for (const [action, keys] of Object.entries(value)) {
+      if (typeof keys !== 'string') continue;
+      // An empty text says "none": kept only where it keeps a usual shortcut away.
+      if (keys.length > 0 || action in DEFAULT_SHORTCUTS) kept[action] = keys;
+    }
+  }
+
+  const taken = new Set(Object.values(kept));
+  for (const [action, keys] of Object.entries(DEFAULT_SHORTCUTS)) {
+    if (!(action in kept) && !taken.has(keys)) kept[action] = keys;
   }
   return kept;
 }
 
 /**
- * The settings of this browser, kept in its local storage. A change is kept at once. The font
- * scale goes onto the page straight away, as the variable --font-scale on <html>.
+ * The settings of this page, kept in the browser's local storage. A change is kept at once. The
+ * font scale goes onto the page straight away, as the variable --font-scale on <html>.
+ *
+ * On the PC the desk program runs on, the desk store connects the settings with the project:
+ * followProject sends every change of the project's part there, and takeProject puts the
+ * project's in place of this browser's.
  */
 @Service()
 export class DeskSettings {
   private readonly data = signal<DeskSettingsData>(DeskSettings.read());
+
+  // Where a change of the project's part goes besides this browser: to the desk program, on the
+  // PC. Null on a phone, and before the page knows.
+  private sendProject: ((settings: ProjectSettingsData) => void) | null = null;
 
   readonly channelSize = computed(() => this.data().channelSize);
   readonly channelRows = computed(() => this.data().channelRows);
@@ -134,12 +205,48 @@ export class DeskSettings {
   readonly memoryKeys = computed(() => this.data().memoryKeys);
   readonly fontScale = computed(() => this.data().fontScale);
   readonly shortcuts = computed(() => this.data().shortcuts);
+  readonly colours = computed(() => this.data().colours);
+  /** The part of the settings that belongs to the project. */
+  readonly projectSettings = computed(() => projectPart(this.data()));
 
   constructor() {
     effect(() => {
       const scale = this.data().fontScale;
       if (typeof document !== 'undefined') document.documentElement.style.setProperty('--font-scale', String(scale));
     });
+
+    // The colours that differ from the usual ones go onto <html>, in place of those of styles.css.
+    effect(() => {
+      const colours = this.data().colours;
+      if (typeof document === 'undefined') return;
+      const style = document.documentElement.style;
+      for (const entry of KEY_COLOURS) {
+        const colour = colours[entry.id];
+        if (colour) style.setProperty(entry.variable, colour);
+        else style.removeProperty(entry.variable);
+      }
+    });
+  }
+
+  /** Gives a key, or a kind of key, a colour of its own: "#3ddc84". */
+  setColour(id: string, colour: string): void {
+    const entry = keyColourWithId(id);
+    if (!entry || !isColour(colour)) return;
+    const rest = { ...this.data().colours };
+    if (colour.toLowerCase() === entry.standard) delete rest[id];
+    else rest[id] = colour.toLowerCase();
+    this.change({ colours: rest });
+  }
+
+  /** The usual colour again, for one (by its name) or, without a name, for all. */
+  resetColours(id?: string): void {
+    if (id === undefined) {
+      this.change({ colours: {} });
+      return;
+    }
+    const rest = { ...this.data().colours };
+    delete rest[id];
+    this.change({ colours: rest });
   }
 
   setChannelSize(size: ChannelSize): void {
@@ -180,8 +287,33 @@ export class DeskSettings {
     this.change({ shortcuts });
   }
 
+  /**
+   * From now on, every change of the project's part of the settings also goes to `send` (the
+   * desk program, on the PC); null for none (a phone keeps its settings to itself).
+   */
+  followProject(send: ((settings: ProjectSettingsData) => void) | null): void {
+    this.sendProject = send;
+  }
+
+  /**
+   * The project's settings, as the desk program has them: they take the place of this page's,
+   * all but the lettering. Whatever they lack or that makes no sense is the default.
+   */
+  takeProject(settings: unknown): void {
+    const taken = settingsOf(settings);
+    this.data.update((old) => ({ ...taken, fontScale: old.fontScale }));
+    this.keep();
+  }
+
   private change(part: Partial<DeskSettingsData>): void {
     this.data.update((old) => ({ ...old, ...part }));
+    this.keep();
+    if (this.sendProject && Object.keys(part).some((key) => key !== 'fontScale')) {
+      this.sendProject(projectPart(this.data()));
+    }
+  }
+
+  private keep(): void {
     try {
       localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(this.data()));
     } catch {

@@ -23,4 +23,11 @@ internal sealed record ProjectContent(byte[]?[] Looks, string[] ChannelNotes, st
 
     /// <summary>The steps of the stack, in the order of their numbers.</summary>
     public ProjectStep[] Stack { get; init; } = [];
+
+    /// <summary>
+    /// The settings of the UI on the PC that belong to the project (its layout and keyboard
+    /// shortcuts), as a JSON object, see <see cref="ProjectSettings"/>; null for a project
+    /// without settings of its own, such as one from a file of an older version.
+    /// </summary>
+    public string? Settings { get; init; }
 }

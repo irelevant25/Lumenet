@@ -30,6 +30,10 @@ internal sealed class ProjectStore
     // What TakeChange gave out the last time.
     private ProjectInfo _told;
 
+    // When the work that Recover brought back was autosaved; null once the project was saved,
+    // loaded or started anew, and when nothing was brought back.
+    private DateTimeOffset? _recovered;
+
     /// <summary>Starts with a new, empty project. The folder is not touched yet.</summary>
     /// <param name="desk">The desk whose memories and notes make up the project.</param>
     /// <param name="folder">The projects folder. It is created when it is first needed.</param>
@@ -52,6 +56,22 @@ internal sealed class ProjectStore
             lock (_lock)
             {
                 return CurrentInfo();
+            }
+        }
+    }
+
+    /// <summary>
+    /// When the unsaved work that the desk program brought back at its start (see
+    /// <see cref="Autosave"/>) was kept; null when nothing was brought back, and once the project
+    /// was saved, loaded or started anew.
+    /// </summary>
+    public DateTimeOffset? Recovered
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _recovered;
             }
         }
     }
@@ -109,6 +129,7 @@ internal sealed class ProjectStore
             _savedChanges = _desk.StartNewProject();
             _name = NewProjectName;
             _path = null;
+            _recovered = null;
             return CurrentInfo();
         }
     }
@@ -130,6 +151,7 @@ internal sealed class ProjectStore
             _name = name ?? _name;
             _path = path;
             _savedChanges = changes;
+            _recovered = null;
             return CurrentInfo();
         }
     }
@@ -150,6 +172,7 @@ internal sealed class ProjectStore
             _savedChanges = _desk.ReplaceProject(content);
             _name = name;
             _path = path;
+            _recovered = null;
             return CurrentInfo();
         }
     }
@@ -171,6 +194,37 @@ internal sealed class ProjectStore
             _name = name;
             _path = null;
             _savedChanges = changes - 1;   // one change, the import itself, is not in a file
+            _recovered = null;
+            return CurrentInfo();
+        }
+    }
+
+    /// <summary>
+    /// Brings back the work the desk program had not saved when it stopped, as <see cref="Autosave"/>
+    /// kept it: the project as it was, under its name and with its file, and unsaved, because
+    /// it is not in its file.
+    /// </summary>
+    /// <param name="name">The project's name then.</param>
+    /// <param name="path">Its file then; null for a project that had none yet.</param>
+    /// <param name="content">The project as it was.</param>
+    /// <param name="kept">When it was kept.</param>
+    /// <returns>The project after it was brought back.</returns>
+    public ProjectInfo Recover(string name, string? path, ProjectContent content, DateTimeOffset kept)
+    {
+        ProjectName.Require(name);
+
+        // A file outside the projects folder is not taken over: saving would write there.
+        string? file = path is null ? null : Path.GetFullPath(path);
+        if (file is not null && !string.Equals(Path.GetDirectoryName(file), Folder, StringComparison.OrdinalIgnoreCase))
+            file = null;
+
+        lock (_lock)
+        {
+            long changes = _desk.ReplaceProject(content);
+            _name = name;
+            _path = file;
+            _savedChanges = changes - 1;   // what was brought back is not in the file
+            _recovered = kept;
             return CurrentInfo();
         }
     }

@@ -5,7 +5,7 @@
     <button
       lmLamp
       type="button"
-      tone="system"
+      [tone]="item.function"
       [level]="item.active ? 3 : 1"
       [blink]="item.blink"
       [disabled]="store.live()"

@@ -23,6 +23,11 @@ export const STRIPS_PER_LINE_PHONE = 8;
 /** Narrower than this is "medium": 16 faders in a row instead of 32, and twice as many page keys. */
 export const MEDIUM_BELOW_PX = 1850;
 /**
+ * Narrower than this is "narrow": the top bar takes two lines, the links to the views under the
+ * name, the keys and the project, which no longer fit beside them.
+ */
+export const NARROW_BELOW_PX = 1300;
+/**
  * Narrower or lower than this is "mobile": the sections stand under each other, the page keys
  * lie under the section titles, and the page scrolls.
  */
@@ -61,6 +66,17 @@ export interface DeskState {
   memoryIndependents?: number[];
   master: number;
   blackout: boolean;
+  /** The rate, a speed master for all sequences, 0.1 to 10. Missing from an older desk program. */
+  rate?: number;
+  /** True while the rate counts (RATE lit). */
+  rateOn?: boolean;
+}
+
+/** The autosave of the desk program: whether it keeps the work that is not saved, and how often. */
+export interface AutosaveOptions {
+  on: boolean;
+  /** 5, 30, 60 or 300 seconds. */
+  seconds: number;
 }
 
 /** What the stored memories hold: for each stored memory, by its number, the level of every channel. */
@@ -213,6 +229,19 @@ export function lanAddressInUse(lan: LanAccess): string | null {
   const chosen = lan.chosen ? lan.addresses.find((address) => address.split(':')[0] === lan.chosen) : undefined;
   return chosen ?? lan.addresses[0] ?? null;
 }
+
+/**
+ * What undo and redo would do now, as the desk program says: "storing memory 5", or null when
+ * there is nothing to undo or redo. Undo covers what the project holds: memories, sequences,
+ * the stack, notes and the independent keys.
+ */
+export interface HistoryState {
+  undo: string | null;
+  redo: string | null;
+}
+
+/** Nothing to undo, nothing to redo. */
+export const NO_HISTORY: HistoryState = { undo: null, redo: null };
 
 /** Whether the backend reaches the dmxbox. */
 export interface BoxStatus {

@@ -41,6 +41,11 @@ export class FaderStrip {
    */
   readonly keyPress = output<void>();
   /**
+   * The key goes down (true) and up again (false), by a pointer or by Space or Enter while it
+   * has the focus: while SOLO is lit the fader is at full while it is held.
+   */
+  readonly keyHold = output<boolean>();
+  /**
    * While a sequence is recorded: the numbers of its steps that use this channel or memory.
    * They stand in yellow in the corner of the key. Nothing given means none.
    */
@@ -62,6 +67,18 @@ export class FaderStrip {
     if (steps.length === 0) return `${this.name()} key`;
     return `${this.name()} key, in ${steps.length === 1 ? 'step' : 'steps'} ${steps.join(', ')}`;
   });
+
+  // The main button of a mouse, or a finger or a pen. The key keeps the pointer until it is
+  // let go, so that a SOLO hold ends also when the pointer has left the key by then.
+  protected onPointerDown(event: PointerEvent): void {
+    if (event.button !== 0) return;
+    (event.currentTarget as Element).setPointerCapture?.(event.pointerId);
+    this.keyHold.emit(true);
+  }
+
+  protected onKey(event: KeyboardEvent, down: boolean): void {
+    if ((event.key === ' ' || event.key === 'Enter') && !event.repeat) this.keyHold.emit(down);
+  }
 
   /** The note's two lines, each in a field of its own. */
   protected readonly lines = computed(() => splitNote(this.note()));

@@ -18,21 +18,29 @@ import {
   MEMORY_INDEPENDENT_COUNT,
   lanAddressInUse,
 } from '../desk/desk-types';
+import { KeyColoursPanel } from '../key-colours-panel/key-colours-panel';
+
+/** How often the autosave can keep the work, in seconds: as the desk program offers it. */
+const AUTOSAVE_INTERVALS: readonly number[] = [5, 30, 60, 300];
 
 /**
- * Settings: what this browser shows of the main view and how, the size of all lettering, and the
- * LAN address and password of the desk program. (The keyboard shortcuts have a view of their own.)
+ * Settings: what this browser shows of the main view and how, the size of all lettering, the
+ * autosave and the LAN of the desk program, and the colours of the keys. (The keyboard shortcuts
+ * have a view of their own.)
  *
  * - The main view: how many channels a page holds (chosen by the window, or fixed), in one or two
  *   rows of faders, and one or two rows of memory faders; rows wider than the window scroll
  *   sideways. How many steps the stack wheel shows, and how many keys of each kind the
  *   independents show (0 to 32; none of either: no independents at all).
  * - The size of all lettering.
+ * - The autosave: on or off, and how often. On the PC only.
  * - While LAN is on: the address of this PC that phones use, and the password. On the PC only.
+ * - The colours of the keys (key-colours-panel).
  *
- * Everything but LAN belongs to this browser on this device, see desk-settings.ts.
+ * The autosave and LAN belong to the desk program; the rest is kept as desk-settings.ts says.
  */
 @Component({
+  imports: [KeyColoursPanel],
   selector: 'lm-settings-view',
   styleUrl: './settings-view.css',
   templateUrl: './settings-view.html',
@@ -102,6 +110,30 @@ export class SettingsView {
   }
 
   protected readonly fontScaleSaid = computed(() => `×${this.settings.fontScale().toFixed(1)}`);
+
+  // ---------------------------------------------------------------- autosave
+
+  protected readonly autosaveIntervals = AUTOSAVE_INTERVALS;
+
+  /** The autosave of the desk program, for a page on the PC; null on another device and with an older desk program. */
+  protected readonly autosave = computed(() => (this.store.lan()?.local ? this.store.autosave() : null));
+
+  protected intervalName(seconds: number): string {
+    return seconds < 60 ? `${seconds} seconds` : seconds === 60 ? '1 minute' : `${seconds / 60} minutes`;
+  }
+
+  protected onAutosaveOn(event: Event): void {
+    const autosave = this.autosave();
+    if (autosave) this.store.setAutosave((event.target as HTMLSelectElement).value === 'on', autosave.seconds);
+  }
+
+  protected onAutosaveEvery(event: Event): void {
+    const autosave = this.autosave();
+    if (autosave) this.store.setAutosave(autosave.on, Number((event.target as HTMLSelectElement).value));
+  }
+
+  /** True on the PC the desk program runs on: there the project keeps the layout and the shortcuts. */
+  protected readonly projectKeeps = computed(() => this.store.lan()?.local === true);
 
   // ---------------------------------------------------------------- LAN
 

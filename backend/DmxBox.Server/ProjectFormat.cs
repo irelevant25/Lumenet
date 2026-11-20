@@ -25,9 +25,14 @@ namespace DmxBox.Server;
 ///   ],
 ///   "stack": [
 ///     { "cue": "1.0", "target": "memory", "number": 1, "value": 255, "up": 2, "wait": 0, "down": 2 }
-///   ]
+///   ],
+///   "settings": { "channelSize": "auto", "shortcuts": { "master.clear": "Ctrl+KeyC" } }
 /// }
 /// </code>
+/// "settings" holds the layout and the keyboard shortcuts of the UI on the PC, see
+/// <see cref="ProjectSettings"/>. It is there only for a project that has some, and a reader that
+/// does not know it passes over it, so it needed no new version. Settings that are no JSON
+/// object, or too long, are left out on reading: the project is good without them.
 /// The notes and the independents may be missing: then there are no notes, and the keys are
 /// on channels 1 to 32 and memories 1 to 32. That keeps the files from before these existed
 /// readable. Version 2 added the sequences and the stack; a file of version 1 has neither, and
@@ -75,6 +80,7 @@ internal static class ProjectFormat
             MemoryIndependents = project.MemoryIndependents.ToList(),
             Sequences = [],
             Stack = project.Stack.Select(step => FileStep(step.Step, step.Cue.ToString())).ToList<ProjectFileStep?>(),
+            Settings = ProjectSettings.Element(project.Settings),
         };
 
         for (int index = 0; index < project.Looks.Length; index++)
@@ -122,7 +128,25 @@ internal static class ProjectFormat
             MemoryIndependents = MemoryIndependentsOf(file.MemoryIndependents, version),
             Sequences = SequencesOf(file.Sequences, looks),
             Stack = StackOf(file.Stack),
+            Settings = SettingsOf(file.Settings),
         };
+    }
+
+    // Settings that are no JSON object of a sensible size are left out: the project is good
+    // without them, and the UI keeps the ones it has.
+    private static string? SettingsOf(JsonElement? settings)
+    {
+        if (settings is not { ValueKind: JsonValueKind.Object } element)
+            return null;
+
+        try
+        {
+            return ProjectSettings.Checked(element);
+        }
+        catch (DeskException)
+        {
+            return null;
+        }
     }
 
     private static ProjectFile Parse(Stream stream)

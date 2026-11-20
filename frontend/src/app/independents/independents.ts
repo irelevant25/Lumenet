@@ -1,7 +1,7 @@
 import { Component, computed, inject, linkedSignal } from '@angular/core';
 import { DeskSettings } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
-import { CHANNEL_COUNT, MEMORY_COUNT } from '../desk/desk-types';
+import { CHANNEL_COUNT, MEMORY_COUNT, StepTarget } from '../desk/desk-types';
 import { KeyColumns } from '../desk/key-columns';
 import { memoryLamp } from '../desk/lamps';
 import { LampButton, LampTone } from '../lamp-button/lamp-button';
@@ -73,6 +73,21 @@ export class Independents {
 
   protected toggleEditing(): void {
     this.editing.update((on) => !on);
+  }
+
+  /**
+   * A key goes down: while SOLO is lit its channel or memory is at full until it is let go. The
+   * key keeps the pointer until then, so that the hold ends also when the pointer has left it.
+   */
+  protected hold(kind: StepTarget, key: number, event: PointerEvent): void {
+    if (event.button !== 0) return;
+    (event.currentTarget as Element).setPointerCapture?.(event.pointerId);
+    this.store.holdIndependent(kind, key, true);
+  }
+
+  /** The same with Space or Enter on a key that has the focus. */
+  protected holdByKey(kind: StepTarget, key: number, event: KeyboardEvent, down: boolean): void {
+    if ((event.key === ' ' || event.key === 'Enter') && !event.repeat) this.store.holdIndependent(kind, key, down);
   }
 
   /** A new channel number was typed onto a channel key. */

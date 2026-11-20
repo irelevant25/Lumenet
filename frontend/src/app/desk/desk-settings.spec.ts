@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, fontScale, keyCount, parseSettings } from './desk-settings';
+import { DEFAULT_SETTINGS, fontScale, keyCount, parseSettings, projectPart } from './desk-settings';
 
 describe('the settings this browser keeps', () => {
   it('are the defaults when there are none, or when they cannot be read', () => {
@@ -13,8 +13,27 @@ describe('the settings this browser keeps', () => {
       channelKeys: 10,
       memoryKeys: 10,
       fontScale: 1,
-      shortcuts: {},
+      shortcuts: { 'project.undo': 'Ctrl+KeyZ', 'project.redo': 'Ctrl+KeyY' },
+      colours: {},
     });
+  });
+
+  it('have undo and redo on Ctrl + Z and Ctrl + Y, unless their owner said otherwise', () => {
+    // taken away: stays away; given to another key: that key keeps it
+    expect(parseSettings(JSON.stringify({ shortcuts: { 'project.undo': '' } })).shortcuts).toEqual({
+      'project.undo': '',
+      'project.redo': 'Ctrl+KeyY',
+    });
+    expect(parseSettings(JSON.stringify({ shortcuts: { 'master.clear': 'Ctrl+KeyZ' } })).shortcuts).toEqual({
+      'master.clear': 'Ctrl+KeyZ',
+      'project.redo': 'Ctrl+KeyY',
+    });
+  });
+
+  it('belong to the project, all but the lettering', () => {
+    expect(projectPart(DEFAULT_SETTINGS)).not.toHaveProperty('fontScale');
+    expect(projectPart({ ...DEFAULT_SETTINGS, channelSize: 8 }).channelSize).toBe(8);
+    expect(projectPart({ ...DEFAULT_SETTINGS, colours: { pause: '#ffffff' } }).colours).toEqual({ pause: '#ffffff' });
   });
 
   it('keep what makes sense, and only that', () => {
@@ -28,6 +47,8 @@ describe('the settings this browser keeps', () => {
         memoryKeys: 33, // there are 32
         fontScale: 1.24,
         shortcuts: { 'master.clear': 'Ctrl+KeyC', 'stack.play': 5, 'stack.next': '' },
+        // a known key and a colour as #rrggbb, kept in small letters
+        colours: { pause: '#FFAA00', play: 'green', nothing: '#000000', channel: '#00ff00' },
       }),
     );
     expect(kept).toEqual({
@@ -38,7 +59,8 @@ describe('the settings this browser keeps', () => {
       channelKeys: 32,
       memoryKeys: 10,
       fontScale: 1.2,
-      shortcuts: { 'master.clear': 'Ctrl+KeyC' },
+      shortcuts: { 'master.clear': 'Ctrl+KeyC', 'project.undo': 'Ctrl+KeyZ', 'project.redo': 'Ctrl+KeyY' },
+      colours: { pause: '#ffaa00', channel: '#00ff00' },
     });
     expect(parseSettings(JSON.stringify({ channelSize: 12 })).channelSize).toBe('auto');
     expect(parseSettings(JSON.stringify({ wheelSize: 9 })).wheelSize).toBe(9);

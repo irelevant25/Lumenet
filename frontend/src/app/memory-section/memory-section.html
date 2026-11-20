@@ -18,6 +18,7 @@
             (valueChange)="store.setMemoryLevel(memory, $event)"
             (noteChange)="store.setMemoryNote(memory, $event)"
             (keyPress)="store.pressMemory(memory)"
+            (keyHold)="store.holdKey('memory', memory, $event)"
           />
         }
       </div>

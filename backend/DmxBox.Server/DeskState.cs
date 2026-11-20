@@ -14,6 +14,8 @@ namespace DmxBox.Server;
 /// <param name="Independents">The channel number, 1-512, each of the 10 channel keys of the independents is bound to; key 1 is at index 0.</param>
 /// <param name="MemorySequence">For each of the 128 memories, whether what it holds is a sequence.</param>
 /// <param name="MemoryIndependents">The memory number, 1-128, each of the 10 memory keys of the independents is bound to; key 1 is at index 0.</param>
+/// <param name="Rate">The rate, a speed master for all sequences: 0.1 to 10.</param>
+/// <param name="RateOn">True while the rate counts.</param>
 /// <remarks>Public only because <see cref="IDeskClient"/> has to be.</remarks>
 public sealed record DeskState(
     int[] Channels,
@@ -25,4 +27,6 @@ public sealed record DeskState(
     string[] MemoryNotes,
     int[] Independents,
     bool[] MemorySequence,
-    int[] MemoryIndependents);
+    int[] MemoryIndependents,
+    double Rate,
+    bool RateOn);

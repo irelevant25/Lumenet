@@ -21,6 +21,11 @@ export interface DeskAction {
   /** What the list of the Keyboard view calls it, like "Play" or "Channel key 5". */
   readonly label: string;
   readonly run: ((context: ActionContext) => void) | null;
+  /**
+   * For a key that holds its fader at full in SOLO mode (under a fader, or of the independents): what holding
+   * it down (true) and letting it go (false) does. Its shortcut then does the same while it is held.
+   */
+  readonly hold?: (context: ActionContext, down: boolean) => void;
 }
 
 /** The groups of the list of the Keyboard view, in their order. */
@@ -61,6 +66,8 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
   view('settings', 'Settings view', '/settings'),
   view('keyboard', 'Keyboard view', '/keyboard'),
 
+  { id: 'project.undo', group: 'Project and LAN', label: 'Undo', run: ({ store }) => store.undo() },
+  { id: 'project.redo', group: 'Project and LAN', label: 'Redo', run: ({ store }) => store.redo() },
   { id: 'project.new', group: 'Project and LAN', label: 'New project', run: null },
   { id: 'project.save', group: 'Project and LAN', label: 'Save project', run: null },
   { id: 'project.load', group: 'Project and LAN', label: 'Load project', run: null },
@@ -74,6 +81,8 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
 
   { id: 'master.clear', group: 'Master', label: 'Clear', run: ({ store }) => store.clear() },
   { id: 'master.blackout', group: 'Master', label: 'Blackout', run: ({ store }) => store.toggleBlackout() },
+  { id: 'master.solo', group: 'Master', label: 'Solo', run: ({ store }) => store.toggleSolo() },
+  { id: 'master.rate', group: 'Master', label: 'Rate', run: ({ store }) => store.toggleRate() },
 
   {
     id: 'stack.live',
@@ -111,12 +120,14 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
     group: 'Independents',
     label: `Channel key ${key} of the independents`,
     run: ({ store }) => store.toggleIndependent(key),
+    hold: ({ store }, down) => store.holdIndependent('channel', key, down),
   })),
   ...numbered(MEMORY_INDEPENDENT_COUNT, (key) => ({
     id: `ind.memory.${key}`,
     group: 'Independents',
     label: `Memory key ${key} of the independents`,
     run: ({ store }) => store.toggleMemoryIndependent(key),
+    hold: ({ store }, down) => store.holdIndependent('memory', key, down),
   })),
 
   ...numbered(MAX_CHANNEL_PAGES, (page) => ({
@@ -143,12 +154,14 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
     group: 'Channel keys',
     label: `Channel key ${channel}`,
     run: ({ store }) => store.pressChannel(channel),
+    hold: ({ store }, down) => store.holdKey('channel', channel, down),
   })),
   ...numbered(MEMORY_COUNT, (memory) => ({
     id: `memory.${memory}`,
     group: 'Memory keys',
     label: `Memory key ${memory}`,
     run: ({ store }) => store.pressMemory(memory),
+    hold: ({ store }, down) => store.holdKey('memory', memory, down),
   })),
 ];
 

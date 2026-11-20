@@ -94,12 +94,12 @@ h2 {
 }
 
 .card.current.on {
-  border-color: var(--channel);
-  background: color-mix(in srgb, var(--channel) 20%, var(--well));
+  border-color: var(--key-play);
+  background: color-mix(in srgb, var(--key-play) 20%, var(--well));
 }
 
 .card.next {
-  border-color: var(--system);
+  border-color: var(--key-next);
 }
 
 h3 {

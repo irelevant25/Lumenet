@@ -1,8 +1,8 @@
-/* The title, Listen and the search, and under them the list of keys and shortcuts, which scrolls
-   when it is higher than the window. */
+/* The title, Listen and the search, the tabs of the kinds of keys, and under them the list of
+   keys and shortcuts, which scrolls when it is higher than the window. */
 :host {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr);
   gap: 12px;
   min-width: 0;
   min-height: 0;
@@ -122,25 +122,38 @@ input::placeholder {
   user-select: text;
 }
 
-.group-title {
+/* the kinds of keys as tabs side by side; the one shown has the amber line under it */
+.tabs {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  border-bottom: 1px solid var(--edge);
+}
+
+[role='tab'] {
+  height: auto;
+  padding: 6px 10px 5px;
   border-color: transparent;
+  border-bottom: 3px solid transparent;
+  border-radius: 3px 3px 0 0;
   background: none;
   font-weight: 600;
-  text-align: left;
 }
 
-.group-title .arrow {
-  width: 1em;
-  color: var(--legend-dim);
+[role='tab'][aria-selected='true'] {
+  border-bottom-color: var(--system);
+  background: var(--panel);
+  color: #fff;
 }
 
-.group-title .count {
+[role='tab'] .count {
+  margin-left: 4px;
   color: var(--legend-dim);
   font-weight: 400;
+}
+
+[role='tab'].none-found {
+  color: var(--legend-dim);
 }
 
 table {

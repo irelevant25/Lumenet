@@ -440,9 +440,11 @@ soon as a box answers.
 The top bar has six links: **Main**, **Memories**, **Sequences**, **Stack**, **Settings** and **Keyboard**.
 Main is the desk itself. Memories only shows what is stored. Sequences and Stack are for the two things that
 run by themselves (see below), Settings for how this browser shows the desk (see [Settings](#settings)),
-Keyboard for its shortcuts. At the right of Main stands a column: the **Master** section (Clear, Black out and
-the master fader with its level), the **Stack** under it, and **Record** at the bottom; at the right edge, over
-the whole height, the **Independents** (unless Settings shows none of their keys).
+Keyboard for its shortcuts. Beside the name stand **LAN**, **Undo** and **Redo**, at the right the keys of the
+project. At the right of Main stands a column: the **Master** section (Clear, Solo and Black out, the master
+fader with its level, and under it Rate with its wheel), the **Stack** under it, and **Record** at the
+bottom; at the right edge, over the whole height, the **Independents** (unless Settings shows none of their
+keys).
 
 * **Channels:** two rows of faders (or one, as Settings says). The keys at the right choose which of the 512
   channels they show. When they do not fit into one column, they get flatter, and then they go on in another
@@ -485,10 +487,30 @@ the whole height, the **Independents** (unless Settings shows none of their keys
 * **Black out** sends zero to every address but leaves the desk as it is; the key blinks while it is active.
   The blackout button on the box does the same, and the desk shows it.
 * **Master** dims the whole output.
+* **Solo** (white, between Clear and Black out): while it is lit, a key under a fader or of the independents
+  puts its fader to full only for as long as it is held, and lets it go back where it was; so does its
+  shortcut. While a record key waits for a memory, the memory keys are for that, and while a sequence is
+  recorded the channel keys put in steps, as always. Solo dark again: the keys switch on and off as before.
+* **Rate** (under the master fader) is a speed master for the sequences. Dark, every sequence plays at its own
+  speed; lit, at its own speed times the rate of the wheel under the key, from ×0.1 to ×10, which stands under
+  the wheel (×1.00). Drag the wheel sideways (to the right: faster, a step for every 6 pixels), turn the mouse
+  wheel over it (a step a notch), or use the arrow keys; each step is about 6 % faster or slower, and a double
+  click sets it back to ×1.00. While Rate is dark the wheel is dim and does not turn; it keeps its rate for
+  the next time. A sequence goes on from where it is when the rate changes. Like the master fader, the rate
+  is not saved with the project, and the other pages see it at once.
+* **Undo** and **Redo** (top left) take back the last change of what the project holds, and make it again:
+  storing, copying and emptying memories, sequences and their speed, the steps of the stack, notes and the
+  channels and memories of the independent keys. Their tooltip says what they would do, for example "Undo
+  storing memory 5", and the top bar says what they did. The faders, Clear, the master and the settings are
+  no steps; changes of one kind in quick succession (the moves of a speed fader) are one.
+  Up to 100 steps are kept, for the whole desk, whichever device made a change. Loading a project, a new
+  one and an import start afresh, and while the stack is live they are locked. Ctrl + Z and Ctrl + Y are
+  their shortcuts until the Keyboard view gives them others.
 * **Stack** (under the master section) is the stack at hand on Main: Stack takes it live, Prev, Play, Pause
   and Next go through it, as on the Stack view. Under the keys stands a wheel of the stack's steps: the one
   that is on in the middle (green, with an arrow beside it), the step before it above (blue), the one Play
-  goes to below (yellow), the others grey. It shows 3 steps, or 1, 5, 7 or 9 as Settings says, and rolls
+  goes to below (yellow), the others grey, their numbers about half as high as a key is wide (15 to 22
+  pixels, times the lettering of Settings). It shows 3 steps, or 1, 5, 7 or 9 as Settings says, and rolls
   on when another step comes on. The stack goes round, and so does the wheel, but a step stands in it once
   only. While no step is on, the middle is empty and the step Play goes to stands under it. On a low window
   the wheel shows fewer steps (3 at least) and the keys of the column get flatter.
@@ -511,7 +533,15 @@ the whole height, the **Independents** (unless Settings shows none of their keys
   independent keys are bound to, not the fader positions, so loading a project never switches a light on by
   itself. New empties the desk; it asks first. A project keeps 32 channel keys and 32 memory keys of the
   independents, however many the page shows. An older project keeps the keys it has (10 of each, or 16
-  channel keys from before there were memory keys); the others are where they are on a new desk.
+  channel keys from before there were memory keys); the others are where they are on a new desk. The
+  project also keeps the layout of Main and the shortcuts of the PC (see [Settings](#settings)).
+* **Autosave:** what is not saved yet is kept every five seconds in a file of its own on this PC
+  (`%LOCALAPPDATA%\Lumenet\autosave.json`, the setting `Autosave:File`), and that file goes once the
+  project is saved. If the desk program stops before that (a crash, Windows restarting, the window
+  closed), it brings the work back when it starts: the project under its name and file, marked "not saved",
+  and the top bar says so. Saving keeps it; loading the project again drops it. The faders are not brought
+  back: a desk program that starts switches no light on by itself. Settings switches the autosave off and
+  on and sets how often it keeps the work (see [Settings](#settings)).
 * **Example:** `examples/Example show.json` is a small show to look at, for 17 channels: two red lights in a
   pot, a front wash, four blue back lights, a spot, an RGBW LED bar, a hazer, a mirror ball and the house
   light. It has notes on every light and memory, ten looks (memory 10 is a copy of 1, made dimmer), eleven
@@ -645,8 +675,9 @@ they are too many for the height, they get flatter and then go on in another col
 **Small screens:** in a window narrower than 900 pixels or lower than 600 pixels (a phone, a tablet held
 upright) the sections stand under each other and the page scrolls. The page keys lie under the section titles,
 in as many lines as they need. Narrower than 720 pixels, a row of 16 faders is shown as two lines of 8 and the
-top bar as three lines. The numbering does not change: a page is still 32 channels or 16 memories. The three
-limits are in `frontend/src/app/desk/desk-types.ts`, and only there.
+top bar as three lines. The numbering does not change: a page is still 32 channels or 16 memories. Narrower
+than 1300 pixels the top bar takes two lines, the links to the views under the rest. The limits are in
+`frontend/src/app/desk/desk-types.ts`, and only there.
 
 **A phone or a tablet (LAN):** the desk can be used from another device in the same network as the PC.
 
@@ -684,8 +715,11 @@ page cannot move a light. In the small-screen layout the mouse wheel scrolls the
 
 ### Settings
 
-What is set here belongs to this browser on this device (it is kept in the browser), so a phone and the PC
-each have their own; only LAN belongs to the desk program.
+On the PC the desk program runs on, the layout of Main (all but the lettering below) and the colours of the
+keys belong to the project, as the shortcuts of the Keyboard view do: they are saved with the project, a
+project that is loaded brings its own, and a new project, an imported one or one from before this starts with
+the ones in use. The lettering belongs to the browser on this device. A phone or a tablet keeps all of its
+settings to itself, for its screen differs. The autosave and LAN belong to the desk program.
 
 * **Channels on a page** (Main): Auto (a row of 32 or 16 by the window, as above), or 8, 16, 32, 64 or 128.
 * **Rows of channel faders** and **rows of memory faders** (Main): 1 or 2 of each, at first 2 and 1. A
@@ -701,20 +735,36 @@ each have their own; only LAN belongs to the desk program.
   in steps of 0.1, numbers on keys too. The keys keep their size, so words on them grow by 15 % at most; a
   word too long for its key goes on in a second line, and so does a page range, after its dash (flat page
   keys then go on in another column sooner, so that the two lines fit).
+* **Autosave:** On or Off, and how often: every 5 seconds (at first), 30 seconds, 1 minute or 5 minutes. Off,
+  the desk program keeps nothing and takes away the file it kept. The desk program keeps the choice in
+  `autosave-options.json` beside the autosave file. On the PC only.
 * **Network (LAN):** while LAN is on, the address phones use and the password; see above. On the PC only.
+* **Colours of the keys:** a colour for each kind (channels, memories, and the colour a memory with a
+  sequence runs into), which is that of all its keys, page keys and faders, and one for each other key, group
+  by group: Clear, Solo, Black out and Rate; Stack, Prev, Play, Pause, Next and Add step (Play also colours the
+  step that is on, Next the step Play goes to); the keys of Record, of the top bar, Edit of the independents
+  and the keys of the Sequences view. While a colour is picked, the desk shows it at once. Each has a key back
+  to its usual colour, and one key takes all of them back. At first Clear, Solo and Pause are white, Black out
+  blue, Play green, Stack red and the others amber.
 
 ### Keyboard
 
 The Keyboard view gives a shortcut to any key of the desk: the view links, New, Save, Load, Import, LAN,
-Clear, Black out, the keys of the stack and of Record, those of the Sequences view, Edit and every key of the
-independents, every page key, and the key under every channel and memory fader. The shortcuts belong to this
-browser, like the settings.
+Clear, Solo, Black out, Rate, the keys of the stack and of Record, those of the Sequences view, Edit and every
+key of the independents, every page key, the key under every channel and memory fader, Undo and Redo. On the
+PC the shortcuts belong to the project, like the layout; a phone keeps its own. Undo and Redo have Ctrl + Z
+and Ctrl + Y until they get others (or none: then they stay without).
 
-* The list has the keys at the left and their shortcuts at the right. **Set**, then press the keys of the
-  shortcut (with Ctrl, Alt or Shift as wanted; Esc stops, Tab and Esc cannot be shortcuts). A shortcut that
-  another key had moves over, and the page says so.
+* The kinds of keys are tabs side by side (Views, Project and LAN, Master, Stack, Record, Sequences view,
+  Independents, Channel pages, Memory pages, Channel keys, Memory keys), each with the number of its keys; the
+  arrow keys go from tab to tab. The search field searches all of them: then each tab shows how many of its
+  keys it finds beside the number of its keys (1/4), and when the tab that is open finds none, the first tab
+  that finds some opens.
+* The list under the tabs has the keys at the left and their shortcuts at the right. **Set**, then press the
+  keys of the shortcut (with Ctrl, Alt or Shift as wanted; Esc stops, Tab and Esc cannot be shortcuts). A
+  shortcut that another key had moves over, and the page says so.
 * **Listen** shows the desk; the next key you click there is not pressed but picked, and the Keyboard view
-  comes back with it chosen in the list and scrolled into sight (Esc stops listening).
+  comes back with its tab open and the key chosen in the list and scrolled into sight (Esc stops listening).
 * A shortcut is the physical key, whatever letter the keyboard's language puts on it. It presses its key on
   the page as a click would, and a locked key stays locked; when the key is not on the view that is shown (a
   page of faders that is not shown, another view), it does what that key does, except the keys of the
@@ -727,7 +777,8 @@ browser, like the settings.
   notes, the project), works out the output and sends it to the box through the `DmxBox` library. A small
   clock in it lets time pass about 30 times a second, for the sequences and the stack. Its settings are in
   `appsettings.json`: the address of the box (`Box:Host`), the projects folder (`Projects:Folder`), the
-  built page it hands out (`Ui:Folder`) and the file with the LAN password (`Lan:PasswordFile`).
+  built page it hands out (`Ui:Folder`), the file with the LAN password (`Lan:PasswordFile`) and the
+  autosave file (`Autosave:File`; the autosave's own settings go beside it).
 * `frontend/` is an Angular app. It only shows the desk and passes on what you do, over SignalR (`/hub/desk`).
   Because the state lives in the backend, reloading the page loses nothing.
 * The backend listens on every network card (`Urls` is `http://*:5080`), but serves another device only while
@@ -737,10 +788,10 @@ browser, like the settings.
   to the pages listed in `Server:AllowedOrigins`, plus the page the backend hands out itself. With `Urls` set
   to `http://localhost:5080` the desk stays on this PC for good.
 
-**Tests:** `dotnet test backend/DmxBox.sln` (384 tests: the client, the desk, sequences and the stack with a
-clock the tests set by hand, project files and the example project, the import of show files, the link to the
-box, the hub, LAN with a pretend PC and a pretend phone), and in `frontend/`: `npm test -- --watch=false` (109
-tests of the page).
+**Tests:** `dotnet test backend/DmxBox.sln` (412 tests: the client, the desk, sequences and the stack with a
+clock the tests set by hand, the rate, undo and the autosave, project files and the example project, the
+import of show files, the link to the box, the hub, LAN with a pretend PC and a pretend phone), and in
+`frontend/`: `npm test -- --watch=false` (122 tests of the page).
 
 ---
 ## 5. The DX protocol (UDP 7000)
@@ -879,6 +930,29 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
   view; no independents with 0 + 0 keys; Listen picked a key low in the list of the Keyboard view, which
   scrolled to it while the page and its top bar stayed in place; at ×1.5 with 64 channel pages every key
   holds its lettering. Phones of 390 and 360 pixels: the six view links fit, nothing scrolls sideways.
+* **Autosave, undo, Flash, Tap and settings in the project (2026-11-20):** the backend passes 411 tests and
+  the page 116. On a test copy without a box, with its own autosave file, in Chrome: a change kept within
+  five seconds, the test copy's desk program stopped hard and started again, and the work was back under its
+  name and file, unsaved, with the message in the top bar; once saved, the file went. Undo took a note back
+  and Redo made it again, also with Ctrl + Y. Flash (now Solo) held a channel at 255 while the mouse button
+  was down and let it back to 0. Three taps 0.4 seconds apart set a running sequence (137 a minute, with the
+  delay of the clicks; Tap became Rate the same day). Channel size 16 went into a saved project, stayed with
+  a new one and came back with a load. At 1920 × 1080 every key of the side column at full height and the
+  master fader 278 pixels high; at 1366 × 768 all keys 26 pixels or more and the fader 60. The top bar fits
+  at 1920, 1366, 1280, 1000 and 800 pixels and on phones of 390 and 360.
+* **Solo, Rate, the colours of the keys, the autosave setting and tabs in the Keyboard view
+  (2026-11-20):** the backend passes 412 tests and the page 122. On a test copy without a box, with its own
+  autosave files, in Chrome at 1920 × 1080: the master section from top to bottom Clear, Solo, Black out,
+  the level, the fader (178 pixels), Rate, the wheel and ×1.00, every key 33 pixels high and nothing
+  scrolling; Solo and Pause white on Main and in the Stack view. Rate dark: the mouse wheel did not turn the
+  wheel. Rate lit: one notch gave ×1.06, a drag of 60 pixels to the right ×1.88 with the dot turned 165°, the
+  desk program had Rate on at 1.88, and a double click gave ×1.00. Solo held a channel at 255 and let it back
+  to 0. The stack wheel's numbers 19 pixels high (13 before), three steps in sight. The Keyboard view: eleven
+  tabs in one line; "black" gave Master 1/4 and 0 in the ten others. Autosave every minute, then every 5
+  seconds with the file written within them, then off with the file gone. Pause made pink went into the
+  project and onto Main, and All the usual colours took it back. At 1366 × 768 every key 20 pixels or more,
+  the fader 50 and the rate wheel in sight; phones of 390 and 360 pixels with Rate and its wheel in a line
+  of their own and nothing scrolling sideways.
 * **Show files of a real console (2026-11-19):** 30 show files that ETC SmartFades wrote (software 3.0.1 and
   3.0.2) went through the import. The first version read them wrongly: their "FOLLOWON 0" (no wait) as a
   follow at once, their patch the wrong way round, and it lost their labels. With the SmartFade's dialect

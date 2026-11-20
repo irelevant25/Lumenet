@@ -20,7 +20,7 @@ public sealed class HubTests
     private static readonly string[] DeskProperties =
     [
         "channels", "memoryLevels", "memoryStored", "master", "blackout", "channelNotes", "memoryNotes", "independents",
-        "memorySequence", "memoryIndependents",
+        "memorySequence", "memoryIndependents", "rate", "rateOn",
     ];
 
     [Fact]
@@ -654,6 +654,102 @@ public sealed class HubTests
         Assert.True((await ui.InvokeAsync("Hello")).GetProperty("desk").GetProperty("blackout").GetBoolean());
     }
 
+    // ---------------------------------------------------------------- undo, settings, the rate, autosave
+
+    [Fact]
+    public async Task UndoAndRedoGoThroughTheHistoryAndEveryUiHearsOfIt()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await using HubClient other = await server.ConnectAsync();
+
+        Assert.Equal("""{"undo":null,"redo":null}""", (await ui.InvokeAsync("GetHistory")).GetRawText());
+        await AssertRefusedAsync("There is nothing to undo.", ui, "Undo");
+
+        await ui.InvokeAsync("SaveMemory", 4);
+        Assert.True((await NextDeskAsync(other)).GetProperty("memoryStored")[3].GetBoolean());
+        await AssertNextAsync(other, "ProjectChanged", """[{"name":"Untitled","path":null,"unsaved":true}]""");
+        await AssertNextAsync(other, "HistoryChanged", """[{"undo":"storing memory 4","redo":null}]""");
+
+        Assert.Equal("storing memory 4", (await ui.InvokeAsync("Undo")).GetString());
+        Assert.False((await NextDeskAsync(other)).GetProperty("memoryStored")[3].GetBoolean());
+        await AssertNextAsync(other, "HistoryChanged", """[{"undo":null,"redo":"storing memory 4"}]""");
+
+        Assert.Equal("storing memory 4", (await ui.InvokeAsync("Redo")).GetString());
+        Assert.True((await NextDeskAsync(other)).GetProperty("memoryStored")[3].GetBoolean());
+        await AssertNextAsync(other, "HistoryChanged", """[{"undo":"storing memory 4","redo":null}]""");
+
+        // A new project starts with an empty history.
+        await ui.InvokeAsync("NewProject");
+        Assert.Equal("""{"undo":null,"redo":null}""", (await ui.InvokeAsync("GetHistory")).GetRawText());
+    }
+
+    [Fact]
+    public async Task SettingsOfTheProjectComeFromThePcAndReachTheOtherUis()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await using HubClient other = await server.ConnectAsync();
+
+        Assert.Equal(JsonValueKind.Null, (await ui.InvokeAsync("GetSettings")).ValueKind);
+        Assert.True((await ui.InvokeAsync("AdoptSettings", new { channelSize = "auto" })).GetBoolean());
+        await AssertNextAsync(other, "SettingsChanged", """[{"channelSize":"auto"}]""");
+        Assert.False((await ui.InvokeAsync("AdoptSettings", new { channelSize = 8 })).GetBoolean());
+
+        // Brought along, they make nothing unsaved; changed, they do.
+        await ui.InvokeAsync("SetSettings", new { channelSize = 8, shortcuts = new Dictionary<string, string> { ["master.clear"] = "Ctrl+KeyC" } });
+        await AssertNextAsync(other, "SettingsChanged", """[{"channelSize":8,"shortcuts":{"master.clear":"Ctrl+KeyC"}}]""");
+        await AssertNextAsync(other, "ProjectChanged", """[{"name":"Untitled","path":null,"unsaved":true}]""");
+        await AssertRefusedAsync("The settings must be a JSON object.", ui, "SetSettings", 5);
+
+        // They go into the file, and come back with it.
+        await ui.InvokeAsync("SaveProject", "show");
+        await ui.InvokeAsync("SetSettings", new { channelSize = 128 });
+        await ui.InvokeAsync("LoadProject", "show");
+        Assert.Equal(
+            """{"channelSize":8,"shortcuts":{"master.clear":"Ctrl+KeyC"}}""",
+            (await ui.InvokeAsync("GetSettings")).GetRawText());
+    }
+
+    [Fact]
+    public async Task TheRateReachesTheOtherUisLikeAFaderAndIsNoStepOfTheHistory()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await using HubClient other = await server.ConnectAsync();
+
+        JsonElement desk = (await ui.InvokeAsync("Hello")).GetProperty("desk");
+        Assert.Equal(1, desk.GetProperty("rate").GetDouble());
+        Assert.False(desk.GetProperty("rateOn").GetBoolean());
+
+        await ui.InvokeAsync("SetRate", true, 1.5);
+        await AssertNextAsync(other, "RateChanged", "[true,1.5]");
+        Assert.Equal("""{"undo":null,"redo":null}""", (await ui.InvokeAsync("GetHistory")).GetRawText());
+        await AssertRefusedAsync("The rate must be from 0.1 to 10, not 20.", ui, "SetRate", true, 20);
+    }
+
+    [Fact]
+    public async Task TheAutosaveIsSetOnThePcAndItsUisHearOfIt()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await using HubClient other = await server.ConnectAsync();
+
+        Assert.Equal("""{"on":true,"seconds":5}""", (await ui.InvokeAsync("GetAutosave")).GetRawText());
+        Assert.Equal("""{"on":false,"seconds":60}""", (await ui.InvokeAsync("SetAutosave", false, 60)).GetRawText());
+        await AssertNextAsync(other, "AutosaveChanged", """[{"on":false,"seconds":60}]""");
+        await AssertRefusedAsync("The autosave can keep the work every 5, 30, 60, 300 seconds, not every 7.", ui, "SetAutosave", true, 7);
+    }
+
+    [Fact]
+    public async Task NothingWasBroughtBackAtAStartWithoutAnAutosaveFile()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+
+        Assert.Equal(JsonValueKind.Null, (await ui.InvokeAsync("GetRecovered")).ValueKind);
+    }
+
     // The names of an object's properties, in the order they have in the JSON.
     private static string[] NamesIn(JsonElement element)
     {
@@ -690,9 +786,15 @@ public sealed class HubTests
         return JsonSerializer.Serialize(new { name, path, unsaved }, AsOnTheWire);
     }
 
+    // The next message of the server with this name. What undo and redo would do and the settings
+    // of the project come along with many changes; a test that does not ask for them by name
+    // passes over them, the others see them in their place.
     private static async Task<HubMessage> NextAsync(HubClient ui, string expectedName)
     {
         HubMessage message = await ui.NextMessageAsync();
+        while (message.Name is "HistoryChanged" or "SettingsChanged" && message.Name != expectedName)
+            message = await ui.NextMessageAsync();
+
         Assert.Equal(expectedName, message.Name);
         return message;
     }

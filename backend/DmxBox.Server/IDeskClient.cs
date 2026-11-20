@@ -91,4 +91,27 @@ public interface IDeskClient
     /// </summary>
     /// <param name="lan">LAN as it is now.</param>
     Task LanAccessChanged(LanState lan);
+
+    /// <summary>
+    /// The settings of the UI on the PC that belong to the project changed: in another UI on the
+    /// PC, or because a project was loaded. Phones and tablets keep their own and pass over it.
+    /// </summary>
+    /// <param name="settings">The settings as the UI wrote them, a JSON object; null while the desk has none.</param>
+    Task SettingsChanged(System.Text.Json.JsonElement? settings);
+
+    /// <summary>What undo and redo would do changed: after a change of the project, an undo, a redo or a load.</summary>
+    /// <param name="history">What undo and redo would do now.</param>
+    Task HistoryChanged(HistoryState history);
+
+    /// <summary>The rate, the speed master for all sequences, was switched or turned.</summary>
+    /// <param name="on">True while the rate counts.</param>
+    /// <param name="rate">The rate, 0.1 to 10.</param>
+    Task RateChanged(bool on, double rate);
+
+    /// <summary>
+    /// The autosave was switched or got another interval, on the PC. Only the UIs on this PC get
+    /// it: they show it in Settings.
+    /// </summary>
+    /// <param name="options">The autosave as it is now.</param>
+    Task AutosaveChanged(AutosaveOptions options);
 }

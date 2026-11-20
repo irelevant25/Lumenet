@@ -1,0 +1,10 @@
+<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+  <!-- the marks stay; the wheel and its dot turn -->
+  @for (tick of ticks; track $index) {
+    <line class="tick" [attr.x1]="tick.x1" [attr.y1]="tick.y1" [attr.x2]="tick.x2" [attr.y2]="tick.y2" />
+  }
+  <g [attr.transform]="'rotate(' + angle() + ' 50 50)'">
+    <circle class="wheel" cx="50" cy="50" r="37" />
+    <circle class="dot" cx="50" cy="25" r="8" />
+  </g>
+</svg>

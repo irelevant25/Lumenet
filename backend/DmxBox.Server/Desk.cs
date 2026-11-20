@@ -66,6 +66,11 @@ internal sealed partial class Desk
     private readonly int[] _independents = DefaultIndependents();
     private readonly int[] _memoryIndependents = DefaultMemoryIndependents();
 
+    // What the owner set up in the UI on this PC for the project (its layout and its keyboard
+    // shortcuts), as a JSON object, see ProjectSettings. Null while the desk has none. The desk
+    // only keeps it; what is in it is the UI's business.
+    private string? _settings;
+
     private byte _master = MaxLevel;
     private bool _blackout;
     private long _outputChanges;
@@ -135,6 +140,58 @@ internal sealed partial class Desk
             {
                 return _projectChanges;
             }
+        }
+    }
+
+    /// <summary>
+    /// The settings of the UI on this PC that belong to the project, as a JSON object; null while
+    /// the desk has none.
+    /// </summary>
+    public string? Settings
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _settings;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Takes settings the owner changed in the UI. They belong to the project, which then has
+    /// something to save. They can be changed while the stack is live: they are not the show.
+    /// </summary>
+    /// <param name="settings">The settings, a JSON object, as <see cref="ProjectSettings.Checked"/> keeps them.</param>
+    /// <returns>True if they differ from what the desk had.</returns>
+    public bool SetSettings(string settings)
+    {
+        lock (_lock)
+        {
+            if (_settings == settings)
+                return false;
+
+            _settings = settings;
+            _projectChanges++;
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Takes the settings a UI on this PC brings along while the desk has none yet, as after a
+    /// start without a project: they become the project's, without counting as a change.
+    /// </summary>
+    /// <param name="settings">The settings, a JSON object, as <see cref="ProjectSettings.Checked"/> keeps them.</param>
+    /// <returns>True if the desk took them, false if it has settings already.</returns>
+    public bool AdoptSettings(string settings)
+    {
+        lock (_lock)
+        {
+            if (_settings is not null)
+                return false;
+
+            _settings = settings;
+            return true;
         }
     }
 
@@ -403,8 +460,8 @@ internal sealed partial class Desk
     /// <summary>
     /// Makes the desk clean for a new project: every channel fader and memory fader down to 0,
     /// every memory empty, an empty stack, no notes, the independent keys back on channels 1 to
-    /// 10 and memories 1 to 10. The master and blackout stay: they belong to the evening, not to
-    /// the project.
+    /// 32 and memories 1 to 32. The master and blackout stay: they belong to the evening, not to
+    /// the project. So do the settings: a new project starts with the layout in use.
     /// </summary>
     /// <returns><see cref="ProjectChanges"/> right after the change.</returns>
     /// <exception cref="DeskException">The stack is live.</exception>
@@ -429,10 +486,10 @@ internal sealed partial class Desk
 
     /// <summary>
     /// Replaces everything a project file holds at once, which is what loading a project does:
-    /// the looks and sequences of all memories, the stack, all notes and the bindings of the
-    /// independent keys. Every memory fader goes down to 0 and the stack stands before its
-    /// first step, so that nothing of the new project appears on stage unasked. The channel
-    /// faders stay.
+    /// the looks and sequences of all memories, the stack, all notes, the bindings of the
+    /// independent keys and the settings (a project without settings keeps those in use). Every
+    /// memory fader goes down to 0 and the stack stands before its first step, so that nothing
+    /// of the new project appears on stage unasked. The channel faders stay.
     /// </summary>
     /// <param name="project">What the file held, with an entry for every memory, fader and key.</param>
     /// <returns><see cref="ProjectChanges"/> right after the change.</returns>
@@ -444,18 +501,32 @@ internal sealed partial class Desk
         lock (_lock)
         {
             RequireUnlocked();
-            for (int index = 0; index < MemoryCount; index++)
-            {
-                _memories[index] = project.Looks[index] is { } look ? Copy(look) : null;
-                _sequences[index] = project.Sequences[index];
-            }
+            PutProject(project);
+            if (project.Settings is not null)
+                _settings = project.Settings;
 
-            ReplaceStack(project.Stack);
-            project.ChannelNotes.CopyTo(_channelNotes, 0);
-            project.MemoryNotes.CopyTo(_memoryNotes, 0);
-            project.Independents.CopyTo(_independents, 0);
-            project.MemoryIndependents.CopyTo(_memoryIndependents, 0);
             Array.Clear(_memoryLevels);
+            CountLookChange();
+            return _projectChanges;
+        }
+    }
+
+    /// <summary>
+    /// Puts back what the project held at an earlier moment, for undo and redo: the looks and
+    /// sequences, the stack, the notes and the bindings of the independent keys. Unlike loading,
+    /// the faders stay where they are, and so do the settings, which undo leaves alone.
+    /// </summary>
+    /// <param name="project">The project as <see cref="GetProject"/> gave it then.</param>
+    /// <returns><see cref="ProjectChanges"/> right after the change.</returns>
+    /// <exception cref="DeskException">The stack is live.</exception>
+    public long RestoreProject(ProjectContent project)
+    {
+        RequireWhole(project);
+
+        lock (_lock)
+        {
+            RequireUnlocked();
+            PutProject(project);
             CountLookChange();
             return _projectChanges;
         }
@@ -477,6 +548,7 @@ internal sealed partial class Desk
                 MemoryIndependents = Copy(_memoryIndependents),
                 Sequences = Copy(_sequences),
                 Stack = _stack.Select(entry => new ProjectStep(entry.Cue, entry.Step)).ToArray(),
+                Settings = _settings,
             };
             return (content, _projectChanges);
         }
@@ -505,7 +577,9 @@ internal sealed partial class Desk
                 MemoryNotes: Copy(_memoryNotes),
                 Independents: Copy(_independents),
                 MemorySequence: sequence,
-                MemoryIndependents: Copy(_memoryIndependents));
+                MemoryIndependents: Copy(_memoryIndependents),
+                Rate: _rate,
+                RateOn: _rateOn);
         }
     }
 
@@ -605,6 +679,25 @@ internal sealed partial class Desk
     {
         _projectChanges++;
         _outputChanges++;
+    }
+
+    // Call with the lock held. The looks and sequences, the stack, the notes and the bindings of
+    // the independent keys of a project take the place of the desk's. The project's own arrays
+    // are copied where the desk changes its arrays in place, so that what the project came from
+    // (a file, or an earlier moment kept for undo) stays as it was.
+    private void PutProject(ProjectContent project)
+    {
+        for (int index = 0; index < MemoryCount; index++)
+        {
+            _memories[index] = project.Looks[index] is { } look ? Copy(look) : null;
+            _sequences[index] = project.Sequences[index];
+        }
+
+        ReplaceStack(project.Stack);
+        project.ChannelNotes.CopyTo(_channelNotes, 0);
+        project.MemoryNotes.CopyTo(_memoryNotes, 0);
+        project.Independents.CopyTo(_independents, 0);
+        project.MemoryIndependents.CopyTo(_memoryIndependents, 0);
     }
 
     // Call with the lock held. Every channel fader and memory fader goes to 0. The UIs are sent

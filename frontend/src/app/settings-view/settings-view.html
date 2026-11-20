@@ -1,8 +1,14 @@
 <header>
   <h2>Settings</h2>
   <p class="summary">
-    Layout and lettering belong to this browser on this device, as the shortcuts of Keyboard do.
-    LAN belongs to the desk program, and only the PC can change it.
+    @if (projectKeeps()) {
+      The main view's layout belongs to the project, as the shortcuts of Keyboard do: saved with it,
+      and a new project starts with the ones in use. Lettering belongs to this browser on this
+      device. LAN belongs to the desk program, and only the PC can change it.
+    } @else {
+      Layout and lettering belong to this device, as the shortcuts of Keyboard do: the project keeps
+      those of the PC. LAN belongs to the desk program, and only the PC can change it.
+    }
   </p>
 </header>
 
@@ -116,6 +122,40 @@
     </p>
   </section>
 
+  <!-- ---------------------------------------------------------------- autosave -->
+  <section class="panel" aria-labelledby="autosave-title">
+    <h3 id="autosave-title">Autosave</h3>
+    @if (autosave(); as autosave) {
+      <div class="field">
+        <label for="autosave-on">Keep the work that is not saved</label>
+        <select id="autosave-on" (change)="onAutosaveOn($event)">
+          <option value="on" [selected]="autosave.on">On</option>
+          <option value="off" [selected]="!autosave.on">Off</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="autosave-every">How often</label>
+        <select id="autosave-every" [disabled]="!autosave.on" (change)="onAutosaveEvery($event)">
+          @for (seconds of autosaveIntervals; track seconds) {
+            <option [value]="seconds" [selected]="seconds === autosave.seconds">Every {{ intervalName(seconds) }}</option>
+          }
+        </select>
+      </div>
+      <p class="hint">
+        The desk program keeps the work that is not saved in a file of its own on this PC, and brings
+        it back if it stops before it is saved. Off, it keeps nothing.
+      </p>
+    } @else {
+      <p class="hint">
+        @if (store.lan() && !store.lan()?.local) {
+          Only the PC the desk program runs on can set the autosave.
+        } @else {
+          The desk program is older than this page and has no autosave to set.
+        }
+      </p>
+    }
+  </section>
+
   <!-- ---------------------------------------------------------------- LAN -->
   <section class="panel" aria-labelledby="lan-title">
     <h3 id="lan-title">Network (LAN)</h3>
@@ -186,4 +226,7 @@
       </p>
     }
   </section>
+
+  <!-- ---------------------------------------------------------------- colours -->
+  <lm-key-colours-panel />
 </div>

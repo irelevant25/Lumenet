@@ -408,6 +408,14 @@ public sealed class LanTests
         Assert.Contains("The LAN password can only be changed on the PC.", password.Message);
         var renew = await Assert.ThrowsAsync<HubCallException>(() => phone.InvokeAsync("NewLanPassword"));
         Assert.Contains("The LAN password can only be changed on the PC.", renew.Message);
+
+        // A phone keeps settings of its own; the project's are the PC's.
+        var settings = await Assert.ThrowsAsync<HubCallException>(() => phone.InvokeAsync("SetSettings", new { channelSize = 8 }));
+        Assert.Contains("Only the PC keeps its settings in the project.", settings.Message);
+        var adopt = await Assert.ThrowsAsync<HubCallException>(() => phone.InvokeAsync("AdoptSettings", new { channelSize = 8 }));
+        Assert.Contains("Only the PC keeps its settings in the project.", adopt.Message);
+        var autosave = await Assert.ThrowsAsync<HubCallException>(() => phone.InvokeAsync("SetAutosave", false, 5));
+        Assert.Contains("The autosave can only be set on the PC.", autosave.Message);
     }
 
     // ---------------------------------------------------------------- the server's own page and names

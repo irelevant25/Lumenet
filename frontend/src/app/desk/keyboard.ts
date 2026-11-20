@@ -1,7 +1,7 @@
 import { DestroyRef, Service, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { DESK_ACTIONS, actionWithId, shortcutOf } from './desk-actions';
-import { DeskSettings } from './desk-settings';
+import { ActionContext, DESK_ACTIONS, actionWithId, shortcutOf } from './desk-actions';
+import { DEFAULT_SHORTCUTS, DeskSettings } from './desk-settings';
 import { DeskStore } from './desk-store';
 
 /** Where the Keyboard view is; listening comes back to it. */
@@ -16,6 +16,8 @@ const KEYBOARD_URL = '/keyboard';
  *   text field has the keyboard (a note is being typed) and while a window such as Load is open.
  * - Recording: the next key pressed (with Ctrl, Alt, Shift held as wanted) becomes the shortcut
  *   of one key of the desk. A shortcut that another key had moves over. Esc stops recording.
+ * - In SOLO mode the shortcut of a key under a fader or of the independents holds that key's
+ *   fader at full for as long as it is held.
  * - Listening: the desk is shown, and the next click on one of its keys does not press it but
  *   picks it, and the Keyboard view comes back with that key chosen in its list. Esc stops
  *   listening.
@@ -40,6 +42,10 @@ export class Keyboard {
   // A key was picked by the press of a pointer: the click that follows must not press it.
   private swallowClick = false;
 
+  // In SOLO mode: the keys of the keyboard held down now that hold a key of the desk, by the
+  // physical key (KeyboardEvent.code), with the name of that key of the desk.
+  private readonly held = new Map<string, string>();
+
   private readonly destroyRef = inject(DestroyRef);
 
   /** Starts listening to the keyboard and to clicks. The page calls it once. */
@@ -48,9 +54,11 @@ export class Keyboard {
     this.started = true;
 
     const keyDown = (event: KeyboardEvent): void => this.onKeyDown(event);
+    const keyUp = (event: KeyboardEvent): void => this.onKeyUp(event);
     const pointerDown = (event: PointerEvent): void => this.onPointerDown(event);
     const click = (event: MouseEvent): void => this.onClick(event);
     document.addEventListener('keydown', keyDown, true);
+    document.addEventListener('keyup', keyUp, true);
     // In the capture phase: a press that picks a key must not reach the key itself. The pick
     // happens when the pointer goes down: a locked key (Play while the stack is not live) gets
     // no click at all, but it is a key like the others and can have a shortcut.
@@ -58,6 +66,7 @@ export class Keyboard {
     document.addEventListener('click', click, true);
     this.destroyRef.onDestroy(() => {
       document.removeEventListener('keydown', keyDown, true);
+      document.removeEventListener('keyup', keyUp, true);
       document.removeEventListener('pointerdown', pointerDown, true);
       document.removeEventListener('click', click, true);
     });
@@ -88,10 +97,10 @@ export class Keyboard {
     this.recording.set(null);
   }
 
-  /** Takes the shortcut of a key of the desk away. */
+  /** Takes the shortcut of a key of the desk away. A usual one (Ctrl + Z for Undo) stays away. */
   clear(id: string): void {
     const rest = { ...this.settings.shortcuts() };
-    delete rest[id];
+    takeAway(rest, id);
     this.settings.setShortcuts(rest);
   }
 
@@ -104,7 +113,7 @@ export class Keyboard {
       return;
     }
 
-    actionWithId(id)?.run?.({ store: this.store, navigate: (url) => void this.router.navigateByUrl(url) });
+    actionWithId(id)?.run?.(this.context());
   }
 
   private onKeyDown(event: KeyboardEvent): void {
@@ -131,7 +140,29 @@ export class Keyboard {
     if (id === undefined) return;
 
     event.preventDefault();
+
+    // In SOLO mode the shortcut of a key under a fader or of the independents holds it, for as long as it is held.
+    const hold = actionWithId(id)?.hold;
+    if (hold && this.store.soloMode()) {
+      this.held.set(event.code, id);
+      hold(this.context(), true);
+      return;
+    }
+
     this.press(id);
+  }
+
+  // A key let go that holds a key of the desk: its fader goes back.
+  private onKeyUp(event: KeyboardEvent): void {
+    const id = this.held.get(event.code);
+    if (id === undefined) return;
+
+    this.held.delete(event.code);
+    actionWithId(id)?.hold?.(this.context(), false);
+  }
+
+  private context(): ActionContext {
+    return { store: this.store, navigate: (url) => void this.router.navigateByUrl(url) };
   }
 
   // A key pressed while a shortcut is recorded: it becomes the shortcut, and goes no further.
@@ -149,7 +180,7 @@ export class Keyboard {
     const shortcuts = { ...this.settings.shortcuts() };
     const before = Object.entries(shortcuts).find(([other, keys]) => keys === shortcut && other !== id)?.[0];
     if (before !== undefined) {
-      delete shortcuts[before];
+      takeAway(shortcuts, before);
       const label = DESK_ACTIONS.find((action) => action.id === before)?.label ?? before;
       this.lastMove.set(`That shortcut was the one of ${label} before; ${label} has none now.`);
     }
@@ -189,6 +220,13 @@ export class Keyboard {
     this.listening.set(false);
     void this.router.navigateByUrl(KEYBOARD_URL);
   }
+}
+
+// Takes the shortcut of a key of the desk away. A usual one (DEFAULT_SHORTCUTS) is marked as
+// taken away, so that it does not come back by itself.
+function takeAway(shortcuts: Record<string, string>, id: string): void {
+  if (id in DEFAULT_SHORTCUTS) shortcuts[id] = '';
+  else delete shortcuts[id];
 }
 
 /** The name of the key of the desk an event happened on, or null. */

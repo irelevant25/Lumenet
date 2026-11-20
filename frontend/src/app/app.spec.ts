@@ -3,10 +3,12 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { App } from './app';
 import { routes } from './app.routes';
-import { actionWithId } from './desk/desk-actions';
+import { ACTION_GROUPS, DESK_ACTIONS, actionWithId } from './desk/desk-actions';
 import { DeskConnection } from './desk/desk-connection';
+import { DeskSettings } from './desk/desk-settings';
 import { DeskStore } from './desk/desk-store';
 import {
+  AutosaveOptions,
   CHANNEL_COUNT,
   ImportAnswer,
   LanAccess,
@@ -77,6 +79,13 @@ class FakeConnection {
   };
   importRefusal: string | null = null;
 
+  /** The project's settings, as the backend keeps them for the page on the PC: none at first. */
+  projectSettings: unknown = null;
+  /** What the backend answers to "GetRecovered": when unsaved work was brought back, or null. */
+  recovered: string | null = null;
+  /** The autosave of the desk program, as the backend answers "GetAutosave" (on the PC). */
+  autosave: AutosaveOptions = { on: true, seconds: 5 };
+
   start(): void {
     this.online.set(true);
     for (const callback of this.connected) callback();
@@ -103,6 +112,20 @@ class FakeConnection {
       if (this.importRefusal) throw new Error(this.importRefusal);
       return this.importAnswer;
     }
+    if (method === 'GetSettings') return this.projectSettings;
+    if (method === 'AdoptSettings') {
+      if (this.projectSettings !== null) return false;
+      this.projectSettings = args[0];
+      return true;
+    }
+    if (method === 'GetHistory') return { undo: null, redo: null };
+    if (method === 'GetRecovered') return this.recovered;
+    if (method === 'Undo' || method === 'Redo') return 'storing memory 4';
+    if (method === 'GetAutosave') return this.autosave;
+    if (method === 'SetAutosave') {
+      this.autosave = { on: args[0] as boolean, seconds: args[1] as number };
+      return this.autosave;
+    }
     return undefined;
   }
 
@@ -127,7 +150,19 @@ class FakeConnection {
 }
 
 /** What the page asks the backend by itself, after connecting and after every "DeskChanged". */
-const QUESTIONS = ['Hello', 'GetMemories', 'GetSequences', 'GetStack', 'GetPlayback', 'GetLanAccess'];
+const QUESTIONS = [
+  'Hello',
+  'GetMemories',
+  'GetSequences',
+  'GetStack',
+  'GetPlayback',
+  'GetLanAccess',
+  'GetHistory',
+  'GetRecovered',
+  'GetSettings',
+  'AdoptSettings',
+  'GetAutosave',
+];
 
 /** A step on a channel, with all three times at one second unless said otherwise. */
 function step(number: number, value: number, more: Partial<TimedStep> = {}): TimedStep {
@@ -632,11 +667,273 @@ describe('the desk page', () => {
     expect(button('New project')).toBeTruthy();
   });
 
-  it('the LAN key stands at the top left, and New beside Save, Load and Import at the right', () => {
+  it('LAN, Undo and Redo stand at the top left; New, Save, Load and Import at the right', () => {
     const labels = (selector: string) =>
       [...page.querySelectorAll(`lm-top-bar ${selector} button`)].map((key) => key.getAttribute('aria-label'));
-    expect(labels('.left')).toEqual(['LAN']);
+    expect(labels('.left')).toEqual(['LAN', 'Undo', 'Redo']);
     expect(labels('.project')).toEqual(['New project', 'Save project', 'Load project', 'Import a show']);
+  });
+
+  // ---------------------------------------------------------------- undo, solo, rate, project settings, autosave, colours
+
+  it('undo and redo say what they would do, and do it', async () => {
+    expect(button('Undo').disabled).toBe(true); // nothing to undo yet
+    expect(button('Redo').disabled).toBe(true);
+
+    connection.emit('HistoryChanged', { undo: 'storing memory 4', redo: null });
+    await fixture.whenStable();
+    expect(button('Undo').disabled).toBe(false);
+    expect(button('Undo').title).toBe('Undo storing memory 4');
+
+    await press(button('Undo'));
+    await until(() => store.notice() !== '');
+    expect(connection.methods()).toEqual(['Undo']);
+    expect(store.notice()).toBe('Undone: storing memory 4.');
+
+    // Ctrl + Z is the usual shortcut; Ctrl + Y for redo.
+    connection.emit('HistoryChanged', { undo: null, redo: 'storing memory 4' });
+    await fixture.whenStable();
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyY', key: 'y', ctrlKey: true, bubbles: true, cancelable: true }));
+    await fixture.whenStable();
+    expect(connection.methods()).toEqual(['Undo', 'Redo']);
+
+    // A live stack locks what is stored, and undo with it.
+    connection.emit('HistoryChanged', { undo: 'storing memory 4', redo: null });
+    await stackStands(LIVE);
+    expect(button('Undo').disabled).toBe(true);
+  });
+
+  it('SOLO makes a key under a fader or of the independents put its fader to full while it is held', async () => {
+    // jsdom knows no PointerEvent; a MouseEvent of that name does the same here.
+    const hold = (key: Element, down: boolean) =>
+      key.dispatchEvent(new MouseEvent(down ? 'pointerdown' : 'pointerup', { bubbles: true, button: 0 }));
+    store.setChannel(5, 40);
+
+    await press(button('Solo'));
+    expect(button('Solo').getAttribute('aria-pressed')).toBe('true');
+    expect(button('Solo').className).toContain('level-3');
+
+    hold(channelKey(5)!, true);
+    expect(store.channels()[4]).toBe(255);
+    hold(channelKey(5)!, false);
+    channelKey(5)!.click(); // the click after a press does not switch the fader as well
+    await fixture.whenStable();
+    expect(store.channels()[4]).toBe(40); // back where it was
+
+    hold(memoryKey(2), true);
+    expect(store.memoryLevels()[1]).toBe(255);
+    hold(memoryKey(2), false);
+    expect(store.memoryLevels()[1]).toBe(0);
+
+    const independent = page.querySelector('[data-action="ind.channel.3"]')!;
+    hold(independent, true);
+    expect(store.channels()[2]).toBe(255);
+    hold(independent, false);
+    expect(store.channels()[2]).toBe(0);
+
+    // Its shortcut puts it to full while the key of the keyboard is held.
+    store.setChannel(7, 0);
+    TestBed.inject(DeskSettings).setShortcuts({ ...TestBed.inject(DeskSettings).shortcuts(), 'channel.7': 'KeyJ' });
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyJ', key: 'j', bubbles: true, cancelable: true }));
+    expect(store.channels()[6]).toBe(255);
+    document.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyJ', key: 'j', bubbles: true }));
+    expect(store.channels()[6]).toBe(0);
+
+    // A key held while SOLO goes dark comes back down; then the keys switch on and off again.
+    hold(channelKey(5)!, true);
+    await press(button('Solo'));
+    expect(store.channels()[4]).toBe(40);
+    expect(button('Solo').className).toContain('level-1');
+    await press(channelKey(5));
+    expect(store.channels()[4]).toBe(255);
+  });
+
+  it('the master section has CLEAR, SOLO and BLACKOUT, the fader, then RATE; SOLO and PAUSE are white', async () => {
+    const keys = [...page.querySelectorAll('lm-master-section button')];
+    expect(keys.map((key) => key.getAttribute('aria-label') ?? key.textContent?.trim())).toEqual(['Clear', 'Solo', 'Blackout', 'Rate']);
+    expect(keys.map((key) => /tone-(\S+)/.exec(key.className)?.[1])).toEqual(['clear', 'solo', 'blackout', 'rate']);
+    const order = [...page.querySelectorAll('lm-master-section > *')].map((element) => element.localName);
+    expect(order.indexOf('lm-fader')).toBeLessThan(order.indexOf('div')); // RATE and its wheel under the fader
+
+    // White, as CLEAR is: SOLO, and PAUSE on Main and in the Stack view.
+    expect(button('Pause').className).toContain('tone-pause');
+    await show('/stack');
+    expect(button('Pause').className).toContain('tone-pause');
+  });
+
+  it('RATE lit lets the wheel under it set the speed of every sequence; dark, each plays at its own', async () => {
+    const wheel = page.querySelector<HTMLElement>('lm-rate-wheel')!;
+    const shown = () => textOf('lm-master-section .rate-value');
+    const turn = (deltaY: number) => wheel.dispatchEvent(new WheelEvent('wheel', { deltaY, bubbles: true, cancelable: true }));
+    // jsdom knows no PointerEvent; a MouseEvent of that name does the same here.
+    const pointer = (type: string, clientX: number) =>
+      wheel.dispatchEvent(new MouseEvent(type, { clientX, bubbles: true, cancelable: true, button: 0 }));
+
+    expect(button('Rate').getAttribute('aria-pressed')).toBe('false');
+    expect(button('Rate').className).toContain('level-1');
+    expect(shown()).toBe('×1.00');
+
+    // Dark, the wheel stays where it is.
+    expect(wheel.getAttribute('aria-disabled')).toBe('true');
+    turn(-100);
+    await fixture.whenStable();
+    expect(store.rate()).toBe(1);
+
+    await press(button('Rate'));
+    expect(button('Rate').className).toContain('level-3');
+    expect(wheel.getAttribute('aria-disabled')).toBeNull();
+
+    // A notch of the mouse wheel: about 6 % faster up, slower down.
+    turn(-100);
+    await fixture.whenStable();
+    expect(store.rate()).toBe(1.06);
+    expect(shown()).toBe('×1.06');
+    expect(wheel.getAttribute('aria-valuetext')).toBe('x1.06');
+    turn(100);
+    turn(100);
+    await fixture.whenStable();
+    expect(store.rate()).toBe(0.94);
+
+    // Dragged sideways: to the right faster, a step for every 6 pixels.
+    pointer('pointerdown', 100);
+    pointer('pointermove', 160);
+    pointer('pointerup', 160);
+    await fixture.whenStable();
+    expect(store.rate()).toBe(1.68); // 10 steps up from 0.94
+    await new Promise((resolve) => setTimeout(resolve, 40)); // the rate is sent a moment later, as fader moves are
+    expect(connection.last('SetRate')).toEqual([true, 1.68]);
+
+    // A double click sets it back to x1.
+    wheel.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    await fixture.whenStable();
+    expect(shown()).toBe('×1.00');
+
+    // Dark again: the sequences play at their own speeds; the wheel keeps its rate for the next time.
+    turn(-100);
+    await press(button('Rate'));
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    expect(connection.last('SetRate')).toEqual([false, 1.06]);
+    expect(page.querySelector('lm-master-section .rate-value')?.classList).not.toContain('on');
+
+    // What another page does reaches this one, as a fader does.
+    connection.emit('RateChanged', true, 0.5);
+    await fixture.whenStable();
+    expect(button('Rate').getAttribute('aria-pressed')).toBe('true');
+    expect(shown()).toBe('×0.50');
+  });
+
+  it('on the PC the layout and the shortcuts go with the project', async () => {
+    // The desk program had none: the page handed it its own.
+    await until(() => connection.calls.some((call) => call.method === 'AdoptSettings'));
+    expect(connection.projectSettings).toMatchObject({ channelSize: 'auto', channelRows: 2 });
+    expect(connection.projectSettings).not.toHaveProperty('fontScale'); // lettering stays with the device
+
+    // A change goes to the project; the lettering does not.
+    await show('/settings');
+    const rows = page.querySelector<HTMLSelectElement>('#channel-rows')!;
+    rows.value = '1';
+    rows.dispatchEvent(new Event('change'));
+    await press(button('Bigger lettering'));
+    expect(connection.methods().filter((method) => method === 'SetSettings').length).toBe(1);
+    expect(connection.last('SetSettings')?.[0]).toMatchObject({ channelRows: 1 });
+
+    // A project that is loaded brings its own.
+    connection.emit('SettingsChanged', { channelSize: 8, channelRows: 2, shortcuts: { 'master.clear': 'KeyC' } });
+    await fixture.whenStable();
+    expect(store.stripsPerRow()).toBe(4);
+    expect(TestBed.inject(DeskSettings).shortcuts()['master.clear']).toBe('KeyC');
+    expect(TestBed.inject(DeskSettings).fontScale()).toBe(1.1);
+
+    // A phone keeps its own.
+    connection.emit('LanAccessChanged', { ...connection.lan, local: false });
+    connection.emit('SettingsChanged', { channelSize: 128 });
+    await fixture.whenStable();
+    expect(store.stripsPerRow()).toBe(4);
+  });
+
+  it('says once that the work which was not saved when the desk program stopped is back', async () => {
+    connection.recovered = '2026-11-20T18:42:05+01:00';
+    connection.start(); // connects again
+    await until(() => store.notice() !== '');
+    expect(store.notice()).toContain('(18:42) is back');
+  });
+
+  it('the autosave is switched and timed in Settings, on the PC only', async () => {
+    await show('/settings');
+    const on = page.querySelector<HTMLSelectElement>('#autosave-on')!;
+    const every = page.querySelector<HTMLSelectElement>('#autosave-every')!;
+    expect(on.value).toBe('on');
+    expect(every.value).toBe('5');
+    expect([...every.options].map((option) => option.textContent?.trim())).toEqual([
+      'Every 5 seconds',
+      'Every 30 seconds',
+      'Every 1 minute',
+      'Every 5 minutes',
+    ]);
+
+    every.value = '60';
+    every.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(connection.last('SetAutosave')).toEqual([true, 60]);
+
+    on.value = 'off';
+    on.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(connection.last('SetAutosave')).toEqual([false, 60]);
+    expect(every.disabled).toBe(true);
+
+    // Another page on the PC switched it on again.
+    connection.emit('AutosaveChanged', { on: true, seconds: 300 });
+    await fixture.whenStable();
+    expect(on.value).toBe('on');
+    expect(every.value).toBe('300');
+
+    // A phone cannot set it.
+    connection.emit('LanAccessChanged', { ...connection.lan, local: false });
+    await fixture.whenStable();
+    expect(page.querySelector('#autosave-on')).toBeNull();
+    expect(page.querySelector('lm-settings-view')?.textContent).toContain('Only the PC the desk program runs on can set the autosave.');
+  });
+
+  it('the colour of a kind of keys or of one key is set in Settings, and goes with the project on the PC', async () => {
+    const shown = (variable: string) => document.documentElement.style.getPropertyValue(variable);
+    const sentColours = () => (connection.last('SetSettings')?.[0] as { colours?: object } | undefined)?.colours;
+    await until(() => connection.calls.some((call) => call.method === 'AdoptSettings'));
+    await show('/settings');
+
+    // While it is picked, the desk shows it at once; when the picker closes, it is kept.
+    const pause = page.querySelector<HTMLInputElement>('#colour-pause')!;
+    expect(pause.value).toBe('#f1f3f6'); // white
+    pause.value = '#ff00ff';
+    pause.dispatchEvent(new Event('input'));
+    expect(shown('--key-pause')).toBe('#ff00ff');
+    pause.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(sentColours()).toEqual({ pause: '#ff00ff' });
+    expect(button('The usual colour for Pause').disabled).toBe(false);
+
+    // A kind: all channel keys, pages and faders.
+    const channels = page.querySelector<HTMLInputElement>('#colour-channel')!;
+    channels.value = '#00ffff';
+    channels.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(shown('--channel')).toBe('#00ffff');
+    expect(sentColours()).toEqual({ pause: '#ff00ff', channel: '#00ffff' });
+
+    // Back to the usual colours: one, then all.
+    await press(button('The usual colour for Pause'));
+    expect(shown('--key-pause')).toBe('');
+    expect(sentColours()).toEqual({ channel: '#00ffff' });
+    await press(button('All the usual colours'));
+    expect(shown('--channel')).toBe('');
+    expect(sentColours()).toEqual({});
+    expect(button('All the usual colours').disabled).toBe(true);
+
+    // A project that is loaded brings its own.
+    connection.emit('SettingsChanged', { colours: { play: '#123456', nonsense: '#000000', next: 'red' } });
+    await fixture.whenStable();
+    expect(shown('--key-play')).toBe('#123456');
+    expect(TestBed.inject(DeskSettings).colours()).toEqual({ play: '#123456' });
   });
 
   it('import: a show file becomes the project, and the window says what became of it', async () => {
@@ -1562,8 +1859,57 @@ describe('the desk page', () => {
     expect(scale()).toBe('0.9');
   });
 
+  /** A tab of the Keyboard view, by the kind of keys it holds. */
+  function tab(group: string): HTMLButtonElement {
+    const found = [...page.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find(
+      (candidate) => candidate.firstChild?.textContent?.trim() === group,
+    );
+    if (!found) throw new Error(`no tab "${group}"`);
+    return found;
+  }
+
+  it('Keyboard has a tab for each kind of keys with its number of keys; a search says how many it finds', async () => {
+    await show('/keyboard');
+    const total = (group: string) => DESK_ACTIONS.filter((action) => action.group === group).length;
+    const count = (group: string) => tab(group).querySelector('.count')?.textContent?.trim();
+    const rows = () => [...page.querySelectorAll('#keys-list tbody th')].map((cell) => cell.textContent?.trim());
+
+    expect(page.querySelectorAll('[role="tab"]').length).toBe(ACTION_GROUPS.length);
+    expect(tab('Views').getAttribute('aria-selected')).toBe('true');
+    expect(count('Master')).toBe(String(total('Master')));
+    expect(rows().length).toBe(total('Views'));
+
+    await press(tab('Master'));
+    expect(tab('Master').getAttribute('aria-selected')).toBe('true');
+    expect(rows()).toEqual(['Clear', 'Blackout', 'Solo', 'Rate']);
+
+    // The arrow keys go from tab to tab.
+    tab('Master').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    await fixture.whenStable();
+    expect(tab('Stack').getAttribute('aria-selected')).toBe('true');
+
+    // A search: each tab says how many of its keys it finds; one that finds none in the tab
+    // shown shows the first tab where it finds some.
+    const search = page.querySelector<HTMLInputElement>('input[type="search"]')!;
+    search.value = 'black';
+    search.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    expect(count('Master')).toBe(`1/${total('Master')}`);
+    expect(count('Stack')).toBe(`0/${total('Stack')}`);
+    expect(tab('Stack').classList).toContain('none-found');
+    expect(tab('Master').getAttribute('aria-selected')).toBe('true');
+    expect(rows()).toEqual(['Blackout']);
+
+    search.value = '';
+    search.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    expect(count('Master')).toBe(String(total('Master')));
+    expect(tab('Stack').getAttribute('aria-selected')).toBe('true'); // the tab chosen before
+  });
+
   it('a shortcut is recorded for a key, and then presses that key', async () => {
     await show('/keyboard');
+    await press(tab('Master'));
     await press(button('Set the shortcut of Blackout'));
     expect(page.querySelector('tr[data-row="master.blackout"] .waiting')).toBeTruthy();
 
@@ -1586,6 +1932,7 @@ describe('the desk page', () => {
 
     // The same shortcut for another key moves over to it.
     await show('/keyboard');
+    await press(tab('Master'));
     await press(button('Set the shortcut of Clear'));
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyB', key: 'b', ctrlKey: true, bubbles: true }));
     await fixture.whenStable();

@@ -5,24 +5,19 @@ import { DeskStore } from '../desk/desk-store';
 import { CHANNEL_COUNT, MEMORY_COUNT } from '../desk/desk-types';
 import { Keyboard } from '../desk/keyboard';
 
-/** The groups of keys that the list shows open at first: the small ones. */
-const OPEN_AT_FIRST: ReadonlySet<ActionGroup> = new Set<ActionGroup>([
-  'Views',
-  'Project and LAN',
-  'Master',
-  'Stack',
-  'Record',
-  'Sequences view',
-]);
-
-/** Rows the list shows at most for a search, so that "1" does not put 600 rows on the page. */
-const MOST_FOUND = 150;
+/** One tab of the list: a kind of keys, how many there are, and how many the search finds. */
+interface Tab {
+  readonly group: ActionGroup;
+  readonly total: number;
+  readonly found: number;
+}
 
 /**
- * Keyboard: a shortcut for every key of the desk. The list has the keys at the left and their
- * shortcuts at the right; Set records one, and Listen finds a key by a click on it on the desk.
- * The shortcuts belong to this browser on this device, see desk-settings.ts; keyboard.ts does
- * the listening and the pressing.
+ * Keyboard: a shortcut for every key of the desk. The kinds of keys are tabs side by side, each
+ * with the number of its keys (and, while a search runs, how many of them it finds); the list
+ * under them has the keys of one tab at the left and their shortcuts at the right. Set records
+ * one, and Listen finds a key by a click on it on the desk. On the PC the shortcuts belong to
+ * the project, see desk-settings.ts; keyboard.ts does the listening and the pressing.
  */
 @Component({
   selector: 'lm-keyboard-view',
@@ -37,36 +32,61 @@ export class KeyboardView {
   private readonly injector = inject(Injector);
 
   protected readonly search = signal('');
-  private readonly openGroups = signal<ReadonlySet<ActionGroup>>(OPEN_AT_FIRST);
+  /** The tab chosen last. */
+  private readonly chosenGroup = signal<ActionGroup>(ACTION_GROUPS[0]);
 
-  /** The groups of the list, each with its rows; a group that is closed has none. */
-  protected readonly groups = computed(() => {
+  /** True while a search runs. */
+  protected readonly searching = computed(() => this.search().trim() !== '');
+
+  // For each kind of keys: its keys that the search finds (all of them without a search).
+  private readonly found = computed(() => {
     const words = this.search().trim().toLowerCase();
     const shortcuts = this.settings.shortcuts();
-    const open = this.openGroups();
-    let room = MOST_FOUND;
-    return ACTION_GROUPS.map((group) => {
-      const all = DESK_ACTIONS.filter((action) => action.group === group);
-      const found = words === '' ? all : all.filter((action) => this.matches(action, words, shortcuts[action.id]));
-      const shown = words !== '' || open.has(group);
-      const rows = shown ? found.slice(0, Math.max(0, room)) : [];
-      if (words !== '') room -= rows.length;
-      return { group, count: found.length, open: shown, rows, cut: shown && rows.length < found.length };
-    }).filter((entry) => words === '' || entry.count > 0);
+    return new Map(
+      ACTION_GROUPS.map((group) => {
+        const all = DESK_ACTIONS.filter((action) => action.group === group);
+        return [group, words === '' ? all : all.filter((action) => this.matches(action, words, shortcuts[action.id]))];
+      }),
+    );
   });
 
-  /** How many keys have a shortcut. */
-  protected readonly mapped = computed(() => Object.keys(this.settings.shortcuts()).length);
+  /** The tabs, one for each kind of keys. */
+  protected readonly tabs = computed<readonly Tab[]>(() =>
+    ACTION_GROUPS.map((group) => ({
+      group,
+      total: DESK_ACTIONS.filter((action) => action.group === group).length,
+      found: this.found().get(group)?.length ?? 0,
+    })),
+  );
+
+  /**
+   * The tab that is shown: the one chosen, unless a search finds nothing there; then the first
+   * tab where it finds something.
+   */
+  protected readonly shownGroup = computed<ActionGroup>(() => {
+    const chosen = this.chosenGroup();
+    if (!this.searching() || (this.found().get(chosen)?.length ?? 0) > 0) return chosen;
+    return this.tabs().find((tab) => tab.found > 0)?.group ?? chosen;
+  });
+
+  /** The keys of the tab that is shown, as the search finds them. */
+  protected readonly rows = computed(() => this.found().get(this.shownGroup()) ?? []);
+
+  /** How many keys have a shortcut. (An empty one is a usual shortcut that was taken away.) */
+  protected readonly mapped = computed(
+    () => Object.values(this.settings.shortcuts()).filter((keys) => keys !== '').length,
+  );
 
   constructor() {
-    // A key picked by listening, or chosen to record: its group opens, and its row comes into
+    // A key picked by listening, or chosen to record: its tab is shown, and its row comes into
     // the middle of the list.
     effect(() => {
       const picked = this.keyboard.picked();
       const action = picked ? actionWithId(picked) : undefined;
       if (!action) return;
 
-      this.openGroups.update((open) => (open.has(action.group) ? open : new Set([...open, action.group])));
+      this.chosenGroup.set(action.group);
+      this.search.set('');
       afterNextRender(
         () => {
           const row = this.host.querySelector<HTMLElement>(`[data-row="${CSS.escape(action.id)}"]`);
@@ -79,12 +99,20 @@ export class KeyboardView {
     });
   }
 
-  protected toggleGroup(group: ActionGroup): void {
-    this.openGroups.update((open) => {
-      const next = new Set(open);
-      if (next.has(group)) next.delete(group);
-      else next.add(group);
-      return next;
+  protected choose(group: ActionGroup): void {
+    this.chosenGroup.set(group);
+  }
+
+  /** The arrow keys go from tab to tab, as in every row of tabs. */
+  protected onTabKey(event: KeyboardEvent): void {
+    const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+    if (step === 0) return;
+    event.preventDefault();
+    const tabs = ACTION_GROUPS;
+    const next = tabs[(tabs.indexOf(this.shownGroup()) + step + tabs.length) % tabs.length];
+    this.chosenGroup.set(next);
+    afterNextRender(() => this.host.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus(), {
+      injector: this.injector,
     });
   }
 

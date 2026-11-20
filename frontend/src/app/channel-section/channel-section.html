@@ -18,6 +18,7 @@
             (valueChange)="store.setChannel(channel, $event)"
             (noteChange)="store.setChannelNote(channel, $event)"
             (keyPress)="store.pressChannel(channel)"
+            (keyHold)="store.holdKey('channel', channel, $event)"
           />
         }
       </div>

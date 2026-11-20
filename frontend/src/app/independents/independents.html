@@ -4,7 +4,7 @@
   <button
     lmLamp
     type="button"
-    tone="system"
+    tone="ind-edit"
     aria-label="Edit the channels and memories of the independent keys"
     data-action="ind.edit"
     [level]="editing() ? 3 : 1"
@@ -41,6 +41,12 @@
         [attr.aria-label]="'Independent ' + item.number + ', channel ' + item.channel"
         [attr.data-action]="'ind.channel.' + item.number"
         (click)="store.toggleIndependent(item.number)"
+        (pointerdown)="hold('channel', item.number, $event)"
+        (pointerup)="store.holdIndependent('channel', item.number, false)"
+        (pointercancel)="store.holdIndependent('channel', item.number, false)"
+        (lostpointercapture)="store.holdIndependent('channel', item.number, false)"
+        (keydown)="holdByKey('channel', item.number, $event, true)"
+        (keyup)="holdByKey('channel', item.number, $event, false)"
       >
         {{ item.channel }}
       </button>
@@ -74,6 +80,12 @@
         [attr.aria-label]="'Independent ' + item.name + ', memory ' + item.memory"
         [attr.data-action]="'ind.memory.' + item.number"
         (click)="store.toggleMemoryIndependent(item.number)"
+        (pointerdown)="hold('memory', item.number, $event)"
+        (pointerup)="store.holdIndependent('memory', item.number, false)"
+        (pointercancel)="store.holdIndependent('memory', item.number, false)"
+        (lostpointercapture)="store.holdIndependent('memory', item.number, false)"
+        (keydown)="holdByKey('memory', item.number, $event, true)"
+        (keyup)="holdByKey('memory', item.number, $event, false)"
       >
         {{ item.memory }}
       </button>

@@ -5,7 +5,7 @@
   <button
     lmLamp
     type="button"
-    tone="live"
+    tone="stack"
     aria-label="Stack live"
     data-action="stack.live"
     [level]="live() ? 3 : 1"
@@ -18,7 +18,7 @@
   <button
     lmLamp
     type="button"
-    tone="system"
+    tone="prev"
     aria-label="Previous step"
     data-action="stack.previous"
     [disabled]="!live()"
@@ -29,7 +29,7 @@
   <button
     lmLamp
     type="button"
-    tone="channel"
+    tone="play"
     aria-label="Play"
     data-action="stack.play"
     [level]="store.stackRunning() ? 3 : 1"
@@ -41,7 +41,7 @@
   <button
     lmLamp
     type="button"
-    tone="system"
+    tone="pause"
     aria-label="Pause"
     data-action="stack.pause"
     [level]="store.stackPaused() ? 3 : 1"
@@ -55,7 +55,7 @@
   <button
     lmLamp
     type="button"
-    tone="system"
+    tone="next"
     aria-label="Next step"
     data-action="stack.next"
     [disabled]="!live()"

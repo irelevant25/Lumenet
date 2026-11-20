@@ -17,20 +17,29 @@
 }
 
 /* The stack (five keys and the wheel of steps, --wheel-size of them) and the five record keys
-   get the height they need, and the master fader takes the rest. On a low window the master
-   section keeps a height of its own, and the stack and the record keys get flatter together,
-   down to --key-min-h, while the wheel shows fewer steps, 3 at least. */
+   get the height they need, and the master section the rest: its keys, the master fader and
+   the rate wheel. On a low window the master keys get flatter (down to --master-key-min) and
+   the fader keeps 50 pixels, the stack and the record keys get flatter together (down to
+   --key-min-h), and the wheel of steps shows fewer, at least the one that is on. Lower still,
+   the column scrolls. */
 .side {
   /* a section's title, its gap and its frame */
   --frame: calc(12px * var(--font-scale) + 8px + 18px);
   --keys-min: calc(5 * var(--key-min-h) + 4 * var(--strip-gap));
   --keys-max: calc(5 * var(--key-h) + 4 * var(--strip-gap));
-  --wheel-min: calc(min(var(--wheel-size, 3), 3) * var(--place-h) + 2px);
+  --wheel-min: calc(var(--place-h) + 2px);
   --wheel-max: calc(var(--wheel-size, 3) * var(--place-h) + 2px);
+  /* The master section at its lowest: the title, Clear, Solo, Blackout and Rate, the level and the
+     rate, 50 pixels of fader, the rate wheel, the gaps and the frame. */
+  --master-key-min: 26px;
+  --master-min: calc(
+    12px * var(--font-scale) + 4px + 4 * var(--master-key-min) + 2 * var(--readout) + 6px + 50px +
+      var(--key-w) * 1.15 + 8 * var(--strip-gap) + 18px
+  );
 
   display: grid;
   grid-template-rows:
-    minmax(220px, 1fr)
+    minmax(var(--master-min), 1fr)
     minmax(
       calc(var(--frame) + 8px + var(--keys-min) + var(--wheel-min)),
       calc(var(--frame) + 8px + var(--keys-max) + var(--wheel-max))
@@ -40,6 +49,8 @@
   grid-column: 2;
   gap: var(--gap);
   min-height: 0;
+  overflow: hidden auto;
+  scrollbar-width: thin;
 }
 
 lm-independents {

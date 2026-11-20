@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
 
 namespace DmxBox.Server;
@@ -8,9 +10,15 @@ namespace DmxBox.Server;
 /// those messages.
 /// </summary>
 /// <remarks>
+/// <para>
 /// A request that cannot be carried out ends in an exception from the desk or the project
 /// store. <see cref="UserErrorFilter"/> hands its message to the UI that asked, and writes
 /// the line about it in the log.
+/// </para>
+/// <para>
+/// Every change of what the project holds runs inside the undo history, which keeps the
+/// project as it was before (see <see cref="UndoHistory"/>).
+/// </para>
 /// </remarks>
 internal sealed class DeskHub : Hub<IDeskClient>
 {
@@ -18,18 +26,24 @@ internal sealed class DeskHub : Hub<IDeskClient>
     private readonly ProjectStore _projects;
     private readonly BoxLink _boxLink;
     private readonly LanAccess _lan;
+    private readonly UndoHistory _history;
+    private readonly Autosave _autosave;
 
     /// <summary>SignalR makes a hub for every call and fills in the parts of the server.</summary>
     /// <param name="desk">The desk.</param>
     /// <param name="projects">The projects folder and the open project.</param>
     /// <param name="boxLink">The link to the box, for its state.</param>
     /// <param name="lan">Whether other devices in the network may use the desk.</param>
-    public DeskHub(Desk desk, ProjectStore projects, BoxLink boxLink, LanAccess lan)
+    /// <param name="history">Undo and redo for what the project holds.</param>
+    /// <param name="autosave">Keeps the work that is not saved yet.</param>
+    public DeskHub(Desk desk, ProjectStore projects, BoxLink boxLink, LanAccess lan, UndoHistory history, Autosave autosave)
     {
         _desk = desk;
         _projects = projects;
         _boxLink = boxLink;
         _lan = lan;
+        _history = history;
+        _autosave = autosave;
     }
 
     // True when the UI that calls runs on this PC, not on another device in the network.
@@ -94,7 +108,10 @@ internal sealed class DeskHub : Hub<IDeskClient>
     /// <param name="text">The text as typed: at most 24 characters, not counting spaces at its ends.</param>
     public async Task SetChannelNote(int channel, string text)
     {
-        string note = _desk.SetChannelNote(channel, text);
+        string note;
+        using (_history.Change($"the note of channel {channel}"))
+            note = _desk.SetChannelNote(channel, text);
+
         await Clients.Others.ChannelNoteChanged(channel, note);
         await TellProjectAsync();
     }
@@ -104,7 +121,10 @@ internal sealed class DeskHub : Hub<IDeskClient>
     /// <param name="text">The text as typed: at most 24 characters, not counting spaces at its ends.</param>
     public async Task SetMemoryNote(int memory, string text)
     {
-        string note = _desk.SetMemoryNote(memory, text);
+        string note;
+        using (_history.Change($"the note of memory {memory}"))
+            note = _desk.SetMemoryNote(memory, text);
+
         await Clients.Others.MemoryNoteChanged(memory, note);
         await TellProjectAsync();
     }
@@ -117,7 +137,9 @@ internal sealed class DeskHub : Hub<IDeskClient>
     /// <param name="channel">The channel the key switches from now on, 1-512.</param>
     public async Task SetIndependent(int index, int channel)
     {
-        _desk.SetIndependent(index, channel);
+        using (_history.Change($"channel key {index} of the independents"))
+            _desk.SetIndependent(index, channel);
+
         await Clients.Others.IndependentChanged(index, channel);
         await TellProjectAsync();
     }
@@ -130,7 +152,9 @@ internal sealed class DeskHub : Hub<IDeskClient>
     /// <param name="memory">The memory whose fader the key switches from now on, 1-128.</param>
     public async Task SetMemoryIndependent(int index, int memory)
     {
-        _desk.SetMemoryIndependent(index, memory);
+        using (_history.Change($"memory key {index} of the independents"))
+            _desk.SetMemoryIndependent(index, memory);
+
         await Clients.Others.MemoryIndependentChanged(index, memory);
         await TellProjectAsync();
     }
@@ -154,7 +178,9 @@ internal sealed class DeskHub : Hub<IDeskClient>
     /// <param name="memory">Memory number, 1-128.</param>
     public Task SaveMemory(int memory)
     {
-        _desk.SaveMemory(memory);
+        using (_history.Change($"storing memory {memory}"))
+            _desk.SaveMemory(memory);
+
         return TellDeskAsync();
     }
 
@@ -171,7 +197,9 @@ internal sealed class DeskHub : Hub<IDeskClient>
     /// <param name="to">Number of the memory that receives the copy, 1-128, another one than <paramref name="from"/>.</param>
     public Task CopyMemory(int from, int to)
     {
-        _desk.CopyMemory(from, to);
+        using (_history.Change($"copying memory {from} to {to}"))
+            _desk.CopyMemory(from, to);
+
         return TellDeskAsync();
     }
 
@@ -179,7 +207,9 @@ internal sealed class DeskHub : Hub<IDeskClient>
     /// <param name="memory">Memory number, 1-128.</param>
     public Task DeleteMemory(int memory)
     {
-        _desk.DeleteMemory(memory);
+        using (_history.Change($"emptying memory {memory}"))
+            _desk.DeleteMemory(memory);
+
         return TellDeskAsync();
     }
 
@@ -207,7 +237,9 @@ internal sealed class DeskHub : Hub<IDeskClient>
     /// </param>
     public Task SetSequence(int memory, Sequence sequence)
     {
-        _desk.SetSequence(memory, sequence);
+        using (_history.Change($"the sequence of memory {memory}"))
+            _desk.SetSequence(memory, sequence);
+
         return TellDeskAsync();
     }
 
@@ -219,9 +251,25 @@ internal sealed class DeskHub : Hub<IDeskClient>
     /// <param name="speed">From 0.1 to 10.</param>
     public async Task SetSequenceSpeed(int memory, double speed)
     {
-        double kept = _desk.SetSequenceSpeed(memory, speed);
+        double kept;
+        using (_history.Change($"the speed of the sequence in memory {memory}", $"speed {memory}"))
+            kept = _desk.SetSequenceSpeed(memory, speed);
+
         await Clients.Others.SequenceSpeedChanged(memory, kept);
         await TellProjectAsync();
+    }
+
+    /// <summary>
+    /// Sets the rate, a speed master for all sequences (see <see cref="Desk.SetRate"/>). The UI
+    /// turns its wheel this way, like a fader: the other UIs hear of it, this one does not. It is
+    /// no part of the project, so the history leaves it alone.
+    /// </summary>
+    /// <param name="on">True: the rate counts.</param>
+    /// <param name="rate">From 0.1 to 10.</param>
+    public Task SetRate(bool on, double rate)
+    {
+        _desk.SetRate(on, rate);
+        return Clients.Others.RateChanged(on, rate);
     }
 
     /// <summary>
@@ -232,7 +280,9 @@ internal sealed class DeskHub : Hub<IDeskClient>
     /// <param name="step">The step.</param>
     public Task AddSequenceStep(int memory, Step step)
     {
-        _desk.AddSequenceStep(memory, step);
+        using (_history.Change($"a step of the sequence in memory {memory}"))
+            _desk.AddSequenceStep(memory, step);
+
         return TellDeskAsync();
     }
 
@@ -253,7 +303,10 @@ internal sealed class DeskHub : Hub<IDeskClient>
     /// <returns>The name of the new step.</returns>
     public async Task<int> AddStackStep(Step step)
     {
-        int id = _desk.AddStackStep(step);
+        int id;
+        using (_history.Change("a new step of the stack"))
+            id = _desk.AddStackStep(step);
+
         await TellStackAsync();
         return id;
     }
@@ -263,7 +316,9 @@ internal sealed class DeskHub : Hub<IDeskClient>
     /// <param name="step">The step as it is to be.</param>
     public Task UpdateStackStep(int id, Step step)
     {
-        _desk.UpdateStackStep(id, step);
+        using (_history.Change($"step {CueOf(id)} of the stack"))
+            _desk.UpdateStackStep(id, step);
+
         return TellStackAsync();
     }
 
@@ -271,7 +326,9 @@ internal sealed class DeskHub : Hub<IDeskClient>
     /// <param name="id">The name of the step.</param>
     public Task DeleteStackStep(int id)
     {
-        _desk.DeleteStackStep(id);
+        using (_history.Change($"taking step {CueOf(id)} out of the stack"))
+            _desk.DeleteStackStep(id);
+
         return TellStackAsync();
     }
 
@@ -280,7 +337,9 @@ internal sealed class DeskHub : Hub<IDeskClient>
     /// <param name="afterId">The step it goes behind; null for the very top.</param>
     public Task MoveStackStep(int id, int? afterId)
     {
-        _desk.MoveStackStep(id, afterId);
+        using (_history.Change($"moving step {CueOf(id)} of the stack"))
+            _desk.MoveStackStep(id, afterId);
+
         return TellStackAsync();
     }
 
@@ -289,23 +348,123 @@ internal sealed class DeskHub : Hub<IDeskClient>
     /// <param name="cue">The number as text: "3", "3.0", "2.1".</param>
     public Task RenumberStackStep(int id, string cue)
     {
-        _desk.RenumberStackStep(id, cue);
+        using (_history.Change($"renumbering step {CueOf(id)} of the stack"))
+            _desk.RenumberStackStep(id, cue);
+
         return TellStackAsync();
     }
 
     /// <summary>
     /// Switches the stack live or off. Going live brings every fader down to 0, goes to the
     /// first step and locks everything that is stored; switching it off stops the stack and
-    /// leaves the faders where they are.
+    /// leaves the faders where they are. The rate stays as it is either way.
     /// </summary>
     /// <param name="on">True for live.</param>
     public async Task SetStackLive(bool on)
     {
         _desk.SetStackLive(on);
-        if (on)
-            await Clients.All.DeskChanged(_desk.GetState());   // every fader went to 0
 
+        // Live: every fader went to 0. Off: the sequences play at their own speeds again. Either
+        // way the UIs take the whole desk and its sequences again.
+        await Clients.All.DeskChanged(_desk.GetState());
         await TellPlaybackAsync();
+    }
+
+    /// <summary>
+    /// Undo: the project goes back to how it was before its last change. See <see cref="UndoHistory"/>
+    /// for what counts. Every UI gets the whole desk again.
+    /// </summary>
+    /// <returns>What was undone, like "storing memory 5".</returns>
+    public async Task<string> Undo()
+    {
+        string what = _history.Undo();
+        await TellDeskAsync();
+        return what;
+    }
+
+    /// <summary>Redo: a change that was undone is made again.</summary>
+    /// <returns>What was redone, like "storing memory 5".</returns>
+    public async Task<string> Redo()
+    {
+        string what = _history.Redo();
+        await TellDeskAsync();
+        return what;
+    }
+
+    /// <summary>What undo and redo would do now.</summary>
+    public HistoryState GetHistory()
+    {
+        return _history.State;
+    }
+
+    /// <summary>
+    /// The settings of the UI on the PC that belong to the project (its layout and keyboard
+    /// shortcuts), as the UI wrote them; null while the desk has none.
+    /// </summary>
+    public JsonElement? GetSettings()
+    {
+        return ProjectSettings.Element(_desk.Settings);
+    }
+
+    /// <summary>
+    /// The owner changed settings of the project in the UI on the PC. The other UIs hear of it;
+    /// the project has something to save. Only a UI on this PC can do this: phones and tablets
+    /// keep settings of their own.
+    /// </summary>
+    /// <param name="settings">The settings, a JSON object.</param>
+    public async Task SetSettings(JsonElement settings)
+    {
+        RequireLocal("Only the PC keeps its settings in the project.");
+        if (_desk.SetSettings(ProjectSettings.Checked(settings)))
+            await Clients.Others.SettingsChanged(ProjectSettings.Element(_desk.Settings));
+
+        await TellProjectAsync();
+    }
+
+    /// <summary>
+    /// A UI on the PC brings its settings along while the desk has none, as after a start
+    /// without a project: they become the project's, without making it unsaved.
+    /// </summary>
+    /// <param name="settings">The settings, a JSON object.</param>
+    /// <returns>True if the desk took them, false if it has settings already (then the UI asks for those).</returns>
+    public async Task<bool> AdoptSettings(JsonElement settings)
+    {
+        RequireLocal("Only the PC keeps its settings in the project.");
+        bool taken = _desk.AdoptSettings(ProjectSettings.Checked(settings));
+        if (taken)
+            await Clients.Others.SettingsChanged(ProjectSettings.Element(_desk.Settings));
+
+        return taken;
+    }
+
+    /// <summary>Whether the autosave keeps the work that is not saved, and how often.</summary>
+    public AutosaveOptions GetAutosave()
+    {
+        return _autosave.Options;
+    }
+
+    /// <summary>
+    /// Switches the autosave and sets how often it keeps the work. Only a UI on this PC can do
+    /// this; the UIs on this PC hear of it.
+    /// </summary>
+    /// <param name="on">True to keep the work.</param>
+    /// <param name="seconds">How often: 5, 30, 60 or 300 seconds.</param>
+    public async Task<AutosaveOptions> SetAutosave(bool on, int seconds)
+    {
+        RequireLocal("The autosave can only be set on the PC.");
+        AutosaveOptions options = _autosave.SetOptions(on, seconds);
+        await Clients.Group(LanAccess.PcGroup).AutosaveChanged(options);
+        return options;
+    }
+
+    /// <summary>
+    /// When the unsaved work that the desk program brought back at its start was kept, as
+    /// "2026-11-20T18:42:05+01:00"; null when nothing was brought back, and once the project was
+    /// saved, loaded or started anew. See <see cref="Autosave"/>.
+    /// </summary>
+    public string? GetRecovered()
+    {
+        return _projects.Recovered?.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture);
     }
 
     /// <summary>Play: goes on after a pause, or goes to the next step.</summary>
@@ -411,6 +570,7 @@ internal sealed class DeskHub : Hub<IDeskClient>
     public async Task<ProjectInfo> NewProject()
     {
         ProjectInfo project = _projects.StartNew();
+        _history.Clear();
         await TellDeskAsync();
         return project;
     }
@@ -437,6 +597,8 @@ internal sealed class DeskHub : Hub<IDeskClient>
     public async Task<ProjectInfo> LoadProject(string name)
     {
         ProjectInfo project = _projects.Load(name);
+        _history.Clear();
+        await Clients.All.SettingsChanged(ProjectSettings.Element(_desk.Settings));   // the project's, or those in use
         await TellDeskAsync();
         return project;
     }
@@ -453,8 +615,22 @@ internal sealed class DeskHub : Hub<IDeskClient>
     {
         ImportedShow show = ShowImport.Read(fileName, text);
         ProjectInfo project = _projects.Import(show.Name, show.Content);
+        _history.Clear();
         await TellDeskAsync();
         return new ImportAnswer(project, show.Report);
+    }
+
+    // True when the UI that calls runs on this PC; otherwise a refusal with the message.
+    private void RequireLocal(string message)
+    {
+        if (!IsLocal)
+            throw new DeskException(message);
+    }
+
+    // The number of a step of the stack, like "2.1", for what the history says.
+    private string CueOf(int id)
+    {
+        return _desk.GetStack().Steps.FirstOrDefault(step => step.Id == id)?.Cue ?? "?";
     }
 
     // After a change that is more than one fader or one note: every UI gets the whole desk
@@ -482,10 +658,14 @@ internal sealed class DeskHub : Hub<IDeskClient>
         return Clients.All.PlaybackChanged(_desk.GetPlayback());
     }
 
-    // The project goes out only when its name, file or "unsaved" mark really changed.
+    // The project goes out only when its name, file or "unsaved" mark really changed, and what
+    // undo and redo would do only when that changed.
     private async Task TellProjectAsync()
     {
         if (_projects.TakeChange() is { } project)
             await Clients.All.ProjectChanged(project);
+
+        if (_history.TakeChange() is { } history)
+            await Clients.All.HistoryChanged(history);
     }
 }

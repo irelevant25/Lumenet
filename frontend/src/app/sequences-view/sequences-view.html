@@ -37,7 +37,7 @@
             <button
               lmLamp
               type="button"
-              tone="system"
+              [tone]="item.mode"
               [level]="mode() === item.mode ? 3 : 1"
               [disabled]="locked()"
               [attr.aria-pressed]="mode() === item.mode"
@@ -58,7 +58,7 @@
           <button
             lmLamp
             type="button"
-            tone="system"
+            tone="sequence-add"
             aria-label="Add a step"
             data-action="sequence.add"
             [disabled]="full() || locked()"
@@ -69,7 +69,7 @@
           <button
             lmLamp
             type="button"
-            tone="system"
+            tone="template"
             aria-label="Make the steps from a template"
             data-action="sequence.template"
             [disabled]="locked()"
@@ -97,7 +97,7 @@
           <button
             lmLamp
             type="button"
-            tone="system"
+            tone="normal-speed"
             aria-label="Normal speed"
             data-action="sequence.speed"
             [disabled]="!sequence() || locked() || speed() === 1"

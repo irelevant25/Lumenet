@@ -366,6 +366,14 @@ public sealed class PlaybackHubTests
 
         public Task LanAccessChanged(LanState lan) => throw new NotSupportedException();
 
+        public Task SettingsChanged(System.Text.Json.JsonElement? settings) => throw new NotSupportedException();
+
+        public Task HistoryChanged(HistoryState history) => throw new NotSupportedException();
+
+        public Task RateChanged(bool on, double rate) => throw new NotSupportedException();
+
+        public Task AutosaveChanged(AutosaveOptions options) => throw new NotSupportedException();
+
         private Task Note(string message)
         {
             Messages.Add(message);

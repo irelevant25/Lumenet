@@ -1,6 +1,6 @@
-/* Every key has the same, nearly square size. Level 1: an outline and a faint fill. */
+/* Every key has the same, nearly square size. Level 1: an outline and a faint fill. The colour
+   (--lamp) comes from the key's tone, see lamp-button.ts. */
 :host {
-  --lamp: var(--system);
 
   box-sizing: border-box;
   display: grid;
@@ -38,26 +38,6 @@
   font-stretch: 75%;
 }
 
-:host(.tone-channel) {
-  --lamp: var(--channel);
-}
-
-:host(.tone-memory) {
-  --lamp: var(--memory);
-}
-
-:host(.tone-white) {
-  --lamp: var(--white-lamp);
-}
-
-:host(.tone-blue) {
-  --lamp: var(--blue-lamp);
-}
-
-:host(.tone-live) {
-  --lamp: var(--live);
-}
-
 /* Level 2: half lit. */
 :host(.level-2) {
   border-color: color-mix(in srgb, var(--lamp) 80%, transparent);
@@ -74,11 +54,11 @@
   font-weight: 600;
 }
 
-/* A memory that holds a sequence: from the red of the memories to yellow. --lamp is the orange
+/* A memory that holds a sequence: from the red of the memories to yellow. --lamp is the colour
    between the two, for the border, the glow and the lettering; --mix is how lit the key is.
    These rules stand after the three levels, because they replace the plain background. */
 :host(.tone-sequence) {
-  --lamp: #ff9838;
+  --lamp: color-mix(in srgb, var(--memory), var(--sequence-end));
   --mix: 14%;
 }
 

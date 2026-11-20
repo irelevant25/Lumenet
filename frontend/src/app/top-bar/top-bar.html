@@ -19,21 +19,49 @@
       </span>
     }
   </div>
-  @if (lanSwitch(); as lan) {
+  <div class="keys">
+    @if (lanSwitch(); as lan) {
+      <button
+        lmLamp
+        type="button"
+        tone="lan"
+        aria-label="LAN"
+        data-action="lan"
+        title="Lets phones and tablets in the same network use the desk, with a password"
+        [level]="lan.on ? 3 : 1"
+        [attr.aria-pressed]="lan.on"
+        (click)="store.setLan(!lan.on)"
+      >
+        LAN
+      </button>
+    }
+    <!-- Undo and redo for what the project holds; what they would do is in the tooltip. -->
     <button
       lmLamp
       type="button"
-      tone="system"
-      aria-label="LAN"
-      data-action="lan"
-      title="Lets phones and tablets in the same network use the desk, with a password"
-      [level]="lan.on ? 3 : 1"
-      [attr.aria-pressed]="lan.on"
-      (click)="store.setLan(!lan.on)"
+      tone="undo"
+      class="undo"
+      aria-label="Undo"
+      data-action="project.undo"
+      [attr.title]="store.history().undo ? 'Undo ' + store.history().undo : 'Nothing to undo'"
+      [disabled]="!store.history().undo || store.live()"
+      (click)="store.undo()"
     >
-      LAN
+      Undo
     </button>
-  }
+    <button
+      lmLamp
+      type="button"
+      tone="redo"
+      aria-label="Redo"
+      data-action="project.redo"
+      [attr.title]="store.history().redo ? 'Redo ' + store.history().redo : 'Nothing to redo'"
+      [disabled]="!store.history().redo || store.live()"
+      (click)="store.redo()"
+    >
+      Redo
+    </button>
+  </div>
 </div>
 
 <!-- The views of the desk. The one that is shown is lit. -->
@@ -77,7 +105,7 @@
   <button
     lmLamp
     type="button"
-    tone="system"
+    tone="new"
     aria-label="New project"
     data-action="project.new"
     [disabled]="store.live()"
@@ -88,7 +116,7 @@
   <button
     lmLamp
     type="button"
-    tone="system"
+    tone="save-project"
     aria-label="Save project"
     data-action="project.save"
     (click)="dialog().open('save')"
@@ -98,7 +126,7 @@
   <button
     lmLamp
     type="button"
-    tone="system"
+    tone="load"
     aria-label="Load project"
     data-action="project.load"
     [disabled]="store.live()"
@@ -109,7 +137,7 @@
   <button
     lmLamp
     type="button"
-    tone="system"
+    tone="import"
     aria-label="Import a show"
     data-action="project.import"
     title="Opens the show file of a theatre console (USITT ASCII, .asc) as a project"

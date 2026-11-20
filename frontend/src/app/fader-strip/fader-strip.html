@@ -19,6 +19,12 @@
   [attr.aria-label]="keyName()"
   [attr.data-action]="kind() + '.' + number()"
   (click)="keyPress.emit()"
+  (pointerdown)="onPointerDown($event)"
+  (pointerup)="keyHold.emit(false)"
+  (pointercancel)="keyHold.emit(false)"
+  (lostpointercapture)="keyHold.emit(false)"
+  (keydown)="onKey($event, true)"
+  (keyup)="onKey($event, false)"
 >
   @if (steps().length) {
     <!-- the steps of the sequence being recorded that use this key -->

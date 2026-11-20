@@ -80,6 +80,10 @@ internal static class Program
         AddLan(builder, pc);
 
         WebApplication app = builder.Build();
+
+        // Work that was not saved when the program stopped comes back before any UI connects.
+        app.Services.GetRequiredService<Autosave>().Restore();
+
         RefuseForeignHosts(app, hosts);
         app.Use((context, next) => LanGate.InvokeAsync(context, app.Services.GetRequiredService<LanAccess>(), next));
         RefuseOtherPages(app, origins);
@@ -120,15 +124,24 @@ internal static class Program
         return new AllowedOrigins(listed);
     }
 
-    // The three parts that live as long as the server: the desk, the projects, the box link.
+    // The parts that live as long as the server: the desk, the projects with their undo history
+    // and their autosave, the box link.
     private static void AddDesk(IServiceCollection services, IConfiguration settings, IBox? box)
     {
         string projectsFolder = Setting(settings, "Projects:Folder", DefaultProjectsFolder());
+        string autosaveFile = Setting(settings, "Autosave:File", DefaultAutosaveFile());
         string boxHost = Setting(settings, "Box:Host", DefaultBoxHost);
         int boxPort = settings.GetValue("Box:Port", DmxBoxClient.DefaultPort);
 
         services.AddSingleton<Desk>();
         services.AddSingleton(provider => new ProjectStore(provider.GetRequiredService<Desk>(), projectsFolder));
+        services.AddSingleton(provider => new UndoHistory(provider.GetRequiredService<Desk>()));
+        services.AddSingleton(provider => new Autosave(
+            provider.GetRequiredService<Desk>(),
+            provider.GetRequiredService<ProjectStore>(),
+            autosaveFile,
+            provider.GetRequiredService<ILogger<Autosave>>()));
+        services.AddHostedService(provider => provider.GetRequiredService<Autosave>());
         services.AddSingleton(provider => new BoxLink(
             provider.GetRequiredService<Desk>(),
             box ?? new RealBox(boxHost, boxPort),
@@ -313,5 +326,12 @@ internal static class Program
     {
         return Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppInfo.Name, "lan-password.txt");
+    }
+
+    // On this PC only too: it is no project, only the work that is not saved yet.
+    private static string DefaultAutosaveFile()
+    {
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppInfo.Name, "autosave.json");
     }
 }

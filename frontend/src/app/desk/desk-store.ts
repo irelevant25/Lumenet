@@ -1,23 +1,27 @@
 import { Service, computed, inject, signal } from '@angular/core';
 import { DeskConnection } from './desk-connection';
-import { DeskSettings } from './desk-settings';
+import { DeskSettings, ProjectSettingsData } from './desk-settings';
 import {
+  AutosaveOptions,
   BoxStatus,
   CHANNEL_COUNT,
   CHANNEL_INDEPENDENT_COUNT,
   DEFAULT_LOOP,
   DeskState,
+  HistoryState,
   ImportAnswer,
   LanAccess,
   MAX_LEVEL,
   MAX_SEQUENCE_STEPS,
   MEDIUM_BELOW_PX,
   MEMORY_COUNT,
+  NARROW_BELOW_PX,
   MEMORY_INDEPENDENT_COUNT,
   MOBILE_BELOW_HEIGHT_PX,
   MOBILE_BELOW_WIDTH_PX,
   MemoryLooks,
   NEW_PROJECT_NAME,
+  NO_HISTORY,
   PHONE_BELOW_PX,
   Playback,
   ProjectInfo,
@@ -28,6 +32,7 @@ import {
   Sequences,
   StackState,
   StackStep,
+  StepTarget,
   TimedStep,
   Welcome,
   firstStep,
@@ -68,6 +73,13 @@ const SEND_DELAY_MS = 15;
 
 /** How long a notice stays in the top bar. */
 const NOTICE_MS = 5000;
+
+/** How long the notice stays that unsaved work was brought back: longer, it matters. */
+const RECOVERED_NOTICE_MS = 15000;
+
+/** The rate, a speed master for all sequences: from a tenth to ten times their own speed. */
+export const MIN_RATE = 0.1;
+export const MAX_RATE = 10;
 
 /** Nothing runs: no sequence gives anything, and no step of the stack is on. */
 const NO_PLAYBACK: Playback = {
@@ -122,6 +134,8 @@ export class DeskStore {
    * before LAN.
    */
   readonly lan = signal<LanAccess | null>(null);
+  /** What undo and redo would do now. */
+  readonly history = signal<HistoryState>(NO_HISTORY);
 
   /**
    * What each channel fader shows: its own level, or what the memories whose faders are up
@@ -243,6 +257,20 @@ export class DeskStore {
   });
   /** A short message for the top bar, for example an error from the backend. */
   readonly notice = signal('');
+  /**
+   * True while SOLO is lit: the keys under the faders and the independent keys put their fader
+   * to full only while they are held, instead of switching it on and off.
+   */
+  readonly soloMode = signal(false);
+  // The faders a held key holds at full now, by "channel 5" or "memory 3": the level each had before.
+  private readonly held = new Map<string, number>();
+  /** The rate, a speed master for all sequences (RATE and its wheel), and whether it counts. */
+  readonly rate = signal(1);
+  readonly rateOn = signal(false);
+  /** The autosave of the desk program: on or off, and how often; null while it is not known. */
+  readonly autosave = signal<AutosaveOptions | null>(null);
+  // True once this page said that unsaved work was brought back.
+  private recoveryTold = false;
 
   private readonly loaded = signal(false);
 
@@ -283,6 +311,17 @@ export class DeskStore {
     connection.on<[StackState]>('StackChanged', (stack) => this.stack.set(stack));
     connection.on<[Playback]>('PlaybackChanged', (playback) => this.takePlayback(playback));
     connection.on<[LanAccess]>('LanAccessChanged', (lan) => this.lan.set(lan));
+    connection.on<[HistoryState]>('HistoryChanged', (history) => this.history.set(history));
+    connection.on<[boolean, number]>('RateChanged', (on, rate) => {
+      this.rateOn.set(on);
+      this.rate.set(rate);
+    });
+    connection.on<[AutosaveOptions]>('AutosaveChanged', (options) => this.autosave.set(options));
+    // The project's settings: another page on the PC changed them, or a project was loaded.
+    // A phone keeps its own.
+    connection.on<[unknown]>('SettingsChanged', (settings) => {
+      if (this.lan()?.local && settings) this.settings.takeProject(settings);
+    });
     connection.on<[number, number]>('SequenceSpeedChanged', (memory, speed) =>
       this.sequences.update((all) => (all[memory] ? { ...all, [memory]: { ...all[memory], speed } } : all)),
     );
@@ -343,16 +382,144 @@ export class DeskStore {
 
   // ---------------------------------------------------------------- independent keys
 
-  /** A channel key of the independents switches its channel: to zero when it is up, to full when it is at zero. */
+  /**
+   * A channel key of the independents switches its channel: to zero when it is up, to full when
+   * it is at zero. In SOLO mode the key holds its fader at full instead, while it is held (holdIndependent).
+   */
   toggleIndependent(key: number): void {
+    if (this.soloMode()) return;
     const channel = this.independents()[key - 1];
     this.setChannel(channel, this.channels()[channel - 1] > 0 ? 0 : MAX_LEVEL);
   }
 
   /** A memory key of the independents switches the fader of its memory, the same way. */
   toggleMemoryIndependent(key: number): void {
+    if (this.soloMode()) return;
     const memory = this.memoryIndependents()[key - 1];
     this.setMemoryLevel(memory, this.memoryLevels()[memory - 1] > 0 ? 0 : MAX_LEVEL);
+  }
+
+  // ---------------------------------------------------------------- solo
+
+  /** SOLO: lit, the keys under the faders and the independent keys hold their fader at full while held; dark, they switch it on and off. */
+  toggleSolo(): void {
+    if (this.soloMode()) this.releaseHeld();
+    this.soloMode.update((on) => !on);
+  }
+
+  /**
+   * The key under the fader of a channel or a memory goes down (true) or up again (false). In
+   * SOLO mode the fader is at full while the key is held, and back where it was when it is let
+   * go. Not while a record key wants the key: a memory key while one waits for a memory, a
+   * channel key while a sequence is recorded.
+   */
+  holdKey(target: StepTarget, number: number, down: boolean): void {
+    if (!down) this.holdOff(target, number);
+    else if (this.soloMode() && this.keyIsFree(target)) this.holdOn(target, number);
+  }
+
+  /** The same for a key of the independents: it holds the channel or the memory it is bound to at full. */
+  holdIndependent(kind: StepTarget, key: number, down: boolean): void {
+    const number = kind === 'channel' ? this.independents()[key - 1] : this.memoryIndependents()[key - 1];
+    if (number === undefined) return;
+    if (!down) this.holdOff(kind, number);
+    else if (this.soloMode()) this.holdOn(kind, number);
+  }
+
+  // True when a key under a fader is free to hold its fader: no record key wants it.
+  private keyIsFree(target: StepTarget): boolean {
+    const kind = this.mode().kind;
+    return target === 'channel' ? kind !== 'recording' : kind === 'idle';
+  }
+
+  private holdOn(target: StepTarget, number: number): void {
+    const name = `${target} ${number}`;
+    if (this.held.has(name)) return;
+
+    const level = target === 'channel' ? this.channels()[number - 1] : this.memoryLevels()[number - 1];
+    this.held.set(name, level);
+    this.setLevel(target, number, MAX_LEVEL);
+  }
+
+  private holdOff(target: StepTarget, number: number): void {
+    const name = `${target} ${number}`;
+    const level = this.held.get(name);
+    if (level === undefined) return;
+
+    this.held.delete(name);
+    this.setLevel(target, number, level);
+  }
+
+  // Every fader a key holds at full goes back, as if its key were let go.
+  private releaseHeld(): void {
+    for (const name of [...this.held.keys()]) {
+      const [target, number] = name.split(' ');
+      this.holdOff(target as StepTarget, Number(number));
+    }
+  }
+
+  private setLevel(target: StepTarget, number: number, level: number): void {
+    if (target === 'channel') this.setChannel(number, level);
+    else this.setMemoryLevel(number, level);
+  }
+
+  // ---------------------------------------------------------------- the rate
+
+  /**
+   * RATE: lit, every sequence plays at its own speed times the rate (the wheel under the key
+   * sets it); dark, at its own speed. A speed master, like the master fader: it is not saved
+   * with the project.
+   */
+  toggleRate(): void {
+    this.rateOn.update((on) => !on);
+    this.sendSoon('rate', 'SetRate', this.rateOn(), this.rate());
+  }
+
+  /** Sets the rate, from 0.1 to 10 (the wheel); it counts while RATE is lit. */
+  setRate(rate: number): void {
+    const kept = Math.min(MAX_RATE, Math.max(MIN_RATE, rate));
+    if (kept === this.rate()) return;
+    this.rate.set(kept);
+    this.sendSoon('rate', 'SetRate', this.rateOn(), kept);
+  }
+
+  // ---------------------------------------------------------------- autosave
+
+  /** Switches the autosave and sets how often it keeps the work (on the PC only). */
+  setAutosave(on: boolean, seconds: number): void {
+    this.autosave.set({ on, seconds });
+    this.connection
+      .invoke<AutosaveOptions | undefined>('SetAutosave', on, seconds)
+      .then((options) => {
+        if (options) this.autosave.set(options);
+      })
+      .catch((error: Error) => this.say(error.message));
+  }
+
+  // ---------------------------------------------------------------- undo and redo
+
+  /**
+   * Undo: what the project holds goes back to how it was before its last change. Memories,
+   * sequences, the stack, notes and the independent keys count; the faders and Clear do not.
+   * Locked while the stack is live, as every change of what is stored is.
+   */
+  undo(): void {
+    this.moveInHistory('Undo', 'Undone');
+  }
+
+  /** Redo: a change that was undone is made again. */
+  redo(): void {
+    this.moveInHistory('Redo', 'Redone');
+  }
+
+  private moveInHistory(method: 'Undo' | 'Redo', done: string): void {
+    if (this.live()) return;
+    // Fader moves of just before reach the desk first: a memory may be stored again by redo.
+    this.flushOutbox();
+    this.connection
+      .invoke<string>(method)
+      .then((what) => this.say(`${done}: ${what}.`))
+      .catch((error: Error) => this.say(error.message));
   }
 
   /** Binds a channel key of the independents to another channel. */
@@ -395,11 +562,13 @@ export class DeskStore {
   }
 
   pressMemory(memory: number): void {
+    if (this.soloMode() && this.keyIsFree('memory')) return; // the key holds its fader at full while it is held, see holdKey
     this.follow(pressMemory(this.mode(), memory, this.memoryContent(memory)));
   }
 
   /** The key under a channel fader: its fader to full and back to zero, or a step while a sequence is recorded. */
   pressChannel(channel: number): void {
+    if (this.soloMode() && this.keyIsFree('channel')) return;
     this.follow(pressChannel(this.mode(), channel));
   }
 
@@ -669,10 +838,10 @@ export class DeskStore {
     this.outbox.clear();
   }
 
-  private say(text: string): void {
+  private say(text: string, ms = NOTICE_MS): void {
     this.notice.set(text);
     if (this.noticeTimer !== null) clearTimeout(this.noticeTimer);
-    this.noticeTimer = setTimeout(() => this.notice.set(''), NOTICE_MS);
+    this.noticeTimer = setTimeout(() => this.notice.set(''), ms);
   }
 
   /** Fetches the whole state. Runs on every connect, so a reconnect cannot leave the page out of date. */
@@ -685,6 +854,9 @@ export class DeskStore {
       this.project.set(welcome.project);
       this.loaded.set(true);
       void this.fetchLan();
+      void this.fetchHistory();
+      void this.fetchAutosave();
+      void this.tellRecovered();
     } catch {
       // The connection dropped again before the answer arrived. The next connect asks again.
     }
@@ -697,17 +869,80 @@ export class DeskStore {
       // A desk program from before LAN does not know the question. Then the page has no LAN key.
       this.lan.set(null);
     }
+    await this.joinProjectSettings();
+  }
+
+  /**
+   * On the PC the desk program runs on, the layout and the shortcuts belong to the project: the
+   * page takes the project's, or, while the desk program has none (after a start without a
+   * project), hands it its own. From then on every change goes there too. A phone or a tablet
+   * keeps its settings to itself.
+   */
+  private async joinProjectSettings(): Promise<void> {
+    if (!this.lan()?.local) {
+      this.settings.followProject(null);
+      return;
+    }
+
+    try {
+      let project = await this.connection.invoke<unknown>('GetSettings');
+      if (project === null || project === undefined) {
+        const taken = await this.connection.invoke<boolean>('AdoptSettings', this.settings.projectSettings());
+        if (!taken) project = await this.connection.invoke<unknown>('GetSettings');
+      }
+      if (project !== null && project !== undefined) this.settings.takeProject(project);
+      this.settings.followProject((settings: ProjectSettingsData) => this.run('SetSettings', settings));
+    } catch {
+      // A desk program from before settings in the project: this browser keeps them, as before.
+      this.settings.followProject(null);
+    }
+  }
+
+  private async fetchHistory(): Promise<void> {
+    try {
+      this.history.set((await this.connection.invoke<HistoryState | undefined>('GetHistory')) ?? NO_HISTORY);
+    } catch {
+      // A desk program from before undo: nothing can be undone.
+      this.history.set(NO_HISTORY);
+    }
+  }
+
+  private async fetchAutosave(): Promise<void> {
+    try {
+      this.autosave.set((await this.connection.invoke<AutosaveOptions | undefined>('GetAutosave')) ?? null);
+    } catch {
+      // A desk program from before the autosave options.
+      this.autosave.set(null);
+    }
+  }
+
+  // Once per page: unsaved work that the desk program brought back at its start.
+  private async tellRecovered(): Promise<void> {
+    if (this.recoveryTold) return;
+    try {
+      const kept = await this.connection.invoke<string | null | undefined>('GetRecovered');
+      if (!kept) return;
+      this.recoveryTold = true;
+      this.say(
+        `The work that was not saved when the desk program stopped (${kept.slice(11, 16)}) is back. ` +
+          'Save it, or load the project again to drop it.',
+        RECOVERED_NOTICE_MS,
+      );
+    } catch {
+      // A desk program from before the autosave.
+    }
   }
 
   /**
    * Keeps the layout in step with the size of the window: the number of faders in a row, and
-   * the classes on <html> ("medium", "mobile", "phone") that the style sheets go by.
+   * the classes on <html> ("medium", "narrow", "mobile", "phone") that the style sheets go by.
    */
   private followWindowSize(): void {
     if (typeof matchMedia !== 'function') return; // not in a browser, for example in the tests
 
     const below = (pixels: number): number => pixels - 0.02; // "narrower than", also for half pixels
     const medium = matchMedia(`(max-width: ${below(MEDIUM_BELOW_PX)}px)`);
+    const narrow = matchMedia(`(max-width: ${below(NARROW_BELOW_PX)}px)`);
     const mobile = matchMedia(
       `(max-width: ${below(MOBILE_BELOW_WIDTH_PX)}px), (max-height: ${below(MOBILE_BELOW_HEIGHT_PX)}px)`,
     );
@@ -719,12 +954,13 @@ export class DeskStore {
       this.mobile.set(mobile.matches);
       this.phone.set(phone.matches);
       classes.toggle('medium', medium.matches);
+      classes.toggle('narrow', narrow.matches);
       classes.toggle('mobile', mobile.matches);
       classes.toggle('phone', phone.matches);
     };
 
     update();
-    for (const query of [medium, mobile, phone]) query.addEventListener('change', update);
+    for (const query of [medium, narrow, mobile, phone]) query.addEventListener('change', update);
   }
 
   private takeDesk(desk: DeskState): void {
@@ -740,6 +976,8 @@ export class DeskStore {
     if (desk.memoryIndependents) this.memoryIndependents.set(desk.memoryIndependents);
     this.master.set(desk.master);
     this.blackout.set(desk.blackout);
+    this.rate.set(desk.rate ?? 1);
+    this.rateOn.set(desk.rateOn ?? false);
     // The whole desk comes when a memory was stored, copied or emptied, or a project loaded:
     // exactly when a look, a sequence or the stack may be another one.
     void this.fetchMemoryLooks();

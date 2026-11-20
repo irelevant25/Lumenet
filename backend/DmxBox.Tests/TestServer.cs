@@ -76,6 +76,7 @@ internal sealed class TestServer : IAsyncDisposable
             "--urls=http://127.0.0.1:0",
             $"--Projects:Folder={folder.FullName}",
             $"--Lan:PasswordFile={Path.Combine(folder.FullName, "lan-password.txt")}",
+            $"--Autosave:File={Path.Combine(folder.FullName, "autosave.json")}",
             "--Box:Host=pretend-box",
             .. moreSettings,
         ];

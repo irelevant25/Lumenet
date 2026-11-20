@@ -17,6 +17,17 @@ internal sealed partial class Desk
     // start plays other orders.
     private readonly int[] _sequenceSeeds = new int[MemoryCount];
 
+    // The rate: a speed master for all sequences. While it is on, every sequence plays at its own
+    // speed times the rate. Like the master fader it belongs to the evening, not to the project.
+    private double _rate = 1;
+    private bool _rateOn;
+
+    /// <summary>The slowest rate: every sequence ten times slower.</summary>
+    public const double MinRate = 0.1;
+
+    /// <summary>The fastest rate: every sequence ten times faster.</summary>
+    public const double MaxRate = 10;
+
     /// <summary>
     /// Stores a sequence in a memory that is empty or holds a sequence already, played in turn
     /// and at its own speed. See <see cref="SetSequence(int, Sequence?)"/>.
@@ -88,10 +99,57 @@ internal sealed partial class Desk
             double now = Now;
             double elapsed = SequenceTime(memory - 1, now);
             _sequences[memory - 1] = sequence with { Speed = checkedSpeed };
-            _sequenceStarts[memory - 1] = now - elapsed / checkedSpeed;
+            _sequenceStarts[memory - 1] = now - elapsed / SpeedOf(memory - 1);
             _projectChanges++;
             _outputChanges++;
             return checkedSpeed;
+        }
+    }
+
+    /// <summary>The rate, a speed master for all sequences, and whether it is on.</summary>
+    public (bool On, double Rate) Rate
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return (_rateOn, _rate);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Sets the rate, a speed master for all sequences: while it is on, every sequence plays at
+    /// its own speed times the rate; off, at its own speed. Every sequence goes on from where it
+    /// is. It is no part of the project, so it can be changed while the stack is live.
+    /// </summary>
+    /// <param name="on">True: the rate counts.</param>
+    /// <param name="rate">From 0.1 (ten times slower) to 10 (ten times faster); 1 changes nothing.</param>
+    /// <exception cref="DeskException">The rate is out of range.</exception>
+    public void SetRate(bool on, double rate)
+    {
+        // "Not a number" fails both comparisons, so it is refused as well. The numbers are written
+        // with a point, as on the UI, whatever the language of the PC.
+        if (!(rate >= MinRate && rate <= MaxRate))
+            throw new DeskException(FormattableString.Invariant($"The rate must be from {MinRate} to {MaxRate}, not {rate}."));
+
+        lock (_lock)
+        {
+            if (on == _rateOn && rate == _rate)
+                return;
+
+            // Every sequence stands where it stands; from here on its time runs at the new speed.
+            double now = Now;
+            double[] elapsed = new double[MemoryCount];
+            for (int index = 0; index < MemoryCount; index++)
+                elapsed[index] = SequenceTime(index, now);
+
+            _rateOn = on;
+            _rate = rate;
+            for (int index = 0; index < MemoryCount; index++)
+                _sequenceStarts[index] = now - elapsed[index] / SpeedOf(index);
+
+            _outputChanges++;
         }
     }
 
@@ -157,10 +215,17 @@ internal sealed partial class Desk
     }
 
     // Call with the lock held. The time of the sequence at "index": seconds since its start,
-    // counted at its speed.
+    // counted at the speed it plays at.
     private double SequenceTime(int index, double now)
     {
-        return (now - _sequenceStarts[index]) * (_sequences[index]?.Speed ?? 1);
+        return (now - _sequenceStarts[index]) * SpeedOf(index);
+    }
+
+    // Call with the lock held. The speed the sequence at "index" plays at: its own, times the
+    // rate while the rate is on.
+    private double SpeedOf(int index)
+    {
+        return (_sequences[index]?.Speed ?? 1) * (_rateOn ? _rate : 1);
     }
 
     // Call with the lock held. A look is not turned into a sequence unasked: its owner empties

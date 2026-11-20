@@ -1,0 +1,86 @@
+/* A panel over the whole width of Settings: the groups side by side as far as there is room. */
+:host {
+  display: block;
+  grid-column: 1 / -1;
+  min-width: 0;
+  padding: 10px 14px 12px;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: var(--well);
+}
+
+h3,
+h4 {
+  margin: 0 0 10px;
+  color: var(--legend-dim);
+  font-size: calc(12px * var(--font-scale));
+  font-stretch: 75%;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+h4 {
+  margin-bottom: 6px;
+}
+
+.hint {
+  max-width: 70ch;
+  margin: 2px 0 12px;
+  color: var(--legend-dim);
+  font-size: calc(13px * var(--font-scale));
+  line-height: 1.35;
+}
+
+.groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 14px 24px;
+}
+
+/* a colour: the field, what it is for, and the key back to the usual one */
+.colour {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: calc(14px * var(--font-scale));
+}
+
+input[type='color'] {
+  width: 36px;
+  height: calc(24px * var(--font-scale));
+  padding: 0 2px;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: var(--panel);
+  cursor: pointer;
+}
+
+button {
+  height: calc(26px * var(--font-scale));
+  padding: 0 8px;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--legend);
+  font: inherit;
+  font-size: calc(13px * var(--font-scale));
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+button:hover:not(:disabled),
+input[type='color']:hover {
+  border-color: var(--legend-dim);
+}
+
+.all {
+  margin-top: 10px;
+}

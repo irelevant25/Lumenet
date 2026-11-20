@@ -61,7 +61,7 @@ h2 {
   width: 0;
   height: 0;
   translate: 0 -50%;
-  border-top: 6px solid var(--channel);
+  border-top: 6px solid var(--key-play);
   border-right: 4px solid transparent;
   border-left: 4px solid transparent;
 }
@@ -111,7 +111,7 @@ h2 {
 
 /* the step that is on: lit green, as on the Stack view */
 .roller .current {
-  background: var(--channel);
+  background: var(--key-play);
   color: #0b0d10;
 }
 
@@ -128,7 +128,7 @@ h2 {
 }
 
 .roller .next {
-  color: var(--system);
+  color: var(--key-next);
 }
 
 /* ---- mobile: one line. The title over it, then the five keys in the columns of the faders,

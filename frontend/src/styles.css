@@ -22,6 +22,44 @@
   --live: #ff5247; /* the stack is live: the red of an "on air" sign, on the Stack key and in the top bar */
   --previous: var(--blue-lamp); /* the step of the stack before the one that is on: blue */
 
+  /* The colour of each key, which Settings can change (desk/key-colours.ts lists them, with
+     these same colours). A key's tone names its variable: tone="play" takes --key-play. */
+  --key-channel: var(--channel);
+  --key-memory: var(--memory);
+  --key-system: var(--system);
+  --key-white: var(--white-lamp);
+  --key-blue: var(--blue-lamp);
+  --key-live: var(--live);
+  --key-stack: var(--live);
+  --key-clear: #f1f3f6;
+  --key-solo: #f1f3f6;
+  --key-blackout: #4aa3ff;
+  --key-rate: #ffb020;
+  --key-prev: #ffb020;
+  --key-play: #3ddc84;
+  --key-pause: #f1f3f6;
+  --key-next: #ffb020;
+  --key-add-step: #ffb020;
+  --key-save: #ffb020;
+  --key-edit: #ffb020;
+  --key-record: #ffb020;
+  --key-copy: #ffb020;
+  --key-delete: #ffb020;
+  --key-lan: #ffb020;
+  --key-undo: #ffb020;
+  --key-redo: #ffb020;
+  --key-new: #ffb020;
+  --key-save-project: #ffb020;
+  --key-load: #ffb020;
+  --key-import: #ffb020;
+  --key-ind-edit: #ffb020;
+  --key-once: #ffb020;
+  --key-loop: #ffb020;
+  --key-random: #ffb020;
+  --key-sequence-add: #ffb020;
+  --key-template: #ffb020;
+  --key-normal-speed: #ffb020;
+
   --cap: #d9dde3;
   --focus: #8ab4ff;
 
@@ -67,9 +105,10 @@
   --key-range: calc(max(9px, var(--key-w) * 0.26) * var(--font-scale));
   --readout: calc(max(11px, var(--key-w) * 0.31) * var(--font-scale));
 
-  /* The wheel of the stack on the main view: a place for each step, numbers that follow the
-     size of all lettering fully. The main view sizes its side column with them. */
-  --wheel-number: calc(max(11px, var(--key-w) * 0.26) * var(--font-scale));
+  /* The wheel of the stack on the main view: a place for each step, numbers about half as high
+     as a key is wide (a cue such as 102.5 still fits), that follow the size of all lettering
+     fully. The main view sizes its side column with them. */
+  --wheel-number: calc(clamp(15px, var(--key-w) * 0.5, 22px) * var(--font-scale));
   --place-h: calc(var(--wheel-number) * 1.4);
 }
 
@@ -225,12 +264,12 @@ table.steps tr.previous > * {
 }
 
 table.steps tr.current > * {
-  border-color: var(--channel);
-  background: color-mix(in srgb, var(--channel) 20%, var(--well));
+  border-color: var(--key-play);
+  background: color-mix(in srgb, var(--key-play) 20%, var(--well));
 }
 
 table.steps tr.next > * {
-  border-color: var(--system);
+  border-color: var(--key-next);
 }
 
 /* while a step is dragged: a line where it would land, above or below this row */

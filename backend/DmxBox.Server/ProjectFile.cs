@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace DmxBox.Server;
@@ -48,6 +49,14 @@ internal sealed class ProjectFile
 
     /// <summary>The steps of the stack. Files of version 1 do not have the property.</summary>
     public List<ProjectFileStep?>? Stack { get; set; }
+
+    /// <summary>
+    /// The settings of the UI on the PC that belong to the project, see
+    /// <see cref="ProjectSettings"/>. Written only for a project that has some; files from before
+    /// there were such settings do not have the property, nor do imported shows.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public JsonElement? Settings { get; set; }
 }
 
 /// <summary>A memory that holds a sequence, as it stands in a project file.</summary>

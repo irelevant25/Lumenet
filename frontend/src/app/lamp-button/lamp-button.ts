@@ -3,12 +3,13 @@ import { BlinkClock } from '../desk/blink-clock';
 import { LampLevel } from '../desk/lamps';
 
 /**
- * The colour of a lamp: green for channels, red for memories, red running into yellow for a
- * memory that holds a sequence, amber for the record keys and the project buttons,
- * white for Clear, blue for Blackout, and the red of "on air" for the key that takes the
- * stack live.
+ * The colour of a lamp. Each key has a colour of its own, which Settings can change (see
+ * desk/key-colours.ts): the tone names it, and the key takes the variable --key-<tone> of
+ * styles.css. Besides those of the keys, "channel" (green), "memory" (red), "system" (amber),
+ * "white", "blue" and "live" stand for the colours of their kind; "sequence" is a memory that
+ * holds a sequence, red running into yellow.
  */
-export type LampTone = 'channel' | 'memory' | 'sequence' | 'system' | 'white' | 'blue' | 'live';
+export type LampTone = string;
 
 /**
  * A square key that is lit from behind, like the keys of a lighting desk.
@@ -18,6 +19,7 @@ export type LampTone = 'channel' | 'memory' | 'sequence' | 'system' | 'white' | 
 @Component({
   host: {
     '[class]': 'hostClass()',
+    '[style.--lamp]': 'lampColour()',
   },
   selector: '[lmLamp]',
   styleUrl: './lamp-button.css',
@@ -45,4 +47,9 @@ export class LampButton {
     if (this.blink() && this.clock.reducedMotion) classes.push('steady-attention');
     return classes.join(' ');
   });
+
+  /** The lamp's colour: the variable of its tone. A sequence's comes from its style sheet. */
+  protected readonly lampColour = computed(() =>
+    this.tone() === 'sequence' ? null : `var(--key-${this.tone()})`,
+  );
 }

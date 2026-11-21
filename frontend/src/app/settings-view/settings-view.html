@@ -227,6 +227,68 @@
     }
   </section>
 
-  <!-- ---------------------------------------------------------------- colours -->
-  <lm-key-colours-panel />
+  <!-- ---------------------------------------------------------------- views in the top bar -->
+  <section class="panel" aria-labelledby="views-title">
+    <div class="head">
+      <h3 id="views-title">Views in the top bar</h3>
+      <button
+        type="button"
+        aria-label="The usual views"
+        title="All the views, in the usual order"
+        [disabled]="viewsUsual()"
+        (click)="settings.resetViews()"
+      >
+        ↺
+      </button>
+    </div>
+    <ul class="views">
+      @for (view of orderedViews(); track view.name; let first = $first, last = $last) {
+        <li>
+          <label>
+            <input
+              type="checkbox"
+              [checked]="viewShown(view.name)"
+              [disabled]="view.name === alwaysShown"
+              (change)="onViewShown(view.name, $event)"
+            />
+            {{ view.label }}
+            @if (view.name === alwaysShown) {
+              <span class="note">always there</span>
+            }
+          </label>
+          <button
+            type="button"
+            class="move"
+            title="One place to the left in the top bar"
+            [attr.data-move]="view.name + ':-1'"
+            [attr.aria-label]="'Move ' + view.label + ' up'"
+            [disabled]="first"
+            (click)="moveView(view.name, -1)"
+          >
+            ▲
+          </button>
+          <button
+            type="button"
+            class="move"
+            title="One place to the right in the top bar"
+            [attr.data-move]="view.name + ':1'"
+            [attr.aria-label]="'Move ' + view.label + ' down'"
+            [disabled]="last"
+            (click)="moveView(view.name, 1)"
+          >
+            ▼
+          </button>
+        </li>
+      }
+    </ul>
+    <p class="hint">
+      A view that is not ticked leaves the top bar; its keyboard shortcut still opens it. Settings
+      stays, so that the others can come back. ▲ and ▼ move a view to the left or right in the top
+      bar, and ↺ brings all of them back in the usual order. Without Main the desk opens on the
+      first view ticked.
+    </p>
+  </section>
+
+  <!-- ---------------------------------------------------------------- colors -->
+  <lm-key-colors-panel />
 </div>

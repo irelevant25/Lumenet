@@ -13,7 +13,7 @@ import {
   MAX_LEVEL,
   MAX_STEP_SECONDS,
   MEMORY_COUNT,
-  StepTarget,
+  StepKind,
   TimedStep,
 } from '../desk/desk-types';
 import { StepChoices, withCurrent } from '../desk/step-choices';
@@ -28,10 +28,11 @@ type TimeField = 'up' | 'wait' | 'down';
 const rowWithList = signal<StepRow | null>(null);
 
 /**
- * One row of a table of steps: what the step stands for (a channel or a memory and its
- * number), the note of that channel or memory, the step's value, and its three times. Put it
- * on a table row: `<tr lmStepRow>`. Cells that belong before or after these seven are given by
- * whoever uses the row, marked `before` and `after`.
+ * One row of a table of steps: what the step stands for (a channel, a memory, a fixture or a
+ * group, and which), the note of that channel or memory or the name of the fixture or group
+ * (with the color of a fixture or group before it, a press on which asks for another), the
+ * step's value, and its three times. Put it on a table row: `<tr lmStepRow>`. Cells that belong
+ * before or after these seven are given by whoever uses the row, marked `before` and `after`.
  *
  * The number is chosen from a list that shows every number with the note under its fader,
  * like "5: Front left". The list is long (512 channels), so only one row carries it at a time:
@@ -67,15 +68,25 @@ export class StepRow {
   readonly locked = input(false);
   /** The step with one field changed. */
   readonly stepChange = output<TimedStep>();
+  /** The color of a step of a fixture or a group was pressed: whoever uses the row asks for another. */
+  readonly colorPick = output<void>();
 
   protected readonly maxSeconds = MAX_STEP_SECONDS;
 
   /** True while this row's field for the number holds the whole list. */
   protected readonly listed = computed(() => rowWithList() === this);
 
+  /** True for a step of a fixture or a group, which has a color. */
+  protected readonly lights = computed(() => isLights(this.step().target));
+
   /** The list for the kind of step this is, with the step's own number in it for sure. */
   protected readonly list = computed(() =>
-    withCurrent(this.choices()[this.step().target], this.step().number),
+    withCurrent(this.choices()[this.step().target], this.step().number, this.lights()),
+  );
+
+  /** What the closed field shows: the number; a fixture's address, a group's "G2". */
+  protected readonly shown = computed(
+    () => this.list().find((choice) => choice.number === this.step().number)?.short ?? String(this.step().number),
   );
 
   /** Seconds are shown with one digit after the point. */
@@ -100,8 +111,11 @@ export class StepRow {
   }
 
   protected onTarget(event: Event): void {
-    const target = (event.target as HTMLSelectElement).value as StepTarget;
-    this.stepChange.emit({ ...this.step(), target, number: this.numberFor(target) });
+    const target = (event.target as HTMLSelectElement).value as StepKind;
+    const { color, ...rest } = this.step();
+    const step = { ...rest, target, number: this.numberFor(target) };
+    // a fixture or a group keeps the color it had; a channel or a memory has none
+    this.stepChange.emit(isLights(target) ? { ...step, color: color ?? null } : step);
   }
 
   protected onNumber(event: Event): void {
@@ -133,15 +147,22 @@ export class StepRow {
   }
 
   /**
-   * The number a step gets when it is switched to the other kind: the number it has if that
-   * kind offers it, else the first number on offer, else the nearest number there is.
+   * The number a step gets when it is switched to another kind: the number it has if that kind
+   * offers it, else the first number on offer, else the nearest number there is (for a fixture
+   * or a group, while the plan has none: 0, none).
    */
-  private numberFor(target: StepTarget): number {
+  private numberFor(target: StepKind): number {
     const old = this.step().number;
     const offered = this.choices()[target];
     if (offered.some((choice) => choice.number === old)) return old;
-    return offered[0]?.number ?? Math.min(old, target === 'channel' ? CHANNEL_COUNT : MEMORY_COUNT);
+    if (offered[0]) return offered[0].number;
+    return isLights(target) ? 0 : Math.min(Math.max(1, old), target === 'channel' ? CHANNEL_COUNT : MEMORY_COUNT);
   }
+}
+
+/** True for a step of a fixture or a group of the stage plan. */
+function isLights(target: StepKind): boolean {
+  return target === 'fixture' || target === 'group';
 }
 
 /** A whole number from `min` to `max`, or null for any other text. */

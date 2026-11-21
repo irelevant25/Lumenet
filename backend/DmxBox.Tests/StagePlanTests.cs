@@ -17,14 +17,14 @@ public sealed class StagePlanTests
 
         StageLight light = Assert.Single(plan.Lights);
         Assert.Equal(new StageLight(1, "LED bar", 30, "RGBW", "#2060ff", 8.12, -1.5, 270), light);
-        Assert.Null(new StagePlan(8, 8, [Light(1, 1, "D") with { Colour = "" }]).Checked().Lights[0].Colour);
+        Assert.Null(new StagePlan(8, 8, [Light(1, 1, "D") with { Color = "" }]).Checked().Lights[0].Color);
     }
 
     [Theory]
     [InlineData(3, 10, "D", 1, 1, 1, "The stage can be 4 to 64 squares wide and deep, not 3 by 10.")]
     [InlineData(16, 65, "D", 1, 1, 1, "The stage can be 4 to 64 squares wide and deep, not 16 by 65.")]
-    [InlineData(16, 10, "", 1, 1, 1, "Light 1 of the plan needs 1 to 64 letters for its channels, like RGB.")]
-    [InlineData(16, 10, "R1B", 1, 1, 1, "Light 1 of the plan needs 1 to 64 letters for its channels, like RGB.")]
+    [InlineData(16, 10, "", 1, 1, 1, "Light 1 of the plan needs 1 to 512 letters for its channels, like RGB.")]
+    [InlineData(16, 10, "R1B", 1, 1, 1, "Light 1 of the plan needs 1 to 512 letters for its channels, like RGB.")]
     [InlineData(16, 10, "D", 0, 1, 1, "Light 1 of the plan at address 0 with 1 channel does not fit into the channels 1 to 512.")]
     [InlineData(16, 10, "RGBW", 510, 1, 1, "Light 1 of the plan at address 510 with 4 channels does not fit into the channels 1 to 512.")]
     [InlineData(16, 10, "D", 1, -2.5, 1, "Light 1 of the plan is not on the plan.")]
@@ -37,7 +37,7 @@ public sealed class StagePlanTests
     }
 
     [Fact]
-    public void ANameAColourAndTheNumbersOfTheLightsAreChecked()
+    public void ANameAColorAndTheNumbersOfTheLightsAreChecked()
     {
         StagePlan plan = new(16, 10, [Light(1, 1, "D")]);
         Assert.Equal(
@@ -47,8 +47,8 @@ public sealed class StagePlanTests
             "Light 1 of the plan: a name cannot contain a tab, a line break or the like.",
             Assert.Throws<DeskException>(() => (plan with { Lights = [Light(1, 1, "D") with { Name = "a\tb" }] }).Checked()).Message);
         Assert.Equal(
-            "Light 1 of the plan: \"red\" is no colour like #ff2000.",
-            Assert.Throws<DeskException>(() => (plan with { Lights = [Light(1, 1, "D") with { Colour = "red" }] }).Checked()).Message);
+            "Light 1 of the plan: \"red\" is no color like #ff2000.",
+            Assert.Throws<DeskException>(() => (plan with { Lights = [Light(1, 1, "D") with { Color = "red" }] }).Checked()).Message);
         Assert.Equal(
             "Two lights of the plan have the same number, 1.",
             Assert.Throws<DeskException>(() => (plan with { Lights = [Light(1, 1, "D"), Light(1, 2, "D")] }).Checked()).Message);
@@ -205,7 +205,7 @@ public sealed class StagePlanTests
         string file = Write(_desk.GetProject().Content);
         Assert.Contains("\"channels\": \"RGBRGBRGBRGB\"", file);
         Assert.DoesNotContain("\"id\"", file);
-        Assert.DoesNotContain("\"colour\": null", file);
+        Assert.DoesNotContain("\"color\": null", file);
 
         StagePlan back = Read(file).Stage!;
         Assert.Equal(20, back.Width);
@@ -213,6 +213,23 @@ public sealed class StagePlanTests
         Assert.Equal(
             new[] { new StageLight(1, "LED bar", 30, "RGBRGBRGBRGB", null, 8, 1, 90), new StageLight(2, "Back blue 1", 6, "D", "#2060ff", 2, 1.5, 0) },
             back.Lights);
+    }
+
+    [Fact]
+    public void AFileThatSpellsColorTheBritishWayKeepsTheColorsOfItsLights()
+    {
+        // Files written before 2026-11-21 spell color the British way: it is read, and written the new way.
+        const string file = """
+            { "format": "lumenet-project", "version": 4, "memories": [], "stage": { "lights": [
+              { "address": 1, "channels": "D", "colour": "#2060ff" },
+              { "address": 2, "channels": "D", "color": "#ff0000", "colour": "#00ff00" } ] } }
+            """;
+        StagePlan plan = Read(file).Stage!;
+        Assert.Equal(["#2060ff", "#ff0000"], plan.Lights.Select(light => light.Color));
+
+        string written = Write(Read(file));
+        Assert.Contains("\"color\": \"#2060ff\"", written);
+        Assert.DoesNotContain("colour", written);
     }
 
     [Fact]

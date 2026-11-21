@@ -66,7 +66,7 @@ internal static class Demos
         box.ReleaseArtNet();   // let the cue layer take over again
     }
 
-    // The rainbow rolls across the PARs: each PAR is a quarter of the colour circle ahead of its neighbour.
+    // The rainbow rolls across the PARs: each PAR is a quarter of the color circle ahead of its neighbour.
     private static byte[] RainbowFrame(double seconds)
     {
         byte[] frame = new byte[ChannelCount];

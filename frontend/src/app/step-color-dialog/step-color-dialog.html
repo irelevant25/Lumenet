@@ -1,0 +1,11 @@
+<dialog #dialog aria-labelledby="step-color-title">
+  <div class="body">
+    <h2 id="step-color-title">{{ title() }}</h2>
+    <lm-color-picker [mixes]="true" [color]="color()" (pick)="onPick($event)" />
+    <p class="hint">A moving head with a color wheel turns it to the color nearest this one.</p>
+    <div class="actions">
+      <button lmLamp type="button" tone="system" aria-label="White, no color" (click)="white()">White</button>
+      <button lmLamp type="button" tone="system" (click)="close()">Cancel</button>
+    </div>
+  </div>
+</dialog>

@@ -1,6 +1,7 @@
 import { Service, computed, effect, signal } from '@angular/core';
 import { CHANNEL_INDEPENDENT_COUNT, MEMORY_INDEPENDENT_COUNT } from './desk-types';
-import { KEY_COLOURS, isColour, keyColourWithId } from './key-colours';
+import { KEY_COLORS, isColor, keyColorWithId } from './key-colors';
+import { ALWAYS_SHOWN, DEFAULT_VIEW_ORDER, ViewName, hiddenViewsOf, viewOrderOf } from './views';
 
 /**
  * How many channels one page of the channel faders on the main view holds: as the size of the
@@ -63,8 +64,12 @@ export interface DeskSettingsData {
   readonly fontScale: number;
   /** The keyboard shortcuts: for each key of the desk that has one, by its name (see desk-actions.ts), the keys that press it. */
   readonly shortcuts: Readonly<Record<string, string>>;
-  /** The colours that differ from the usual ones, by their name (see key-colours.ts): "#3ddc84". */
-  readonly colours: Readonly<Record<string, string>>;
+  /** The colors that differ from the usual ones, by their name (see key-colors.ts): "#3ddc84". */
+  readonly colors: Readonly<Record<string, string>>;
+  /** The views left out of the top bar (see views.ts); never Settings. */
+  readonly hiddenViews: readonly ViewName[];
+  /** The order of the views in the top bar: every view, once. */
+  readonly viewOrder: readonly ViewName[];
 }
 
 export const DEFAULT_SETTINGS: DeskSettingsData = {
@@ -76,7 +81,9 @@ export const DEFAULT_SETTINGS: DeskSettingsData = {
   memoryKeys: DEFAULT_SHOWN_KEYS,
   fontScale: 1,
   shortcuts: DEFAULT_SHORTCUTS,
-  colours: {},
+  colors: {},
+  hiddenViews: [],
+  viewOrder: DEFAULT_VIEW_ORDER,
 };
 
 /** The part of the settings that belongs to the project on the PC: all but the lettering. */
@@ -92,7 +99,9 @@ export function projectPart(settings: DeskSettingsData): ProjectSettingsData {
     channelKeys: settings.channelKeys,
     memoryKeys: settings.memoryKeys,
     shortcuts: settings.shortcuts,
-    colours: settings.colours,
+    colors: settings.colors,
+    hiddenViews: settings.hiddenViews,
+    viewOrder: settings.viewOrder,
   };
 }
 
@@ -127,16 +136,19 @@ export function settingsOf(raw: unknown): DeskSettingsData {
     memoryKeys: keyCount(kept['memoryKeys'], MEMORY_INDEPENDENT_COUNT),
     fontScale: fontScale(kept['fontScale']),
     shortcuts: shortcuts(kept['shortcuts']),
-    colours: colours(kept['colours']),
+    // settings kept before 2026-11-21 name the colors in the British spelling: read, never written
+    colors: colors(kept['colors'] ?? kept['colours']),
+    hiddenViews: hiddenViewsOf(kept['hiddenViews']),
+    viewOrder: viewOrderOf(kept['viewOrder']),
   };
 }
 
-/** The colours that make sense: a known name with a colour like "#3ddc84". */
-function colours(value: unknown): Record<string, string> {
+/** The colors that make sense: a known name with a color like "#3ddc84". */
+function colors(value: unknown): Record<string, string> {
   const kept: Record<string, string> = {};
   if (typeof value !== 'object' || value === null) return kept;
-  for (const [id, colour] of Object.entries(value)) {
-    if (keyColourWithId(id) && isColour(colour)) kept[id] = colour.toLowerCase();
+  for (const [id, color] of Object.entries(value)) {
+    if (keyColorWithId(id) && isColor(color)) kept[id] = color.toLowerCase();
   }
   return kept;
 }
@@ -205,7 +217,9 @@ export class DeskSettings {
   readonly memoryKeys = computed(() => this.data().memoryKeys);
   readonly fontScale = computed(() => this.data().fontScale);
   readonly shortcuts = computed(() => this.data().shortcuts);
-  readonly colours = computed(() => this.data().colours);
+  readonly colors = computed(() => this.data().colors);
+  readonly hiddenViews = computed(() => this.data().hiddenViews);
+  readonly viewOrder = computed(() => this.data().viewOrder);
   /** The part of the settings that belongs to the project. */
   readonly projectSettings = computed(() => projectPart(this.data()));
 
@@ -215,42 +229,64 @@ export class DeskSettings {
       if (typeof document !== 'undefined') document.documentElement.style.setProperty('--font-scale', String(scale));
     });
 
-    // The colours that differ from the usual ones go onto <html>, in place of those of styles.css.
+    // The colors that differ from the usual ones go onto <html>, in place of those of styles.css.
     effect(() => {
-      const colours = this.data().colours;
+      const colors = this.data().colors;
       if (typeof document === 'undefined') return;
       const style = document.documentElement.style;
-      for (const entry of KEY_COLOURS) {
-        const colour = colours[entry.id];
-        if (colour) style.setProperty(entry.variable, colour);
+      for (const entry of KEY_COLORS) {
+        const color = colors[entry.id];
+        if (color) style.setProperty(entry.variable, color);
         else style.removeProperty(entry.variable);
       }
     });
   }
 
-  /** Gives a key, or a kind of key, a colour of its own: "#3ddc84". */
-  setColour(id: string, colour: string): void {
-    const entry = keyColourWithId(id);
-    if (!entry || !isColour(colour)) return;
-    const rest = { ...this.data().colours };
-    if (colour.toLowerCase() === entry.standard) delete rest[id];
-    else rest[id] = colour.toLowerCase();
-    this.change({ colours: rest });
+  /** Gives a key, or a kind of key, a color of its own: "#3ddc84". */
+  setColor(id: string, color: string): void {
+    const entry = keyColorWithId(id);
+    if (!entry || !isColor(color)) return;
+    const rest = { ...this.data().colors };
+    if (color.toLowerCase() === entry.standard) delete rest[id];
+    else rest[id] = color.toLowerCase();
+    this.change({ colors: rest });
   }
 
-  /** The usual colour again, for one (by its name) or, without a name, for all. */
-  resetColours(id?: string): void {
+  /** The usual color again, for one (by its name) or, without a name, for all. */
+  resetColors(id?: string): void {
     if (id === undefined) {
-      this.change({ colours: {} });
+      this.change({ colors: {} });
       return;
     }
-    const rest = { ...this.data().colours };
+    const rest = { ...this.data().colors };
     delete rest[id];
-    this.change({ colours: rest });
+    this.change({ colors: rest });
   }
 
   setChannelSize(size: ChannelSize): void {
     this.change({ channelSize: size });
+  }
+
+  /** A view in the top bar (true), or left out of it (false). Settings stays in it. */
+  setViewShown(name: ViewName, shown: boolean): void {
+    if (name === ALWAYS_SHOWN) return;
+    const others = this.data().hiddenViews.filter((hidden) => hidden !== name);
+    this.change({ hiddenViews: hiddenViewsOf(shown ? others : [...others, name]) });
+  }
+
+  /** A view one place earlier (-1) or later (+1) in the top bar. */
+  moveView(name: ViewName, by: -1 | 1): void {
+    const order = [...this.data().viewOrder];
+    const at = order.indexOf(name);
+    const other = at + by;
+    if (at < 0 || other < 0 || other >= order.length) return;
+    [order[at], order[other]] = [order[other], order[at]];
+    this.change({ viewOrder: order });
+  }
+
+  /** Every view in the top bar again, in the usual order. */
+  resetViews(): void {
+    this.change({ hiddenViews: [], viewOrder: DEFAULT_VIEW_ORDER });
   }
 
   setChannelRows(rows: RowCount): void {

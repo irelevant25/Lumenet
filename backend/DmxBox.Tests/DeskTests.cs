@@ -171,7 +171,7 @@ public sealed class DeskTests
     }
 
     [Fact]
-    public void BlackoutIsNotPartOfTheOutput()
+    public void BlackoutDarkensTheOutputAndLeavesTheFaders()
     {
         var desk = new Desk();
         desk.SetChannel(1, 200);
@@ -179,7 +179,11 @@ public sealed class DeskTests
         desk.SetBlackout(true);
 
         Assert.True(desk.Blackout);
-        Assert.Equal(200, desk.GetOutput()[0]);   // the box makes it dark, not the desk
+        Assert.Equal(0, desk.GetOutput()[0]);
+        Assert.Equal(200, desk.GetState().Channels[0]);
+
+        desk.SetBlackout(false);
+        Assert.Equal(200, desk.GetOutput()[0]);
     }
 
     [Fact]
@@ -198,15 +202,13 @@ public sealed class DeskTests
         AssertMovesOutputCounter(desk, () => desk.DeleteMemory(3));
         AssertMovesOutputCounter(desk, () => desk.Clear());
         AssertMovesOutputCounter(desk, () => desk.ReplaceProject(EmptyProject()));
+        AssertMovesOutputCounter(desk, () => desk.SetBlackout(true));
 
         long beforeNote = desk.OutputChanges;
         desk.SetChannelNote(1, "Front left");
         desk.SetMemoryNote(1, "Blue wash");
+        desk.SetBlackout(true);   // it is on already
         Assert.Equal(beforeNote, desk.OutputChanges);
-
-        long before = desk.OutputChanges;
-        desk.SetBlackout(true);
-        Assert.Equal(before, desk.OutputChanges);
     }
 
     // ---------------------------------------------------------------- numbers out of range

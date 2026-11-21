@@ -1,0 +1,92 @@
+@if (light(); as light) {
+  <div class="head">
+    <h3>{{ light.name || 'A light' }}</h3>
+    <button type="button" class="close" aria-label="Close" title="Close" (click)="choice.set(null)">✕</button>
+  </div>
+  <p class="facts">{{ kindSaid() }}</p>
+
+  @if (mixes() || slots().length > 0) {
+    <h4>Color</h4>
+    <lm-color-picker [color]="color()" [mixes]="mixes()" [slots]="slots()" (pick)="onPick(light, $event)" />
+  }
+
+  @if (position(); as position) {
+    <h4>Where it points</h4>
+    <lm-position-pad [x]="position.x" [y]="position.y" (move)="store.setFixturePosition(light, $event.x, $event.y)" />
+  }
+
+  @if (choices().length > 0) {
+    <h4>Settings</h4>
+    <div class="form">
+      @for (choice of choices(); track choice.channel) {
+        <label [for]="'fixture-choice-' + choice.channel">{{ choice.name }}</label>
+        <select [id]="'fixture-choice-' + choice.channel" (change)="setChoice(choice.channel, $event)">
+          @if (choice.current < 0) {
+            <option value="" selected>{{ choice.value }}</option>
+          }
+          @for (range of choice.ranges; track $index) {
+            <option [value]="range.from" [selected]="$index === choice.current">{{ range.label }}</option>
+          }
+        </select>
+      }
+    </div>
+  }
+
+  <h4>Channels</h4>
+  <lm-light-faders [light]="light" />
+} @else if (group(); as group) {
+  <div class="head">
+    <h3>{{ group.name || 'A group' }}</h3>
+    <button type="button" class="close" aria-label="Close" title="Close" (click)="choice.set(null)">✕</button>
+  </div>
+  <p class="facts">{{ group.lights.length === 1 ? '1 light' : group.lights.length + ' lights' }}; its fader moves all of them, each in its own color.</p>
+
+  <div class="form">
+    <label for="group-name">Name</label>
+    <input
+      id="group-name"
+      type="text"
+      autocomplete="off"
+      [attr.maxlength]="nameLength"
+      [value]="group.name"
+      [readOnly]="store.live()"
+      (change)="rename(group, $event)"
+    />
+  </div>
+
+  @if (groupMixes()) {
+    <h4>Color</h4>
+    <lm-color-picker [mixes]="true" (pick)="onGroupPick(group, $event)" />
+  }
+
+  <h4>Lights</h4>
+  <ul class="members">
+    @for (member of lights(); track member.id) {
+      <li>
+        <label>
+          <input
+            type="checkbox"
+            [checked]="group.lights.includes(member.id)"
+            [disabled]="store.live()"
+            (change)="toggleMember(group, member.id, $event)"
+          />
+          {{ member.name || 'A light' }} <span class="dim">{{ channelRange(member) }}</span>
+        </label>
+      </li>
+    } @empty {
+      <li class="dim">The stage plan has no lights yet.</li>
+    }
+  </ul>
+  <button type="button" class="remove" [disabled]="store.live()" (click)="removeGroup(group)">Remove the group</button>
+} @else {
+  <h3>Fixture</h3>
+  <p class="hint">
+    Press the color on top of a fixture to see it here: its color, where a moving head points,
+    its wheels and the faders of all its channels. Its fader and its key move its intensity: the
+    dimmer, or the colors of a fixture without one, which keep their mix.
+  </p>
+  <p class="hint">
+    A group's fader moves all its lights. New group makes one of the fixture chosen; its lights are
+    ticked here. The fixtures are the lights of the stage plan: add them in the Stage view (Edit).
+  </p>
+}

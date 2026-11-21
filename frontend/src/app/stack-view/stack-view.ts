@@ -1,9 +1,9 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { DeskStore } from '../desk/desk-store';
 import { StackStep, TimedStep } from '../desk/desk-types';
-import { noteInOneLine } from '../desk/notes';
-import { StepChoices, stepChoices } from '../desk/step-choices';
+import { StepChoices, lightChoices, stepChoices } from '../desk/step-choices';
 import { LampButton } from '../lamp-button/lamp-button';
+import { StepColorDialog } from '../step-color-dialog/step-color-dialog';
 import { StepRow } from '../step-row/step-row';
 
 /** Where a dragged step would land: before or after the step with this id. */
@@ -16,8 +16,8 @@ interface DropMark {
  * The Stack view: the one stack of the project. The Stack key takes it live: every fader goes
  * to zero and the first step starts. From then on it is gone through with Play, Pause, Next and
  * Previous, round and round: after the last step comes the first. Going to a step moves the
- * real fader of its channel or memory up to the step's value; leaving it moves that fader back
- * to zero.
+ * real fader of its channel or memory up to the step's value (for a fixture or a group, the
+ * channel faders of its lights, in the step's color); leaving it moves that fader back to zero.
  *
  * While the stack is live, nothing that is stored can be changed, here or anywhere on the
  * desk. While it is not live it does not run, and that is the time to change its steps.
@@ -27,13 +27,14 @@ interface DropMark {
  * that fits its new place.
  */
 @Component({
-  imports: [LampButton, StepRow],
+  imports: [LampButton, StepColorDialog, StepRow],
   selector: 'lm-stack-view',
   styleUrl: './stack-view.css',
   templateUrl: './stack-view.html',
 })
 export class StackView {
   protected readonly store = inject(DeskStore);
+  private readonly colorDialog = viewChild.required(StepColorDialog);
 
   protected readonly steps = computed(() => this.store.stack().steps);
   private readonly playback = computed(() => this.store.playback().stack);
@@ -53,12 +54,13 @@ export class StackView {
   protected readonly dropMark = signal<DropMark | null>(null);
 
   /**
-   * What the number of a step is chosen from: every channel, and the memories that hold
-   * something, a look or a sequence.
+   * What the number of a step is chosen from: every channel, the memories that hold something
+   * (a look or a sequence), and the fixtures and groups of the stage plan.
    */
   protected readonly choices = computed<StepChoices>(() => ({
-    channel: stepChoices(this.store.channelNotes()),
+    channel: stepChoices(this.store.channelNames()),
     memory: stepChoices(this.store.memoryNotes(), (memory) => this.store.memoryStored()[memory - 1]),
+    ...lightChoices(this.store.stage()),
   }));
 
   protected readonly summary = computed(() => {
@@ -94,17 +96,22 @@ export class StackView {
     }
   });
 
-  /** The note under the fader of the step's channel or memory, in one line. */
+  /** The note under the fader of the step's channel or memory, or the name of its fixture or group, in one line. */
   protected noteOf(step: TimedStep): string {
-    const notes = step.target === 'channel' ? this.store.channelNotes() : this.store.memoryNotes();
-    return noteInOneLine(notes[step.number - 1] ?? '');
+    return this.store.stepNote(step);
   }
 
-  /** A step in words: "Channel 5 (PAR 1 red) at 200". */
+  /** A step in words: "Channel 5 (PAR 1 red) at 200", "Fixture Spot 1 at 255". */
   protected describe(step: TimedStep): string {
+    const name = this.store.stepName(step);
+    if (step.target === 'fixture' || step.target === 'group') return `${name} at ${step.value}`;
     const note = this.noteOf(step);
-    const name = `${step.target === 'channel' ? 'Channel' : 'Memory'} ${step.number}`;
     return `${note ? `${name} (${note})` : name} at ${step.value}`;
+  }
+
+  /** The color of a step of a fixture or a group was pressed: the window asks for another. */
+  protected pickColor(step: StackStep): void {
+    this.colorDialog().open(`Color of step ${step.cue}`, step.color ?? null, (color) => this.changeStep(step.id, { ...step, color }));
   }
 
   /** The times of a step in words, for the "next" card. */
@@ -120,8 +127,8 @@ export class StackView {
 
   /** A row hands back its step with one field changed. Only the step itself goes to the desk, not its name and number. */
   protected changeStep(id: number, step: TimedStep): void {
-    const { target, number, value, up, wait, down } = step;
-    this.store.updateStackStep(id, { target, number, value, up, wait, down });
+    const { target, number, value, up, wait, down, color } = step;
+    this.store.updateStackStep(id, color === undefined ? { target, number, value, up, wait, down } : { target, number, value, up, wait, down, color });
   }
 
   /**

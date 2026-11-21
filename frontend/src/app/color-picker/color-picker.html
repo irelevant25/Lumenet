@@ -1,0 +1,44 @@
+@if (mixes()) {
+  <div class="swatches" role="group" aria-label="Colors">
+    @for (preset of presets; track preset.hex) {
+      <button
+        type="button"
+        class="swatch"
+        [class.current]="preset.hex === color()"
+        [style.--swatch]="preset.hex"
+        [attr.aria-label]="preset.label"
+        [title]="preset.label"
+        (click)="choosePreset(preset.hex)"
+      ></button>
+    }
+  </div>
+  <!-- every hue across, from white at the bottom to the full color at the top; the colors above do the same with keys -->
+  <div
+    class="field"
+    aria-hidden="true"
+    (pointerdown)="onFieldDown($event)"
+    (pointermove)="onFieldMove($event)"
+    (pointerup)="onFieldUp($event)"
+    (pointercancel)="onFieldUp($event)"
+  >
+    @if (marker(); as marker) {
+      <span class="marker" [style.left.%]="marker.x" [style.top.%]="marker.y"></span>
+    }
+  </div>
+}
+
+@if (slots().length > 0) {
+  <div class="swatches" role="group" aria-label="Color wheel">
+    @for (slot of slots(); track $index) {
+      <button
+        type="button"
+        class="swatch"
+        [class.current]="slot.color === color()"
+        [style.--swatch]="slot.color"
+        [attr.aria-label]="slot.label"
+        [title]="slot.label"
+        (click)="chooseSlot(slot)"
+      ></button>
+    }
+  </div>
+}

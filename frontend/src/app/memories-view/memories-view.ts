@@ -55,7 +55,7 @@ export class MemoriesView {
 
   /** True when any channel has a note: then every cell of the table keeps room for one. */
   protected readonly withNotes = computed(() =>
-    this.store.channelNotes().some((note) => note.trim() !== ''),
+    this.store.channelNames().some((note) => note.trim() !== ''),
   );
 
   /**
@@ -64,7 +64,7 @@ export class MemoriesView {
    */
   protected readonly rows = computed(() => {
     const look = this.look();
-    const notes = this.store.channelNotes();
+    const notes = this.store.channelNames();
     const perRow = this.store.phone() ? STRIPS_PER_LINE_PHONE : this.store.windowStripsPerRow();
     const rows: Cell[][] = [];
     for (let first = 1; first <= CHANNEL_COUNT; first += perRow) {

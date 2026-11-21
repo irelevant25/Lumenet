@@ -89,6 +89,68 @@ internal sealed class ProjectFileStage
     /// <summary>"stage" or "plan": what the picture lies under. A file that does not say means the stage.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? PictureOver { get; set; }
+
+    /// <summary>The kinds of lights from the fixture library, numbered from 1 in this order. Written only when there are some.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<ProjectFileType?>? Types { get; set; }
+
+    /// <summary>The groups of lights. Written only when there are some.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<ProjectFileGroup?>? Groups { get; set; }
+}
+
+/// <summary>A kind of light from the fixture library, as it stands in a project file, see <see cref="FixtureType"/>.</summary>
+internal sealed class ProjectFileType
+{
+    public string? Maker { get; set; }
+
+    public string? Model { get; set; }
+
+    public string? Mode { get; set; }
+
+    /// <summary>Where it is in the library, like "american-dj/inno-pocket-spot".</summary>
+    public string? Source { get; set; }
+
+    public List<ProjectFileTypeChannel?>? Channels { get; set; }
+}
+
+/// <summary>A channel of a kind of light, as it stands in a project file, see <see cref="FixtureChannel"/>.</summary>
+internal sealed class ProjectFileTypeChannel
+{
+    public string? Name { get; set; }
+
+    /// <summary>Its letter, like "P".</summary>
+    public string? Code { get; set; }
+
+    /// <summary>For the fine part of another channel: the index of that one, 0 for the first.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Fine { get; set; }
+
+    /// <summary>What it does at its values. Written only for a channel that has ranges.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<ProjectFileRange?>? Ranges { get; set; }
+}
+
+/// <summary>A range of a channel of a kind of light, as it stands in a project file.</summary>
+internal sealed class ProjectFileRange
+{
+    public int? From { get; set; }
+
+    public int? To { get; set; }
+
+    public string? Label { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Color { get; set; }
+}
+
+/// <summary>A group of lights, as it stands in a project file.</summary>
+internal sealed class ProjectFileGroup
+{
+    public string? Name { get; set; }
+
+    /// <summary>Its lights, by their place in the file's list of lights, counted from 1.</summary>
+    public List<int>? Lights { get; set; }
 }
 
 /// <summary>A light of the stage plan, as it stands in a project file.</summary>
@@ -103,9 +165,17 @@ internal sealed class ProjectFileLight
     /// <summary>One letter per channel, like "DRGB", see <see cref="StageLight.Channels"/>.</summary>
     public string? Channels { get; set; }
 
-    /// <summary>The colour of a light without colour channels, like "#ff2000"; none for warm white.</summary>
+    /// <summary>The color of a light without color channels, like "#ff2000"; none for warm white.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Colour { get; set; }
+    public string? Color { get; set; }
+
+    /// <summary>
+    /// The color as files written before 2026-11-21 name it, in the British spelling. It is read,
+    /// so that those files keep their colors, and never written.
+    /// </summary>
+    [JsonPropertyName("colour")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? EarlierColor { get; set; }
 
     /// <summary>Where it hangs: squares from the left edge of the stage.</summary>
     public double? X { get; set; }
@@ -124,6 +194,14 @@ internal sealed class ProjectFileLight
 
     /// <summary>How deep it is, in squares. A file that does not say means 1.</summary>
     public int? Depth { get; set; }
+
+    /// <summary>The kind of light from the fixture library it is, by its place in the file's list of kinds, counted from 1; none for a light of letters.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Type { get; set; }
+
+    /// <summary>The most it gives, in per cent. Written only for a light with a limit below 100.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Limit { get; set; }
 }
 
 /// <summary>A memory that holds a sequence, as it stands in a project file.</summary>
@@ -152,11 +230,18 @@ internal sealed class ProjectFileStep
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Cue { get; set; }
 
-    /// <summary>"channel" or "memory".</summary>
+    /// <summary>"channel", "memory", "fixture" or "group".</summary>
     public string? Target { get; set; }
 
-    /// <summary>The channel (1-512) or the memory (1-128).</summary>
+    /// <summary>
+    /// The channel (1-512) or the memory (1-128); a fixture or a group by its place in the file's
+    /// list of lights or groups, counted from 1 (0 for one that is gone).
+    /// </summary>
     public int? Number { get; set; }
+
+    /// <summary>For a step of a fixture or a group: the color of its lights, like "#ff2000". Written only when it has one.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Color { get; set; }
 
     /// <summary>The level the step brings it to, 0-255.</summary>
     public int? Value { get; set; }

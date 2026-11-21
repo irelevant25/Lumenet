@@ -1,0 +1,50 @@
+:host {
+  display: grid;
+  gap: 8px;
+}
+
+/* the colors as little gels, six in a row */
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.swatch {
+  box-sizing: border-box;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: var(--swatch);
+  cursor: pointer;
+}
+
+.swatch.current {
+  outline: 2px solid #fff;
+  outline-offset: 1px;
+}
+
+/* every hue across, white at the bottom */
+.field {
+  position: relative;
+  height: calc(96px * var(--font-scale));
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background:
+    linear-gradient(to bottom, transparent, #fff),
+    linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.marker {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px #000;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}

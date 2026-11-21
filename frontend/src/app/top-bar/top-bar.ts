@@ -1,14 +1,17 @@
 import { Component, computed, inject, viewChild } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { DeskSettings } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
 import { lanAddressInUse } from '../desk/desk-types';
+import { viewNamed } from '../desk/views';
 import { ImportDialog } from '../import-dialog/import-dialog';
 import { LampButton } from '../lamp-button/lamp-button';
 import { ProjectDialog } from '../project-dialog/project-dialog';
 
 /**
  * The strip along the top: name and version with the box light and the LAN key, the links to
- * the views (Settings the last), and the project with its keys New, Save, Load and Import.
+ * the views (those Settings does not leave out), and the project with its keys New, Save, Load
+ * and Import.
  */
 @Component({
   host: {
@@ -21,8 +24,18 @@ import { ProjectDialog } from '../project-dialog/project-dialog';
 })
 export class TopBar {
   protected readonly store = inject(DeskStore);
+  private readonly settings = inject(DeskSettings);
   protected readonly dialog = viewChild.required(ProjectDialog);
   protected readonly importDialog = viewChild.required(ImportDialog);
+
+  /** The links to the views: in the order Settings gives them, all but those it leaves out. */
+  protected readonly links = computed(() => {
+    const hidden = this.settings.hiddenViews();
+    return this.settings
+      .viewOrder()
+      .filter((name) => !hidden.includes(name))
+      .map(viewNamed);
+  });
 
   /** Shown when the pointer rests on the connection light. */
   protected readonly boxHint = computed(() => {

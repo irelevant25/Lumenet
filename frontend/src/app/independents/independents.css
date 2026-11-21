@@ -39,7 +39,7 @@ h2 {
   height: auto;
 }
 
-/* While editing, a key becomes a field for its number, framed in the colour of its key. */
+/* While editing, a key becomes a field for its number, framed in the color of its key. */
 .field {
   box-sizing: border-box;
   width: var(--key-w);

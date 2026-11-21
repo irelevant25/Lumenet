@@ -9,6 +9,13 @@ namespace DmxBox.Server;
 /// things the box does by itself: its blackout button, and a restart.
 /// </summary>
 /// <remarks>
+/// The desk's blackout is part of its output: it darkens the light and leaves the attributes of
+/// the lights, such as the pan of a moving head, where they are. The box has a blackout of its
+/// own, which its button switches: that one makes everything dark. The desk follows the button
+/// (its blackout goes on and off with it), and a blackout switched off on a UI switches the
+/// box's own off too.
+/// </remarks>
+/// <remarks>
 /// The link has a thread of its own, because a request to a box that does not answer blocks
 /// for most of a second. All requests come from that thread, one after the other.
 /// </remarks>
@@ -35,7 +42,7 @@ internal sealed class BoxLink : BackgroundService
     private bool _connected;
     private TimeSpan _nextPing;     // when to ping next: to find the box, or to check on it
     private TimeSpan _lastUptime;   // the box's uptime at the last ping
-    private bool _boxBlackout;      // the blackout state the link last gave the box, or took from it
+    private bool _boxBlackout;      // the box's own blackout, of its button, as the link last gave it or took it
     private long _sentOutput;       // the desk's OutputChanges that belong to the last frame sent
     private string? _lastFailure;   // why the box was not reached the last time
 
@@ -133,9 +140,9 @@ internal sealed class BoxLink : BackgroundService
 
     private void Serve(TimeSpan now)
     {
-        // A blackout switched on the UI goes out first: going dark must not wait behind a
-        // frame, and the ping below has to find the box in the state the desk asked for.
-        SendBlackoutIfChanged();
+        // The box's own blackout goes off first when the UI switched blackout off: the ping
+        // below has to find the box in the state the desk asked for.
+        ReleaseBoxBlackout();
         SendOutputIfChanged();
 
         if (now >= _nextPing)
@@ -168,32 +175,25 @@ internal sealed class BoxLink : BackgroundService
     // What a box needs after it was found, or after it restarted: it may hold anything, or nothing.
     private void PushEverything()
     {
-        bool blackout = _desk.Blackout;
-
-        // In a blackout the box has to be dark before it gets the look. The other way round,
-        // the look would be on stage for the moment between the two requests.
-        if (blackout)
-            _box.Blackout(true);
-
-        // The desk's master is already part of the output. The box's own master must not dim it once more.
+        // The desk's master and blackout are already part of the output. The box's own master
+        // must not dim it once more.
         _box.Master(Desk.MaxLevel);
         SendOutput();
 
-        // Without blackout it is the opposite: first the right look, then the light.
-        if (!blackout)
-            _box.Blackout(false);
-
-        _boxBlackout = blackout;
+        // First the right look, then the light: the box's own blackout goes off after the output.
+        _box.Blackout(false);
+        _boxBlackout = false;
     }
 
-    private void SendBlackoutIfChanged()
+    // Blackout switched off on a UI switches off the box's own blackout too, if its button had
+    // switched it on.
+    private void ReleaseBoxBlackout()
     {
-        bool blackout = _desk.Blackout;
-        if (blackout == _boxBlackout)
+        if (!_boxBlackout || _desk.Blackout)
             return;
 
-        _box.Blackout(blackout);
-        _boxBlackout = blackout;
+        _box.Blackout(false);
+        _boxBlackout = false;
     }
 
     private void SendOutputIfChanged()
@@ -211,7 +211,7 @@ internal sealed class BoxLink : BackgroundService
         _sentOutput = changes;
     }
 
-    // The box's button has the last word: its state goes to the desk and to the UIs.
+    // The box's button was pressed: the desk's blackout follows it, and the UIs hear of it.
     private void TakeBlackoutFromBox(bool on)
     {
         _boxBlackout = on;

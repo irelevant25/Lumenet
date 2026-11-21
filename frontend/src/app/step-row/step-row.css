@@ -31,3 +31,21 @@ td {
   white-space: nowrap;
   user-select: text;
 }
+
+/* the color of a step of a fixture or a group: a press asks for another */
+.swatch {
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  margin: 0 6px 0 0;
+  padding: 0;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: var(--swatch);
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+.swatch:disabled {
+  cursor: default;
+}

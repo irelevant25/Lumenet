@@ -1,0 +1,90 @@
+/* the color, the level number, the fader (taller in a taller window), the key and the name,
+   centred above each other */
+:host {
+  display: grid;
+  grid-template-rows: auto auto clamp(calc(150px * var(--font-scale)), 30vh, 320px) auto auto;
+  justify-items: center;
+  gap: 4px;
+  width: var(--strip);
+}
+
+/* the color: a press chooses the fixture; a fixture without one to show has a hatched box */
+.swatch {
+  box-sizing: border-box;
+  width: 100%;
+  height: calc(20px * var(--font-scale));
+  padding: 0;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: var(--swatch);
+  cursor: pointer;
+}
+
+.swatch.none {
+  background: repeating-linear-gradient(45deg, transparent 0 4px, var(--edge) 4px 5px);
+}
+
+:host(.chosen) .swatch {
+  outline: 2px solid var(--system);
+  outline-offset: 1px;
+}
+
+lm-fader {
+  justify-self: stretch;
+}
+
+/* while a sequence is recorded, as on the main view: the numbers of the steps that use the key, small and yellow */
+.key {
+  position: relative;
+}
+
+.key.marked {
+  padding-top: 9px;
+}
+
+.steps {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  max-width: calc(100% - 2px);
+  overflow: hidden;
+  border-radius: 2px;
+  background: rgb(11 13 16 / 85%);
+  color: var(--sequence-end);
+  font-size: calc(9px * var(--font-scale));
+  font-weight: 700;
+  line-height: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.readout {
+  color: var(--legend-dim);
+  font-size: var(--readout);
+  font-stretch: 87.5%;
+  line-height: 1;
+}
+
+:host(.up) .readout {
+  color: #fff;
+}
+
+/* the name in two lines, as a note on the main view; what does not fit is cut off */
+.name {
+  display: -webkit-box;
+  width: 100%;
+  min-height: 2.5em;
+  overflow: hidden;
+  color: var(--legend);
+  font-size: calc(12px * var(--font-scale));
+  font-stretch: 75%;
+  line-height: 1.25;
+  text-align: center;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+:host(.chosen) .name {
+  color: var(--system);
+}

@@ -48,7 +48,7 @@
 }
 
 /* --own is where the fader's own level ends. It is the same as --level, unless a memory holds
-   the fader higher: then the part above the own level is lit in the colour of the memories. */
+   the fader higher: then the part above the own level is lit in the color of the memories. */
 .fill {
   position: absolute;
   right: 0;

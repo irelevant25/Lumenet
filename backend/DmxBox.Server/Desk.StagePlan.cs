@@ -55,7 +55,7 @@ internal sealed partial class Desk
             if (kept.SameAs(_stage))
                 return false;
 
-            _stage = kept;
+            PutStage(kept);
             _projectChanges++;
             return true;
         }

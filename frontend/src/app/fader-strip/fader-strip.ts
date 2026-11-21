@@ -27,7 +27,7 @@ export class FaderStrip {
   readonly valueChange = output<number>();
   /**
    * The fader's own level, where a memory holds the channel higher than that. The part
-   * between the two is drawn in the colour of the memories.
+   * between the two is drawn in the color of the memories.
    */
   readonly ownLevel = input<number | null>(null);
   readonly lampLevel = input<LampLevel>(1);
@@ -54,6 +54,17 @@ export class FaderStrip {
   });
   /** A short text of the owner's, for example which light this is. Empty: nothing is shown. */
   readonly note = model('');
+  /**
+   * What the stage plan says this channel is, as a note of two lines ("Spot 1", "Pan"): shown
+   * dimmed in a line of the note the owner left empty.
+   */
+  readonly fixture = input('');
+  protected readonly fixtureLines = computed(() => splitNote(this.fixture()));
+  /** The note, or else what the plan says, for the pointer. */
+  protected readonly noteTitle = computed(() => {
+    const [first, second] = this.lines()[0] || this.lines()[1] ? this.lines() : this.fixtureLines();
+    return second ? `${first} ${second}` : first || null;
+  });
   /** True while the note cannot be changed: the stack is live. */
   readonly locked = input(false);
 

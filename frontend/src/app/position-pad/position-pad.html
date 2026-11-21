@@ -1,0 +1,25 @@
+<!-- the pad is for the pointer; the sliders under it do the same with the keyboard -->
+<div
+  class="pad"
+  aria-hidden="true"
+  (pointerdown)="onPadDown($event)"
+  (pointermove)="onPadMove($event)"
+  (pointerup)="onPadUp($event)"
+  (pointercancel)="onPadUp($event)"
+>
+  <span class="line across" [style.top.%]="y() * 100"></span>
+  <span class="line down" [style.left.%]="x() * 100"></span>
+  <span class="dot" [style.left.%]="x() * 100" [style.top.%]="y() * 100"></span>
+</div>
+
+<div class="sliders">
+  <label for="head-pan">Pan</label>
+  <input id="head-pan" type="range" min="0" [max]="steps" step="1" [value]="x() * steps" (input)="onSlider('x', $event)" />
+  <output for="head-pan">{{ percent(x()) }} %</output>
+
+  <label for="head-tilt">Tilt</label>
+  <input id="head-tilt" type="range" min="0" [max]="steps" step="1" [value]="y() * steps" (input)="onSlider('y', $event)" />
+  <output for="head-tilt">{{ percent(y()) }} %</output>
+</div>
+
+<button type="button" (click)="centre()">To the middle</button>

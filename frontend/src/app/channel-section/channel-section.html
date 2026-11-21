@@ -14,6 +14,7 @@
             [ownLevel]="store.channels()[channel - 1]"
             [lampLevel]="lamp(channel)"
             [note]="store.channelNotes()[channel - 1]"
+            [fixture]="store.fixtureLabels()[channel - 1]"
             [locked]="store.live()"
             (valueChange)="store.setChannel(channel, $event)"
             (noteChange)="store.setChannelNote(channel, $event)"

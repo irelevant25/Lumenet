@@ -3,14 +3,19 @@ namespace DmxBox.Server;
 /// <summary>A step of the stack as the UI gets it: a <see cref="Step"/> with its name and its number.</summary>
 /// <param name="Id">Names the step for as long as the program runs; its number may change, this does not.</param>
 /// <param name="Cue">Its number in the order of the stack, written like "2.1".</param>
-/// <param name="Target">What the step stands for: "channel" or "memory".</param>
-/// <param name="Number">The channel (1-512) or the memory (1-128).</param>
+/// <param name="Target">What the step stands for: "channel", "memory", "fixture" or "group".</param>
+/// <param name="Number">The channel (1-512) or the memory (1-128); a fixture or a group by its number in the stage plan.</param>
 /// <param name="Value">The level the step brings its fader to, 0-255.</param>
 /// <param name="Up">Seconds the fader takes to the value.</param>
 /// <param name="Wait">Seconds after which the stack goes on by itself; 0 means it stays until Play.</param>
 /// <param name="Down">Seconds the fader takes back to zero when the stack leaves the step.</param>
 /// <remarks>Public only because <see cref="IDeskClient"/> has to be.</remarks>
-public sealed record StackStep(int Id, string Cue, string Target, int Number, int Value, double Up, double Wait, double Down);
+public sealed record StackStep(int Id, string Cue, string Target, int Number, int Value, double Up, double Wait, double Down)
+{
+    /// <summary>For a step of a fixture or a group: the color of its lights, see <see cref="Step.Color"/>.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? Color { get; init; }
+}
 
 /// <summary>The stack as the UI gets it.</summary>
 /// <param name="Steps">The steps in the order of their numbers.</param>

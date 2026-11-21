@@ -30,7 +30,7 @@ namespace DmxBox.Server;
 ///   "stage": { "width": 16, "depth": 10, "lights": [
 ///     { "name": "LED bar", "address": 30, "channels": "RGBRGBRGBRGB", "x": 8, "y": 1, "angle": 0,
 ///       "shape": "square", "width": 4, "depth": 1 },
-///     { "name": "Back blue 1", "address": 6, "channels": "D", "colour": "#2060ff", "x": 2, "y": 1.5, "angle": 0,
+///     { "name": "Back blue 1", "address": 6, "channels": "D", "color": "#2060ff", "x": 2, "y": 1.5, "angle": 0,
 ///       "shape": "round", "width": 1, "depth": 1 } ],
 ///     "picture": "data:image/jpeg;base64,...", "pictureOpacity": 0.6, "pictureOver": "stage" }
 /// }
@@ -41,7 +41,13 @@ namespace DmxBox.Server;
 /// object, or too long, are left out on reading: the project is good without them.
 /// "stage" is the stage plan, see <see cref="StagePlan"/>; it came the same way, without a new
 /// version. A file without it has an empty stage. A light without "shape", "width" and "depth" is
-/// round and one square big; a plan without "picture" has none.
+/// round and one square big; a plan without "picture" has none. A plan can also list "types",
+/// the kinds of lights from the fixture library with the names of their channels, and "groups"
+/// of lights; a light names its kind ("type") and a group its lights by their place in the
+/// file's lists, counted from 1, and a light with a "limit" gives at most that many per cent.
+/// All of these are written only when they are there, so files without them stay as they were.
+/// A step of a sequence or of the stack can also stand for a "fixture" or a "group", named by its
+/// place in those lists (0 for one that is gone), with a "color".
 /// The notes and the independents may be missing: then there are no notes, and the keys are
 /// on channels 1 to 32 and memories 1 to 32. That keeps the files from before these existed
 /// readable. Version 2 added the sequences and the stack; a file of version 1 has neither, and
@@ -78,6 +84,7 @@ internal static class ProjectFormat
     /// <param name="project">The looks, the notes and the independents to write.</param>
     public static void Write(Stream stream, ProjectContent project)
     {
+        StepPlaces places = StepPlaces.Of(project.Stage);
         var file = new ProjectFile
         {
             Format = FormatName,
@@ -88,7 +95,7 @@ internal static class ProjectFormat
             Independents = project.Independents.ToList(),
             MemoryIndependents = project.MemoryIndependents.ToList(),
             Sequences = [],
-            Stack = project.Stack.Select(step => FileStep(step.Step, step.Cue.ToString())).ToList<ProjectFileStep?>(),
+            Stack = project.Stack.Select(step => FileStep(step.Step, step.Cue.ToString(), places)).ToList<ProjectFileStep?>(),
             Settings = ProjectSettings.Element(project.Settings),
             Stage = FileStage(project.Stage, project.StagePicture),
         };
@@ -109,7 +116,7 @@ internal static class ProjectFormat
                     Loop = sequence.Loop,
                     Random = sequence.Random,
                     Speed = sequence.Speed,
-                    Steps = sequence.Steps.Select(step => FileStep(step, cue: null)).ToList<ProjectFileStep?>(),
+                    Steps = sequence.Steps.Select(step => FileStep(step, cue: null, places)).ToList<ProjectFileStep?>(),
                 });
             }
         }
@@ -146,7 +153,8 @@ internal static class ProjectFormat
     }
 
     // The stage plan and its picture, with the same rules as for a plan made on the UI; none for
-    // a file without a plan. The lights are numbered from 1 in the order of the file.
+    // a file without a plan. The lights, the kinds of lights and the groups are numbered from 1
+    // in the order of the file, which is how they name each other there.
     private static (StagePlan? Stage, string? Picture) StageOf(ProjectFileStage? stage)
     {
         if (stage is null)
@@ -161,11 +169,13 @@ internal static class ProjectFormat
                 throw Bad($"Light {index + 1} of the stage plan in the file needs an address and its channels.");
 
             lights[index] = new StageLight(
-                index + 1, light.Name ?? "", address, light.Channels, light.Colour, light.X ?? 0, light.Y ?? 0, light.Angle ?? 0)
+                index + 1, light.Name ?? "", address, light.Channels, light.Color ?? light.EarlierColor, light.X ?? 0, light.Y ?? 0, light.Angle ?? 0)
             {
                 Shape = light.Shape ?? StageLight.Round,
                 Width = light.Width ?? 1,
                 Depth = light.Depth ?? 1,
+                Type = light.Type,
+                Limit = light.Limit ?? StageLight.NoLimit,
             };
         }
 
@@ -177,6 +187,9 @@ internal static class ProjectFormat
                 PictureId = picture is null ? null : StagePicture.IdOf(picture),
                 PictureOpacity = stage.PictureOpacity ?? StagePlan.DefaultPictureOpacity,
                 PictureOver = stage.PictureOver ?? StagePlan.PictureOverStage,
+                Types = TypesOf(stage.Types),
+                Groups = [.. (stage.Groups ?? []).Select((group, index) =>
+                    new LightGroup(index + 1, group?.Name ?? "", [.. group?.Lights ?? []]))],
             };
             return (plan.Checked(), picture);
         }
@@ -186,10 +199,35 @@ internal static class ProjectFormat
         }
     }
 
+    // The kinds of lights from the fixture library, numbered from 1 in the order of the file.
+    private static FixtureType[] TypesOf(List<ProjectFileType?>? listed)
+    {
+        return [.. (listed ?? []).Select((type, index) => type is null
+            ? throw new DeskException($"Kind {index + 1} of the lights is empty.")
+            : new FixtureType(
+                index + 1,
+                type.Maker ?? "",
+                type.Model ?? "",
+                type.Mode ?? "",
+                type.Source ?? "",
+                [.. (type.Channels ?? []).Select((channel, number) => channel is null
+                    ? throw new DeskException($"Kind {index + 1} of the lights: channel {number + 1} is empty.")
+                    : new FixtureChannel(channel.Name ?? "", channel.Code ?? "")
+                    {
+                        Fine = channel.Fine,
+                        Ranges = [.. (channel.Ranges ?? []).Select(range =>
+                            new FixtureRange(range?.From ?? 0, range?.To ?? 0, range?.Label ?? "") { Color = range?.Color })],
+                    })]))];
+    }
+
     private static ProjectFileStage? FileStage(StagePlan? stage, string? picture)
     {
         if (stage is null)
             return null;
+
+        // In the file the lights and the kinds are named by their place in its lists, from 1.
+        Dictionary<int, int> typePlaces = stage.Types.Select((type, index) => (type.Id, Place: index + 1)).ToDictionary();
+        Dictionary<int, int> lightPlaces = stage.Lights.Select((light, index) => (light.Id, Place: index + 1)).ToDictionary();
 
         return new ProjectFileStage
         {
@@ -200,18 +238,47 @@ internal static class ProjectFormat
                 Name = light.Name,
                 Address = light.Address,
                 Channels = light.Channels,
-                Colour = light.Colour,
+                Color = light.Color,
                 X = light.X,
                 Y = light.Y,
                 Angle = light.Angle,
                 Shape = light.Shape,
                 Width = light.Width,
                 Depth = light.Depth,
+                Type = light.Type is int type && typePlaces.TryGetValue(type, out int place) ? place : null,
+                Limit = light.Limit < StageLight.NoLimit ? light.Limit : null,
             }).ToList<ProjectFileLight?>(),
             // the picture and how it shows only for a plan that has one
             Picture = picture,
             PictureOpacity = picture is null ? null : stage.PictureOpacity,
             PictureOver = picture is null ? null : stage.PictureOver,
+            Types = stage.Types.Length == 0 ? null : stage.Types.Select(type => new ProjectFileType
+            {
+                Maker = type.Maker,
+                Model = type.Model,
+                Mode = type.Mode,
+                Source = type.Source,
+                Channels = type.Channels.Select(channel => new ProjectFileTypeChannel
+                {
+                    Name = channel.Name,
+                    Code = channel.Code,
+                    Fine = channel.Fine,
+                    Ranges = channel.Ranges.Length == 0
+                        ? null
+                        : channel.Ranges.Select(range => new ProjectFileRange
+                        {
+                            From = range.From,
+                            To = range.To,
+                            Label = range.Label,
+                            Color = range.Color,
+                        }).ToList<ProjectFileRange?>(),
+                }).ToList<ProjectFileTypeChannel?>(),
+            }).ToList<ProjectFileType?>(),
+            Groups = stage.Groups.Length == 0 ? null : stage.Groups.Select(group => new ProjectFileGroup
+            {
+                Name = group.Name,
+                Lights = [.. group.Lights.Where(lightPlaces.ContainsKey).Select(id => lightPlaces[id])],
+            }).ToList<ProjectFileGroup?>(),
         };
     }
 
@@ -489,7 +556,10 @@ internal static class ProjectFormat
 
         try
         {
-            return new Step(entry.Target, entry.Number.Value, entry.Value.Value, entry.Up ?? 0, entry.Wait ?? 0, entry.Down ?? 0).Checked();
+            return new Step(entry.Target, entry.Number.Value, entry.Value.Value, entry.Up ?? 0, entry.Wait ?? 0, entry.Down ?? 0)
+            {
+                Color = entry.Color,
+            }.Checked();
         }
         catch (DeskException e)
         {
@@ -497,18 +567,35 @@ internal static class ProjectFormat
         }
     }
 
-    private static ProjectFileStep FileStep(Step step, string? cue)
+    // A step as the file has it. "places" gives a fixture or a group its place in the file's
+    // lists (from 1); 0 for one the plan does not have any more.
+    private static ProjectFileStep FileStep(Step step, string? cue, StepPlaces places)
     {
+        int number = step.Target switch
+        {
+            Step.Fixture => places.Lights.GetValueOrDefault(step.Number),
+            Step.Group => places.Groups.GetValueOrDefault(step.Number),
+            _ => step.Number,
+        };
         return new ProjectFileStep
         {
             Cue = cue,
             Target = step.Target,
-            Number = step.Number,
+            Number = number,
             Value = step.Value,
             Up = step.Up,
             Wait = step.Wait,
             Down = step.Down,
+            Color = step.Color,
         };
+    }
+
+    // Where the lights and the groups of a plan stand in the file's lists, by their numbers.
+    private sealed record StepPlaces(Dictionary<int, int> Lights, Dictionary<int, int> Groups)
+    {
+        public static StepPlaces Of(StagePlan? plan) => new(
+            (plan?.Lights ?? []).Select((light, index) => (light.Id, index + 1)).ToDictionary(),
+            (plan?.Groups ?? []).Select((group, index) => (group.Id, index + 1)).ToDictionary());
     }
 
     // Channel number and level of every channel that is not at 0.

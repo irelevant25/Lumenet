@@ -1,0 +1,80 @@
+:host {
+  display: grid;
+  gap: 8px;
+}
+
+/* a square with a cross where the head points */
+.pad {
+  position: relative;
+  aspect-ratio: 1;
+  max-height: 220px;
+  overflow: hidden;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background:
+    linear-gradient(var(--edge) 1px, transparent 1px) 0 0 / 25% 25%,
+    linear-gradient(90deg, var(--edge) 1px, transparent 1px) 0 0 / 25% 25%,
+    #08090b;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.line {
+  position: absolute;
+  background: var(--system);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.line.across {
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+
+.line.down {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.dot {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--system);
+  border-radius: 50%;
+  background: rgb(0 0 0 / 50%);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.sliders {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) 4.5em;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+input[type='range'] {
+  min-width: 0;
+  accent-color: var(--system);
+}
+
+output {
+  color: var(--legend-dim);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+button {
+  justify-self: start;
+  height: calc(30px * var(--font-scale));
+  padding: 0 10px;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--legend);
+  font: inherit;
+  cursor: pointer;
+}

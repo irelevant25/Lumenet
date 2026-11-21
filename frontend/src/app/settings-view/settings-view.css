@@ -177,6 +177,62 @@ button:hover:not(:disabled) {
   text-align: center;
 }
 
+/* a title with ↺ at its right, as the colors have it */
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.head h3 {
+  margin: 0;
+}
+
+.head button {
+  height: calc(26px * var(--font-scale));
+  font-size: calc(13px * var(--font-scale));
+}
+
+/* the views in the top bar, in their order: ticked when the link is there, ▲ ▼ to move it */
+.views {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.views li,
+.views label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.views label {
+  flex: 1;
+}
+
+.views .move {
+  width: 32px;
+  padding: 0;
+  font-size: 12px;
+}
+
+.views input {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  accent-color: var(--system);
+}
+
+.note {
+  color: var(--legend-dim);
+  font-size: calc(12px * var(--font-scale));
+}
+
 /* ---- mobile: the page scrolls as a whole */
 :host-context(.mobile) {
   grid-template-rows: none;

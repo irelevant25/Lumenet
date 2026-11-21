@@ -35,5 +35,5 @@ npm run build                 # the finished files, in dist/lumenet
 | `channel-section/`, `memory-section/` | The rows of faders with their page keys, and the four memory functions. |
 | `top-bar/`, `project-dialog/` | Name, Clear, Black out, Master, and saving and loading a project. |
 
-Every component has its own `.ts`, `.html` and `.css` file. Sizes and colours shared by all of them are
+Every component has its own `.ts`, `.html` and `.css` file. Sizes and colors shared by all of them are
 in `src/styles.css`.

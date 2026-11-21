@@ -25,6 +25,19 @@ h4 {
   margin-bottom: 6px;
 }
 
+/* the title, and at its right the key back to all the usual colors */
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.head h3 {
+  margin: 0;
+}
+
 .hint {
   max-width: 70ch;
   margin: 2px 0 12px;
@@ -39,14 +52,48 @@ h4 {
   gap: 14px 24px;
 }
 
-/* a colour: the field, what it is for, and the key back to the usual one */
-.colour {
+/* a color: the color itself (a press opens the palette), what it is for, and the key back to the usual one */
+.color {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   margin-bottom: 4px;
   font-size: calc(14px * var(--font-scale));
+}
+
+.swatch {
+  width: 36px;
+  height: calc(24px * var(--font-scale));
+  padding: 0;
+  background: var(--swatch);
+}
+
+/* the colors of the desk, and Other with a field for any color */
+.palette {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 8px 44px;
+}
+
+.palette .swatch {
+  width: 28px;
+}
+
+.palette .current {
+  outline: 2px solid #fff;
+  outline-offset: 1px;
+}
+
+.other {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+  color: var(--legend-dim);
+  font-size: calc(13px * var(--font-scale));
 }
 
 input[type='color'] {
@@ -79,8 +126,4 @@ button:disabled {
 button:hover:not(:disabled),
 input[type='color']:hover {
   border-color: var(--legend-dim);
-}
-
-.all {
-  margin-top: 10px;
 }

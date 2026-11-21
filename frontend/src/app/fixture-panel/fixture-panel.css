@@ -1,0 +1,118 @@
+/* A panel beside the strips, in the colors of the panel of the Stage view. */
+:host {
+  display: block;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px 14px 12px;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: var(--well);
+  font-size: calc(14px * var(--font-scale));
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.head h3 {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+h3,
+h4 {
+  margin: 0 0 10px;
+  color: var(--legend-dim);
+  font-size: calc(12px * var(--font-scale));
+  font-stretch: 75%;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+h4 {
+  margin-top: 16px;
+}
+
+.facts,
+.hint {
+  margin: 0 0 10px;
+  color: var(--legend-dim);
+  line-height: 1.35;
+}
+
+.hint {
+  font-size: calc(13px * var(--font-scale));
+}
+
+/* each field in one row: the label at the left, the field at the right */
+.form {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 8px 10px;
+  margin-bottom: 10px;
+}
+
+input,
+select,
+button {
+  box-sizing: border-box;
+  height: calc(30px * var(--font-scale));
+  padding: 0 8px;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--legend);
+  font: inherit;
+}
+
+.form > input,
+.form > select {
+  width: 100%;
+  min-width: 0;
+}
+
+input[type='checkbox'] {
+  height: auto;
+  accent-color: var(--system);
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.close {
+  flex: none;
+  width: calc(30px * var(--font-scale));
+  padding: 0;
+}
+
+/* the lights of the group, one in a line, ticked when they belong to it */
+.members {
+  max-height: 260px;
+  margin: 0 0 12px;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.members li {
+  padding: 3px 0;
+}
+
+.dim {
+  color: var(--legend-dim);
+}

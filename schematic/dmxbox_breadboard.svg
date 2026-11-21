@@ -2,7 +2,7 @@
 <rect width="1630" height="980" fill="white"/>
 <text x="30.0" y="45.0" font-size="22" text-anchor="start" font-weight="bold" fill="#1f2328">dmxbox on a breadboard</text>
 <text x="30.0" y="66.0" font-size="13" text-anchor="start" font-weight="normal" fill="#6b7280">Full-size board: 830 holes, rows numbered 1 to 63. Lay it with row 1 at the left and the letters a to e at the bottom. The five holes of one row, above or below the middle gap, are one contact.</text>
-<text x="30.0" y="84.0" font-size="13" text-anchor="start" font-weight="normal" fill="#6b7280">If the letters on your board run the other way, go by the picture. Wire colours only tell the wires apart in the picture: any wire will do.</text>
+<text x="30.0" y="84.0" font-size="13" text-anchor="start" font-weight="normal" fill="#6b7280">If the letters on your board run the other way, go by the picture. Wire colors only tell the wires apart in the picture: any wire will do.</text>
 <rect x="110.0" y="154.0" width="1300.0" height="416.0" rx="10" fill="#f6f5ef" stroke="#c9c8bf" stroke-width="1.5"/>
 <path d="M124.0,156.0 L1396.0,156.0 L1396.0,485.0 L1100.0,485.0 L1100.0,362.0 L870.0,362.0 L870.0,208.0 L124.0,208.0 Z" fill="#cfe1ff" stroke="none" stroke-width="2.0" stroke-linejoin="round" stroke-linecap="round" opacity="0.6"/>
 <path d="M1100.0,485.0 L1100.0,362.0 L870.0,362.0 L870.0,208.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="7 5"/>

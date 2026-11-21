@@ -1,0 +1,68 @@
+<header>
+  <h2>Fixtures</h2>
+  <p class="summary">{{ summary() }}</p>
+  <div class="keys">
+    <button
+      lmLamp
+      type="button"
+      tone="system"
+      aria-label="New group"
+      data-action="fixtures.group"
+      [level]="1"
+      [disabled]="!canAddGroup()"
+      (click)="newGroup()"
+    >
+      New<br />group
+    </button>
+  </div>
+</header>
+
+<div class="strips">
+  @if (fixtures().length > 0) {
+    <section aria-labelledby="fixtures-lights">
+      <h3 id="fixtures-lights">Fixtures</h3>
+      <div class="row">
+        @for (item of fixtures(); track item.light.id) {
+          <lm-fixture-strip
+            [name]="item.light.name || 'Light ' + item.light.address"
+            [keyText]="'' + item.light.address"
+            [level]="item.level"
+            [color]="item.color"
+            [chosen]="item.chosen"
+            [blink]="recording()"
+            [steps]="store.recordedSteps()?.fixtures?.get(item.light.id) ?? []"
+            (levelChange)="store.setFixtureIntensity(item.light, $event)"
+            (keyPress)="store.pressFixture(item.light)"
+            (choose)="choose('light', item.light.id)"
+          />
+        }
+      </div>
+    </section>
+  }
+
+  @if (groups().length > 0) {
+    <section aria-labelledby="fixtures-groups">
+      <h3 id="fixtures-groups">Groups</h3>
+      <div class="row">
+        @for (item of groups(); track item.group.id) {
+          <lm-fixture-strip
+            [group]="true"
+            [name]="item.group.name || 'Group ' + item.number"
+            [keyText]="'G' + item.number"
+            [level]="item.level"
+            [color]="item.color"
+            [chosen]="item.chosen"
+            [blink]="recording()"
+            [steps]="store.recordedSteps()?.groups?.get(item.group.id) ?? []"
+            (levelChange)="store.setGroupIntensity(item.group, $event)"
+            (keyPress)="store.pressGroup(item.group)"
+            (choose)="choose('group', item.group.id)"
+          />
+        }
+      </div>
+    </section>
+  }
+</div>
+
+<!-- Always there, so that the strips keep their place: the fixture or group chosen, or what the page does. -->
+<lm-fixture-panel [(choice)]="choice" />

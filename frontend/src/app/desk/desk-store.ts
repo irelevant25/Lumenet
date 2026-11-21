@@ -11,6 +11,7 @@ import {
   HistoryState,
   ImportAnswer,
   LanAccess,
+  LightGroup,
   MAX_LEVEL,
   MAX_SEQUENCE_STEPS,
   MEDIUM_BELOW_PX,
@@ -35,6 +36,7 @@ import {
   SoloState,
   StackState,
   StackStep,
+  StageLight,
   StagePlan,
   StepTarget,
   TimedStep,
@@ -55,14 +57,36 @@ import {
   pressFunction,
   pressMemory,
 } from './function-mode';
+import {
+  AttributeLight,
+  LevelChanges,
+  applyLimits,
+  colorChanges,
+  fixtureLabels,
+  hasDimmer,
+  intensityChanges,
+  intensityOf,
+  lookHolds,
+  mixedColor,
+  panTiltOf,
+  positionChanges,
+  recordedColorOf,
+  rolesOf,
+  shutterOpening,
+  stepLights,
+  typeOf,
+} from './fixtures';
+import { noteInOneLine } from './notes';
 
 /**
- * While a sequence is recorded: for every channel and memory it uses, the numbers of the
- * steps that use it, counted from 1. The keys show them.
+ * While a sequence is recorded: for every channel, memory, fixture and group it uses, the
+ * numbers of the steps that use it, counted from 1. The keys show them.
  */
 export interface RecordedSteps {
   readonly channels: ReadonlyMap<number, readonly number[]>;
   readonly memories: ReadonlyMap<number, readonly number[]>;
+  readonly fixtures: ReadonlyMap<number, readonly number[]>;
+  readonly groups: ReadonlyMap<number, readonly number[]>;
 }
 
 /** Where the stack stands, see DeskStore.stackPosition. */
@@ -145,7 +169,8 @@ export class DeskStore {
    * What each channel fader shows: its own level, or what the memories whose faders are up
    * give the channel, whichever is higher. A look gives a fixed level; a running sequence
    * gives what the backend reports from moment to moment. The backend works out the output
-   * the same way, before the master.
+   * the same way, before the master. An attribute of a light (a pan, a tilt) shows what the
+   * fader that took it last gives it, as stored (see attributesTaken).
    */
   readonly shownChannels = computed<readonly number[]>(() => {
     const own = this.channels();
@@ -169,20 +194,65 @@ export class DeskStore {
         shown[index] = running[index];
       }
     }
-    return shown ?? own;
+    if (this.roles().attributeLights.length === 0) return shown ?? own;
+
+    shown ??= own.slice();
+    this.attributesTaken(shown);
+    return shown;
   });
 
   /**
-   * What goes out to the rig for each channel: what the fader shows, as a solo leaves it, scaled
-   * by the master and rounded as the desk program does; all zero during blackout (the box does
-   * the blackout, so the desk program itself leaves it out). The stage plan draws its lights
-   * from it.
+   * Latest takes precedence, as in the desk program: each attribute of a light comes from the
+   * fader that took it last, at the level it holds, not scaled by any fader. A channel fader
+   * takes its channel when it moves; a memory fader takes the lights its memory holds when it
+   * leaves zero (a look holds a light it gives any level, a sequence one its steps use).
+   */
+  private attributesTaken(shown: number[]): void {
+    const own = this.channels();
+    const levels = this.memoryLevels();
+    const looks = this.memoryLooks();
+    const sequences = this.sequences();
+    const memoryClaims = this.memoryClaims();
+    const channelClaims = this.channelClaims();
+    const running = this.playback().levels;
+    const plan = this.stage();
+    const stepHolds = (step: TimedStep, light: AttributeLight): boolean => {
+      if (step.target === 'channel') return light.channels.includes(step.number - 1);
+      if (step.target === 'memory') return !!looks[step.number] && lookHolds(looks[step.number], light);
+      return stepLights(plan, step).some((held) => light.channels.includes(held.address - 1));
+    };
+    for (const light of this.roles().attributeLights) {
+      let latest = -1;
+      for (let index = 0; index < MEMORY_COUNT; index++) {
+        if (!levels[index] || (latest >= 0 && memoryClaims[index] <= memoryClaims[latest])) continue;
+        const look = looks[index + 1];
+        const sequence = sequences[index + 1];
+        const holds = look ? lookHolds(look, light) : (sequence?.steps ?? []).some((step) => stepHolds(step, light));
+        if (holds) latest = index;
+      }
+      for (const channel of light.attributes) {
+        const taken = latest >= 0 && memoryClaims[latest] > channelClaims[channel];
+        shown[channel] = taken ? (looks[latest + 1]?.[channel] ?? running[channel] ?? 0) : own[channel];
+      }
+    }
+  }
+
+  /**
+   * What goes out to the rig for each channel: what the fader shows, as a solo leaves it, each
+   * light held to its limit, scaled by the master and rounded as the desk program does, and dark
+   * during blackout. The attributes of the lights (a pan, a tilt) are left as they are by all of
+   * that. The stage plan draws its lights from it.
    */
   readonly output = computed<readonly number[]>(() => {
-    if (this.blackout()) return zeros(CHANNEL_COUNT);
-    const master = this.master();
-    const levels = this.soloLevels();
-    return master === MAX_LEVEL ? levels : levels.map((level) => Math.floor((level * master + 127) / MAX_LEVEL));
+    const roles = this.roles();
+    const shown = this.shownChannels();
+    const levels = this.soloLevels().slice();
+    applyLimits(levels, roles.limits);
+    const master = this.blackout() ? 0 : this.master();
+    for (let index = 0; index < CHANNEL_COUNT; index++) {
+      levels[index] = roles.attribute[index] ? shown[index] : Math.floor((levels[index] * master + 127) / MAX_LEVEL);
+    }
+    return levels;
   });
 
   /**
@@ -205,7 +275,10 @@ export class DeskStore {
         if (look) look.forEach((level, index) => raise(index, level));
         // a sequence: what it gives now, on the channels its steps use (its fader is at full)
         for (const step of this.sequences()[key.number]?.steps ?? []) {
-          const channels = step.target === 'channel' ? [step.number - 1] : lookChannels(this.memoryLooks()[step.number]);
+          const channels =
+            step.target === 'channel' ? [step.number - 1]
+            : step.target === 'memory' ? lookChannels(this.memoryLooks()[step.number])
+            : stepLights(this.stage(), step).flatMap((light) => [...light.channels].map((_, offset) => light.address - 1 + offset));
           for (const index of channels) raise(index, shown[index]);
         }
       }
@@ -219,6 +292,22 @@ export class DeskStore {
     }
     return levels;
   });
+
+  /** What the stage plan says about every channel: which are attributes of lights, and the lights' limits. */
+  readonly roles = computed(() => rolesOf(this.stage()));
+  /** For each channel: the light it belongs to and what it does there, as a note of two lines; empty for none. */
+  readonly fixtureLabels = computed(() => fixtureLabels(this.stage()));
+  /** For each channel: its note, or else what the plan says it is. The lists of steps name channels so. */
+  readonly channelNames = computed(() => {
+    const labels = this.fixtureLabels();
+    return this.channelNotes().map((note, index) => (note.trim() !== '' ? note : labels[index]));
+  });
+  /** When each channel fader and each memory fader last took what it gives an attribute (a count that grows). */
+  readonly channelClaims = signal<readonly number[]>(zeros(CHANNEL_COUNT));
+  readonly memoryClaims = signal<readonly number[]>(zeros(MEMORY_COUNT));
+  private claimCount = 0;
+  // The color each fixture that mixes its color had last: brought up from dark, it comes back in it.
+  private readonly lastColors = new Map<number, [number, number, number]>();
 
   /**
    * True while the stack is live. Then the desk plays a show and nothing that is stored can be
@@ -297,15 +386,14 @@ export class DeskStore {
     const mode = this.mode();
     if (mode.kind !== 'recording') return null;
 
-    const channels = new Map<number, number[]>();
-    const memories = new Map<number, number[]>();
+    const used = { channel: new Map<number, number[]>(), memory: new Map<number, number[]>(), fixture: new Map<number, number[]>(), group: new Map<number, number[]>() };
     (this.sequences()[mode.memory]?.steps ?? []).forEach((step, index) => {
-      const users = step.target === 'channel' ? channels : memories;
+      const users = used[step.target];
       const numbers = users.get(step.number);
       if (numbers) numbers.push(index + 1);
       else users.set(step.number, [index + 1]);
     });
-    return { channels, memories };
+    return { channels: used.channel, memories: used.memory, fixtures: used.fixture, groups: used.group };
   });
   /** A short message for the top bar, for example an error from the backend. */
   readonly notice = signal('');
@@ -349,12 +437,14 @@ export class DeskStore {
   constructor() {
     const connection = this.connection;
 
-    connection.on<[number, number]>('ChannelChanged', (channel, level) =>
-      this.channels.update((levels) => withItem(levels, channel - 1, level)),
-    );
-    connection.on<[number, number]>('MemoryLevelChanged', (memory, level) =>
-      this.memoryLevels.update((levels) => withItem(levels, memory - 1, level)),
-    );
+    connection.on<[number, number]>('ChannelChanged', (channel, level) => {
+      this.channels.update((levels) => withItem(levels, channel - 1, level));
+      this.claimChannel(channel);
+    });
+    connection.on<[number, number]>('MemoryLevelChanged', (memory, level) => {
+      this.claimMemory(memory, level);
+      this.memoryLevels.update((levels) => withItem(levels, memory - 1, level));
+    });
     connection.on<[number, string]>('ChannelNoteChanged', (channel, text) =>
       this.channelNotes.update((notes) => withItem(notes, channel - 1, text)),
     );
@@ -415,13 +505,172 @@ export class DeskStore {
   setChannel(channel: number, level: number): void {
     if (this.channels()[channel - 1] === level) return;
     this.channels.update((levels) => withItem(levels, channel - 1, level));
+    this.claimChannel(channel);
     this.sendSoon(`channel ${channel}`, 'SetChannel', channel, level);
   }
 
   setMemoryLevel(memory: number, level: number): void {
     if (this.memoryLevels()[memory - 1] === level) return;
+    this.claimMemory(memory, level);
     this.memoryLevels.update((levels) => withItem(levels, memory - 1, level));
     this.sendSoon(`memory ${memory}`, 'SetMemoryLevel', memory, level);
+  }
+
+  // A channel fader that moves takes its channel, if that is an attribute of a light.
+  private claimChannel(channel: number): void {
+    if (!this.roles().attribute[channel - 1]) return;
+    this.channelClaims.update((claims) => withItem(claims, channel - 1, ++this.claimCount));
+  }
+
+  // A memory fader that leaves zero takes the lights its memory holds. Call before the level changes.
+  private claimMemory(memory: number, level: number): void {
+    if (level === 0 || this.memoryLevels()[memory - 1] !== 0) return;
+    this.memoryClaims.update((claims) => withItem(claims, memory - 1, ++this.claimCount));
+  }
+
+  /** Sets many channel faders at once, each as if it was moved. */
+  setChannels(changes: LevelChanges): void {
+    for (const [channel, level] of changes) this.setChannel(channel, level);
+  }
+
+  // ---------------------------------------------------------------- fixtures and groups
+
+  /** The intensity of a fixture as the faders show it, 0 to 255: its dimmer, or its strongest color. */
+  fixtureIntensity(light: StageLight): number {
+    return intensityOf(light, this.shownChannels());
+  }
+
+  /**
+   * A fixture to another intensity: its dimmers, or its colors keeping their mix (from dark:
+   * the color it had last, or white); a moving head's shutter opens with it.
+   */
+  setFixtureIntensity(light: StageLight, level: number): void {
+    const shown = this.shownChannels();
+    const color = mixedColor(light, shown);
+    if (color) this.lastColors.set(light.id, color);
+    this.setChannels(intensityChanges(light, typeOf(this.stage(), light), level, shown, this.lastColors.get(light.id) ?? null));
+  }
+
+  /** The key of a fixture: to full, and to zero when it gives light. */
+  toggleFixture(light: StageLight): void {
+    this.setFixtureIntensity(light, this.fixtureIntensity(light) > 0 ? 0 : MAX_LEVEL);
+  }
+
+  /**
+   * The key of a fixture on the Fixtures page: while a sequence is recorded (REC SEQ) it puts in
+   * a step of the fixture, at full, in the color it shows now; otherwise it switches it.
+   */
+  pressFixture(light: StageLight): void {
+    const mode = this.mode();
+    if (mode.kind !== 'recording') {
+      this.toggleFixture(light);
+      return;
+    }
+    const color = recordedColorOf(light, typeOf(this.stage(), light), this.shownChannels());
+    this.addSequenceStep(mode.memory, recordedStep('fixture', light.id, color));
+  }
+
+  /** The key of a group: a step of the group while a sequence is recorded, in the color of its first light that shows one; otherwise it switches the group. */
+  pressGroup(group: LightGroup): void {
+    const mode = this.mode();
+    if (mode.kind !== 'recording') {
+      this.toggleGroup(group);
+      return;
+    }
+    const plan = this.stage();
+    const shown = this.shownChannels();
+    const color = this.groupLights(group).map((light) => recordedColorOf(light, typeOf(plan, light), shown)).find((found) => found) ?? null;
+    this.addSequenceStep(mode.memory, recordedStep('group', group.id, color));
+  }
+
+  /**
+   * A number for a new light (or group) that no light (or group) has, and no step of the
+   * sequences or the stack points to: a step of a light that is gone must not come to play a new one.
+   */
+  nextLightId(): number {
+    return this.nextId('fixture', this.stage().lights);
+  }
+
+  nextGroupId(): number {
+    return this.nextId('group', this.stage().groups);
+  }
+
+  private nextId(target: 'fixture' | 'group', items: readonly { id: number }[]): number {
+    const steps = [...Object.values(this.sequences()).flatMap((sequence) => sequence.steps), ...this.stack().steps];
+    const used = steps.filter((step) => step.target === target).map((step) => step.number);
+    return Math.max(0, ...items.map((item) => item.id), ...used) + 1;
+  }
+
+  /** What a step stands for, in words: "Channel 5", "Memory 2", "Fixture Spot 1", "Group Back". */
+  stepName(step: TimedStep): string {
+    if (step.target === 'channel' || step.target === 'memory') return `${step.target === 'channel' ? 'Channel' : 'Memory'} ${step.number}`;
+    const plan = this.stage();
+    const found =
+      step.target === 'fixture'
+        ? plan.lights.find((light) => light.id === step.number)?.name
+        : plan.groups.find((group) => group.id === step.number)?.name;
+    return `${step.target === 'fixture' ? 'Fixture' : 'Group'} ${found ?? '(gone)'}`;
+  }
+
+  /** The note of a step in one line: under the fader of its channel or memory; the name of its fixture or group. */
+  stepNote(step: TimedStep): string {
+    switch (step.target) {
+      case 'channel':
+        return noteInOneLine(this.channelNames()[step.number - 1] ?? '');
+      case 'memory':
+        return noteInOneLine(this.memoryNotes()[step.number - 1] ?? '');
+      case 'fixture':
+        return this.stage().lights.find((light) => light.id === step.number)?.name ?? 'A light that is gone';
+      case 'group':
+        return this.stage().groups.find((group) => group.id === step.number)?.name ?? 'A group that is gone';
+    }
+  }
+
+  /**
+   * A fixture in a color (red, green and blue, 0 to 255): its color channels mix it. A fixture
+   * that is dark comes up to full with it, so that the color shows.
+   */
+  setFixtureColor(light: StageLight, color: [number, number, number]): void {
+    this.lastColors.set(light.id, color);
+    const shown = this.shownChannels();
+    const intensity = intensityOf(light, shown);
+    const type = typeOf(this.stage(), light);
+    const changes = new Map<number, number>();
+    if (hasDimmer(light)) {
+      for (const [channel, level] of colorChanges(light, color, MAX_LEVEL)) changes.set(channel, level);
+      if (intensity === 0) for (const [channel, level] of intensityChanges(light, type, MAX_LEVEL, shown, color)) changes.set(channel, level);
+    } else {
+      for (const [channel, level] of colorChanges(light, color, intensity || MAX_LEVEL)) changes.set(channel, level);
+      for (const [channel, level] of shutterOpening(light, type, shown)) changes.set(channel, level);
+    }
+    this.setChannels(changes);
+  }
+
+  /** Points a moving head: pan `x` and tilt `y`, each from 0 to 1. */
+  setFixturePosition(light: StageLight, x: number, y: number): void {
+    const axes = panTiltOf(light, typeOf(this.stage(), light));
+    if (axes) this.setChannels(positionChanges(axes, x, y));
+  }
+
+  /** The lights of a group, as the plan has them now. */
+  groupLights(group: LightGroup): StageLight[] {
+    const lights = this.stage().lights;
+    return group.lights.flatMap((id) => lights.filter((light) => light.id === id));
+  }
+
+  /** The intensity of a group: that of its brightest light. */
+  groupIntensity(group: LightGroup): number {
+    return Math.max(0, ...this.groupLights(group).map((light) => this.fixtureIntensity(light)));
+  }
+
+  /** The fader of a group: every light of it to this intensity, each in its own color. */
+  setGroupIntensity(group: LightGroup, level: number): void {
+    for (const light of this.groupLights(group)) this.setFixtureIntensity(light, level);
+  }
+
+  /** The key of a group: all its lights to full, and to zero when any gives light. */
+  toggleGroup(group: LightGroup): void {
+    this.setGroupIntensity(group, this.groupIntensity(group) > 0 ? 0 : MAX_LEVEL);
   }
 
   setMaster(level: number): void {
@@ -513,6 +762,8 @@ export class DeskStore {
     const name = `${target} ${number}`;
     const up = this.soloMode() === 'up';
     if (this.held.has(name)) return;
+    // A solo is for the light: the key of an attribute (a pan, a tilt) does not move it.
+    if (target === 'channel' && this.roles().attribute[number - 1]) return;
 
     const level = target === 'channel' ? this.channels()[number - 1] : this.memoryLevels()[number - 1];
     this.held.set(name, { level, up });
@@ -780,7 +1031,7 @@ export class DeskStore {
   addStackStepAtEnd(): void {
     if (this.live()) return; // a live stack keeps its steps
     const last = this.stack().steps.at(-1);
-    this.addStackStep(last ? stepAfter(last) : firstStep(0));
+    this.addStackStep(last ? stepAfter(last, this.stage()) : firstStep(0));
   }
 
   updateStackStep(id: number, step: TimedStep): void {
@@ -1107,6 +1358,12 @@ export class DeskStore {
     this.rate.set(desk.rate ?? 1);
     this.rateOn.set(desk.rateOn ?? false);
     this.solo.set(desk.solo ?? NO_SOLO);
+    // The order in which faders took the attributes of the lights; the page counts on from there.
+    const channelClaims = desk.channelClaims ?? zeros(CHANNEL_COUNT);
+    const memoryClaims = desk.memoryClaims ?? zeros(MEMORY_COUNT);
+    this.channelClaims.set(channelClaims);
+    this.memoryClaims.set(memoryClaims);
+    this.claimCount = Math.max(this.claimCount, ...channelClaims, ...memoryClaims);
     // The whole desk comes when a memory was stored, copied or emptied, or a project loaded:
     // exactly when a look, a sequence or the stack may be another one.
     void this.fetchMemoryLooks();
@@ -1132,6 +1389,8 @@ export class DeskStore {
       ...EMPTY_STAGE,
       ...plan,
       lights: (plan.lights ?? []).map((light) => ({ ...light, shape: light.shape ?? 'round', width: light.width ?? 1, depth: light.depth ?? 1 })),
+      types: plan.types ?? [],
+      groups: plan.groups ?? [],
     };
     this.stage.set(filled);
     if (filled.pictureId === this.stagePictureId) return;

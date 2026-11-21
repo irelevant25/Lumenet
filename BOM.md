@@ -53,7 +53,7 @@ There is no power jack: the box takes its 5 V from the USB cable.
 | 4 | Screw M3 × 6 mm | For the carrier board. One of the four holes is under the Pico: put that screw in before you plug the Pico in. |
 | 4 | Spacer M3 × 6 mm | Only if your box has no moulded posts |
 | 2 | Screw M3 × 10 mm with nut | For the XLR jack |
-| 3 | Hook-up wire, about 10 cm each | Three colours, for XLR jack to screw terminal |
+| 3 | Hook-up wire, about 10 cm each | Three colors, for XLR jack to screw terminal |
 | 1 | Micro-USB cable | It powers the box and carries the data, so it must be a **data cable**, not a charge-only one. USB allows up to 5 m. The box draws about 0.2 A. |
 | 1 | USB charger or power bank (optional) | Only for running the box without a computer, with its buttons and stored presets |
 | 1 | DMX terminator (optional) | XLR 3-pin male plug with a 120 Ω resistor between pins 2 and 3, for the last fixture in the chain |

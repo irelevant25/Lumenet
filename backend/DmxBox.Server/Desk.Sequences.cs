@@ -242,11 +242,15 @@ internal sealed partial class Desk
     }
 
     // Call with the lock held. Every move of a memory fader goes through here, by hand or by
-    // the stack: a fader that leaves zero starts the sequence of its memory.
+    // the stack: a fader that leaves zero starts the sequence of its memory, and takes the
+    // attributes of the lights the memory holds (Desk.Attributes.cs).
     private void MoveMemoryFader(int memory, byte level)
     {
         if (_memoryLevels[memory - 1] == 0 && level > 0)
+        {
             StartSequence(memory - 1);
+            ClaimMemory(memory);
+        }
 
         _memoryLevels[memory - 1] = level;
     }
@@ -280,11 +284,24 @@ internal sealed partial class Desk
     }
 
     // What one step gives while it is "fraction" of the way up, under the fader of its sequence.
+    // A fixture or a group gives its light here; its attributes (a shutter, a color wheel) come
+    // from the step that is on, see Desk.Attributes.cs.
     private void AddStep(byte[] levels, Step step, double fraction, byte fader)
     {
         byte level = (byte)Math.Round(step.Value * fraction);
         if (level == 0)
             return;
+
+        if (step.IsLights)
+        {
+            foreach (FixtureLooks.Part part in LookOfLights(step))
+            {
+                if (!part.Attribute)
+                    levels[part.Channel] = Math.Max(levels[part.Channel], Scale((byte)Math.Round(part.Value * fraction), fader));
+            }
+
+            return;
+        }
 
         if (!step.IsMemory)
         {

@@ -27,20 +27,34 @@
     <div class="fields">
       <label for="template-target">Lights</label>
       <div class="lights">
-        <select id="template-target" aria-label="Channels or memories" (change)="onTarget($event)">
+        <select id="template-target" aria-label="Channels, memories or the fixtures of a group" (change)="onTarget($event)">
           <option value="channel" [selected]="target() === 'channel'">Channels</option>
           <option value="memory" [selected]="target() === 'memory'">Memories</option>
+          <option value="group" [selected]="target() === 'group'" [disabled]="groups().length === 0">Fixtures of a group</option>
         </select>
-        <input
-          type="text"
-          autocomplete="off"
-          spellcheck="false"
-          aria-label="Numbers of the lights, like 1, 2 or 1-4"
-          placeholder="1, 2 or 1-4"
-          [value]="numbers()"
-          (input)="onNumbers($event)"
-        />
+        @if (target() === 'group') {
+          <select aria-label="The group" (change)="onGroup($event)">
+            @for (item of groups(); track item.id) {
+              <option [value]="item.id" [selected]="item.id === group()?.id">{{ item.name || 'Group' }}</option>
+            }
+          </select>
+        } @else {
+          <input
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+            aria-label="Numbers of the lights, like 1, 2 or 1-4"
+            placeholder="1, 2 or 1-4"
+            [value]="numbers()"
+            (input)="onNumbers($event)"
+          />
+        }
       </div>
+
+      @if (target() === 'group') {
+        <span class="label">Color</span>
+        <lm-color-picker [mixes]="true" [color]="color() ?? '#ffffff'" (pick)="onColor($event)" />
+      }
 
       @if (info().usesLow) {
         <label for="template-low">Low</label>

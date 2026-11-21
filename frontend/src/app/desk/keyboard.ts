@@ -7,6 +7,9 @@ import { DeskStore } from './desk-store';
 /** Where the Keyboard view is; listening comes back to it. */
 const KEYBOARD_URL = '/keyboard';
 
+/** Two presses on the same key within this many milliseconds are a double click. */
+const DOUBLE_PRESS_MS = 250;
+
 /**
  * The keyboard: the shortcuts of the Keyboard view press the keys of the desk, a shortcut can be
  * recorded for a key, and "listening" finds a key by a click on it.
@@ -18,9 +21,11 @@ const KEYBOARD_URL = '/keyboard';
  *   of one key of the desk. A shortcut that another key had moves over. Esc stops recording.
  * - While a solo is lit, the shortcut of a key under a fader or of the independents holds that key's
  *   fader (at full or at zero) for as long as it is held.
- * - Listening: the desk is shown, and the next click on one of its keys does not press it but
- *   picks it, and the Keyboard view comes back with that key chosen in its list. Esc stops
- *   listening.
+ * - Listening: the desk is shown, and a double click on one of its keys does not press it but
+ *   picks it, and the Keyboard view comes back with that key chosen in its list. A single click
+ *   does what it always does, a moment later (when no second click has come): it opens another
+ *   view, another page of faders, or presses a key, so that the key to pick can be found first.
+ *   Enter on a key picks it at once. Esc stops listening.
  */
 @Service()
 export class Keyboard {
@@ -39,8 +44,15 @@ export class Keyboard {
 
   private started = false;
 
-  // A key was picked by the press of a pointer: the click that follows must not press it.
+  // A key was pressed by a pointer while listening: the click that follows must not press it.
   private swallowClick = false;
+
+  // While listening: the key pressed once, waiting for a second press (a double click picks it);
+  // when none comes, its click is made then.
+  private pending: { id: string; element: HTMLElement; timer: ReturnType<typeof setTimeout> } | null = null;
+
+  // True while the click of a single press is made, a moment after the press: it is let through.
+  private replaying = false;
 
   // While a solo is lit: the keys of the keyboard held down now that hold a key of the desk, by the
   // physical key (KeyboardEvent.code), with the name of that key of the desk.
@@ -56,18 +68,25 @@ export class Keyboard {
     const keyDown = (event: KeyboardEvent): void => this.onKeyDown(event);
     const keyUp = (event: KeyboardEvent): void => this.onKeyUp(event);
     const pointerDown = (event: PointerEvent): void => this.onPointerDown(event);
+    // The click of a press comes right after the pointer goes up; a locked key gets none, and
+    // then the next click (Enter on a key) must not be taken for it.
+    const pointerUp = (): void => {
+      if (this.swallowClick) setTimeout(() => (this.swallowClick = false));
+    };
     const click = (event: MouseEvent): void => this.onClick(event);
     document.addEventListener('keydown', keyDown, true);
     document.addEventListener('keyup', keyUp, true);
-    // In the capture phase: a press that picks a key must not reach the key itself. The pick
-    // happens when the pointer goes down: a locked key (Play while the stack is not live) gets
+    // In the capture phase: a press that picks a key must not reach the key itself. The presses
+    // are counted when the pointer goes down: a locked key (Play while the stack is not live) gets
     // no click at all, but it is a key like the others and can have a shortcut.
     document.addEventListener('pointerdown', pointerDown, true);
+    document.addEventListener('pointerup', pointerUp, true);
     document.addEventListener('click', click, true);
     this.destroyRef.onDestroy(() => {
       document.removeEventListener('keydown', keyDown, true);
       document.removeEventListener('keyup', keyUp, true);
       document.removeEventListener('pointerdown', pointerDown, true);
+      document.removeEventListener('pointerup', pointerUp, true);
       document.removeEventListener('click', click, true);
     });
   }
@@ -81,12 +100,14 @@ export class Keyboard {
 
   stopListening(): void {
     if (!this.listening()) return;
+    this.dropPending();
     this.listening.set(false);
     void this.router.navigateByUrl(KEYBOARD_URL);
   }
 
   /** The next keys pressed become the shortcut of this key of the desk. */
   record(id: string): void {
+    this.dropPending();
     this.listening.set(false);
     this.lastMove.set('');
     this.picked.set(id);
@@ -189,23 +210,35 @@ export class Keyboard {
     this.recording.set(null);
   }
 
+  // While listening, a press on a key of the desk does not reach it. A second press on the same
+  // key soon after picks the key; otherwise the key gets its click a moment later.
   private onPointerDown(event: PointerEvent): void {
-    this.swallowClick = false; // a press that picked a key and then never became a click
-    if (!this.listening()) return;
+    this.swallowClick = false; // a press that was held back and then never became a click
+    if (!this.listening() || event.button !== 0) return;
 
-    const id = keyUnder(event);
-    if (id === null) return; // not a key of the desk: it works as always
+    const element = keyElementUnder(event);
+    const id = element ? keyOf(element) : null;
+    if (element === null || id === null) return; // not a key of the desk: it works as always
 
     event.preventDefault();
     event.stopImmediatePropagation();
     this.swallowClick = true;
-    this.picked.set(id);
-    this.listening.set(false);
-    void this.router.navigateByUrl(KEYBOARD_URL);
+
+    const first = this.pending;
+    if (first?.id === id) {
+      this.dropPending();
+      this.pick(id);
+      return;
+    }
+
+    if (first) this.replay(); // a press on another key: the first one's click happens now
+    this.pending = { id, element, timer: setTimeout(() => this.replay(), DOUBLE_PRESS_MS) };
   }
 
   private onClick(event: MouseEvent): void {
-    // The click of the press that picked a key, or one made without a pointer (Enter on a key).
+    if (this.replaying) return; // the click of a single press, made a moment after it
+
+    // The click of a press that was held back, or one made without a pointer (Enter on a key).
     const picked = this.swallowClick || (this.listening() && keyUnder(event) !== null);
     if (!picked) return;
 
@@ -216,9 +249,41 @@ export class Keyboard {
       return;
     }
 
-    this.picked.set(keyUnder(event));
+    this.dropPending();
+    this.pick(keyUnder(event));
+  }
+
+  // A key is picked: the Keyboard view comes back with it chosen.
+  private pick(id: string | null): void {
+    this.picked.set(id);
     this.listening.set(false);
     void this.router.navigateByUrl(KEYBOARD_URL);
+  }
+
+  // A single press on a key while listening, with no second one after it: the key gets its click
+  // now, as without listening (a link opens its view, a page key its page). A locked key does
+  // nothing, as always.
+  private replay(): void {
+    const pending = this.pending;
+    this.dropPending();
+    if (!pending || !this.listening()) return;
+
+    const element = pending.element.isConnected
+      ? pending.element
+      : document.querySelector<HTMLElement>(`[data-action="${CSS.escape(pending.id)}"]`);
+    if (!element || (element instanceof HTMLButtonElement && element.disabled)) return;
+
+    this.replaying = true;
+    try {
+      element.click();
+    } finally {
+      this.replaying = false;
+    }
+  }
+
+  private dropPending(): void {
+    if (this.pending) clearTimeout(this.pending.timer);
+    this.pending = null;
   }
 }
 
@@ -231,8 +296,18 @@ function takeAway(shortcuts: Record<string, string>, id: string): void {
 
 /** The name of the key of the desk an event happened on, or null. */
 function keyUnder(event: Event): string | null {
-  const element = (event.target as Element | null)?.closest?.('[data-action]');
-  const id = element?.getAttribute('data-action') ?? null;
+  const element = keyElementUnder(event);
+  return element ? keyOf(element) : null;
+}
+
+/** The element of the key of the desk an event happened on, or null. */
+function keyElementUnder(event: Event): HTMLElement | null {
+  return (event.target as Element | null)?.closest?.<HTMLElement>('[data-action]') ?? null;
+}
+
+/** The name of a key of the desk, if the desk knows it. */
+function keyOf(element: Element): string | null {
+  const id = element.getAttribute('data-action');
   return id !== null && actionWithId(id) ? id : null;
 }
 

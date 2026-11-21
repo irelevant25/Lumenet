@@ -56,7 +56,7 @@ end and are not needed for the current variant.
 | 4 | Screw M3 × 6 mm | For the carrier board |
 | 4 | Spacer M3 × 6 mm | Only if your box has no moulded posts |
 | 2 | Screw M3 × 10 mm with nut | For the XLR jack |
-| 3 | Hook-up wire, about 10 cm each | Three colours, for XLR jack to screw terminal |
+| 3 | Hook-up wire, about 10 cm each | Three colors, for XLR jack to screw terminal |
 | 1 | Power supply 5 V DC, 1 A or more | 5.5 / 2.1 mm plug, **centre positive**. The box draws about 0.3 A. |
 | 1 | Ethernet patch cable | |
 | 1 | Micro-USB cable | For loading the firmware onto the W5500-EVB-Pico |

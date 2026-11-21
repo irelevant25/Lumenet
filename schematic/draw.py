@@ -119,17 +119,17 @@ def draw_schematic(path):
         s.circle(x, y, 4, fill=wire_c)
 
     def gnd(x, y, iso=False, label="right"):
-        colour = iso_c if iso else INK
+        color = iso_c if iso else INK
         name = "GND2" if iso else "GND"
         s.line(x, y, x, y + 10, wire_c)
         for i, half in enumerate((11, 7, 3)):
-            s.line(x - half, y + 10 + 4 * i, x + half, y + 10 + 4 * i, colour, 2)
+            s.line(x - half, y + 10 + 4 * i, x + half, y + 10 + 4 * i, color, 2)
         if label == "right":
-            s.text(x + 15, y + 18, name, 11, weight="bold", fill=colour)
+            s.text(x + 15, y + 18, name, 11, weight="bold", fill=color)
         elif label == "left":
-            s.text(x - 15, y + 18, name, 11, "end", "bold", colour)
+            s.text(x - 15, y + 18, name, 11, "end", "bold", color)
         elif label == "below":
-            s.text(x, y + 34, name, 11, "middle", "bold", colour)
+            s.text(x, y + 34, name, 11, "middle", "bold", color)
 
     def flag(x, y, side="up"):
         w, h = 62, 18
@@ -406,7 +406,7 @@ for _ref, _row in SWITCHES.items():
         LEGS[f"{_ref}.{_letter}{_row}"] = f"{_letter}{_row}"
         LEGS[f"{_ref}.{_letter}{_row + 2}"] = f"{_letter}{_row + 2}"
 
-# number, from, to, colour, what it does, corner points (row, height), where the number tag sits
+# number, from, to, color, what it does, corner points (row, height), where the number tag sits
 WIRES = [
     (1, "j2", "j35", RED, "Pico pin 39 (VSYS, 5 V) to U4 pin 1", [(2, 2.0), (35, 2.0)], (9, 2.0)),
     (2, "j3", "j36", BLACK, "Pico pin 38 (GND) to U4 pin 2", [(3, 2.45), (36, 2.45)], (12, 2.45)),
@@ -430,7 +430,7 @@ WIRES = [
     (19, "i54", "f57", GREEN, "U5 pin 6 (A, Data +) to D1", [(56.4, 5), (56.4, 8)], (55.2, 5)),
     (20, "h53", "f59", BROWN, "U5 pin 7 (B, Data −) to D3", [(55.75, 6), (55.75, 9.3), (59, 9.3)], (57.5, 9.3)),
 ]
-XLR_WIRES = [          # number, hole, XLR pin, colour, what, corner points
+XLR_WIRES = [          # number, hole, XLR pin, color, what, corner points
     (21, "g57", 3, GREEN, "Data +", [(57.6, 7.5), (64.3, 7.5)]),
     (22, "g59", 2, BROWN, "Data −", [(59.6, 6.5), (64.3, 6.5)]),
     (23, "T-61", 1, BLUE, "common", [(64.3, 1.0)]),
@@ -554,7 +554,7 @@ def draw_breadboard(path):
                    "a to e at the bottom. The five holes of one row, above or below the middle gap, are one contact.",
            13, fill=GREY)
     s.text(30, 84, "If the letters on your board run the other way, go by the picture. "
-                   "Wire colours only tell the wires apart in the picture: any wire will do.", 13, fill=GREY)
+                   "Wire colors only tell the wires apart in the picture: any wire will do.", 13, fill=GREY)
 
     # ---- the board
     s.rect(X(1) - 30, Y(0) - 18, X(ROWS) - X(1) + 60, Y(19) - Y(0) + 36, fill="#f6f5ef", stroke="#c9c8bf",
@@ -573,8 +573,8 @@ def draw_breadboard(path):
         for letter, units in LETTER_Y.items():
             s.rect(X(row) - 2.5, Y(units) - 2.5, 5, 5, fill="#a8a79f", rx=1)
         if row in RAIL_ROWS:
-            for units, colour in ((0, "#a8a79f"), (1, "#a8a79f"), (18, "#d4d3cc"), (19, "#d4d3cc")):
-                s.rect(X(row) - 2.5, Y(units) - 2.5, 5, 5, fill=colour, rx=1)
+            for units, color in ((0, "#a8a79f"), (1, "#a8a79f"), (18, "#d4d3cc"), (19, "#d4d3cc")):
+                s.rect(X(row) - 2.5, Y(units) - 2.5, 5, 5, fill=color, rx=1)
         if row == 1 or row % 5 == 0:                            # row numbers: in the gap and as rulers outside
             s.text(X(row), Y(9.5) + 4, str(row), 10, "middle", fill="#8b8a82")
             for ruler_y, tick_y in ((Y(0) - 40, Y(0) - 36), (Y(19) + 33, Y(19) + 19)):
@@ -693,27 +693,27 @@ def draw_breadboard(path):
         s.text(jack_x + 16, pins_y[number] + 4, f"{number}   {label}", 12, weight="bold")
 
     # ---- wires
-    def tag(number, spot, colour):
+    def tag(number, spot, color):
         tx, ty = at(spot)
-        s.circle(tx, ty, 7.5, fill="white", stroke=colour, width=1.6)
+        s.circle(tx, ty, 7.5, fill="white", stroke=color, width=1.6)
         s.text(tx, ty + 3.4, str(number), 9.5, "middle", "bold")
 
-    for number, a, b, colour, _, corners, tag_at in WIRES:
+    for number, a, b, color, _, corners, tag_at in WIRES:
         points = [at(a)] + [at(corner) for corner in corners] + [at(b)]
         s.path(points, stroke="#1f2328", width=4.6)
-        s.path(points, stroke=colour, width=3)
+        s.path(points, stroke=color, width=3)
         for px, py in (points[0], points[-1]):
-            s.circle(px, py, 4.3, fill=colour, stroke="#1f2328", width=1)
-    for number, a, pin_number, colour, _, corners in XLR_WIRES:
+            s.circle(px, py, 4.3, fill=color, stroke="#1f2328", width=1)
+    for number, a, pin_number, color, _, corners in XLR_WIRES:
         points = [at(a)] + [at(corner) for corner in corners] + [(jack_x, pins_y[pin_number])]
         s.path(points, stroke="#1f2328", width=4.6)
-        s.path(points, stroke=colour, width=3)
-        s.circle(*points[0], 4.3, fill=colour, stroke="#1f2328", width=1)
-        s.circle(*points[-1], 4.3, fill=colour, stroke="#1f2328", width=1)
-    for number, a, b, colour, _, corners, tag_at in WIRES:
-        tag(number, tag_at, colour)
-    for number, a, pin_number, colour, _, corners in XLR_WIRES:
-        tag(number, (64.9, corners[-1][1]), colour)
+        s.path(points, stroke=color, width=3)
+        s.circle(*points[0], 4.3, fill=color, stroke="#1f2328", width=1)
+        s.circle(*points[-1], 4.3, fill=color, stroke="#1f2328", width=1)
+    for number, a, b, color, _, corners, tag_at in WIRES:
+        tag(number, tag_at, color)
+    for number, a, pin_number, color, _, corners in XLR_WIRES:
+        tag(number, (64.9, corners[-1][1]), color)
 
     # ---- what is what
     y = Y(19) + 60
@@ -742,19 +742,19 @@ def draw_breadboard(path):
         s.text(30, y + 22 + i * 18, ref, 12, weight="bold")
         s.text(66, y + 22 + i * 18, text, 12)
 
-    def wire_line(x, line_y, number, colour, ends, what, what_x=150):
-        s.circle(x + 8, line_y - 4, 7.5, fill="white", stroke=colour, width=1.6)
+    def wire_line(x, line_y, number, color, ends, what, what_x=150):
+        s.circle(x + 8, line_y - 4, 7.5, fill="white", stroke=color, width=1.6)
         s.text(x + 8, line_y - 0.6, str(number), 9.5, "middle", "bold")
         s.text(x + 24, line_y, ends, 12, weight="bold")
         s.text(x + what_x, line_y, what, 12)
 
-    for i, (number, a, b, colour, what, _, _) in enumerate(WIRES):
+    for i, (number, a, b, color, what, _, _) in enumerate(WIRES):
         x, row = (640, i) if number <= 8 else (1040, i - 8)
-        wire_line(x, y + 22 + row * 18, number, colour, f"{hole_name(a)} → {hole_name(b)}", what)
+        wire_line(x, y + 22 + row * 18, number, color, f"{hole_name(a)} → {hole_name(b)}", what)
     xlr_y = y + 22 + 12 * 18 + 16
     s.text(1040, xlr_y, "4  The XLR jack", 14, weight="bold")
-    for i, (number, a, pin_number, colour, what, _) in enumerate(XLR_WIRES):
-        wire_line(1040, xlr_y + 22 + i * 18, number, colour, f"{hole_name(a)} → XLR pin {pin_number}", what, 190)
+    for i, (number, a, pin_number, color, what, _) in enumerate(XLR_WIRES):
+        wire_line(1040, xlr_y + 22 + i * 18, number, color, f"{hole_name(a)} → XLR pin {pin_number}", what, 190)
 
     tips_y = y + 22 + len(parts) * 18 + 16
     s.text(30, tips_y, "Before you plug the USB cable in", 14, weight="bold")

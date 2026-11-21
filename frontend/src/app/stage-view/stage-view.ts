@@ -17,6 +17,7 @@ import {
   withoutLight,
   zoneAt,
 } from '../desk/stage-lights';
+import { shutterClosed, typeOf, wheelColorOf } from '../desk/fixtures';
 import { LampButton } from '../lamp-button/lamp-button';
 import { StagePanel } from '../stage-panel/stage-panel';
 
@@ -42,7 +43,7 @@ interface ShownLight {
   readonly vertical: boolean;
   /** For a device: the level of its first channel, in per cent. */
   readonly level: number;
-  /** Its cells: the colour of each lens and of its glow, how bright it is, and where its middle is, in per cent of the light. */
+  /** Its cells: the color of each lens and of its glow, how bright it is, and where its middle is, in per cent of the light. */
   readonly cells: readonly { lens: string; glow: string; brightness: number; x: number; y: number }[];
   /** How big the glow of a cell is, in squares: across and from back to front. */
   readonly glowWidth: number;
@@ -63,10 +64,10 @@ interface Dragged {
 
 /**
  * Stage: the stage seen from above, a grid of squares with the audience at the bottom, and the
- * lights of the rig on it, each in the colour its channels give it at this moment (after the
+ * lights of the rig on it, each in the color its channels give it at this moment (after the
  * master; dark in blackout), over a picture of the stage if the plan has one. For programming
  * without the rig: open it in a second window or on a tablet, and every change on the desk
- * shows at once. The colours come from stage-lights.ts.
+ * shows at once. The colors come from stage-lights.ts.
  *
  * The panel at the right (under the plan on a small screen) is always there: a click on a light
  * shows it there, with the faders of its channels; a double click puts its faders to full, and
@@ -126,9 +127,11 @@ export class StageView {
   protected readonly shown = computed<readonly ShownLight[]>(() => {
     const output = this.store.output();
     const dragged = this.dragged();
-    return this.store.stage().lights.map((light) => {
+    const plan = this.store.stage();
+    return plan.lights.map((light) => {
       const at = dragged?.id === light.id ? dragged : light;
-      const look = lookOf(light, output);
+      const type = typeOf(plan, light);
+      const look = lookOf(light, output, type ? { color: wheelColorOf(light, type, output), dark: shutterClosed(light, type, output) } : {});
       const square = light.shape === 'square';
       const width = at.width - (square ? SQUARE_INSET : ROUND_INSET);
       const depth = at.depth - (square ? SQUARE_INSET : ROUND_INSET);
@@ -196,14 +199,14 @@ export class StageView {
     if (!this.editing() || this.full()) return;
 
     const address = nextAddress(plan.lights);
-    const id = plan.lights.reduce((highest, light) => Math.max(highest, light.id), 0) + 1;
+    const id = this.store.nextLightId();
     const note = this.store.channelNotes()[address - 1] ?? '';
     const light: StageLight = {
       id,
       name: nameFor(address, note),
       address,
       channels: 'D',
-      colour: null,
+      color: null,
       angle: 0,
       shape: 'round',
       width: 1,

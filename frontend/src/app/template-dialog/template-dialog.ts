@@ -1,16 +1,22 @@
 import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
+import { ColorPick, ColorPicker } from '../color-picker/color-picker';
 import { DeskStore } from '../desk/desk-store';
-import { CHANNEL_COUNT, MAX_LEVEL, MAX_SEQUENCE_STEPS, MEMORY_COUNT, StepTarget } from '../desk/desk-types';
+import { CHANNEL_COUNT, MAX_LEVEL, MAX_SEQUENCE_STEPS, MEMORY_COUNT } from '../desk/desk-types';
+import { hexOf } from '../desk/fixtures';
 import { TEMPLATES, TemplateInfo, TemplateName, makeSequence, readNumbers, stepsNeeded } from '../desk/sequence-templates';
 import { LampButton } from '../lamp-button/lamp-button';
 
+/** What a template goes through: channels or memories by their numbers, or the fixtures of a group. */
+type TemplateLights = 'channel' | 'memory' | 'group';
+
 /**
  * The window that fills the sequence of a memory from a template: fire, chase, wave, strobe or
- * storm, for the lights the owner names. The steps it makes replace those of the sequence, and
+ * storm, for the lights the owner names: channels, memories, or the fixtures of a group (in the
+ * order of their addresses, in a color). The steps it makes replace those of the sequence, and
  * can be changed in the table like any others.
  */
 @Component({
-  imports: [LampButton],
+  imports: [ColorPicker, LampButton],
   selector: 'lm-template-dialog',
   styleUrl: './template-dialog.css',
   templateUrl: './template-dialog.html',
@@ -24,8 +30,13 @@ export class TemplateDialog {
   /** The memory whose sequence the template fills. */
   protected readonly memory = signal(1);
   protected readonly name = signal<TemplateName>('fire');
-  protected readonly target = signal<StepTarget>('channel');
+  protected readonly target = signal<TemplateLights>('channel');
   protected readonly numbers = signal('1, 2');
+  /** For the fixtures of a group: which group, and their color (null for white). */
+  protected readonly groupId = signal<number | null>(null);
+  protected readonly color = signal<string | null>(null);
+  protected readonly groups = computed(() => this.store.stage().groups);
+  protected readonly group = computed(() => this.groups().find((group) => group.id === this.groupId()) ?? this.groups()[0] ?? null);
   protected readonly low = signal(TEMPLATES[0].low);
   protected readonly high = signal(TEMPLATES[0].high);
   protected readonly time = signal(TEMPLATES[0].time);
@@ -61,7 +72,15 @@ export class TemplateDialog {
   }
 
   protected onTarget(event: Event): void {
-    this.target.set((event.target as HTMLSelectElement).value as StepTarget);
+    this.target.set((event.target as HTMLSelectElement).value as TemplateLights);
+  }
+
+  protected onGroup(event: Event): void {
+    this.groupId.set(Number((event.target as HTMLSelectElement).value));
+  }
+
+  protected onColor(pick: ColorPick): void {
+    if (pick.kind === 'mix') this.color.set(hexOf(pick.rgb));
   }
 
   protected onNumbers(event: Event): void {
@@ -88,8 +107,15 @@ export class TemplateDialog {
   protected make(event: Event): void {
     event.preventDefault(); // the form must not close the window on a mistake
 
-    const highest = this.target() === 'channel' ? CHANNEL_COUNT : MEMORY_COUNT;
-    const numbers = readNumbers(this.numbers(), highest);
+    const fixtures = this.target() === 'group';
+    let numbers: number[] | string;
+    if (fixtures) {
+      const group = this.group();
+      const lights = group ? this.store.groupLights(group).sort((a, b) => a.address - b.address) : [];
+      numbers = lights.length > 0 ? lights.map((light) => light.id) : 'The group has no lights: tick them on the Fixtures page.';
+    } else {
+      numbers = readNumbers(this.numbers(), this.target() === 'channel' ? CHANNEL_COUNT : MEMORY_COUNT);
+    }
     if (typeof numbers === 'string') {
       this.error.set(numbers);
       return;
@@ -105,8 +131,9 @@ export class TemplateDialog {
 
     const made = makeSequence({
       name: this.name(),
-      target: this.target(),
+      target: fixtures ? 'fixture' : this.target() === 'channel' ? 'channel' : 'memory',
       numbers,
+      color: fixtures ? this.color() : null,
       low: this.low(),
       high: this.high(),
       time: this.time(),

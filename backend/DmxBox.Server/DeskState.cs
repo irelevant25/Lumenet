@@ -17,6 +17,12 @@ namespace DmxBox.Server;
 /// <param name="Rate">The rate, a speed master for all sequences: 0.1 to 10.</param>
 /// <param name="RateOn">True while the rate counts.</param>
 /// <param name="Solo">The keys held for a solo now, see <see cref="SoloState"/>.</param>
+/// <param name="ChannelClaims">
+/// For each of the 512 channel faders, when it last took its channel (a number that grows with
+/// every such move; the higher, the later; 0 for never): an attribute of a light, such as a pan,
+/// comes from the fader that took it last. See Desk.Attributes.cs.
+/// </param>
+/// <param name="MemoryClaims">For each of the 128 memory faders, when it last left zero and took the lights its memory holds, on the same count.</param>
 /// <remarks>Public only because <see cref="IDeskClient"/> has to be.</remarks>
 public sealed record DeskState(
     int[] Channels,
@@ -31,7 +37,9 @@ public sealed record DeskState(
     int[] MemoryIndependents,
     double Rate,
     bool RateOn,
-    SoloState Solo);
+    SoloState Solo,
+    long[] ChannelClaims,
+    long[] MemoryClaims);
 
 /// <summary>
 /// The keys of channels and memories held for a solo now, on any UI: with SOLO UP lit only their

@@ -58,7 +58,8 @@ h2 {
   gap: 8px 12px;
 }
 
-label {
+label,
+.label {
   color: var(--legend-dim);
   font-size: calc(13px * var(--font-scale));
 }

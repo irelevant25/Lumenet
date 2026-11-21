@@ -97,8 +97,9 @@ internal sealed partial class Desk
     private double Now => _time.GetElapsedTime(_born).TotalSeconds;
 
     /// <summary>
-    /// True while blackout is on. <see cref="GetOutput"/> does not show it: the box does the
-    /// blackout, so that its own blackout button and the one on the desk are the same switch.
+    /// True while blackout is on: <see cref="GetOutput"/> gives every channel that gives light 0,
+    /// and leaves the attributes of the lights (a pan, a tilt) where they are, so that no moving
+    /// head moves. The blackout button of the box switches it too, see <see cref="BoxLink"/>.
     /// </summary>
     public bool Blackout
     {
@@ -225,6 +226,7 @@ internal sealed partial class Desk
         {
             _moves.Remove(new Fader(Memory: false, channel));
             _channels[channel - 1] = (byte)level;
+            ClaimChannel(channel);
             _outputChanges++;
         }
     }
@@ -249,7 +251,7 @@ internal sealed partial class Desk
         }
     }
 
-    /// <summary>Moves the master fader, which scales the whole output.</summary>
+    /// <summary>Moves the master fader, which scales the channels that give light (not the attributes of the lights).</summary>
     /// <param name="level">The fader's new level, 0-255. The desk starts with 255.</param>
     public void SetMaster(int level)
     {
@@ -268,7 +270,11 @@ internal sealed partial class Desk
     {
         lock (_lock)
         {
+            if (_blackout == on)
+                return;
+
             _blackout = on;
+            _outputChanges++;
         }
     }
 
@@ -400,6 +406,8 @@ internal sealed partial class Desk
                 throw new DeskException($"Memory {memory} holds a sequence. Change it on the Sequences page.");
 
             StoredLook(memory).CopyTo(_channels, 0);
+            long claim = ++_claims;
+            Array.Fill(_channelClaims, claim);
             _outputChanges++;
         }
     }
@@ -480,7 +488,7 @@ internal sealed partial class Desk
             Array.Fill(_memoryNotes, "");
             DefaultIndependents().CopyTo(_independents, 0);
             DefaultMemoryIndependents().CopyTo(_memoryIndependents, 0);
-            _stage = StagePlan.Empty;
+            PutStage(StagePlan.Empty);
             _stagePicture = null;
             CountLookChange();
             return _projectChanges;
@@ -586,7 +594,9 @@ internal sealed partial class Desk
                 MemoryIndependents: Copy(_memoryIndependents),
                 Rate: _rate,
                 RateOn: _rateOn,
-                Solo: SoloNow());
+                Solo: SoloNow(),
+                ChannelClaims: Copy(_channelClaims),
+                MemoryClaims: Copy(_memoryClaims));
         }
     }
 
@@ -611,12 +621,14 @@ internal sealed partial class Desk
     }
 
     /// <summary>
-    /// Computes the levels the box has to send at this moment. For every channel the highest
-    /// wins: its own fader, or a memory that holds the channel, scaled by that memory's fader.
-    /// A memory with a sequence gives what its sequence gives right now. A solo changes that (see
-    /// Desk.Solo.cs): with keys held with SOLO UP only their faders count, at full; with keys held
-    /// with SOLO DOWN their faders give nothing. The master then scales the result. Blackout is
-    /// left out, see <see cref="Blackout"/>.
+    /// Computes the levels the box has to send at this moment. For every channel that gives
+    /// light the highest wins: its own fader, or a memory that holds the channel, scaled by that
+    /// memory's fader. A memory with a sequence gives what its sequence gives right now. A solo
+    /// changes that (see Desk.Solo.cs): with keys held with SOLO UP only their faders count, at
+    /// full; with keys held with SOLO DOWN their faders give nothing. Then each light is held to
+    /// its limit, the master scales the result, and blackout makes it dark. The attributes of the
+    /// lights (a pan, a tilt) come from the fader that took them last, untouched by all of
+    /// that, see Desk.Attributes.cs.
     /// </summary>
     /// <returns>512 levels; channel 1 is at index 0.</returns>
     public byte[] GetOutput()
@@ -647,8 +659,9 @@ internal sealed partial class Desk
                     output[fader.Number - 1] = 0;
             }
 
-            for (int channel = 0; channel < ChannelCount; channel++)
-                output[channel] = Scale(output[channel], _master);
+            FinishLight(output);
+            if (_roles.AttributeLights.Length > 0)
+                PutAttributes(output, now, down);
 
             return output;
         }
@@ -712,7 +725,7 @@ internal sealed partial class Desk
     // was. The plan is never changed in place.
     private void PutProject(ProjectContent project)
     {
-        _stage = project.Stage ?? StagePlan.Empty;
+        PutStage(project.Stage ?? StagePlan.Empty);
         _stagePicture = project.Stage is null ? null : project.StagePicture;
 
         for (int index = 0; index < MemoryCount; index++)

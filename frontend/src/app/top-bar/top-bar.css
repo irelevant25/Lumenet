@@ -64,7 +64,10 @@ h1 {
   line-height: 1;
 }
 
-.version {
+/* the version, the box light and the LAN line: small and dim */
+.version,
+.box,
+.lan {
   color: var(--legend-dim);
   font-size: calc(13px * var(--font-scale));
 }
@@ -74,16 +77,18 @@ h1 {
   grid-column: 1;
   align-items: center;
   gap: 7px;
-  color: var(--legend-dim);
-  font-size: calc(13px * var(--font-scale));
 }
 
-.box .light {
+/* the lights of the box and of LAN: little round lamps */
+.light {
   box-sizing: border-box;
   width: 9px;
   height: 9px;
-  border: 1px solid var(--legend-dim);
   border-radius: 50%;
+}
+
+.box .light {
+  border: 1px solid var(--legend-dim);
 }
 
 .box.connected {
@@ -103,17 +108,11 @@ h1 {
   grid-column: 1 / -1;
   align-items: baseline;
   gap: 6px;
-  color: var(--legend-dim);
-  font-size: calc(13px * var(--font-scale));
   white-space: nowrap;
 }
 
 .lan .light {
-  box-sizing: border-box;
   align-self: center;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
   background: var(--system);
   box-shadow: 0 0 8px color-mix(in srgb, var(--system) 60%, transparent);
 }
@@ -141,7 +140,7 @@ h1 {
 }
 
 .views a {
-  padding: 9px 6px 7px; /* close together: seven links, and the project's name keeps its room */
+  padding: 9px 6px 7px; /* close together: eight links, and the project's name keeps its room */
   border-bottom: 3px solid var(--edge);
   color: var(--legend-dim);
   font-size: calc(15px * var(--font-scale));
@@ -264,7 +263,7 @@ h1 {
   justify-self: end;
 }
 
-/* The seven links share the line: narrow lettering, little room around the words, and the line
+/* The eight links share the line: narrow lettering, little room around the words, and the line
    shared out among them. Should bigger lettering (Settings) make them wider than the line, the
    line scrolls sideways, not the page; its room at the top keeps the "live" tag in sight. */
 :host-context(.phone) .views {
@@ -291,6 +290,15 @@ h1 {
   top: -7px;
   right: 0;
   margin: 0;
+}
+
+/* eight links do not fit in one line on a narrow phone: two rows of four */
+@media (max-width: 430px) {
+  :host-context(.phone) .views {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    row-gap: 6px;
+  }
 }
 
 :host-context(.phone) .file {

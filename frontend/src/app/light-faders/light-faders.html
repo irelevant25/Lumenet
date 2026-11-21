@@ -6,7 +6,7 @@
         [label]="fader.label"
         [value]="fader.level"
         [ownLevel]="fader.own"
-        [style.--lamp]="fader.colour"
+        [style.--lamp]="fader.color"
         (valueChange)="store.setChannel(fader.channel, $event)"
       />
       <span class="letter" aria-hidden="true" [title]="fader.name">{{ fader.letter }}</span>

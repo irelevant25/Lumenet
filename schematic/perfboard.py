@@ -95,7 +95,7 @@ for _ref, (_left, _right, _row) in SWITCHES.items():
 # The socket strip of U4 has seven contacts, but the converter has no pin at 3, 4 and 6.
 EMPTY_CONTACTS = {"U4 position 3": "O8", "U4 position 4": "P8", "U4 position 6": "R8"}
 
-# Insulated wires on the parts side: net, from, to, colour, what it is.
+# Insulated wires on the parts side: net, from, to, color, what it is.
 LINKS = [
     ("DMX_TX", "B1", "M4", "#7c3aed", "Pico pin 1 (GP0, the DMX data) to U3 pin 3"),
 ]
@@ -436,7 +436,7 @@ PITCH = 30.0                                              # pixels from hole to 
 BOARD_W, BOARD_H = 70 / 2.54, 90 / 2.54                   # the board, in hole distances
 EDGE_X, EDGE_Y = (BOARD_W - 25) / 2, (BOARD_H - 30) / 2   # from the board's edge to the first hole
 
-NET_INFO = {                                              # colour, what the net is
+NET_INFO = {                                              # color, what the net is
     "VSYS": ("#dc2626", "5 V from the USB cable (Pico pin 39)"),
     "GND": ("#111827", "ground of the Pico and the computer"),
     "3V3": ("#f59e0b", "3.3 V (Pico pin 36) to R3"),
@@ -513,10 +513,10 @@ def draw_tracks(view, tracks, faint):
                           width=3 if faint else 7)
 
 
-def draw_pads(view, tracks, coloured):
-    """A dot in every hole that holds a leg. On the solder side the dot has the colour of its net."""
+def draw_pads(view, tracks, colored):
+    """A dot in every hole that holds a leg. On the solder side the dot has the color of its net."""
     s = view.svg
-    if coloured:
+    if colored:
         for net, pairs in tracks.items():
             for pad in pads_of(pairs):
                 s.circle(*view.xy(pad), 5.5, fill=NET_INFO[net][0])
@@ -525,8 +525,8 @@ def draw_pads(view, tracks, coloured):
         if net is None:
             s.circle(*view.xy(at(hole)), 4.2, fill=PAPER, stroke=INK, width=1.6)       # a leg that joins nothing
         else:
-            s.circle(*view.xy(at(hole)), 6.5 if coloured else 4.4, fill=NET_INFO[net][0] if coloured else INK)
-            if coloured:
+            s.circle(*view.xy(at(hole)), 6.5 if colored else 4.4, fill=NET_INFO[net][0] if colored else INK)
+            if colored:
                 s.circle(*view.xy(at(hole)), 2.2, fill=PAPER)
     for hole in EMPTY_CONTACTS.values():
         s.circle(*view.xy(at(hole)), 4.2, fill=PAPER, stroke=INK, width=1.6)
@@ -667,28 +667,28 @@ def link_way(a, b):
 
 def draw_links(view, parts_side):
     s = view.svg
-    for i, (net, a, b, colour, _) in enumerate(LINKS, start=1):
+    for i, (net, a, b, color, _) in enumerate(LINKS, start=1):
         if parts_side:
             points = [view.xy(cell) for cell in link_way(a, b)]
             s.path(points, stroke="white", width=7)
-            s.path(points, stroke=colour, width=4)
+            s.path(points, stroke=color, width=4)
             lx, ly = view.xy((at(a)[0] + 7.6, 0.1))
-            s.text(lx, ly - 7, f"W{i}: insulated wire", size=11, weight="bold", fill=colour, halo=True)
+            s.text(lx, ly - 7, f"W{i}: insulated wire", size=11, weight="bold", fill=color, halo=True)
         for hole in (a, b):
             x, y = view.xy(at(hole))
-            s.circle(x, y, 8.5, stroke=colour, width=2.5, fill="none" if not parts_side else colour)
+            s.circle(x, y, 8.5, stroke=color, width=2.5, fill="none" if not parts_side else color)
             if parts_side:
                 s.circle(x, y, 2.2, fill=PAPER)
             else:
-                s.text(x, y - 12, f"W{i}", size=10, anchor="middle", weight="bold", fill=colour, halo=True)
+                s.text(x, y - 12, f"W{i}", size=10, anchor="middle", weight="bold", fill=color, halo=True)
 
 
 def draw_legend(view, x, y, solder_side):
     s = view.svg
     s.text(x, y, "Tracks on the solder side" if solder_side else "What is connected", size=14, weight="bold")
-    for i, (net, (colour, what)) in enumerate(NET_INFO.items()):
+    for i, (net, (color, what)) in enumerate(NET_INFO.items()):
         yy = y + 26 + i * 24
-        s.line(x, yy - 4, x + 34, yy - 4, stroke=colour, width=7)
+        s.line(x, yy - 4, x + 34, yy - 4, stroke=color, width=7)
         s.text(x + 44, yy, net, size=12, weight="bold")
         s.text(x + 44, yy + 12, what, size=10, fill=GREY)
     yy = y + 26 + len(NET_INFO) * 24 + 16
@@ -700,7 +700,7 @@ def draw_legend(view, x, y, solder_side):
         "Dashed outlines: where the parts are, seen",
         "through the board.",
         "",
-        "Neighbouring pads of two colours must not touch:",
+        "Neighbouring pads of two colors must not touch:",
         "look for solder bridges before the first power-up.",
     ] if solder_side else [
         "A black dot is a hole with a leg in it.",
@@ -730,7 +730,7 @@ def draw(path, tracks, solder_side):
                    "The board turned over sideways: column A is at the right now. 70 × 90 mm, 26 × 31 holes.")
         draw_parts(view, outline_only=True)
         draw_tracks(view, tracks, faint=False)
-        draw_pads(view, tracks, coloured=True)
+        draw_pads(view, tracks, colored=True)
         draw_names(view)
         draw_links(view, parts_side=False)
     else:
@@ -739,7 +739,7 @@ def draw(path, tracks, solder_side):
         draw_tracks(view, tracks, faint=True)
         draw_links(view, parts_side=True)                 # under the parts: the wire lies on the board
         draw_parts(view, outline_only=False)
-        draw_pads(view, tracks, coloured=False)
+        draw_pads(view, tracks, colored=False)
     draw_legend(view, 60 + BOARD_W * PITCH + 50, 130, solder_side)
     svg.save(path)
 

@@ -16,7 +16,7 @@ interface Tab {
  * Keyboard: a shortcut for every key of the desk. The kinds of keys are tabs side by side, each
  * with the number of its keys (and, while a search runs, how many of them it finds); the list
  * under them has the keys of one tab at the left and their shortcuts at the right. Set records
- * one, and Listen finds a key by a click on it on the desk. On the PC the shortcuts belong to
+ * one, and Listen finds a key by a double click on it on the desk. On the PC the shortcuts belong to
  * the project, see desk-settings.ts; keyboard.ts does the listening and the pressing.
  */
 @Component({

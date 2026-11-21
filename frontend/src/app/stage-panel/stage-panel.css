@@ -1,4 +1,4 @@
-/* A panel beside the plan, in the colours of the panels of Settings. */
+/* A panel beside the plan, in the colors of the panels of Settings. */
 :host {
   display: block;
   min-height: 0;
@@ -131,6 +131,12 @@ select:hover,
 input:hover,
 button:hover:not(:disabled) {
   border-color: var(--legend-dim);
+}
+
+.keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .hint {

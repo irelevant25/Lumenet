@@ -29,6 +29,11 @@ export const routes: Routes = [
     title: 'Lumenet: stage',
   },
   {
+    path: 'fixtures',
+    loadComponent: () => import('./fixtures-view/fixtures-view').then((file) => file.FixturesView),
+    title: 'Lumenet: fixtures',
+  },
+  {
     path: 'settings',
     loadComponent: () => import('./settings-view/settings-view').then((file) => file.SettingsView),
     title: 'Lumenet: settings',

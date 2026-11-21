@@ -33,12 +33,13 @@
   {{ number() }}
 </button>
 
-<div class="note" [attr.title]="lines()[1] ? lines()[0] + ' ' + lines()[1] : lines()[0] || null">
+<div class="note" [attr.title]="noteTitle()">
   <input
     type="text"
     autocomplete="off"
     spellcheck="false"
     [attr.maxlength]="lineLength"
+    [attr.placeholder]="fixtureLines()[0] || null"
     [value]="lines()[0]"
     [readOnly]="locked()"
     [attr.aria-label]="'Note for ' + name()"
@@ -51,6 +52,7 @@
     autocomplete="off"
     spellcheck="false"
     [attr.maxlength]="lineLength"
+    [attr.placeholder]="fixtureLines()[1] || null"
     [value]="lines()[1]"
     [readOnly]="locked()"
     [attr.aria-label]="'Note for ' + name() + ', second line'"

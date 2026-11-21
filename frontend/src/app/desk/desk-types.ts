@@ -72,6 +72,14 @@ export interface DeskState {
   rateOn?: boolean;
   /** The keys held for a solo now, on any page. An older desk program leaves it out. */
   solo?: SoloState;
+  /**
+   * For each channel fader, when it last took its channel, on a count that grows (0: never): an
+   * attribute of a light, such as a pan, comes from the fader that took it last. An older desk
+   * program leaves it out.
+   */
+  channelClaims?: number[];
+  /** For each memory fader, when it last left zero and took the lights its memory holds, on the same count. */
+  memoryClaims?: number[];
 }
 
 /** A key of a channel or a memory held for a solo. */
@@ -99,9 +107,9 @@ export interface AutosaveOptions {
 }
 
 /**
- * A light of the rig on the stage plan. Its channels are one letter each, from its address on:
- * D dimmer, R red, G green, B blue, W white, A amber, U ultraviolet; any other letter is a
- * channel that gives no light (a strobe, a mode). See stage-lights.ts.
+ * A light of the rig on the stage plan: a fixture. Its channels are one letter each, from its
+ * address on: D dimmer, R red, G green, B blue, W white, A amber, U ultraviolet; any other letter
+ * is a channel that gives no light (P pan, T tilt, S strobe, a mode). See stage-lights.ts.
  */
 export interface StageLight {
   /** Its number while the plan is edited; no other light of the plan has it. */
@@ -111,8 +119,8 @@ export interface StageLight {
   address: number;
   /** One letter per channel, like "DRGB" or "RGBRGBRGBRGB" (four cells). */
   channels: string;
-  /** The colour of a light without colour channels (a gel), like "#ff2000"; null: warm white. */
-  colour: string | null;
+  /** The color of a light without color channels (a gel), like "#ff2000"; null: warm white. */
+  color: string | null;
   /** Where it hangs, in squares: across from the left edge of the stage, and from its back edge. */
   x: number;
   y: number;
@@ -123,12 +131,68 @@ export interface StageLight {
   /** How big it is before it is turned, in whole squares, 1 to 32: across and from back to front. */
   width: number;
   depth: number;
+  /** The kind of light from the fixture library it is, by its id in the plan's types; null (or missing) for one of letters. */
+  type?: number | null;
+  /** The most it gives, in per cent, 1 to 100 (missing: 100), like a hazer at most 60. */
+  limit?: number;
 }
 
 export type LightShape = 'round' | 'square';
 
 /** The biggest a light can be, across and from back to front, in squares. */
 export const LIGHT_MAX_SIZE = 32;
+
+/** A light without a limit goes to 100 per cent. */
+export const NO_LIMIT = 100;
+
+/**
+ * A kind of light from the fixture library (the Open Fixture Library): a maker's model in one of
+ * its modes, with what each channel does. The lights of this kind have its channels' codes as
+ * their letters.
+ */
+export interface FixtureType {
+  id: number;
+  maker: string;
+  model: string;
+  mode: string;
+  /** Where it is in the library, like "american-dj/inno-pocket-spot". */
+  source: string;
+  channels: FixtureChannel[];
+}
+
+/** A channel of a kind of light from the library. */
+export interface FixtureChannel {
+  /** What the library calls it, like "Pan" or "Color Wheel". */
+  name: string;
+  /** Its letter: D dimmer, R G B W A U colors, P pan, T tilt, F the fine part of another channel, S shutter or strobe, X anything else. */
+  code: string;
+  /** For the fine part of another channel (16 bits): that channel's index, 0 for the first; null otherwise. */
+  fine?: number | null;
+  /** What it does at its values, for a channel that does several things: wheel slots, a shutter, modes. */
+  ranges?: FixtureRange[];
+}
+
+/** What a channel does from one value to another, like "Red" on a color wheel. */
+export interface FixtureRange {
+  from: number;
+  to: number;
+  label: string;
+  /** For a color of a wheel: its color, like "#ff0000". */
+  color?: string | null;
+}
+
+/** A group of lights, with one fader on the Fixtures page that moves all of them. */
+export interface LightGroup {
+  id: number;
+  name: string;
+  /** The ids of its lights. */
+  lights: number[];
+}
+
+/** The most groups and the most kinds of lights from the library a plan can have, and the longest group name. */
+export const MAX_GROUPS = 64;
+export const MAX_TYPES = 64;
+export const GROUP_NAME_LENGTH = 24;
 
 /** The stage plan of the project: the stage in squares of its grid, and the lights on it. */
 export interface StagePlan {
@@ -141,6 +205,10 @@ export interface StagePlan {
   pictureOpacity: number;
   /** What the picture lies under: the stage, or the whole plan with the room around the stage. */
   pictureOver: 'stage' | 'plan';
+  /** The kinds of lights from the library that lights of the plan are. Missing from an older desk program. */
+  types: FixtureType[];
+  /** The groups of lights. Missing from an older desk program. */
+  groups: LightGroup[];
 }
 
 /** The plan of a desk without one: a stage of 16 by 10 squares, no lights, no picture. */
@@ -151,6 +219,8 @@ export const EMPTY_STAGE: StagePlan = {
   pictureId: null,
   pictureOpacity: 0.6,
   pictureOver: 'stage',
+  types: [],
+  groups: [],
 };
 
 /** The smallest and biggest stage, across and from back to front, in squares. */
@@ -165,8 +235,11 @@ export const STAGE_FRONT_ROOM = 4;
 /** What the stored memories hold: for each stored memory, by its number, the level of every channel. */
 export type MemoryLooks = Readonly<Record<number, readonly number[]>>;
 
-/** What a step of a sequence or of the stack stands for. */
+/** A fader of the desk: of a channel or of a memory (solo keys, the independents). */
 export type StepTarget = 'channel' | 'memory';
+
+/** What a step of a sequence or of the stack stands for: a fader, or a fixture or a group of fixtures of the stage plan. */
+export type StepKind = StepTarget | 'fixture' | 'group';
 
 /** The longest time a step can have, in seconds. */
 export const MAX_STEP_SECONDS = 999.9;
@@ -174,19 +247,21 @@ export const MAX_STEP_SECONDS = 999.9;
 export const MAX_SEQUENCE_STEPS = 99;
 
 /**
- * One step of a sequence or of the stack: a channel or a memory, the value it is brought to,
- * and three times in seconds. `up` is its way from zero to the value, `wait` how long it then
- * stays, `down` its way back to zero when the next step takes over.
+ * One step of a sequence or of the stack: a channel, a memory, a fixture or a group, the value
+ * it is brought to, and three times in seconds. `up` is its way from zero to the value, `wait`
+ * how long it then stays, `down` its way back to zero when the next step takes over.
  */
 export interface TimedStep {
-  target: StepTarget;
-  /** The channel (1 to 512) or the memory (1 to 128). */
+  target: StepKind;
+  /** The channel (1 to 512) or the memory (1 to 128); a fixture or a group by its id in the stage plan. */
   number: number;
-  /** 0 to 255. */
+  /** 0 to 255: for a fixture or a group, the intensity of its lights. */
   value: number;
   up: number;
   wait: number;
   down: number;
+  /** For a fixture or a group: the color its lights shine in, like "#ff2000"; missing or null for white. */
+  color?: string | null;
 }
 
 /** A sequence, stored in a memory: its steps run one after the other while the memory's fader is up. */
@@ -259,27 +334,30 @@ export function firstStep(wait: number): TimedStep {
 }
 
 /**
- * The step that recording a sequence puts in for a pressed key: that channel or memory at
- * full, with the times a new sequence starts with.
+ * The step that recording a sequence puts in for a pressed key: that channel, memory, fixture or
+ * group at full, a fixture or a group in `color`, with the times a new sequence starts with.
  */
-export function recordedStep(target: StepTarget, number: number): TimedStep {
-  return { ...firstStep(1), target, number };
+export function recordedStep(target: StepKind, number: number, color: string | null = null): TimedStep {
+  const step: TimedStep = { ...firstStep(1), target, number };
+  return target === 'fixture' || target === 'group' ? { ...step, color } : step;
 }
 
 /**
- * The step that "Add step" puts in after `last`: the same kind, value and times, on the next
- * channel or memory. That is what building a run of lights needs most often.
+ * The step that "Add step" puts in after `last`: the same kind, value, color and times, on the
+ * next channel or memory, or the next fixture (by address) or group of `plan`. That is what
+ * building a run of lights needs most often.
  */
-export function stepAfter(last: TimedStep): TimedStep {
-  const highest = last.target === 'channel' ? CHANNEL_COUNT : MEMORY_COUNT;
-  return {
-    target: last.target,
-    number: Math.min(last.number + 1, highest),
-    value: last.value,
-    up: last.up,
-    wait: last.wait,
-    down: last.down,
+export function stepAfter(last: TimedStep, plan: Pick<StagePlan, 'lights' | 'groups'> = EMPTY_STAGE): TimedStep {
+  const nextOf = (ids: readonly number[]) => {
+    const at = ids.indexOf(last.number);
+    return at >= 0 && at + 1 < ids.length ? ids[at + 1] : last.number;
   };
+  const number =
+    last.target === 'fixture' ? nextOf([...plan.lights].sort((a, b) => a.address - b.address).map((light) => light.id))
+    : last.target === 'group' ? nextOf(plan.groups.map((group) => group.id))
+    : Math.min(last.number + 1, last.target === 'channel' ? CHANNEL_COUNT : MEMORY_COUNT);
+  const { target, value, up, wait, down, color } = last;
+  return color === undefined ? { target, number, value, up, wait, down } : { target, number, value, up, wait, down, color };
 }
 
 /**

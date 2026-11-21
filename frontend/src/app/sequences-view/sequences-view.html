@@ -123,7 +123,7 @@
           <thead>
             <tr>
               <th scope="col">Step</th>
-              <th scope="col">Channel or memory</th>
+              <th scope="col">Kind</th>
               <th scope="col">Number</th>
               <th scope="col">Notes</th>
               <th scope="col">Value</th>
@@ -144,6 +144,7 @@
                 [locked]="locked()"
                 [class.current]="runningStep() === $index + 1"
                 (stepChange)="changeStep($index, $event)"
+                (colorPick)="pickColor($index, step)"
               >
                 <th before scope="row">{{ $index + 1 }}</th>
                 <td after class="row-keys">
@@ -165,6 +166,7 @@
                   </button>
                   <button
                     type="button"
+                    class="delete"
                     [attr.aria-label]="'Take step ' + ($index + 1) + ' out'"
                     [disabled]="locked()"
                     (click)="deleteStep($index)"
@@ -207,3 +209,4 @@
 </div>
 
 <lm-template-dialog />
+<lm-step-color-dialog />

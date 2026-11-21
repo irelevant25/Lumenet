@@ -58,16 +58,17 @@ public sealed class BoxLinkTests
     }
 
     [Fact]
-    public void ConnectingInBlackoutDarkensTheBoxBeforeItGetsTheLook()
+    public void ConnectingInBlackoutGivesTheBoxADarkLook()
     {
         _desk.SetChannel(1, 200);
         _desk.SetBlackout(true);
 
         _link.Step(At(0));
 
-        Assert.Equal(["ping", "blackout on", "master 255", "levels"], _box.Calls);
-        Assert.True(_box.BlackoutOn);
-        Assert.Equal(200, _box.Levels[0]);
+        // The blackout is in the output: the box's own blackout, that of its button, stays off.
+        Assert.Equal(["ping", "master 255", "levels", "blackout off"], _box.Calls);
+        Assert.False(_box.BlackoutOn);
+        Assert.Equal(0, _box.Levels[0]);
     }
 
     [Fact]
@@ -147,36 +148,53 @@ public sealed class BoxLinkTests
     // ---------------------------------------------------------------- blackout
 
     [Fact]
-    public void BlackoutFromTheUiGoesToTheBox()
+    public void BlackoutFromTheUiGoesToTheBoxAsADarkLook()
     {
+        _desk.SetChannel(1, 200);
         Connect();
 
         _desk.SetBlackout(true);
         _link.Step(At(25));
 
-        Assert.Equal(["blackout on"], _box.Calls);
-        Assert.True(_box.BlackoutOn);
+        Assert.Equal(["levels"], _box.Calls);
+        Assert.Equal(0, _box.Levels[0]);
+        Assert.False(_box.BlackoutOn);   // the box's own blackout is that of its button
 
         _desk.SetBlackout(false);
         _link.Step(At(50));
 
-        Assert.Equal(["blackout on", "blackout off"], _box.Calls);
-        Assert.False(_box.BlackoutOn);
+        Assert.Equal(["levels", "levels"], _box.Calls);
+        Assert.Equal(200, _box.Levels[0]);
     }
 
     [Fact]
-    public void BlackoutFromTheUiReachesTheBoxBeforeTheNextPing()
+    public void BlackoutFromTheUiIsNotMistakenForThePressOfTheButton()
     {
         Connect();
 
         _desk.SetBlackout(true);
         _link.Step(At(500));   // a round in which the ping is due as well
 
-        // In the other order the ping would have found the box without blackout, and the desk
-        // could have taken that for a press of the box's button.
-        Assert.Equal(["blackout on", "ping"], _box.Calls);
+        Assert.Equal(["levels", "ping"], _box.Calls);
         Assert.True(_desk.Blackout);
         Assert.Empty(_clients.BlackoutChanges);
+    }
+
+    [Fact]
+    public void BlackoutSwitchedOffOnTheUiSwitchesOffThatOfTheButtonToo()
+    {
+        _desk.SetChannel(1, 200);
+        Connect();
+        _box.PressBlackoutButton();
+        _link.Step(At(500));
+        _box.ForgetCalls();
+
+        _desk.SetBlackout(false);
+        _link.Step(At(525));
+
+        Assert.Equal(["blackout off", "levels"], _box.Calls);
+        Assert.False(_box.BlackoutOn);
+        Assert.Equal(200, _box.Levels[0]);
     }
 
     [Fact]
@@ -209,7 +227,8 @@ public sealed class BoxLinkTests
         _link.Step(At(525));
         _link.Step(At(1000));
 
-        Assert.Equal(["ping"], _box.Calls);
+        // The desk's blackout goes out as a dark look; the box keeps its own blackout as it is.
+        Assert.Equal(["levels", "ping"], _box.Calls);
         Assert.True(_box.BlackoutOn);
         Assert.Equal([true], _clients.BlackoutChanges);
     }
@@ -241,8 +260,8 @@ public sealed class BoxLinkTests
         _box.Restart();   // the box comes back without blackout
         _link.Step(At(500));
 
-        Assert.Equal(["ping", "blackout on", "master 255", "levels"], _box.Calls);
-        Assert.True(_box.BlackoutOn);
+        Assert.Equal(["ping", "master 255", "levels", "blackout off"], _box.Calls);
+        Assert.Equal(0, _box.Levels[0]);
         Assert.True(_desk.Blackout);
         Assert.Empty(_clients.BlackoutChanges);
     }
@@ -319,13 +338,12 @@ public sealed class BoxLinkTests
         _box.Unplug();
         _link.Step(At(500));
         _desk.SetChannel(3, 99);   // changed while the box was away
-        _desk.SetBlackout(true);
         _box.ForgetCalls();
 
         _box.PlugIn();
         _link.Step(At(1500));
 
-        Assert.Equal(["ping", "blackout on", "master 255", "levels"], _box.Calls);
+        Assert.Equal(["ping", "master 255", "levels", "blackout off"], _box.Calls);
         Assert.Equal(99, _box.Levels[2]);
         Assert.True(_link.Status.Connected);
         Assert.Equal([true, false, true], _clients.BoxChanges.Select(status => status.Connected));

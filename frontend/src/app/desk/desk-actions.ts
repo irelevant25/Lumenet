@@ -66,6 +66,7 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
   view('sequences', 'Sequences view', '/sequences'),
   view('stack', 'Stack view', '/stack'),
   view('stage', 'Stage view', '/stage'),
+  view('fixtures', 'Fixtures view', '/fixtures'),
   view('settings', 'Settings view', '/settings'),
   view('keyboard', 'Keyboard view', '/keyboard'),
 
@@ -123,6 +124,7 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
   { id: 'stage.edit', group: 'Stage view', label: 'Edit (stage plan)', run: null },
   { id: 'stage.add', group: 'Stage view', label: 'Add light', run: null },
   { id: 'stage.clear', group: 'Stage view', label: 'Clear (the lights of the stage plan)', run: ({ store }) => store.clearStageLights() },
+  { id: 'fixtures.group', group: 'Stage view', label: 'New group (Fixtures view)', run: null },
 
   { id: 'ind.edit', group: 'Independents', label: 'Edit (independents)', run: null },
   ...numbered(CHANNEL_INDEPENDENT_COUNT, (key) => ({

@@ -1,0 +1,77 @@
+<div class="head">
+  <h3 id="colors-title">Colors of the keys</h3>
+  <button
+    type="button"
+    aria-label="All the usual colors"
+    title="All the usual colors"
+    [disabled]="!changed()"
+    (click)="settings.resetColors()"
+  >
+    ↺
+  </button>
+</div>
+<p class="hint">
+  @if (store.lan()?.local) {
+    The colors belong to the project, like the layout: saved with it.
+  } @else {
+    The colors belong to this device.
+  }
+  A color of a kind (channels, memories, sequences) is that of all its keys, pages and faders. A
+  press on a color offers the colors of the desk, and Other for any color.
+</p>
+
+<div class="groups" role="group" aria-labelledby="colors-title">
+  @for (group of groups; track group.name) {
+    <section class="group">
+      <h4>{{ group.name }}</h4>
+      @for (entry of group.entries; track entry.id) {
+        <div class="color">
+          <button
+            type="button"
+            class="swatch"
+            [style.--swatch]="colorOf(entry)"
+            [attr.aria-label]="'Color of ' + entry.label"
+            [attr.aria-expanded]="open() === entry.id"
+            (click)="toggle(entry)"
+          ></button>
+          <span class="label">{{ entry.label }}</span>
+          <button
+            type="button"
+            [attr.aria-label]="'The usual color for ' + entry.label"
+            title="The usual color"
+            [disabled]="!settings.colors()[entry.id]"
+            (click)="settings.resetColors(entry.id)"
+          >
+            ↺
+          </button>
+        </div>
+        @if (open() === entry.id) {
+          <!-- the colors of the desk, to take one of them, and a field for any other -->
+          <div class="palette" role="group" [attr.aria-label]="'Colors for ' + entry.label">
+            @for (standard of standards; track standard.color) {
+              <button
+                type="button"
+                class="swatch"
+                [class.current]="standard.color === colorOf(entry)"
+                [style.--swatch]="standard.color"
+                [attr.aria-label]="standard.name"
+                [attr.aria-current]="standard.color === colorOf(entry) ? 'true' : null"
+                [title]="standard.name"
+                (click)="choose(entry, standard.color)"
+              ></button>
+            }
+            <label class="other">
+              Other
+              <input
+                type="color"
+                [value]="colorOf(entry)"
+                (input)="onInput(entry, $event)"
+                (change)="onChange(entry, $event)"
+              />
+            </label>
+          </div>
+        }
+      }
+    </section>
+  }
+</div>

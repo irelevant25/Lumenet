@@ -18,12 +18,16 @@
 
       <label for="light-type">Kind</label>
       <select id="light-type" (change)="setType(light, $event)">
-        @for (type of types; track type.type) {
-          <option [value]="type.type" [selected]="form()?.type === type.type">{{ type.label }}</option>
+        @if (libraryType(); as type) {
+          <option value="library" selected>{{ type.model }}, {{ type.mode }}</option>
         }
+        @for (type of types; track type.type) {
+          <option [value]="type.type" [selected]="!libraryType() && form()?.type === type.type">{{ type.label }}</option>
+        }
+        <option value="library-search">From the fixture library…</option>
       </select>
 
-      @if (form(); as form) {
+      @if (!libraryType() && form(); as form) {
         @if (hasCells(form.type)) {
           <label for="light-dimmer">Dimmer channel</label>
           <select id="light-dimmer" (change)="setDimmer(light, $event)">
@@ -55,9 +59,9 @@
         }
       }
 
-      @if (ownColour()) {
-        <label for="light-colour">Colour</label>
-        <input id="light-colour" type="color" [value]="light.colour ?? warmWhite" (change)="setColour(light, $event)" />
+      @if (ownColor()) {
+        <label for="light-color">Color</label>
+        <input id="light-color" type="color" [value]="light.color ?? warmWhite" (change)="setColor(light, $event)" />
       }
 
       <label for="light-shape">Shape</label>
@@ -100,13 +104,23 @@
         <button type="button" aria-label="Turn right by 45°" (click)="turn(light, 45)">⟳</button>
         <span>{{ light.angle }}°</span>
       </span>
+
+      <label for="light-limit">Limit</label>
+      <span class="pair">
+        <input id="light-limit" class="number" type="number" min="1" [max]="noLimit" step="1" [value]="light.limit ?? noLimit" (change)="setLimit(light, $event)" />
+        <span class="unit" aria-hidden="true">per cent</span>
+      </span>
     </div>
     <p class="hint">
-      Cells divide the light along its longer side; a light of one cell shines in one colour, however
+      Cells divide the light along its longer side; a light of one cell shines in one color, however
       big it is. On the plan, drag it by an edge or a corner to size it. The arrow keys move it, with
-      Shift by two squares; Delete takes it away.
+      Shift by two squares; Delete takes it away. A limit is the most the light gives, like a hazer at 60.
     </p>
-    <button type="button" class="remove" (click)="remove(light)">Remove the light</button>
+    <div class="keys">
+      <button type="button" (click)="copy(light)">Copy the light</button>
+      <button type="button" class="remove" (click)="remove(light)">Remove the light</button>
+    </div>
+    <lm-library-dialog />
   }
 
   <lm-light-faders [light]="light" />

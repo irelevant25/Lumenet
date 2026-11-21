@@ -1,4 +1,4 @@
-/* Every key has the same, nearly square size. Level 1: an outline and a faint fill. The colour
+/* Every key has the same, nearly square size. Level 1: an outline and a faint fill. The color
    (--lamp) comes from the key's tone, see lamp-button.ts. */
 :host {
 
@@ -54,7 +54,7 @@
   font-weight: 600;
 }
 
-/* A memory that holds a sequence: from the red of the memories to yellow. --lamp is the colour
+/* A memory that holds a sequence: from the red of the memories to yellow. --lamp is the color
    between the two, for the border, the glow and the lettering; --mix is how lit the key is.
    These rules stand after the three levels, because they replace the plain background. */
 :host(.tone-sequence) {

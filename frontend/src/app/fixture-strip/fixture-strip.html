@@ -1,0 +1,33 @@
+<button
+  type="button"
+  class="swatch"
+  [class.none]="!color()"
+  [style.--swatch]="color()"
+  [attr.aria-label]="name() + ': color and settings'"
+  [attr.aria-pressed]="chosen()"
+  (click)="choose.emit()"
+></button>
+
+<span class="readout" aria-hidden="true">{{ level() }}</span>
+
+<lm-fader [value]="level()" [label]="name()" [tone]="group() ? 'system' : 'channel'" (valueChange)="levelChange.emit($event)" />
+
+<button
+  lmLamp
+  type="button"
+  class="key"
+  [class.marked]="steps().length > 0"
+  [tone]="group() ? 'system' : 'channel'"
+  [level]="level() > 0 ? 3 : 1"
+  [blink]="blink()"
+  [attr.aria-label]="name() + (blink() ? ': a step of it' : ': to full, or to zero') + (steps().length ? ', in steps ' + steps().join(', ') : '')"
+  (click)="keyPress.emit()"
+>
+  @if (steps().length) {
+    <!-- the steps of the sequence being recorded that use this fixture or group -->
+    <span class="steps" aria-hidden="true">{{ steps().join(',') }}</span>
+  }
+  {{ keyText() }}
+</button>
+
+<span class="name" [title]="name()">{{ name() }}</span>

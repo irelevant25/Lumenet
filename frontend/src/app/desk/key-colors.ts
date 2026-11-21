@@ -1,21 +1,21 @@
 /**
- * A colour of the desk that Settings can change: of a kind of key (channels, memories,
+ * A color of the desk that Settings can change: of a kind of key (channels, memories,
  * sequences), or of one key. On the PC it is saved with the project, like the layout.
  */
-export interface KeyColour {
+export interface KeyColor {
   /** Its name in the settings, and the tone of its keys (see LampButton). */
   readonly id: string;
   /** Where Settings lists it. */
-  readonly group: KeyColourGroup;
+  readonly group: KeyColorGroup;
   /** What Settings calls it. */
   readonly label: string;
   /** The variable of styles.css that holds it. */
   readonly variable: string;
-  /** The colour it has until it is changed: the same as in styles.css. */
+  /** The color it has until it is changed: the same as in styles.css. */
   readonly standard: string;
 }
 
-export const KEY_COLOUR_GROUPS = [
+export const KEY_COLOR_GROUPS = [
   'Kinds',
   'Master',
   'General',
@@ -26,16 +26,16 @@ export const KEY_COLOUR_GROUPS = [
   'Sequences view',
   'Stage view',
 ] as const;
-export type KeyColourGroup = (typeof KEY_COLOUR_GROUPS)[number];
+export type KeyColorGroup = (typeof KEY_COLOR_GROUPS)[number];
 
 const AMBER = '#ffb020';
 const WHITE = '#f1f3f6';
 
-/** Every colour Settings can change, group by group. */
-export const KEY_COLOURS: readonly KeyColour[] = [
-  colour('channel', 'Kinds', 'Channels: their keys, pages, independent keys and faders', '--channel', '#3ddc84'),
-  colour('memory', 'Kinds', 'Memories: their keys, pages, independent keys and faders', '--memory', '#ff5247'),
-  colour('sequence', 'Kinds', 'Sequences: the colour a memory that holds one runs into', '--sequence-end', '#ffd426'),
+/** Every color Settings can change, group by group. */
+export const KEY_COLORS: readonly KeyColor[] = [
+  color('channel', 'Kinds', 'Channels: their keys, pages, independent keys and faders', '--channel', '#3ddc84'),
+  color('memory', 'Kinds', 'Memories: their keys, pages, independent keys and faders', '--memory', '#ff5247'),
+  color('sequence', 'Kinds', 'Sequences: the color a memory that holds one runs into', '--sequence-end', '#ffd426'),
 
   key('blackout', 'Master', 'Blackout', '#4aa3ff'),
 
@@ -44,7 +44,7 @@ export const KEY_COLOURS: readonly KeyColour[] = [
   key('solo-down', 'General', 'Solo down', WHITE),
   key('rate', 'General', 'Rate (and its fader)', AMBER),
 
-  colour('stack', 'Stack', 'Stack (live), and the Live mark in the top bar', '--live', '#ff5247'),
+  color('stack', 'Stack', 'Stack (live), and the Live mark in the top bar', '--live', '#ff5247'),
   key('prev', 'Stack', 'Prev', AMBER),
   key('play', 'Stack', 'Play, and the step that is on', '#3ddc84'),
   key('pause', 'Stack', 'Pause', WHITE),
@@ -79,23 +79,33 @@ export const KEY_COLOURS: readonly KeyColour[] = [
   key('stage-add', 'Stage view', 'Add light', AMBER),
 ];
 
-const BY_ID = new Map(KEY_COLOURS.map((entry) => [entry.id, entry]));
+/** The colors the keys have at first, each once, with a name: the palette Settings offers for any key. */
+export const STANDARD_KEY_COLORS: readonly { readonly color: string; readonly name: string }[] = [
+  { color: '#3ddc84', name: 'Green' },
+  { color: '#ff5247', name: 'Red' },
+  { color: '#ffd426', name: 'Yellow' },
+  { color: AMBER, name: 'Amber' },
+  { color: WHITE, name: 'White' },
+  { color: '#4aa3ff', name: 'Blue' },
+];
 
-/** The colour with this name, or undefined. */
-export function keyColourWithId(id: string): KeyColour | undefined {
+const BY_ID = new Map(KEY_COLORS.map((entry) => [entry.id, entry]));
+
+/** The color with this name, or undefined. */
+export function keyColorWithId(id: string): KeyColor | undefined {
   return BY_ID.get(id);
 }
 
-/** A colour as Settings keeps it: "#3ddc84". */
-export function isColour(value: unknown): value is string {
+/** A color as Settings keeps it: "#3ddc84". */
+export function isColor(value: unknown): value is string {
   return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value);
 }
 
-// The colour of one key: its variable is --key-<name>.
-function key(id: string, group: KeyColourGroup, label: string, standard: string): KeyColour {
+// The color of one key: its variable is --key-<name>.
+function key(id: string, group: KeyColorGroup, label: string, standard: string): KeyColor {
   return { id, group, label, variable: `--key-${id}`, standard };
 }
 
-function colour(id: string, group: KeyColourGroup, label: string, variable: string, standard: string): KeyColour {
+function color(id: string, group: KeyColorGroup, label: string, variable: string, standard: string): KeyColor {
   return { id, group, label, variable, standard };
 }

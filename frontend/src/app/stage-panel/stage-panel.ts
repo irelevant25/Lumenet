@@ -1,6 +1,7 @@
-import { Component, computed, inject, input, model } from '@angular/core';
+import { Component, computed, inject, input, model, viewChild } from '@angular/core';
 import { DeskStore } from '../desk/desk-store';
-import { LIGHT_MAX_SIZE, LightShape, STAGE_MAX_SIZE, STAGE_MIN_SIZE, StageLight } from '../desk/desk-types';
+import { LIGHT_MAX_SIZE, LightShape, NO_LIMIT, STAGE_MAX_SIZE, STAGE_MIN_SIZE, StageLight } from '../desk/desk-types';
+import { typeOf } from '../desk/fixtures';
 import {
   DimmerPlace,
   LIGHT_TYPES,
@@ -9,36 +10,39 @@ import {
   MAX_LETTERS,
   WARM_WHITE,
   channelRange,
+  copiedLight,
   fittingAddress,
   formOf,
   hasCells,
   keptOn,
   lettersOf,
   resized,
-  usesOwnColour,
+  usesOwnColor,
   withLight,
   withoutLight,
 } from '../desk/stage-lights';
+import { LibraryDialog } from '../library-dialog/library-dialog';
 import { LightFaders } from '../light-faders/light-faders';
 import { StagePictureForm } from '../stage-picture-form/stage-picture-form';
 
 /**
  * The panel at the right of the Stage view. For the light chosen on the plan: its name, kind and
  * channels, and the faders of its channels (they work as those of the main view do); while Edit
- * is lit, also everything about it that can be changed (name, address, kind, cells, colour,
+ * is lit, also everything about it that can be changed (name, address, kind, cells, color,
  * shape and size, how it is turned). While Edit is lit and no light is chosen: the stage itself
  * (its size) and the picture under it. Every change goes to the plan at once, see
  * DeskStore.setStage.
  */
 @Component({
   host: { role: 'complementary', '[attr.aria-label]': 'title()' },
-  imports: [LightFaders, StagePictureForm],
+  imports: [LibraryDialog, LightFaders, StagePictureForm],
   selector: 'lm-stage-panel',
   styleUrl: './stage-panel.css',
   templateUrl: './stage-panel.html',
 })
 export class StagePanel {
   protected readonly store = inject(DeskStore);
+  private readonly library = viewChild.required(LibraryDialog);
 
   /** The number of the light chosen on the plan; null: none, the panel shows the stage. */
   readonly lightId = model<number | null>(null);
@@ -69,11 +73,21 @@ export class StagePanel {
     return light ? formOf(light.channels) : null;
   });
 
+  /** The kind of light from the fixture library the chosen light is; undefined for one of letters. */
+  protected readonly libraryType = computed(() => {
+    const light = this.light();
+    return light ? typeOf(this.store.stage(), light) : undefined;
+  });
+
+  protected readonly noLimit = NO_LIMIT;
+
   /** The kind of the chosen light, in words: "RGB in 4 cells, dimmer first". */
   protected readonly kindSaid = computed(() => {
     const form = this.form();
     const light = this.light();
+    const type = this.libraryType();
     if (!form || !light) return '';
+    if (type) return `${type.maker} ${type.model}, ${type.mode}`;
     if (form.type === 'letters') return `Channels ${light.channels}`;
     const label = LIGHT_TYPES.find((type) => type.type === form.type)?.label ?? '';
     if (!hasCells(form.type)) return label;
@@ -82,10 +96,10 @@ export class StagePanel {
     return `${label}${cells}${dimmer}`;
   });
 
-  /** True when the chosen light takes its colour from the colour field. */
-  protected readonly ownColour = computed(() => {
+  /** True when the chosen light takes its color from the color field. */
+  protected readonly ownColor = computed(() => {
     const light = this.light();
-    return light ? usesOwnColour(light.channels) : false;
+    return light ? usesOwnColor(light.channels) : false;
   });
 
   protected rename(light: StageLight, event: Event): void {
@@ -100,9 +114,35 @@ export class StagePanel {
   }
 
   protected setType(light: StageLight, event: Event): void {
-    const type = (event.target as HTMLSelectElement).value as LightType;
+    const select = event.target as HTMLSelectElement;
+    const chosen = select.value;
+    if (chosen === 'library-search') {
+      // The window chooses; until then (and if it is closed without) the light stays what it is.
+      select.value = this.libraryType() ? 'library' : formOf(light.channels).type;
+      this.library().open(light);
+      return;
+    }
+    if (chosen === 'library') return;
+
+    const type = chosen as LightType;
     const form = formOf(light.channels);
     this.setLetters(light, lettersOf({ ...form, type, cells: type === form.type ? form.cells : 1 }, light.channels));
+  }
+
+  /** The most the light gives, in per cent: 1 to 100. */
+  protected setLimit(light: StageLight, event: Event): void {
+    const field = event.target as HTMLInputElement;
+    const limit = Math.min(NO_LIMIT, Math.max(1, Math.round(Number(field.value)) || NO_LIMIT));
+    field.value = String(limit);
+    this.change(light, { limit });
+  }
+
+  /** A copy of the light, on the channels after the last light, and chosen. */
+  protected copy(light: StageLight): void {
+    const plan = this.store.stage();
+    const copy = copiedLight(plan, light, this.store.nextLightId());
+    this.store.setStage({ ...plan, lights: [...plan.lights, copy] });
+    this.lightId.set(copy.id);
   }
 
   protected setDimmer(light: StageLight, event: Event): void {
@@ -124,8 +164,8 @@ export class StagePanel {
     if (letters) this.setLetters(light, letters);
   }
 
-  protected setColour(light: StageLight, event: Event): void {
-    this.change(light, { colour: (event.target as HTMLInputElement).value.toLowerCase() });
+  protected setColor(light: StageLight, event: Event): void {
+    this.change(light, { color: (event.target as HTMLInputElement).value.toLowerCase() });
   }
 
   protected setShape(light: StageLight, event: Event): void {
@@ -157,7 +197,8 @@ export class StagePanel {
   }
 
   protected removeAll(): void {
-    this.store.setStage({ ...this.store.stage(), lights: [] });
+    const plan = this.store.stage();
+    this.store.setStage({ ...plan, lights: [], groups: plan.groups.map((group) => ({ ...group, lights: [] })) });
   }
 
   private change(light: StageLight, changes: Partial<StageLight>): void {
@@ -170,8 +211,9 @@ export class StagePanel {
     this.change(light, { ...changes, ...keptOn(this.store.stage(), shaped.x, shaped.y, shaped) });
   }
 
-  // New channels for a light: if they do not fit after its address, the address moves down.
+  // New channels for a light: if they do not fit after its address, the address moves down. A
+  // light of the library becomes one of letters.
   private setLetters(light: StageLight, channels: string): void {
-    this.change(light, { channels, address: fittingAddress(light.address, channels.length) });
+    this.change(light, { channels, type: null, address: fittingAddress(light.address, channels.length) });
   }
 }

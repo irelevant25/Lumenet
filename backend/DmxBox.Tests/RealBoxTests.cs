@@ -45,16 +45,23 @@ public sealed class RealBoxTests
         using var box = new RealBox(Loopback, sim.ControlPort);
         using DmxBoxClient observer = sim.CreateClient();
         var link = new BoxLink(_desk, box, _clients, Loopback, NullLogger<BoxLink>.Instance);
+        _desk.SetChannel(1, 200);
         link.Step(TimeSpan.Zero);
 
+        // From the UI: a dark look; the box's own blackout stays off.
         _desk.SetBlackout(true);
         link.Step(TimeSpan.FromMilliseconds(25));
-        Assert.True(observer.Ping().Blackout);
+        Assert.Equal([0], observer.GetOutput(1, 1));
+        Assert.False(observer.Ping().Blackout);
 
-        observer.Blackout(false);   // like a press of the button on the box
+        observer.Blackout(true);   // like a press of the button on the box
         link.Step(TimeSpan.FromMilliseconds(500));
+        observer.Blackout(false);   // and once more
+        link.Step(TimeSpan.FromMilliseconds(1000));
         Assert.False(_desk.Blackout);
-        Assert.Equal([false], _clients.BlackoutChanges);
+        Assert.Equal([true, false], _clients.BlackoutChanges);
+        link.Step(TimeSpan.FromMilliseconds(1025));
+        Assert.Equal([200], observer.GetOutput(1, 1));
     }
 
     [Fact]

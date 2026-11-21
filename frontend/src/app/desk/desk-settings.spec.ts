@@ -14,7 +14,9 @@ describe('the settings this browser keeps', () => {
       memoryKeys: 10,
       fontScale: 1,
       shortcuts: { 'project.undo': 'Ctrl+KeyZ', 'project.redo': 'Ctrl+KeyY' },
-      colours: {},
+      colors: {},
+      hiddenViews: [],
+      viewOrder: ['main', 'memories', 'sequences', 'stack', 'stage', 'fixtures', 'settings', 'keyboard'],
     });
   });
 
@@ -33,7 +35,29 @@ describe('the settings this browser keeps', () => {
   it('belong to the project, all but the lettering', () => {
     expect(projectPart(DEFAULT_SETTINGS)).not.toHaveProperty('fontScale');
     expect(projectPart({ ...DEFAULT_SETTINGS, channelSize: 8 }).channelSize).toBe(8);
-    expect(projectPart({ ...DEFAULT_SETTINGS, colours: { pause: '#ffffff' } }).colours).toEqual({ pause: '#ffffff' });
+    expect(projectPart({ ...DEFAULT_SETTINGS, colors: { pause: '#ffffff' } }).colors).toEqual({ pause: '#ffffff' });
+    expect(projectPart({ ...DEFAULT_SETTINGS, hiddenViews: ['stage'] }).hiddenViews).toEqual(['stage']);
+    expect(projectPart({ ...DEFAULT_SETTINGS, viewOrder: ['stage'] }).viewOrder).toEqual(['stage']);
+  });
+
+  it('leave known views out of the top bar, each once, never Settings', () => {
+    const hidden = parseSettings(JSON.stringify({ hiddenViews: ['stage', 'settings', 'nothing', 'main', 'stage', 4] })).hiddenViews;
+    expect(hidden).toEqual(['main', 'stage']); // in the usual order
+    expect(parseSettings(JSON.stringify({ hiddenViews: 'stage' })).hiddenViews).toEqual([]);
+  });
+
+  it('put every view in the top bar once: the known ones in their order, then the others as usual', () => {
+    const order = parseSettings(JSON.stringify({ viewOrder: ['keyboard', 'stage', 'nothing', 'keyboard', 3, 'main'] })).viewOrder;
+    expect(order).toEqual(['keyboard', 'stage', 'main', 'memories', 'sequences', 'stack', 'fixtures', 'settings']);
+    expect(parseSettings(JSON.stringify({ viewOrder: 'stage' })).viewOrder).toEqual(DEFAULT_SETTINGS.viewOrder);
+  });
+
+  it('read the colors that were kept before they were called so', () => {
+    // settings kept before 2026-11-21 name them in the British spelling
+    expect(parseSettings(JSON.stringify({ colours: { pause: '#FFAA00' } })).colors).toEqual({ pause: '#ffaa00' });
+    expect(parseSettings(JSON.stringify({ colors: { play: '#000000' }, colours: { pause: '#ffaa00' } })).colors).toEqual({
+      play: '#000000',
+    });
   });
 
   it('keep what makes sense, and only that', () => {
@@ -47,8 +71,8 @@ describe('the settings this browser keeps', () => {
         memoryKeys: 33, // there are 32
         fontScale: 1.24,
         shortcuts: { 'master.clear': 'Ctrl+KeyC', 'stack.play': 5, 'stack.next': '' },
-        // a known key and a colour as #rrggbb, kept in small letters
-        colours: { pause: '#FFAA00', play: 'green', nothing: '#000000', channel: '#00ff00' },
+        // a known key and a color as #rrggbb, kept in small letters
+        colors: { pause: '#FFAA00', play: 'green', nothing: '#000000', channel: '#00ff00' },
       }),
     );
     expect(kept).toEqual({
@@ -60,7 +84,9 @@ describe('the settings this browser keeps', () => {
       memoryKeys: 10,
       fontScale: 1.2,
       shortcuts: { 'master.clear': 'Ctrl+KeyC', 'project.undo': 'Ctrl+KeyZ', 'project.redo': 'Ctrl+KeyY' },
-      colours: { pause: '#ffaa00', channel: '#00ff00' },
+      colors: { pause: '#ffaa00', channel: '#00ff00' },
+      hiddenViews: [],
+      viewOrder: DEFAULT_SETTINGS.viewOrder,
     });
     expect(parseSettings(JSON.stringify({ channelSize: 12 })).channelSize).toBe('auto');
     expect(parseSettings(JSON.stringify({ wheelSize: 9 })).wheelSize).toBe(9);

@@ -4,7 +4,8 @@ namespace DmxBox.Server;
 // gone through with Play, Pause, Next and Previous, round and round: after the last step comes
 // the first. The stack moves the real faders: going to a step moves the fader of its channel or
 // memory to the step's value over the step's "up" time, and leaving a step moves that fader to
-// zero over its "down" time. Everything else follows from the faders.
+// zero over its "down" time. A step of a fixture or a group moves the channel faders of its
+// lights the same way (see FixtureLooks). Everything else follows from the faders.
 //
 // The stack runs only while it is live. Then nothing a project holds can be changed, its own
 // steps included (RequireUnlocked in Desk.cs). While it is not live no step is on, and Play,
@@ -93,6 +94,8 @@ internal sealed partial class Desk
             byte[] levels = new byte[ChannelCount];
             var stepsOn = new Dictionary<int, int>();
             AddSequences(levels, now, stepsOn);
+            if (_roles.AttributeLights.Length > 0)
+                PutSequenceAttributes(levels, now);
 
             double until = _phase is Fading or Waiting ? _phaseEnd - (_paused ? _pausedAt : now) : 0;
             var stack = new StackPlayback(
@@ -320,23 +323,49 @@ internal sealed partial class Desk
         AdvanceStack(now);   // a fade of no length is done at once
     }
 
-    // Call with the lock held. The step "target" starts at the moment "at": the fader of the
-    // step that was on starts its way down, the fader of the new one its way up.
+    // Call with the lock held. The step "target" starts at the moment "at": the faders of the
+    // step that was on start their way down, those of the new one their way up. A fixture's
+    // attributes (a shutter, a color wheel) are set at once, and stay when the step is left.
     private void Enter(StackEntry target, double at)
     {
         StackEntry? old = _stack.Find(entry => entry.Id == _currentId);
-        if (old is not null && old.Fader != target.Fader)
-            StartMove(old.Fader, to: 0, old.Step.Down, at);
+        (Fader Fader, int Level, bool Jump)[] targets = StackTargets(target.Step);
+        if (old is not null)
+        {
+            var staying = targets.Select(item => item.Fader).ToHashSet();
+            foreach ((Fader fader, _, bool jump) in StackTargets(old.Step))
+            {
+                if (!jump && !staying.Contains(fader))
+                    StartMove(fader, to: 0, old.Step.Down, at);
+            }
+        }
 
-        StartMove(target.Fader, target.Step.Value, target.Step.Up, at);
+        foreach ((Fader fader, int level, bool jump) in targets)
+            StartMove(fader, level, jump ? 0 : target.Step.Up, at);
+
         _currentId = target.Id;
         _phase = Fading;
         _phaseEnd = at + target.Step.Up;
     }
 
+    // Call with the lock held. The faders a step of the stack moves, and to what: the fader of its
+    // channel or memory; for a fixture or a group, the channel faders of its lights, an
+    // attribute to be set at once ("jump").
+    private (Fader Fader, int Level, bool Jump)[] StackTargets(Step step)
+    {
+        if (!step.IsLights)
+            return [(new Fader(step.IsMemory, step.Number), step.Value, false)];
+
+        return [.. LookOfLights(step).Select(part => (new Fader(Memory: false, part.Channel + 1), (int)part.Value, part.Attribute))];
+    }
+
     private void StartMove(Fader fader, int to, double seconds, double now)
     {
         _moves[fader] = new FaderMove(now, seconds, LevelOf(fader), to);
+
+        // A channel fader the stack starts to move takes its channel, like one moved by hand.
+        if (!fader.Memory)
+            ClaimChannel(fader.Number);
     }
 
     // Call with the lock held. Brings the faders the stack is moving to where they belong at
@@ -492,11 +521,12 @@ internal sealed partial class Desk
 
         public Step Step { get; set; } = step;
 
-        public Fader Fader => new(Step.IsMemory, Step.Number);
-
         public StackStep ForUi()
         {
-            return new StackStep(Id, Cue.ToString(), Step.Target, Step.Number, Step.Value, Step.Up, Step.Wait, Step.Down);
+            return new StackStep(Id, Cue.ToString(), Step.Target, Step.Number, Step.Value, Step.Up, Step.Wait, Step.Down)
+            {
+                Color = Step.Color,
+            };
         }
     }
 }

@@ -94,6 +94,12 @@ lm-fader {
   border-bottom-color: var(--legend-dim);
 }
 
+/* what the stage plan says the channel is, where no note was typed: dimmed, so that it is not taken for a note */
+.note input::placeholder {
+  color: var(--legend-dim);
+  opacity: 1;
+}
+
 .note input:focus {
   outline-offset: 0;
   background: var(--well);

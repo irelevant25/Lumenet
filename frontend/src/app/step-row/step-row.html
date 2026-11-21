@@ -3,11 +3,13 @@
 <td class="kind">
   <select
     [disabled]="locked()"
-    [attr.aria-label]="label() + ', channel or memory'"
+    [attr.aria-label]="label() + ', channel, memory, fixture or group'"
     (change)="onTarget($event)"
   >
     <option value="channel" [selected]="step().target === 'channel'">Channel</option>
     <option value="memory" [selected]="step().target === 'memory'">Memory</option>
+    <option value="fixture" [selected]="step().target === 'fixture'">Fixture</option>
+    <option value="group" [selected]="step().target === 'group'">Group</option>
   </select>
 </td>
 <td class="number">
@@ -28,11 +30,24 @@
         </option>
       }
     } @else {
-      <option selected [value]="step().number">{{ step().number }}</option>
+      <option selected [value]="step().number">{{ shown() }}</option>
     }
   </select>
 </td>
-<td class="note" [attr.title]="note() || null">{{ note() }}</td>
+<td class="note" [attr.title]="note() || null">
+  @if (lights()) {
+    <button
+      type="button"
+      class="swatch"
+      [style.--swatch]="step().color ?? '#ffffff'"
+      [disabled]="locked()"
+      [attr.aria-label]="label() + ', color'"
+      [title]="step().color ? 'Color ' + step().color : 'White'"
+      (click)="colorPick.emit()"
+    ></button>
+  }
+  {{ note() }}
+</td>
 <td>
   <input
     type="text"

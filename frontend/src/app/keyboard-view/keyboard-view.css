@@ -199,6 +199,16 @@ td.row-keys button {
   font-size: calc(13px * var(--font-scale));
 }
 
+/* ✕, which takes the shortcut away: red */
+td.row-keys .delete {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--edge));
+  color: var(--danger);
+}
+
+td.row-keys .delete:hover:not(:disabled) {
+  border-color: var(--danger);
+}
+
 /* the key picked by listening (or chosen to record): amber */
 tr.picked > * {
   border-color: var(--system);

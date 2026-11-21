@@ -1,18 +1,20 @@
-import { MAX_LEVEL, MAX_SEQUENCE_STEPS, MAX_STEP_SECONDS, StepTarget, TimedStep } from './desk-types';
+import { MAX_LEVEL, MAX_SEQUENCE_STEPS, MAX_STEP_SECONDS, StepKind, TimedStep } from './desk-types';
 
 /**
  * Templates for sequences: a few clicks instead of dozens of fields. A template writes ordinary
  * steps, which can be changed in the table afterwards like any others. Each one is made for the
- * channels (or memories) it is given, in their order.
+ * channels, memories or fixtures it is given, in their order.
  */
 export type TemplateName = 'fire' | 'chase' | 'wave' | 'strobe' | 'lightning';
 
 /** What the owner chooses for a template. */
 export interface TemplateSettings {
   readonly name: TemplateName;
-  readonly target: StepTarget;
-  /** The channels or memories, in the order the template goes through them. */
+  readonly target: StepKind;
+  /** The channels, memories or fixtures (by their id), in the order the template goes through them. */
   readonly numbers: readonly number[];
+  /** For fixtures: the color of their steps; null or missing for white. */
+  readonly color?: string | null;
   /** The lowest value the template uses, where it uses one (see TemplateInfo.usesLow). */
   readonly low: number;
   /** The highest value: how bright the lights get. */
@@ -128,6 +130,7 @@ export function stepsNeeded(name: TemplateName, lights: number): number {
  */
 export function makeSequence(settings: TemplateSettings, random: () => number = Math.random): MadeSequence {
   const { target, numbers, low, high, time } = settings;
+  const lights = target === 'fixture' || target === 'group';
   const step = (number: number, value: number, up: number, wait: number, down: number): TimedStep => ({
     target,
     number,
@@ -135,6 +138,7 @@ export function makeSequence(settings: TemplateSettings, random: () => number = 
     up: tenths(up),
     wait: tenths(wait),
     down: tenths(down),
+    ...(lights ? { color: settings.color ?? null } : {}),
   });
 
   switch (settings.name) {

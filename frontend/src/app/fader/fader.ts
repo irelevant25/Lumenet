@@ -64,7 +64,7 @@ export class Fader {
   readonly valueChange = output<number>();
   /**
    * The fader's own level, when something else (a memory) holds the fader higher. The slot
-   * is then lit in the fader's colour up to here, and in the colour of the memories above.
+   * is then lit in the fader's color up to here, and in the color of the memories above.
    */
   readonly ownLevel = input<number | null>(null);
   /** What a screen reader calls this fader, for example "Channel 5". */

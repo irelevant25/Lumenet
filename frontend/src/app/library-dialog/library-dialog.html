@@ -1,0 +1,81 @@
+<dialog #dialog aria-labelledby="library-dialog-title">
+  <div class="body">
+    <h2 id="library-dialog-title">Fixture library</h2>
+
+    @if (chosen(); as fixture) {
+      <p class="model">
+        <span class="maker">{{ fixture.maker }}</span> {{ fixture.model }}
+      </p>
+      @if (fixture.categories.length > 0) {
+        <p class="hint">{{ fixture.categories.join(', ') }}</p>
+      }
+      <div class="fields">
+        <label for="library-mode">Mode</label>
+        <select id="library-mode" (change)="onMode($event)">
+          @for (mode of fixture.modes; track $index) {
+            <option [value]="$index" [selected]="$index === modeIndex()">
+              {{ mode.name }} ({{ mode.channels.length }} {{ mode.channels.length === 1 ? 'channel' : 'channels' }})
+            </option>
+          }
+        </select>
+      </div>
+      @if (mode(); as mode) {
+        <ol class="channels" aria-label="Its channels">
+          @for (channel of mode.channels; track $index) {
+            <li>
+              <span class="code" aria-hidden="true">{{ channel.code }}</span>
+              {{ channel.name }}
+              @if (channel.ranges?.length) {
+                <span class="ranges">{{ channel.ranges?.length }} settings</span>
+              }
+            </li>
+          }
+        </ol>
+      }
+      <div class="actions">
+        <button lmLamp type="button" tone="system" (click)="back()">Back</button>
+        <button lmLamp type="button" tone="system" aria-label="Use this mode" [level]="3" (click)="use()">Use</button>
+      </div>
+    } @else {
+      <input
+        #searchBox
+        type="search"
+        autocomplete="off"
+        spellcheck="false"
+        aria-label="Maker or model"
+        placeholder="Maker or model, like adj spot"
+        [value]="search()"
+        (input)="onSearch($event)"
+      />
+      @if (busy()) {
+        <p class="hint" role="status">Reading the library…</p>
+      } @else if (search().trim() !== '' && found().length === 0 && (entries()?.length ?? 0) > 0) {
+        <p class="hint">No light of the library has these words.</p>
+      }
+      @if (found().length > 0) {
+        <ul class="found" aria-label="Lights of the library">
+          @for (entry of found(); track entry.source) {
+            <li>
+              <button type="button" (click)="choose(entry)">
+                <span class="maker">{{ entry.maker }}</span> {{ entry.model }}
+              </button>
+            </li>
+          }
+        </ul>
+      }
+      <p class="hint">
+        From the Open Fixture Library (open-fixture-library.org), {{ entries()?.length ?? 0 }} lights, read from its
+        copy on GitHub; the browser keeps the list for a week.
+        <button type="button" class="link" [disabled]="busy()" (click)="loadList(true)">Read the list again</button>
+        The channels of the light go into the project: the library is needed only now.
+      </p>
+      <div class="actions">
+        <button lmLamp type="button" tone="system" (click)="close()">Cancel</button>
+      </div>
+    }
+
+    @if (error()) {
+      <p class="error" role="alert">{{ error() }}</p>
+    }
+  </div>
+</dialog>

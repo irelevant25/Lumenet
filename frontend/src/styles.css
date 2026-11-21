@@ -1,4 +1,4 @@
-/* Lumenet desk: the colours, lettering and sizes every component shares. */
+/* Lumenet desk: the colors, lettering and sizes every component shares. */
 :root {
   color-scheme: dark;
 
@@ -12,7 +12,7 @@
   --legend: #d3d8df;
   --legend-dim: #8b93a1;
 
-  /* lamp colours: channels, memories, the memory functions and project buttons, Clear, Blackout */
+  /* lamp colors: channels, memories, the memory functions and project buttons, Clear, Blackout */
   --channel: #3ddc84;
   --memory: #ff5247;
   --sequence-end: #ffd426; /* a memory that holds a sequence runs from the memory red to this yellow */
@@ -21,9 +21,10 @@
   --blue-lamp: #4aa3ff;
   --live: #ff5247; /* the stack is live: the red of an "on air" sign, on the Stack key and in the top bar */
   --previous: var(--blue-lamp); /* the step of the stack before the one that is on: blue */
+  --danger: #ff5247; /* a key that takes something out (✕): red */
 
-  /* The colour of each key, which Settings can change (desk/key-colours.ts lists them, with
-     these same colours). A key's tone names its variable: tone="play" takes --key-play. */
+  /* The color of each key, which Settings can change (desk/key-colors.ts lists them, with
+     these same colors). A key's tone names its variable: tone="play" takes --key-play. */
   --key-channel: var(--channel);
   --key-memory: var(--memory);
   --key-system: var(--system);
@@ -361,6 +362,16 @@ table.steps .row-keys button:hover:not(:disabled) {
 table.steps .row-keys button:disabled {
   cursor: default;
   opacity: 0.35;
+}
+
+/* ✕, which takes the step out: red */
+table.steps .row-keys button.delete {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--edge));
+  color: var(--danger);
+}
+
+table.steps .row-keys button.delete:hover:not(:disabled) {
+  border-color: var(--danger);
 }
 
 table.steps td.empty {

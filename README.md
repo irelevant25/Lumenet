@@ -183,7 +183,7 @@ A safe order:
    and J1. Mind the notch of U3 and U5 (towards row 1) and the plus leg of C3 and C4.
 2. Join the pads track by track after the solder-side drawing, and tick each track off in the list.
 3. Before anything is plugged in, test with a multimeter set to continuity. Every track must conduct from end
-   to end. Tracks of different colours must not conduct to each other. **Nothing left of the gap may conduct
+   to end. Tracks of different colors must not conduct to each other. **Nothing left of the gap may conduct
    to anything right of it.**
 4. Plug in the Pico and U4, leave U3 and U5 out, and connect the USB cable. Between S-8 (plus) and Q-8 (minus)
    there should be about 5 V (4.6 to 5.5 V).
@@ -324,9 +324,10 @@ There is no USB serial port any more. The log goes to the serial pins GP16 / GP1
 * **Losing the computer:** as long as the box has power, it keeps outputting the last state. The buttons work
   without a computer: GP18 toggles blackout, and GP19 fades to preset slot 0 in 2 s.
 
-> **Master and blackout scale every channel.** That is right for dimmers and RGB PARs. If you add
-> moving heads, a blackout would also send pan/tilt to 0. In that case, add a channel mask in
-> `engine_render()`.
+> **The box's own master and blackout act on every channel.** That is right for dimmers and RGB PARs; with
+> moving heads a blackout of the box also sends pan and tilt to 0. Lumenet therefore does its master and
+> blackout in the levels it sends, on the light only (see the Fixtures view), and keeps the box's own
+> master at full; the box's blackout is only that of its button.
 
 ### Testing the network code on a PC
 
@@ -437,9 +438,10 @@ soon as a box answers.
 
 **What is on the page**
 
-The top bar has seven links: **Main**, **Memories**, **Sequences**, **Stack**, **Stage**, **Settings** and
-**Keyboard**. Main is the desk itself. Memories only shows what is stored. Sequences and Stack are for the two
-things that run by themselves (see below), Stage shows the lights of the rig in their colours, Settings is
+The top bar has eight links: **Main**, **Memories**, **Sequences**, **Stack**, **Stage**, **Fixtures**,
+**Settings** and **Keyboard** (in this order until Settings gives them another). Main is the desk itself. Memories only shows what is stored. Sequences and Stack
+are for the two things that run by themselves (see below), Stage shows the lights of the rig in their colors,
+Fixtures plays them as fixtures, Settings is
 for how this browser shows the desk (see [Settings](#settings)), Keyboard for its shortcuts. Beside the name
 stand **LAN**, **Undo** and **Redo**, at the right the keys of the project. At the right of Main stand three
 columns: the **Master** section (Black out and the master fader with its level) over **Record**; the
@@ -479,15 +481,18 @@ phone the master section, the general section and the stack lie across the top, 
     one that holds a sequence already, which is then continued behind its last step. From then on every
     channel key, and every key of a memory that holds a look, puts in one more step: that channel or memory
     at full, with 1 second up, 1 second wait and 1 second down. A key shows the numbers of the steps it is in,
-    small and yellow in its top left corner (the same channel can be used several times: 1, 5, 14). Press
-    Rec seq again when the sequence is complete. A new sequence is played in a loop.
+    small and yellow in its top left corner (the same channel can be used several times: 1, 5, 14). The keys
+    of the Fixtures view put in steps of their fixture or group, in the color it shows at that moment.
+    Press Rec seq again when the sequence is complete. A new sequence is played in a loop.
   * **Copy:** press the memory to copy from, then the memory to copy to. A sequence is copied like a look.
   * **Del:** press the memory to empty, whatever it holds.
   * Pressing the lit function again cancels it.
 * **Clear** cancels an unfinished function and brings every channel fader and memory fader to zero.
-* **Black out** sends zero to every address but leaves the desk as it is; the key blinks while it is active.
-  The blackout button on the box does the same, and the desk shows it.
-* **Master** dims the whole output.
+* **Black out** darkens every light but leaves the desk as it is; the key blinks while it is active. The
+  attributes of the fixtures of the stage plan (a pan, a tilt, a wheel) stay as they are, so no moving head
+  moves. The blackout button on the box darkens the box itself, pan and tilt too; the desk shows it, and
+  Black out switched off on the desk switches that off as well.
+* **Master** dims the light, not the attributes of the fixtures.
 * **Solo up** and **Solo down** (white, in General under Clear) change what a key under a fader or of the
   independents does while it is held; so does its shortcut. Lighting one darkens the other.
   * **Solo up:** the key puts its fader to full and every other light goes dark: only that channel (or that
@@ -499,7 +504,8 @@ phone the master section, the general section and the stack lie across the top, 
     solo lets out, and Black out still darkens it. Several keys can be held at once; a key held on a phone
     counts for the whole desk, and the desk lets it go if that phone loses its connection. While a record
     key waits for a memory, the memory keys are for that, and while a sequence is recorded the channel keys
-    put in steps, as always. Both dark again: the keys switch on and off as before.
+    put in steps, as always. Both dark again: the keys switch on and off as before. A solo is for the light:
+    the key of an attribute of a fixture (a pan) does nothing while one is lit.
 * **Rate** (in General, under Solo down) is a speed master for the sequences. Dark, every sequence plays at its own
   speed; lit, at its own speed times the rate of the fader under the key, which stands on top of the fader
   (×1.00). The fader goes from ×0.1 at the bottom to ×10 at the top, with ×1 in the middle (a line marks it),
@@ -539,19 +545,19 @@ phone the master section, the general section and the stack lie across the top, 
   for two lines of one. The page keys at the right choose which memories the keys show. This view and
   the Sequences view go by the window only: what Settings says about Main does not change them.
 * **The Stage view** is a plan of the stage seen from above, for programming without the rig: a grid of
-  squares (16 by 10 at first), the audience below it, and the lights of the rig on it, each in the colour
+  squares (16 by 10 at first), the audience below it, and the lights of the rig on it, each in the color
   its channels give it at this moment, as it goes out: memories, sequences and the stack included, after
   the master, and dark during blackout. A light glows around itself, and where lights meet their light adds
   up. Every window shows the same desk, so the plan can stay open in a second window, on a second screen or
   on a tablet over LAN while you program on Main.
   * **The panel** at the right (under the plan on a phone) is always there, so the plan never changes its
     place or size. **A click on a light** shows it there: its name, its kind and its channels, and a fader
-    for each of its channels (R red, D dimmer, ... under it, then the channel's number), coloured as its
+    for each of its channels (R red, D dimmer, ... under it, then the channel's number), colored as its
     channel is. They are the channel faders of Main: moving one there moves it here, and a memory that
     holds a channel up holds its fader up here too. A press beside the lights, Close or Esc lets the light
     go, and the panel says again what a click does. Its fields stand one in a row, the label at the left.
   * **A double click on a light** puts its faders to full, and the next one back to zero: those of its
-    dimmer and its colours, not a strobe or a mode (of a device that gives no light: all its channels).
+    dimmer and its colors, not a strobe or a mode (of a device that gives no light: all its channels).
     **Clear** (top right) puts the faders of every light on the plan to zero; a memory, a sequence or the
     stack that holds a light up still holds it, as on Main.
   * **Edit** (top right) places the lights: **Add light** puts one on the plan, on the channel after the
@@ -566,23 +572,59 @@ phone the master section, the general section and the stack lie across the top, 
     square, or an oblong over several squares of the grid), 1 to 32 whole squares wide and deep. A square
     light lies with its edges on the lines of the grid (unless it is turned askew) and moves by whole squares.
     The size is not the cells: a bar four squares wide with one RGB cell turns all red with its red channel;
-    with four cells, each quarter has its own colour. Cells lie along the longer side.
+    with four cells, each quarter has its own color. Cells lie along the longer side.
   * **Picture:** a photo or a drawing of the stage under the grid and the lights (Edit, with no light chosen:
     Choose a picture). The page makes it smaller first (at most 1600 pixels on its longer side, as a JPEG),
     and the stage takes its proportions: its depth changes so that the picture fits. It lies under the stage
     or under the whole plan, shows through from 10 to 100 % (60 % at first), and Fit the stage to it and
     Remove the picture do what they say. It is saved with the project.
-  * **Kinds of lights:** a dimmer of one colour (you pick its colour, like a gel; warm white until then),
+  * **Kinds of lights:** a dimmer of one color (you pick its color, like a gel; warm white until then),
     RGB, RGBW, RGBA, RGBWA, RGBW + UV and RGBWA + UV, each with or without a dimmer channel (first or last)
     and in 1 to 16 cells (a bar of four RGB cells is 12 channels from its address; each cell shows its own
-    colour), a device that gives no light (a hazer, a mirror ball: it shows the level of its channel), or
-    the channels typed as letters for any other fixture mode: D dimmer, R red, G green, B blue, W white,
-    A amber, U UV, and any other letter for a channel that gives no light, such as S for a strobe. A D dims
-    the cell it stands in; one D in a light of several cells dims all of them.
+    color), a device that gives no light (a hazer, a mirror ball: it shows the level of its channel), the
+    channels typed as letters for any other fixture mode (D dimmer, R red, G green, B blue, W white,
+    A amber, U UV, P pan, T tilt, and any other letter for a channel that gives no light, such as S for a
+    strobe; a D dims the cell it stands in; one D in a light of several cells dims all of them), or a
+    light **from the fixture library** (see the Fixtures view). **Limit** (1 to 100 per cent) and **Copy the
+    light** are there too.
   * The plan belongs to the project: it is saved with it, and a project that is loaded brings its own. A
     new project, one from before plans and an imported show have an empty stage (no lights, no picture,
     16 by 10 squares). Changes of the plan are steps of Undo, and like everything stored the plan cannot be
     changed while the stack is live.
+* **The Fixtures view** plays the lights of the stage plan as fixtures instead of loose channels. Each light
+  has a strip, in the order of their addresses: its color on top, its intensity as a number and a fader,
+  its key (to full, and to zero) and its name. The fader moves its dimmer; a light without one, such as an
+  RGB bar, keeps the mix of its colors, and comes up from dark in the color it had last (white at first); a
+  moving head opens its shutter when it comes up. **Groups** stand under the fixtures, each with a fader that
+  moves all its lights to its level, each in its own color; **New group** makes one of the fixture chosen,
+  and its lights are ticked in the panel. Everything here moves the channel faders, so a memory saved
+  afterwards holds it, and a memory that holds a light up holds its strip up too.
+  * **The panel** at the right (under the strips on a phone) is always there; a press on the color on top
+    of a strip shows that fixture or group in it. For a fixture: twelve colors and a field of every hue
+    (white at the bottom) for a light that mixes its color, a white channel taking the white part of it; the
+    colors of a moving head's color wheel; a pad for where a moving head points (pan across, tilt down; in
+    16 bits with fine channels), with a slider for each that the keyboard moves too; a list for each channel
+    that does several things (a gobo wheel, a shutter, a mode); and the faders of all its channels. For a
+    group: its name, its lights and a color for all of them.
+  * **Moving heads:** a pan, a tilt, a wheel, a shutter and every other channel of a light that is not a
+    dimmer or a color is an attribute. Latest takes precedence for it: the fader or the memory that took
+    it last gives it, at the value it holds, not scaled by any fader. A channel fader takes its channel when
+    it moves; a memory fader takes the lights its memory holds when it leaves zero (a look holds the lights
+    it gives any level, a sequence those its steps use; the stack does it through the faders it moves);
+    when it goes back to zero, the one that took them before gives them again. The master, Black out and a
+    solo act on the light only, so a head stays where it points. Dimmers and colors still add up.
+  * **The fixture library:** in Edit on the Stage view, the kind **From the fixture library…** searches the
+    Open Fixture Library (open-fixture-library.org) for a maker and a model, read from its copy on GitHub
+    (the browser keeps the list for a week), and shows the modes of the model with their channels. The
+    light gets the channels of the mode chosen, with their names and what they do at their values (wheel
+    slots with their colors, a shutter that is open or closed). The project keeps all of it, so the library
+    is needed only while lights are set up. **Copy the light** puts the next one of the same kind on the
+    next free channels.
+  * **Limit:** a light limited to, say, 60 per cent (a hazer) gives at most that: its dimmers and the
+    channels of a device stop there, and the colors of a cell without a dimmer are dimmed together, so
+    that the color stays.
+  * On Main the note fields of a fixture's channels show, dimmed, what the plan says each channel is
+    ("Spot 1", "Pan") where no note was typed; the lists of steps name the channels so too.
 * **Project:** New, Save, Load and Import at the top right. A project is one JSON file in
   `Documents\Lumenet`. It holds the memories (looks and sequences), the stack, the notes and what the
   independent keys are bound to, not the fader positions, so loading a project never switches a light on by
@@ -648,17 +690,27 @@ phone the master section, the general section and the stack lie across the top, 
     on by themselves, a fade of 1:30, submasters and groups. Import it from the `examples` folder.
 * **LAN** (top left, beside the name) lets a phone or a tablet in the same network use the desk; see below.
 
-**Steps.** A sequence and the stack are both made of steps. A step stands for a channel or a memory, has the
-value it brings that to (0 to 255), and three times in seconds: **up** (from zero to the value), **wait**
-(how long it stays) and **down** (back to zero when the next step takes over). The old step goes down while
-the new one goes up.
+**Steps.** A sequence and the stack are both made of steps. A step stands for a channel, a memory, a
+**fixture** or a **group** of fixtures (see the Fixtures view), has the value it brings that to (0 to 255),
+and three times in seconds: **up** (from zero to the value), **wait** (how long it stays) and **down** (back
+to zero when the next step takes over). The old step goes down while the new one goes up.
+
+A step of a fixture or a group has a **color** too: the box before its name in the Notes column; a press on
+it gives the colors of the Fixtures view, and White. Its value is the intensity of its lights: the dimmer,
+and the colors mixing the step's color (a light without a dimmer mixes it at that level); a moving head's
+shutter opens, and its color wheel turns to the slot nearest the color, at once. Where a head points stays
+with the memories, which hold whole looks: a memory step does that. In the stack, a step of a fixture or a
+group moves the channel faders of its lights. A step follows its fixture when the fixture gets another
+address; a fixture that is taken off the plan leaves its steps doing nothing ("Gone").
 
 In both tables the **number** of a step is chosen from a list. Each line of the list reads like
 `5: Front left`: the number, then the note that stands under that fader in the main view (its two lines with
 a space between them); a fader without a note shows its number alone. For a channel the list has all 512
-channels; for a memory only the memories that hold something. The **Notes** column beside the number shows
-the note of the channel or memory the step uses. It is read there, not written: a note is changed under its
-fader.
+channels; for a memory only the memories that hold something; for a fixture every light of the stage plan,
+by its address (`18: Spot 1`, the closed field showing the address), for a group every group (`G1: Back`).
+The **Notes** column beside the number shows the note of the channel or memory the step uses, or the name
+of the fixture or group. It is read there, not written: a note is changed under its fader. **Add step**
+puts in a step like the last one, on the next channel, memory, fixture (by address) or group.
 
 **The Sequences view.** A memory can hold a sequence in place of a look; its key is then red running into
 yellow. A sequence runs while the fader of its memory is up: it starts at its first step when the fader
@@ -678,7 +730,8 @@ it gives in red.
   again. The 1× key puts it back. The arrow keys move it by 0.05 left of the middle and by 0.5 right of it.
   The speed is kept with the sequence in the project.
 * **Template** fills the sequence from a pattern, for the lights you name (channels like `1, 2` or `1-4`,
-  or memories). The steps it makes replace the old ones and can be changed in the table like any others.
+  memories, or the fixtures of a group, in the order of their addresses and in a color you choose). The
+  steps it makes replace the old ones and can be changed in the table like any others.
   * **Fire:** every light flickers on its own, always between Low and High (now and then near Low, where a
     flame ducks), played at random. Low and High both at 255 give a steady full light.
     It looks best over a glow: set the faders of those lights to about 80.
@@ -732,7 +785,8 @@ they are too many for the height, they get flatter and then go on in another col
 **Small screens:** in a window narrower than 900 pixels or lower than 600 pixels (a phone, a tablet held
 upright) the sections stand under each other and the page scrolls. The page keys lie under the section titles,
 in as many lines as they need. Narrower than 720 pixels, a row of 16 faders is shown as two lines of 8 and the
-top bar as three lines. The numbering does not change: a page is still 32 channels or 16 memories. Narrower
+top bar as three lines (narrower than 430 pixels, its eight links stand in two rows of four). The numbering
+does not change: a page is still 32 channels or 16 memories. Narrower
 than 1300 pixels the top bar takes two lines, the links to the views under the rest. The limits are in
 `frontend/src/app/desk/desk-types.ts`, and only there.
 
@@ -772,7 +826,7 @@ page cannot move a light. In the small-screen layout the mouse wheel scrolls the
 
 ### Settings
 
-On the PC the desk program runs on, the layout of Main (all but the lettering below) and the colours of the
+On the PC the desk program runs on, the layout of Main (all but the lettering below) and the colors of the
 keys belong to the project, as the shortcuts of the Keyboard view do: they are saved with the project, a
 project that is loaded brings its own, and a new project, an imported one or one from before this starts with
 the ones in use. The lettering belongs to the browser on this device. A phone or a tablet keeps all of its
@@ -796,13 +850,24 @@ settings to itself, for its screen differs. The autosave and LAN belong to the d
   the desk program keeps nothing and takes away the file it kept. The desk program keeps the choice in
   `autosave-options.json` beside the autosave file. On the PC only.
 * **Network (LAN):** while LAN is on, the address phones use and the password; see above. On the PC only.
-* **Colours of the keys:** a colour for each kind (channels, memories, and the colour a memory with a
+* **Views in the top bar:** the views in the order of their links, each with a tick; a view that is not
+  ticked leaves the top bar (its keyboard shortcut still opens it). Settings is always ticked, so that the
+  others can come back. ▲ and ▼ move a view one place to the left or right in the top bar (the keyboard focus
+  stays on the arrow), and ↺ beside the title brings every view back in the usual order. A desk without Main
+  in its top bar opens on the first view that is. On the PC this goes with the project, as the layout does;
+  a phone or tablet keeps its own.
+* **Colors of the keys:** a color for each kind (channels, memories, and the color a memory with a
   sequence runs into), which is that of all its keys, page keys and faders, and one for each other key, group
-  by group: Black out; Clear, Solo up, Solo down and Rate (with its fader); Stack, Prev, Play, Pause, Next and Add step (Play also colours the
+  by group: Black out; Clear, Solo up, Solo down and Rate (with its fader); Stack, Prev, Play, Pause, Next and Add step (Play also colors the
   step that is on, Next the step Play goes to); the keys of Record, of the top bar, Edit of the independents,
-  the keys of the Sequences view and of the Stage view. While a colour is picked, the desk shows it at once. Each has a key back
-  to its usual colour, and one key takes all of them back. At first Clear, Solo and Pause are white, Black out
-  blue, Play green, Stack red and the others amber.
+  the keys of the Sequences view and of the Stage view. A press on a color opens the colors the keys have at
+  first (green, red, yellow, amber, white and blue, the one it has ringed) to take one of them, and Other for
+  any color; while that one is picked, the desk shows it at once. Each has a key back to its usual color, and
+  ↺ beside the title takes all of them back. At first Clear, Solo and Pause are white, Black out blue, Play
+  green, Stack red and the others amber.
+
+The keys that take something out, ✕ at the end of a step in the Sequences and Stack views and of a shortcut
+in the Keyboard view, are red.
 
 ### Keyboard
 
@@ -821,8 +886,10 @@ and Ctrl + Y until they get others (or none: then they stay without).
 * The list under the tabs has the keys at the left and their shortcuts at the right. **Set**, then press the
   keys of the shortcut (with Ctrl, Alt or Shift as wanted; Esc stops, Tab and Esc cannot be shortcuts). A
   shortcut that another key had moves over, and the page says so.
-* **Listen** shows the desk; the next key you click there is not pressed but picked, and the Keyboard view
+* **Listen** shows the desk; the key you double-click there is not pressed but picked, and the Keyboard view
   comes back with its tab open and the key chosen in the list and scrolled into sight (Esc stops listening).
+  A single click works as always, a moment later: it opens another view or page of faders, or presses the
+  key, so the key to pick can be found first. Enter on a key picks it at once.
 * A shortcut is the physical key, whatever letter the keyboard's language puts on it. It presses its key on
   the page as a click would, and a locked key stays locked; when the key is not on the view that is shown (a
   page of faders that is not shown, another view), it does what that key does, except the keys of the
@@ -846,10 +913,11 @@ and Ctrl + Y until they get others (or none: then they stay without).
   to the pages listed in `Server:AllowedOrigins`, plus the page the backend hands out itself. With `Urls` set
   to `http://localhost:5080` the desk stays on this PC for good.
 
-**Tests:** `dotnet test backend/DmxBox.sln` (440 tests: the client, the desk, solo, sequences and the stack with a
-clock the tests set by hand, the rate, undo and the autosave, the stage plan and its picture, project files
+**Tests:** `dotnet test backend/DmxBox.sln` (456 tests: the client, the desk, solo, sequences and the stack with a
+clock the tests set by hand, the rate, undo and the autosave, the stage plan and its picture, fixtures, their
+attributes and their steps, project files
 and the example project, the import of show files, the link to the box, the hub, LAN with a pretend PC and a
-pretend phone), and in `frontend/`: `npm test -- --watch=false` (140 tests of the page).
+pretend phone), and in `frontend/`: `npm test -- --watch=false` (168 tests of the page).
 
 ---
 ## 5. The DX protocol (UDP 7000)
@@ -998,7 +1066,7 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
   a new one and came back with a load. At 1920 × 1080 every key of the side column at full height and the
   master fader 278 pixels high; at 1366 × 768 all keys 26 pixels or more and the fader 60. The top bar fits
   at 1920, 1366, 1280, 1000 and 800 pixels and on phones of 390 and 360.
-* **Solo, Rate, the colours of the keys, the autosave setting and tabs in the Keyboard view
+* **Solo, Rate, the colors of the keys, the autosave setting and tabs in the Keyboard view
   (2026-11-20):** the backend passes 412 tests and the page 122. On a test copy without a box, with its own
   autosave files, in Chrome at 1920 × 1080: the master section from top to bottom Clear, Solo, Black out,
   the level, the fader (178 pixels), Rate, the wheel and ×1.00, every key 33 pixels high and nothing
@@ -1008,14 +1076,14 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
   to 0. The stack wheel's numbers 19 pixels high (13 before), three steps in sight. The Keyboard view: eleven
   tabs in one line; "black" gave Master 1/4 and 0 in the ten others. Autosave every minute, then every 5
   seconds with the file written within them, then off with the file gone. Pause made pink went into the
-  project and onto Main, and All the usual colours took it back. At 1366 × 768 every key 20 pixels or more,
+  project and onto Main, and All the usual colors took it back. At 1366 × 768 every key 20 pixels or more,
   the fader 50 and the rate wheel in sight; phones of 390 and 360 pixels with Rate and its wheel in a line
   of their own and nothing scrolling sideways.
 * **The Stage view (2026-11-20):** the backend passes 430 tests and the page 132. On a test copy without a
   box, in Chrome: the example show got its plan of 14 lights through the hub and was saved by the desk
   itself. With Full stage up and a few channels set by hand, the back lights glowed blue, the front wash
   warm white, the two pot lights red at two levels and the hazer showed its level; with the rainbow and the
-  fire running, the LED bar and the pot changed colour as they played. In Edit a light was chosen (the
+  fire running, the LED bar and the pot changed color as they played. In Edit a light was chosen (the
   panel showed it) and a drag of one square moved the mirror ball by exactly one square. The plan fits at
   1920 × 1080 and 1366 × 768 and on phones of 390 and 360 pixels, and the seven view links fit at 1920,
   1366, 1280, 1000 and 800 pixels and on those phones (from 1300 to about 1330 pixels a project name like
@@ -1049,6 +1117,40 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
   (where it stayed put); Clear put the lights of the plan to 0. Made RGB in 10 cells, all eight fields stood
   beside their labels inside the panel. On a phone of 390 pixels the panel lies under the plan, with nothing
   scrolling sideways.
+* **Fixtures (2026-11-21):** the backend passes 450 tests and the page 159. In the tests: of two memories that
+  hold a moving head at two places, the one raised last gives the place, as stored (a memory fader at half
+  does not move the head half way), and the one before gives it again when that one goes down; a fader
+  moved later takes its own channel only; a memory that does not hold the head leaves it alone; a sequence
+  of two memory steps gives the head what its step gives; the master and blackout leave pan and tilt where
+  they are; limits of 60 and 50 per cent gave 153, 128 and an orange 128, 64, 0. On a test copy without a
+  box, in Chrome at 1920 × 1080: a new light of the example was made an American DJ Inno Pocket Spot from
+  the library on GitHub (it offered the 9- and 11-channel modes; 11 channels, PFTFXXSDXXX). On the
+  Fixtures view its key brought its dimmer to full and opened its shutter (8), a press on the pad three
+  quarters across and a quarter down gave pan 191/255 and tilt 64/0, and Red of its color wheel turned the
+  wheel to 8. A group of the head and the LED bar was made, and its fader took both down. The eight view
+  links fit in one line from 1920 down to 800 pixels, and in two rows of four on phones of 390 and 360
+  pixels, where the panel lies under the strips.
+* **Steps of fixtures and groups (2026-11-21):** the backend passes 455 tests and the page 163. In the tests:
+  a sequence of a fixture in red and a group in white gave 255, 0, 0 and then both pars at 128 (the RGBW one
+  in its white channel); a step of a moving head gave its dimmer, opened its shutter (8) and left its pan; in
+  the stack a fixture step moved the par's faders up over 2 s and the next step opened the head's shutter at
+  once while the par went down; the project file names fixtures and groups by their place in its lists (a
+  light that is gone as 0) and keeps the color. On a test copy without a box, in Chrome: a sequence of the
+  LED bar in red and a group of the four back lights was put together in the table (Fixture, Group and the
+  color box), and played the LED bar in red only; Rec seq with the keys of the Fixtures view put in a fixture
+  step and a group step, and the key showed its step number; a Chase template over the group in blue made
+  four fixture steps; a stack step of the group put the faders of its four lights to 200.
+* **The order of the views, the palette of the key colors and red ✕ keys (2026-11-21):** the backend passes
+  456 tests and the page 168. In the tests: views left out of the top bar and put in another order with ▲
+  and ▼, in Settings and in the top bar alike, with the keyboard focus going with the arrow; a desk without
+  Main opened on the first view of the new order; ↺ brought every view back in the usual order; a key color
+  taken from the palette and one from Other; a project file and settings that still spell color the British
+  way kept their colors, and are written the new way. On a test copy without a box, in Chrome at 1600 × 1000: Enter on ▲
+  of Keyboard moved it twice to the left in the top bar with the focus staying on the arrow, ▲ of Main at the
+  top went dark and the focus went to ▼, and ↺ gave the usual eight links; the palette of Pause offered the
+  six colors with White ringed, and Red took it; the ✕ keys of the Sequences, Stack and Keyboard views were
+  red, with a red edge under the pointer. The two drawings whose notes spelled color the British way were
+  made again by their scripts; everything else they draw came out the same.
 * **Show files of a real console (2026-11-19):** 30 show files that ETC SmartFades wrote (software 3.0.1 and
   3.0.2) went through the import. The first version read them wrongly: their "FOLLOWON 0" (no wait) as a
   follow at once, their patch the wrong way round, and it lost their labels. With the SmartFade's dialect

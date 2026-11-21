@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, Injector, afterNextRender, computed, inject, signal } from '@angular/core';
 import {
   CHANNEL_SIZES,
   ChannelSize,
@@ -18,14 +18,15 @@ import {
   MEMORY_INDEPENDENT_COUNT,
   lanAddressInUse,
 } from '../desk/desk-types';
-import { KeyColoursPanel } from '../key-colours-panel/key-colours-panel';
+import { ALWAYS_SHOWN, DEFAULT_VIEW_ORDER, ViewName, viewNamed } from '../desk/views';
+import { KeyColorsPanel } from '../key-colors-panel/key-colors-panel';
 
 /** How often the autosave can keep the work, in seconds: as the desk program offers it. */
 const AUTOSAVE_INTERVALS: readonly number[] = [5, 30, 60, 300];
 
 /**
  * Settings: what this browser shows of the main view and how, the size of all lettering, the
- * autosave and the LAN of the desk program, and the colours of the keys. (The keyboard shortcuts
+ * autosave and the LAN of the desk program, and the colors of the keys. (The keyboard shortcuts
  * have a view of their own.)
  *
  * - The main view: how many channels a page holds (chosen by the window, or fixed), in one or two
@@ -35,12 +36,13 @@ const AUTOSAVE_INTERVALS: readonly number[] = [5, 30, 60, 300];
  * - The size of all lettering.
  * - The autosave: on or off, and how often. On the PC only.
  * - While LAN is on: the address of this PC that phones use, and the password. On the PC only.
- * - The colours of the keys (key-colours-panel).
+ * - Which views have a link in the top bar, and in which order: all but Settings can be left out.
+ * - The colors of the keys (key-colors-panel).
  *
  * The autosave and LAN belong to the desk program; the rest is kept as desk-settings.ts says.
  */
 @Component({
-  imports: [KeyColoursPanel],
+  imports: [KeyColorsPanel],
   selector: 'lm-settings-view',
   styleUrl: './settings-view.css',
   templateUrl: './settings-view.html',
@@ -48,6 +50,8 @@ const AUTOSAVE_INTERVALS: readonly number[] = [5, 30, 60, 300];
 export class SettingsView {
   protected readonly settings = inject(DeskSettings);
   protected readonly store = inject(DeskStore);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
 
   // ---------------------------------------------------------------- layout and lettering
 
@@ -58,6 +62,44 @@ export class SettingsView {
   protected readonly maxMemoryKeys = MEMORY_INDEPENDENT_COUNT;
   protected readonly smallest = FONT_SCALE_MIN;
   protected readonly biggest = FONT_SCALE_MAX;
+
+  // ---------------------------------------------------------------- the views in the top bar
+
+  protected readonly alwaysShown = ALWAYS_SHOWN;
+
+  /** The views in the order of their links in the top bar. */
+  protected readonly orderedViews = computed(() => this.settings.viewOrder().map(viewNamed));
+
+  /** True while every view is in the top bar in the usual order: then ↺ has nothing to do. */
+  protected readonly viewsUsual = computed(
+    () =>
+      this.settings.hiddenViews().length === 0 &&
+      this.settings.viewOrder().every((name, at) => name === DEFAULT_VIEW_ORDER[at]),
+  );
+
+  protected viewShown(view: ViewName): boolean {
+    return !this.settings.hiddenViews().includes(view);
+  }
+
+  protected onViewShown(view: ViewName, event: Event): void {
+    this.settings.setViewShown(view, (event.target as HTMLInputElement).checked);
+  }
+
+  /**
+   * ▲ or ▼: the view one place earlier or later. The keyboard focus stays with it, on the same
+   * arrow, or on the other one where this one has gone dark (at the top or the bottom).
+   */
+  protected moveView(view: ViewName, by: -1 | 1): void {
+    this.settings.moveView(view, by);
+    afterNextRender(
+      () => {
+        const arrow = (way: number) => this.host.nativeElement.querySelector<HTMLButtonElement>(`[data-move="${view}:${way}"]`);
+        const same = arrow(by);
+        (same && !same.disabled ? same : arrow(-by))?.focus();
+      },
+      { injector: this.injector },
+    );
+  }
 
   /** What the chosen channel size and rows make of the main view, in words. */
   protected readonly sizeSaid = computed(() => {

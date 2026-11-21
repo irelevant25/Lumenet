@@ -20,7 +20,7 @@ public sealed class HubTests
     private static readonly string[] DeskProperties =
     [
         "channels", "memoryLevels", "memoryStored", "master", "blackout", "channelNotes", "memoryNotes", "independents",
-        "memorySequence", "memoryIndependents", "rate", "rateOn", "solo",
+        "memorySequence", "memoryIndependents", "rate", "rateOn", "solo", "channelClaims", "memoryClaims",
     ];
 
     [Fact]
@@ -636,8 +636,10 @@ public sealed class HubTests
         await ui.InvokeAsync("SetMaster", 128);
         await Wait.UntilAsync(() => server.Box.Levels[0] == 128, "The fader move did not reach the box.");
 
+        // The blackout goes out as a dark look; the box's own blackout is that of its button.
         await ui.InvokeAsync("SetBlackout", true);
-        await Wait.UntilAsync(() => server.Box.BlackoutOn, "The blackout did not reach the box.");
+        await Wait.UntilAsync(() => server.Box.Levels[0] == 0, "The blackout did not reach the box.");
+        Assert.False(server.Box.BlackoutOn);
     }
 
     [Fact]
@@ -750,7 +752,7 @@ public sealed class HubTests
         await using HubClient ui = await server.ConnectAsync();
         await using HubClient other = await server.ConnectAsync();
 
-        const string empty = """{"width":16,"depth":10,"lights":[],"pictureId":null,"pictureOpacity":0.6,"pictureOver":"stage"}""";
+        const string empty = """{"width":16,"depth":10,"lights":[],"pictureId":null,"pictureOpacity":0.6,"pictureOver":"stage","types":[],"groups":[]}""";
         Assert.Equal(empty, (await ui.InvokeAsync("GetStage")).GetRawText());
 
         var plan = new
@@ -759,16 +761,16 @@ public sealed class HubTests
             depth = 12,
             lights = new object[]
             {
-                new { id = 1, name = " LED bar ", address = 30, channels = "rgbrgb", colour = (string?)null, x = 8.0, y = 1.0, angle = 450, shape = "Square", width = 4, depth = 1 },
-                new { id = 2, name = "Back blue 1", address = 6, channels = "D", colour = (string?)"#2060FF", x = 2.0, y = 1.5, angle = 0 },
+                new { id = 1, name = " LED bar ", address = 30, channels = "rgbrgb", color = (string?)null, x = 8.0, y = 1.0, angle = 450, shape = "Square", width = 4, depth = 1 },
+                new { id = 2, name = "Back blue 1", address = 6, channels = "D", color = (string?)"#2060FF", x = 2.0, y = 1.5, angle = 0 },
             },
         };
         await ui.InvokeAsync("SetStage", plan);
         const string kept =
             """{"width":20,"depth":12,"lights":[""" +
-            """{"id":1,"name":"LED bar","address":30,"channels":"RGBRGB","colour":null,"x":8,"y":1,"angle":90,"shape":"square","width":4,"depth":1},""" +
-            """{"id":2,"name":"Back blue 1","address":6,"channels":"D","colour":"#2060ff","x":2,"y":1.5,"angle":0,"shape":"round","width":1,"depth":1}]""" +
-            ""","pictureId":null,"pictureOpacity":0.6,"pictureOver":"stage"}""";
+            """{"id":1,"name":"LED bar","address":30,"channels":"RGBRGB","color":null,"x":8,"y":1,"angle":90,"shape":"square","width":4,"depth":1,"type":null,"limit":100},""" +
+            """{"id":2,"name":"Back blue 1","address":6,"channels":"D","color":"#2060ff","x":2,"y":1.5,"angle":0,"shape":"round","width":1,"depth":1,"type":null,"limit":100}]""" +
+            ""","pictureId":null,"pictureOpacity":0.6,"pictureOver":"stage","types":[],"groups":[]}""";
         await AssertNextAsync(other, "StageChanged", $"[{kept}]");
         await AssertNextAsync(other, "ProjectChanged", """[{"name":"Untitled","path":null,"unsaved":true}]""");
         await AssertNextAsync(other, "HistoryChanged", """[{"undo":"the stage plan","redo":null}]""");

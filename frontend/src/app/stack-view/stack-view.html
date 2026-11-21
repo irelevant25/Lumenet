@@ -133,7 +133,7 @@
       <tr>
         <th scope="col"><span class="for-readers">Drag to move</span></th>
         <th scope="col">Step</th>
-        <th scope="col">Channel or memory</th>
+        <th scope="col">Kind</th>
         <th scope="col">Number</th>
         <th scope="col">Notes</th>
         <th scope="col">Value</th>
@@ -158,6 +158,7 @@
           [class.drop-before]="dropMark()?.id === step.id && !dropMark()?.after"
           [class.drop-after]="dropMark()?.id === step.id && dropMark()?.after"
           (stepChange)="changeStep(step.id, $event)"
+          (colorPick)="pickColor(step)"
           (dragover)="onDragOver($event, step)"
           (drop)="onDrop($event, $index)"
         >
@@ -205,6 +206,7 @@
             </button>
             <button
               type="button"
+              class="delete"
               [attr.aria-label]="'Take step ' + step.cue + ' out'"
               [disabled]="live()"
               (click)="store.deleteStackStep(step.id)"
@@ -229,3 +231,6 @@
     another is moved; type a number to change it.
   </p>
 </div>
+
+<!-- the color of a step of a fixture or a group -->
+<lm-step-color-dialog />

@@ -544,16 +544,24 @@ phone the master section, the general section and the stack lie across the top, 
   the master, and dark during blackout. A light glows around itself, and where lights meet their light adds
   up. Every window shows the same desk, so the plan can stay open in a second window, on a second screen or
   on a tablet over LAN while you program on Main.
-  * **A click on a light** shows it in a panel at the right: its name, its kind and its channels, and a
-    fader for each of its channels (R red, D dimmer, ... under it, then the channel's number), coloured as
-    its channel is. They are the channel faders of Main: moving one there moves it here, and a memory that
-    holds a channel up holds its fader up here too. A press beside the lights, Close or Esc closes the panel.
+  * **The panel** at the right (under the plan on a phone) is always there, so the plan never changes its
+    place or size. **A click on a light** shows it there: its name, its kind and its channels, and a fader
+    for each of its channels (R red, D dimmer, ... under it, then the channel's number), coloured as its
+    channel is. They are the channel faders of Main: moving one there moves it here, and a memory that
+    holds a channel up holds its fader up here too. A press beside the lights, Close or Esc lets the light
+    go, and the panel says again what a click does. Its fields stand one in a row, the label at the left.
+  * **A double click on a light** puts its faders to full, and the next one back to zero: those of its
+    dimmer and its colours, not a strobe or a mode (of a device that gives no light: all its channels).
+    **Clear** (top right) puts the faders of every light on the plan to zero; a memory, a sequence or the
+    stack that holds a light up still holds it, as on Main.
   * **Edit** (top right) places the lights: **Add light** puts one on the plan, on the channel after the
-    last light, named after the note of that channel. Drag a light to move it (in half squares; the arrow
-    keys move it too, with Shift by two squares; Delete takes it away), and click it to change it in the
-    panel at the right, over its faders: its name, its address (first channel), its kind, its shape and size,
-    and how it is turned (45° a step). While no light is chosen the panel sets the size of the stage and the
-    picture under it. Lights can also hang beside the stage, behind it and over the audience.
+    last light, named after the note of that channel. Drag a light by its middle to move it (in half
+    squares; the arrow keys move it too, with Shift by two squares; Delete takes it away), and by an edge
+    or a corner to size it, in whole squares, with the edge across from it staying where it is; the cursor
+    shows what a press does there. Click a light to change it in the panel, over its faders: its name, its
+    address (first channel), its kind, its shape and size, and how it is turned (45° a step). While no light
+    is chosen the panel sets the size of the stage and the picture under it. Lights can also hang beside
+    the stage, behind it and over the audience.
   * **Shape and size:** a light is round (a circle, or an ellipse when it is wider than deep) or square (a
     square, or an oblong over several squares of the grid), 1 to 32 whole squares wide and deep. A square
     light lies with its edges on the lines of the grid (unless it is turned askew) and moves by whole squares.
@@ -841,7 +849,7 @@ and Ctrl + Y until they get others (or none: then they stay without).
 **Tests:** `dotnet test backend/DmxBox.sln` (440 tests: the client, the desk, solo, sequences and the stack with a
 clock the tests set by hand, the rate, undo and the autosave, the stage plan and its picture, project files
 and the example project, the import of show files, the link to the box, the hub, LAN with a pretend PC and a
-pretend phone), and in `frontend/`: `npm test -- --watch=false` (137 tests of the page).
+pretend phone), and in `frontend/`: `npm test -- --watch=false` (140 tests of the page).
 
 ---
 ## 5. The DX protocol (UDP 7000)
@@ -1031,6 +1039,16 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
   (Full stage) held: its fader went to 0 and its lights dark, and back to full when let go. New gave an
   empty stage; loading the example brought its 14 lights back. General holds its four keys and the rate
   fader at 1920 × 1080, at 1366 × 768 (keys 41 pixels, fader 76) and on a phone of 360 pixels.
+* **The Stage panel always there, sizing on the plan, double click and Clear (2026-11-21):** the backend
+  passes 440 tests (unchanged) and the page 140. On a test copy without a box, in Chrome at 1920 × 1080: the
+  plan kept its place and size (1155 × 924 pixels) with no light chosen, with one chosen and in Edit. In
+  Edit the cursor over the LED bar showed ew-resize at its left and right edges, ns-resize at the back and
+  the front, nwse-resize and nesw-resize at the corners and move in its middle; its right edge dragged two
+  squares out made it 6 squares wide with its left edge where it was, and its front right corner one square
+  down made it 6 by 2. A double click on it put its four channels to 255 and the next one to 0, in Edit too
+  (where it stayed put); Clear put the lights of the plan to 0. Made RGB in 10 cells, all eight fields stood
+  beside their labels inside the panel. On a phone of 390 pixels the panel lies under the plan, with nothing
+  scrolling sideways.
 * **Show files of a real console (2026-11-19):** 30 show files that ETC SmartFades wrote (software 3.0.1 and
   3.0.2) went through the import. The first version read them wrongly: their "FOLLOWON 0" (no wait) as a
   follow at once, their patch the wrong way round, and it lost their labels. With the SmartFade's dialect

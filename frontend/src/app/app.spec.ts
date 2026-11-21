@@ -1104,7 +1104,9 @@ describe('the desk page', () => {
   it('a click on a light shows it at the right with the faders of its channels, which work as those of Main', async () => {
     await planWith(stageLight(1, 'Par', 11, 'DRGB', null, 2, 8), stageLight(2, 'Spot', 5, 'D', null, 8, 5));
     await show('/stage');
-    expect(page.querySelector('lm-stage-panel')).toBeNull(); // nothing chosen yet
+    // The panel is always there, so that the plan keeps its size: with nothing chosen, what a click does.
+    const nothingChosen = () => textOf('lm-stage-panel h3') === 'Light' && page.querySelector('lm-light-faders') === null;
+    expect(nothingChosen()).toBe(true);
 
     await pressLight(1);
     expect(textOf('lm-stage-panel h3')).toBe('Par');
@@ -1135,16 +1137,40 @@ describe('the desk page', () => {
     // A press beside the lights, or Close, lets the light go.
     page.querySelector('lm-stage-view .plan')!.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }));
     await fixture.whenStable();
-    expect(page.querySelector('lm-stage-panel')).toBeNull();
+    expect(nothingChosen()).toBe(true);
     await pressLight(2);
     await press(button('Close'));
-    expect(page.querySelector('lm-stage-panel')).toBeNull();
+    expect(nothingChosen()).toBe(true);
 
     // In Edit the faders stand under what can be changed.
     await press(button('Edit the plan'));
     await pressLight(1);
     expect(page.querySelector('#light-name')).toBeTruthy();
     expect(page.querySelectorAll('lm-light-faders lm-fader').length).toBe(4);
+  });
+
+  it('a double click puts the faders of a light to full and back; Clear puts every light of the plan to zero', async () => {
+    await planWith(stageLight(1, 'Par', 11, 'DRGBS', null, 2, 8), stageLight(2, 'Spot', 5, 'D', null, 8, 5));
+    await show('/stage');
+    const twice = (id: number) => page.querySelector(`[data-light="${id}"]`)!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+    twice(1);
+    await fixture.whenStable();
+    expect(store.channels().slice(10, 15)).toEqual([255, 255, 255, 255, 0]); // the strobe stays
+    expect(lenses(1)).toEqual(['255 255 255']);
+    twice(1);
+    await fixture.whenStable();
+    expect(store.channels().slice(10, 15)).toEqual([0, 0, 0, 0, 0]);
+
+    // Clear: every channel of every light on the plan to zero, and nothing else.
+    twice(1);
+    twice(2);
+    store.setChannel(30, 99);
+    await fixture.whenStable();
+    await press(button('Clear the lights of the plan'));
+    expect(store.channels().slice(10, 15)).toEqual([0, 0, 0, 0, 0]);
+    expect(store.channels()[4]).toBe(0);
+    expect(store.channels()[29]).toBe(99);
   });
 
   it('a light is round or square and as big as some squares; one cell lights all of it, cells divide it', async () => {
@@ -1216,10 +1242,10 @@ describe('the desk page', () => {
   it('the stage plan cannot be changed while the stack is live', async () => {
     await show('/stage');
     await press(button('Edit the plan'));
-    expect(page.querySelector('lm-stage-panel')).toBeTruthy();
+    expect(page.querySelector('#stage-width')).toBeTruthy();
 
     await stackStands(LIVE);
-    expect(page.querySelector('lm-stage-panel')).toBeNull();
+    expect(page.querySelector('#stage-width')).toBeNull(); // Edit is over: the panel says what a click does
     expect(button('Edit the plan').disabled).toBe(true);
     expect(textOf('lm-stage-view .summary')).toContain('The stack is live');
     expect(textOf('lm-stage-view .nothing')).toBe('No lights yet. Edit, then Add light.');

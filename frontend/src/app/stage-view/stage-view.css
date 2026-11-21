@@ -1,8 +1,8 @@
-/* The title with Edit and Add light, then the plan as big as the window allows; while a light
-   is chosen or Edit is lit, the panel at the right. */
+/* The title with Clear, Edit and Add light, then the plan as big as the window allows, and the
+   panel at the right, always there: the plan keeps its size whatever the panel shows. */
 :host {
   display: grid;
-  grid-template: auto minmax(0, 1fr) / minmax(0, 1fr);
+  grid-template: auto minmax(0, 1fr) / minmax(0, 1fr) minmax(280px, 330px);
   gap: 12px;
   min-width: 0;
   min-height: 0;
@@ -10,10 +10,6 @@
   border: 1px solid var(--edge);
   border-radius: 6px;
   background: var(--panel-raised);
-}
-
-:host(.with-panel) {
-  grid-template-columns: minmax(0, 1fr) minmax(250px, 310px);
 }
 
 header {
@@ -108,13 +104,13 @@ h2 {
   text-transform: uppercase;
 }
 
-/* A light: a point at its place; the fixture, turned, around it, and its name under it. */
+/* A light: a point at its place; the fixture, turned, around it, and its name under it. The
+   cursor over the fixture says what a press does (stage-view.ts). */
 .light {
   position: absolute;
   width: 0;
   height: 0;
   outline: none;
-  cursor: pointer;
 }
 
 .fixture {
@@ -218,11 +214,8 @@ h2 {
   outline-offset: 3px;
 }
 
-.light.movable {
-  cursor: grab;
-}
-
-:host(.with-panel) .plan:has(.movable) {
+/* in Edit a finger drags the lights instead of scrolling the page */
+:host(.editing) .plan {
   touch-action: none;
 }
 

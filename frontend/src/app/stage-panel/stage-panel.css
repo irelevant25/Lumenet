@@ -53,18 +53,30 @@ h3 {
   text-transform: uppercase;
 }
 
-/* a label with its field */
-.field {
-  display: flex;
-  flex-wrap: wrap;
+/* The fields: each in one row, its label at the left and the field at the right, in two columns
+   that every row shares, so that nothing goes on in a second line. */
+.form {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
   align-items: center;
-  gap: 6px 8px;
-  margin-bottom: 8px;
+  gap: 8px 10px;
+  margin-bottom: 10px;
 }
 
-.field > label,
-.field > .label {
-  flex: 1 1 110px;
+.form > .wide {
+  grid-column: 1 / -1;
+}
+
+/* fields side by side in one cell: width × depth, the turn keys */
+.pair {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.unit {
+  color: var(--legend-dim);
 }
 
 input,
@@ -80,19 +92,20 @@ button {
   font: inherit;
 }
 
-input[type='text'],
-select {
-  width: 150px;
+.form > input[type='text'],
+.form > select {
+  width: 100%;
+  min-width: 0;
 }
 
-input[type='number'] {
-  width: 76px;
+input.number {
+  width: 64px;
   text-align: right;
 }
 
-/* width × depth of a light, side by side */
-input.size {
-  width: 56px;
+/* the numbers of a pair give way, so that the unit after them stays in the panel */
+.pair > input.number {
+  min-width: 48px;
 }
 
 input.letters {

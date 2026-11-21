@@ -2,6 +2,20 @@
   <h2>Stage</h2>
   <p class="summary">{{ summary() }}</p>
   <div class="keys">
+    <!-- the faders of every light on the plan to zero -->
+    <button
+      lmLamp
+      type="button"
+      tone="stage-clear"
+      aria-label="Clear the lights of the plan"
+      data-action="stage.clear"
+      title="The faders of every light on the plan to zero"
+      [level]="3"
+      [disabled]="store.stage().lights.length === 0"
+      (click)="store.clearStageLights()"
+    >
+      Clear
+    </button>
     <button
       lmLamp
       type="button"
@@ -74,7 +88,6 @@
         role="button"
         tabindex="0"
         [class.selected]="selectedId() === item.light.id"
-        [class.movable]="editing()"
         [style.left.%]="item.left"
         [style.top.%]="item.top"
         [attr.aria-label]="item.title"
@@ -82,13 +95,15 @@
         [attr.data-light]="item.light.id"
         [title]="item.title"
         (pointerdown)="onLightDown($event, item.light)"
-        (pointermove)="onLightMove($event)"
+        (pointermove)="onLightMove($event, item.light)"
         (pointerup)="onLightUp($event)"
         (pointercancel)="onLightUp($event)"
+        (dblclick)="onLightDouble(item.light)"
         (keydown)="onLightKey($event, item.light)"
       >
         <div
           class="fixture"
+          [style.cursor]="cursorOver(item.light)"
           [class.square]="item.square"
           [class.device]="item.device"
           [class.vertical]="item.vertical"
@@ -136,7 +151,6 @@
   <p class="audience" aria-hidden="true">Audience</p>
 </div>
 
-<!-- The chosen light with its faders; while Edit is lit, what can be changed of it or of the stage -->
-@if (panelShown()) {
-  <lm-stage-panel [(lightId)]="selectedId" [editing]="editing()" />
-}
+<!-- Always there, so that the plan keeps its size: the chosen light with its faders; while Edit
+     is lit, what can be changed of it or of the stage; otherwise what a click does. -->
+<lm-stage-panel [(lightId)]="selectedId" [editing]="editing()" />

@@ -17,16 +17,26 @@ h3 {
   text-transform: uppercase;
 }
 
-.field {
-  display: flex;
-  flex-wrap: wrap;
+/* each field in one row, as in the panel: the label at the left, the field at the right */
+.form {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
   align-items: center;
-  gap: 6px 8px;
+  gap: 8px 10px;
   margin-bottom: 8px;
 }
 
-.field > label {
-  flex: 1 1 110px;
+.pair,
+.keys {
+  display: flex;
+  align-items: center;
+  gap: 6px 8px;
+  min-width: 0;
+}
+
+.keys {
+  flex-wrap: wrap;
+  margin-bottom: 8px;
 }
 
 select,
@@ -43,7 +53,8 @@ button {
 }
 
 select {
-  width: 150px;
+  width: 100%;
+  min-width: 0;
 }
 
 button:disabled {
@@ -52,7 +63,8 @@ button:disabled {
 }
 
 input[type='range'] {
-  width: 110px;
+  flex: 1;
+  min-width: 0;
   accent-color: var(--system);
 }
 

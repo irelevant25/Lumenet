@@ -74,6 +74,7 @@ export const KEY_COLOURS: readonly KeyColour[] = [
   key('template', 'Sequences view', 'Template', AMBER),
   key('normal-speed', 'Sequences view', '1x (normal speed)', AMBER),
 
+  key('stage-clear', 'Stage view', 'Clear', WHITE),
   key('stage-edit', 'Stage view', 'Edit', AMBER),
   key('stage-add', 'Stage view', 'Add light', AMBER),
 ];

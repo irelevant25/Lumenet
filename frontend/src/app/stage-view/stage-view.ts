@@ -1,16 +1,21 @@
 import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { DeskStore } from '../desk/desk-store';
-import { CHANNEL_COUNT, STAGE_BACK_ROOM, STAGE_FRONT_ROOM, STAGE_SIDE_ROOM, StageLight } from '../desk/desk-types';
+import { CHANNEL_COUNT, MAX_LEVEL, STAGE_BACK_ROOM, STAGE_FRONT_ROOM, STAGE_SIDE_ROOM, StageLight } from '../desk/desk-types';
 import {
+  LightZone,
   SNAP,
   channelRange,
+  cursorOf,
   freeSpot,
   keptOn,
+  lightChannels,
   lookOf,
   nameFor,
   nextAddress,
+  resizedLight,
   withLight,
   withoutLight,
+  zoneAt,
 } from '../desk/stage-lights';
 import { LampButton } from '../lamp-button/lamp-button';
 import { StagePanel } from '../stage-panel/stage-panel';
@@ -19,13 +24,16 @@ import { StagePanel } from '../stage-panel/stage-panel';
 const ROUND_INSET = 0.1;
 const SQUARE_INSET = 0.08;
 
+/** How near to the edge of a light the pointer resizes it instead of moving it, in pixels (at most a quarter of the light). */
+const EDGE_PIXELS = 9;
+
 /** A light as the plan draws it. */
 interface ShownLight {
   readonly light: StageLight;
   /** Its middle, in per cent of the plan's width and height. */
   readonly left: number;
   readonly top: number;
-  /** Its size in squares, before it is turned: across and from back to front. */
+  /** Its size in squares as it is drawn, before it is turned: across and from back to front. */
   readonly width: number;
   readonly depth: number;
   readonly square: boolean;
@@ -44,6 +52,15 @@ interface ShownLight {
   readonly title: string;
 }
 
+/** A light being dragged: where it is and how big, until it is let go. */
+interface Dragged {
+  readonly id: number;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly depth: number;
+}
+
 /**
  * Stage: the stage seen from above, a grid of squares with the audience at the bottom, and the
  * lights of the rig on it, each in the colour its channels give it at this moment (after the
@@ -51,13 +68,16 @@ interface ShownLight {
  * without the rig: open it in a second window or on a tablet, and every change on the desk
  * shows at once. The colours come from stage-lights.ts.
  *
- * A click on a light shows it in the panel at the right, with the faders of its channels. Edit
- * places the lights: drag one to move it (the arrow keys move the chosen one), change it in the
- * panel (stage-panel), Add light puts a new one on the plan. The plan belongs to the project;
- * like everything stored, it cannot change while the stack is live.
+ * The panel at the right (under the plan on a small screen) is always there: a click on a light
+ * shows it there, with the faders of its channels; a double click puts its faders to full, and
+ * the next one back to zero; Clear puts the faders of every light on the plan to zero. Edit
+ * places the lights: drag one by its middle to move it, by an edge or a corner to make it bigger
+ * or smaller (the arrow keys move the chosen one), change it in the panel (stage-panel), Add light
+ * puts a new one on the plan. The plan belongs to the project; like everything stored, it cannot
+ * change while the stack is live.
  */
 @Component({
-  host: { '[class.with-panel]': 'panelShown()' },
+  host: { '[class.editing]': 'editing()' },
   imports: [LampButton, StagePanel],
   selector: 'lm-stage-view',
   styleUrl: './stage-view.css',
@@ -77,14 +97,13 @@ export class StageView {
 
   /** The number of the light that is chosen; null for none. */
   protected readonly selectedId = signal<number | null>(null);
-  private readonly selected = computed(() => this.store.stage().lights.find((light) => light.id === this.selectedId()) ?? null);
 
-  /** The panel stands at the right while Edit is lit or a light is chosen. */
-  protected readonly panelShown = computed(() => this.editing() || this.selected() !== null);
+  // A light being dragged, by its middle or by an edge or a corner: the plan gets it once it is let go.
+  private readonly dragged = signal<Dragged | null>(null);
+  private drag: { pointer: number; startX: number; startY: number; light: StageLight; zone: LightZone } | null = null;
 
-  // A light being dragged: where it is now. The plan gets it once it is let go.
-  private readonly dragged = signal<{ id: number; x: number; y: number } | null>(null);
-  private drag: { id: number; pointer: number; startX: number; startY: number; light: StageLight } | null = null;
+  /** The cursor over a light in Edit: where the pointer is on it, see cursorOf. */
+  private readonly hover = signal<{ id: number; cursor: string } | null>(null);
 
   /** The whole plan in squares: the stage and the room around it. */
   protected readonly totalWidth = computed(() => this.store.stage().width + 2 * STAGE_SIDE_ROOM);
@@ -107,15 +126,14 @@ export class StageView {
   protected readonly shown = computed<readonly ShownLight[]>(() => {
     const output = this.store.output();
     const dragged = this.dragged();
-    const plan = this.store.stage();
-    return plan.lights.map((light) => {
+    return this.store.stage().lights.map((light) => {
       const at = dragged?.id === light.id ? dragged : light;
       const look = lookOf(light, output);
       const square = light.shape === 'square';
-      const width = light.width - (square ? SQUARE_INSET : ROUND_INSET);
-      const depth = light.depth - (square ? SQUARE_INSET : ROUND_INSET);
+      const width = at.width - (square ? SQUARE_INSET : ROUND_INSET);
+      const depth = at.depth - (square ? SQUARE_INSET : ROUND_INSET);
       const count = Math.max(1, look.cells.length);
-      const vertical = light.depth > light.width;
+      const vertical = at.depth > at.width;
       const turn = (light.angle * Math.PI) / 180;
       const halfHeight = (Math.abs(Math.sin(turn)) * width + Math.abs(Math.cos(turn)) * depth) / 2;
       return {
@@ -145,7 +163,7 @@ export class StageView {
     const count = this.store.stage().lights.length;
     const lights = count === 1 ? '1 light' : `${count} lights`;
     return this.editing()
-      ? `Stage plan with ${lights}: drag a light to move it, click it to change it`
+      ? `Stage plan with ${lights}: drag a light to move it, by an edge to make it bigger, click it to change it`
       : `Stage plan with ${lights}: click a light to see it and its faders`;
   });
 
@@ -155,10 +173,17 @@ export class StageView {
     const parts = ['Every light shows what its channels give it now, after the master.'];
     if (this.store.blackout()) parts.push('Blackout is on: the rig is dark.');
     if (this.store.live()) parts.push('The stack is live, so the plan cannot be changed.');
-    else if (this.editing()) parts.push('Drag a light to move it; click it to change it at the right.');
-    else parts.push('Click a light for its faders; Edit places the lights.');
+    else if (this.editing()) parts.push('Drag a light to move it, an edge or a corner to size it; click it to change it.');
+    else parts.push('Click a light for its faders, double click for all of them up or down.');
     return parts.join(' ');
   });
+
+  /** The cursor over a light: in Edit, as the pointer stands on it; otherwise a hand that chooses. */
+  protected cursorOver(light: StageLight): string {
+    if (!this.editing()) return 'pointer';
+    const hover = this.hover();
+    return hover?.id === light.id ? hover.cursor : 'move';
+  }
 
   protected toggleEdit(): void {
     if (!this.canEdit()) return;
@@ -194,7 +219,7 @@ export class StageView {
     if (!(event.target as Element).closest('.light')) this.selectedId.set(null);
   }
 
-  /** A light is chosen by a press on it; while Edit is lit, it is dragged as well. */
+  /** A light is chosen by a press on it; while Edit is lit, it is dragged by its middle, or sized by an edge. */
   protected onLightDown(event: PointerEvent, light: StageLight): void {
     if (event.button !== 0) return;
     this.selectedId.set(light.id);
@@ -204,33 +229,51 @@ export class StageView {
     const element = event.currentTarget as HTMLElement;
     element.setPointerCapture?.(event.pointerId);
     element.focus({ preventScroll: true });
-    this.drag = { id: light.id, pointer: event.pointerId, startX: event.clientX, startY: event.clientY, light };
+    this.drag = { pointer: event.pointerId, startX: event.clientX, startY: event.clientY, light, zone: this.zoneOf(event, light) };
   }
 
-  protected onLightMove(event: PointerEvent): void {
+  protected onLightMove(event: PointerEvent, light: StageLight): void {
     const drag = this.drag;
-    if (!drag || event.pointerId !== drag.pointer) return;
-    const square = this.planBox().nativeElement.getBoundingClientRect().width / this.totalWidth();
+    if (!drag) {
+      // Over a light in Edit: the cursor says what a press would do there.
+      if (this.editing()) this.hover.set({ id: light.id, cursor: cursorOf(this.zoneOf(event, light), light.angle) });
+      return;
+    }
+    if (event.pointerId !== drag.pointer) return;
+
+    const square = this.square();
     if (!(square > 0)) return;
-    const place = keptOn(
-      this.store.stage(),
-      drag.light.x + (event.clientX - drag.startX) / square,
-      drag.light.y + (event.clientY - drag.startY) / square,
-      drag.light,
-    );
+    const dx = (event.clientX - drag.startX) / square;
+    const dy = (event.clientY - drag.startY) / square;
+    const from = drag.light;
+    const moved =
+      drag.zone.x === 0 && drag.zone.y === 0
+        ? { ...keptOn(this.store.stage(), from.x + dx, from.y + dy, from), width: from.width, depth: from.depth }
+        : this.sized(from, resizedLight(from, drag.zone, dx, dy));
     const now = this.dragged();
-    if (now?.x !== place.x || now?.y !== place.y) this.dragged.set({ id: drag.id, ...place });
+    if (now?.x !== moved.x || now?.y !== moved.y || now?.width !== moved.width || now?.depth !== moved.depth) {
+      this.dragged.set({ id: from.id, ...moved });
+    }
   }
 
   protected onLightUp(event: PointerEvent): void {
     const drag = this.drag;
     if (!drag || event.pointerId !== drag.pointer) return;
     this.drag = null;
-    const place = this.dragged();
+    const done = this.dragged();
     this.dragged.set(null);
-    if (place && (place.x !== drag.light.x || place.y !== drag.light.y)) {
-      this.store.setStage(withLight(this.store.stage(), drag.id, { x: place.x, y: place.y }));
+    const from = drag.light;
+    if (done && (done.x !== from.x || done.y !== from.y || done.width !== from.width || done.depth !== from.depth)) {
+      this.store.setStage(withLight(this.store.stage(), from.id, { x: done.x, y: done.y, width: done.width, depth: done.depth }));
     }
+  }
+
+  /** A double click on a light: its faders to full; when they are at full already, back to zero. */
+  protected onLightDouble(light: StageLight): void {
+    const channels = lightChannels(light);
+    const own = this.store.channels();
+    const level = channels.every((channel) => own[channel - 1] === MAX_LEVEL) ? 0 : MAX_LEVEL;
+    for (const channel of channels) this.store.setChannel(channel, level);
   }
 
   /**
@@ -270,5 +313,32 @@ export class StageView {
     const grid = light.shape === 'square' && light.angle % 90 === 0 ? 2 : 1;
     const place = keptOn(this.store.stage(), light.x + move[0] * grid, light.y + move[1] * grid, light);
     this.store.setStage(withLight(this.store.stage(), light.id, place));
+  }
+
+  /** One square of the plan, in pixels as it is drawn now. */
+  private square(): number {
+    return this.planBox().nativeElement.getBoundingClientRect().width / this.totalWidth();
+  }
+
+  // Where on the light the pointer is: on an edge, on a corner or in the middle.
+  private zoneOf(event: PointerEvent, light: StageLight): LightZone {
+    const fixture = (event.currentTarget as HTMLElement).querySelector('.fixture');
+    const square = this.square();
+    if (!fixture || !(square > 0)) return { x: 0, y: 0 };
+    const box = fixture.getBoundingClientRect();
+    const inset = light.shape === 'square' ? SQUARE_INSET : ROUND_INSET;
+    return zoneAt(
+      light.angle,
+      light.width - inset,
+      light.depth - inset,
+      (event.clientX - (box.left + box.width / 2)) / square,
+      (event.clientY - (box.top + box.height / 2)) / square,
+      EDGE_PIXELS / square,
+    );
+  }
+
+  // A light at its new size, kept on the plan by the rules of its shape.
+  private sized(light: StageLight, size: Pick<StageLight, 'x' | 'y' | 'width' | 'depth'>): Omit<Dragged, 'id'> {
+    return { ...keptOn(this.store.stage(), size.x, size.y, { ...light, ...size }), width: size.width, depth: size.depth };
   }
 }

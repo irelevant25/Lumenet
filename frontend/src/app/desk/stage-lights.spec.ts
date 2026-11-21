@@ -1,5 +1,19 @@
 import { CHANNEL_COUNT, EMPTY_STAGE, StageLight } from './desk-types';
-import { formOf, freeSpot, keptOn, lettersOf, lookOf, nameFor, nextAddress, partsOf, resized } from './stage-lights';
+import {
+  cursorOf,
+  formOf,
+  freeSpot,
+  keptOn,
+  lettersOf,
+  lightChannels,
+  lookOf,
+  nameFor,
+  nextAddress,
+  partsOf,
+  resized,
+  resizedLight,
+  zoneAt,
+} from './stage-lights';
 import { NOTE_LINE_SEPARATOR } from './notes';
 
 /** A round light of one square at address 1 with these channels. */
@@ -107,6 +121,37 @@ describe('the lights of the stage plan', () => {
     expect(smaller.width).toBe(8);
     expect(smaller.lights[0].x).toBe(10); // the edge of the room beside the smaller stage
     expect(resized(plan, 'depth', 2).depth).toBe(4); // at least 4 squares
+  });
+
+  it('are sized by an edge or a corner, and moved by their middle, with the cursor to say so', () => {
+    // a light 4 squares wide and 2 deep, pressed near its right edge, near its front left corner, in its middle
+    expect(zoneAt(0, 4, 2, 1.9, 0, 0.2)).toEqual({ x: 1, y: 0 });
+    expect(zoneAt(0, 4, 2, -1.9, 0.95, 0.2)).toEqual({ x: -1, y: 1 });
+    expect(zoneAt(0, 4, 2, 0.5, 0.2, 0.2)).toEqual({ x: 0, y: 0 });
+    // turned by 90°, its right edge lies at the front
+    expect(zoneAt(90, 4, 2, 0, 1.9, 0.2)).toEqual({ x: 1, y: 0 });
+
+    expect(cursorOf({ x: 1, y: 0 }, 0)).toBe('ew-resize');
+    expect(cursorOf({ x: 0, y: -1 }, 0)).toBe('ns-resize');
+    expect(cursorOf({ x: 1, y: 1 }, 0)).toBe('nwse-resize');
+    expect(cursorOf({ x: 1, y: -1 }, 0)).toBe('nesw-resize');
+    expect(cursorOf({ x: 1, y: 0 }, 90)).toBe('ns-resize');
+    expect(cursorOf({ x: 0, y: 0 }, 0)).toBe('move');
+
+    // The right edge dragged 2.4 squares out: 2 more squares, the left edge stays where it was.
+    const bar = { ...light('RGB'), shape: 'square' as const, x: 8, y: 2.5, width: 4, depth: 1 };
+    expect(resizedLight(bar, { x: 1, y: 0 }, 2.4, 0)).toEqual({ x: 9, y: 2.5, width: 6, depth: 1 });
+    // The front left corner: one square narrower, two deeper
+    expect(resizedLight(bar, { x: -1, y: 1 }, 1, 2)).toEqual({ x: 8.5, y: 3.5, width: 3, depth: 3 });
+    // never smaller than one square
+    expect(resizedLight(bar, { x: 1, y: 0 }, -9, 0).width).toBe(1);
+    // turned by 90°: its right edge is at the front, so dragging to the front makes it wider
+    expect(resizedLight({ ...bar, angle: 90 }, { x: 1, y: 0 }, 0, 1)).toEqual({ x: 8, y: 3, width: 5, depth: 1 });
+  });
+
+  it('go up and down by a double click with the channels that give light', () => {
+    expect(lightChannels({ address: 10, channels: 'DRGBS' })).toEqual([10, 11, 12, 13]); // not the strobe
+    expect(lightChannels({ address: 20, channels: 'X' })).toEqual([20]); // a hazer: its channel
   });
 
   it('lie on the lines of the grid when they are square and not turned askew', () => {

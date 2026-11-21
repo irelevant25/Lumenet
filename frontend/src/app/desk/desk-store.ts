@@ -591,6 +591,13 @@ export class DeskStore {
     });
   }
 
+  /** Clear of the Stage view: every channel of every light on the plan to zero. Memories and other channels stay. */
+  clearStageLights(): void {
+    for (const light of this.stage().lights) {
+      for (let offset = 0; offset < light.channels.length; offset++) this.setChannel(light.address + offset, 0);
+    }
+  }
+
   /**
    * Puts a picture under the plan (a data URL of a JPEG, PNG or WebP image), or takes it away
    * (null). Shown at once; the desk program answers every page with the plan, which names it.

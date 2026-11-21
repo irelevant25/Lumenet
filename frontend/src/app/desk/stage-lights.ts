@@ -1,5 +1,6 @@
 import {
   CHANNEL_COUNT,
+  LIGHT_MAX_SIZE,
   STAGE_BACK_ROOM,
   STAGE_FRONT_ROOM,
   STAGE_MAX_SIZE,
@@ -304,6 +305,75 @@ export function resized(plan: StagePlan, side: 'width' | 'depth', size: number):
   const kept = Math.min(STAGE_MAX_SIZE, Math.max(STAGE_MIN_SIZE, Math.round(size) || plan[side]));
   const stage = { ...plan, [side]: kept };
   return { ...stage, lights: plan.lights.map((light) => ({ ...light, ...keptOn(stage, light.x, light.y, light) })) };
+}
+
+// ---------------------------------------------------------------- on the plan: resizing, faders
+
+/**
+ * Where on a light a point is: on an edge or a corner (x -1 left, 1 right; y -1 back, 1 front,
+ * in the light's own directions, before it is turned), or in its middle (0 and 0).
+ */
+export interface LightZone {
+  readonly x: -1 | 0 | 1;
+  readonly y: -1 | 0 | 1;
+}
+
+/**
+ * The zone of a light at a point: `dx` and `dy` are the point's distance from the light's middle
+ * in squares, in the plan's directions; the light is `width` by `depth` squares as it is drawn;
+ * `edge` is how near to an edge counts as on it, in squares (at most a quarter of the light).
+ */
+export function zoneAt(angle: number, width: number, depth: number, dx: number, dy: number, edge: number): LightZone {
+  const [x, y] = toLocal(angle, dx, dy);
+  const side = (value: number, size: number): -1 | 0 | 1 => {
+    const near = Math.min(edge, size / 4);
+    return value > size / 2 - near ? 1 : value < -size / 2 + near ? -1 : 0;
+  };
+  return { x: side(x, width), y: side(y, depth) };
+}
+
+/** The cursor over a zone of a light: across its edge or corner as the light lies turned; "move" in its middle. */
+export function cursorOf(zone: LightZone, angle: number): string {
+  if (zone.x === 0 && zone.y === 0) return 'move';
+  const [x, y] = toPlan(angle, zone.x, zone.y);
+  const direction = (((Math.atan2(y, x) * 180) / Math.PI) % 180 + 180) % 180;
+  return ['ew-resize', 'nwse-resize', 'ns-resize', 'nesw-resize'][Math.round(direction / 45) % 4];
+}
+
+/**
+ * A light resized by dragging an edge or a corner by `dx` and `dy` squares, in the plan's
+ * directions: whole squares from 1 to 32, the opposite edge staying where it is.
+ */
+export function resizedLight(light: StageLight, zone: LightZone, dx: number, dy: number): Pick<StageLight, 'x' | 'y' | 'width' | 'depth'> {
+  const [x, y] = toLocal(light.angle, dx, dy);
+  const size = (from: number, by: number) => Math.min(LIGHT_MAX_SIZE, Math.max(1, Math.round(from + by)));
+  const width = zone.x === 0 ? light.width : size(light.width, zone.x * x);
+  const depth = zone.y === 0 ? light.depth : size(light.depth, zone.y * y);
+  const [moveX, moveY] = toPlan(light.angle, (zone.x * (width - light.width)) / 2, (zone.y * (depth - light.depth)) / 2);
+  const tidy = (value: number) => Math.round(value * 1000) / 1000;
+  return { x: tidy(light.x + moveX), y: tidy(light.y + moveY), width, depth };
+}
+
+/**
+ * The channels a double click on a light puts to full, and back to zero: those that give light
+ * (its dimmers and colours); a light that gives none, such as a hazer, all of its channels. A
+ * strobe or a mode channel stays where it is.
+ */
+export function lightChannels(light: Pick<StageLight, 'address' | 'channels'>): number[] {
+  const all = [...light.channels].map((letter, offset) => ({ letter, channel: light.address + offset }));
+  const giving = all.filter(({ letter }) => letter === 'D' || letter in COLOURS);
+  return (giving.length > 0 ? giving : all).map(({ channel }) => channel);
+}
+
+// From the plan's directions to a light's own (before it is turned), and back.
+function toLocal(angle: number, x: number, y: number): [number, number] {
+  const turn = (angle * Math.PI) / 180;
+  return [x * Math.cos(turn) + y * Math.sin(turn), -x * Math.sin(turn) + y * Math.cos(turn)];
+}
+
+function toPlan(angle: number, x: number, y: number): [number, number] {
+  const turn = (angle * Math.PI) / 180;
+  return [x * Math.cos(turn) - y * Math.sin(turn), x * Math.sin(turn) + y * Math.cos(turn)];
 }
 
 /** What each letter of a light's channels stands for, as a fader of the light is named. */

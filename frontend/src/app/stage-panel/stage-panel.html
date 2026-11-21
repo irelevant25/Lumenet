@@ -8,40 +8,34 @@
   </p>
 
   @if (editing()) {
-    <div class="field">
+    <!-- one row for each: the label at the left, its field at the right -->
+    <div class="form">
       <label for="light-name">Name</label>
       <input id="light-name" type="text" maxlength="24" autocomplete="off" [value]="light.name" (change)="rename(light, $event)" />
-    </div>
-    <div class="field">
+
       <label for="light-address">Address</label>
-      <input id="light-address" type="number" min="1" max="512" step="1" [value]="light.address" (change)="setAddress(light, $event)" />
-    </div>
-    <div class="field">
+      <input id="light-address" class="number" type="number" min="1" max="512" step="1" [value]="light.address" (change)="setAddress(light, $event)" />
+
       <label for="light-type">Kind</label>
       <select id="light-type" (change)="setType(light, $event)">
         @for (type of types; track type.type) {
           <option [value]="type.type" [selected]="form()?.type === type.type">{{ type.label }}</option>
         }
       </select>
-    </div>
 
-    @if (form(); as form) {
-      @if (hasCells(form.type)) {
-        <div class="field">
+      @if (form(); as form) {
+        @if (hasCells(form.type)) {
           <label for="light-dimmer">Dimmer channel</label>
           <select id="light-dimmer" (change)="setDimmer(light, $event)">
             <option value="none" [selected]="form.dimmer === 'none'">None</option>
             <option value="first" [selected]="form.dimmer === 'first'">First</option>
             <option value="last" [selected]="form.dimmer === 'last'">Last</option>
           </select>
-        </div>
-        <div class="field">
+
           <label for="light-cells">Cells</label>
-          <input id="light-cells" type="number" min="1" [max]="maxCells" step="1" [value]="form.cells" (change)="setCells(light, $event)" />
-        </div>
-      }
-      @if (form.type === 'letters') {
-        <div class="field">
+          <input id="light-cells" class="number" type="number" min="1" [max]="maxCells" step="1" [value]="form.cells" (change)="setCells(light, $event)" />
+        }
+        @if (form.type === 'letters') {
           <label for="light-letters">Channels</label>
           <input
             id="light-letters"
@@ -53,64 +47,64 @@
             [value]="light.channels"
             (change)="onLetters(light, $event)"
           />
-        </div>
-        <p class="hint">
-          One letter per channel: D dimmer, R red, G green, B blue, W white, A amber, U UV; any
-          other letter (S strobe, M mode) gives no light. RGBRGB is two cells. A D dims the cell
-          it stands in; one D in a light of several cells dims them all.
-        </p>
+          <p class="hint wide">
+            One letter per channel: D dimmer, R red, G green, B blue, W white, A amber, U UV; any
+            other letter (S strobe, M mode) gives no light. RGBRGB is two cells. A D dims the cell
+            it stands in; one D in a light of several cells dims them all.
+          </p>
+        }
       }
-    }
 
-    @if (ownColour()) {
-      <div class="field">
+      @if (ownColour()) {
         <label for="light-colour">Colour</label>
         <input id="light-colour" type="color" [value]="light.colour ?? warmWhite" (change)="setColour(light, $event)" />
-      </div>
-    }
+      }
 
-    <div class="field">
       <label for="light-shape">Shape</label>
       <select id="light-shape" (change)="setShape(light, $event)">
         <option value="round" [selected]="light.shape === 'round'">Round</option>
         <option value="square" [selected]="light.shape === 'square'">Square</option>
       </select>
-    </div>
-    <div class="field">
-      <label for="light-width">Size in squares</label>
-      <input
-        id="light-width"
-        class="size"
-        type="number"
-        min="1"
-        [max]="maxLightSize"
-        step="1"
-        aria-label="Width in squares"
-        [value]="light.width"
-        (change)="setSize(light, 'width', $event)"
-      />
-      <span aria-hidden="true">×</span>
-      <input
-        id="light-depth"
-        class="size"
-        type="number"
-        min="1"
-        [max]="maxLightSize"
-        step="1"
-        aria-label="Depth in squares"
-        [value]="light.depth"
-        (change)="setSize(light, 'depth', $event)"
-      />
-    </div>
-    <div class="field">
-      <span class="label">Turned {{ light.angle }}°</span>
-      <button type="button" aria-label="Turn left by 45°" (click)="turn(light, -45)">⟲</button>
-      <button type="button" aria-label="Turn right by 45°" (click)="turn(light, 45)">⟳</button>
+
+      <label for="light-width">Size</label>
+      <span class="pair">
+        <input
+          id="light-width"
+          class="number"
+          type="number"
+          min="1"
+          [max]="maxLightSize"
+          step="1"
+          aria-label="Width in squares"
+          [value]="light.width"
+          (change)="setSize(light, 'width', $event)"
+        />
+        <span aria-hidden="true">×</span>
+        <input
+          id="light-depth"
+          class="number"
+          type="number"
+          min="1"
+          [max]="maxLightSize"
+          step="1"
+          aria-label="Depth in squares"
+          [value]="light.depth"
+          (change)="setSize(light, 'depth', $event)"
+        />
+        <span class="unit" aria-hidden="true">squares</span>
+      </span>
+
+      <span class="label">Turned</span>
+      <span class="pair">
+        <button type="button" aria-label="Turn left by 45°" (click)="turn(light, -45)">⟲</button>
+        <button type="button" aria-label="Turn right by 45°" (click)="turn(light, 45)">⟳</button>
+        <span>{{ light.angle }}°</span>
+      </span>
     </div>
     <p class="hint">
-      Cells divide the light along its longer side; a light of one cell shines in one colour,
-      however big it is. A square light lies on the lines of the grid. The arrow keys move it,
-      with Shift by two squares; Delete takes it away.
+      Cells divide the light along its longer side; a light of one cell shines in one colour, however
+      big it is. On the plan, drag it by an edge or a corner to size it. The arrow keys move it, with
+      Shift by two squares; Delete takes it away.
     </p>
     <button type="button" class="remove" (click)="remove(light)">Remove the light</button>
   }
@@ -118,20 +112,33 @@
   <lm-light-faders [light]="light" />
 } @else if (editing()) {
   <h3>Stage</h3>
-  <div class="field">
-    <label for="stage-width">Width in squares</label>
-    <input id="stage-width" type="number" [min]="minSize" [max]="maxSize" step="1" [value]="store.stage().width" (change)="setStageSize('width', $event)" />
-  </div>
-  <div class="field">
-    <label for="stage-depth">Depth in squares</label>
-    <input id="stage-depth" type="number" [min]="minSize" [max]="maxSize" step="1" [value]="store.stage().depth" (change)="setStageSize('depth', $event)" />
+  <div class="form">
+    <label for="stage-width">Width</label>
+    <span class="pair">
+      <input id="stage-width" class="number" type="number" [min]="minSize" [max]="maxSize" step="1" [value]="store.stage().width" (change)="setStageSize('width', $event)" />
+      <span class="unit" aria-hidden="true">squares</span>
+    </span>
+
+    <label for="stage-depth">Depth</label>
+    <span class="pair">
+      <input id="stage-depth" class="number" type="number" [min]="minSize" [max]="maxSize" step="1" [value]="store.stage().depth" (change)="setStageSize('depth', $event)" />
+      <span class="unit" aria-hidden="true">squares</span>
+    </span>
   </div>
   <p class="hint">
-    Lights can also hang beside the stage, behind it and over the audience. Click a light to
-    change it; Add light puts a new one on the next free channel, named after the note of that
-    channel. Undo takes back changes of the plan.
+    Lights can also hang beside the stage, behind it and over the audience. Click a light to change
+    it; Add light puts a new one on the next free channel, named after the note of that channel.
+    Undo takes back changes of the plan.
   </p>
   <button type="button" [disabled]="store.stage().lights.length === 0" (click)="removeAll()">Remove all lights</button>
 
   <lm-stage-picture-form />
+} @else {
+  <h3>Light</h3>
+  <p class="hint">
+    Click a light on the plan to see it here, with a fader for each of its channels. A double click
+    puts its faders to full, the next one back to zero; Clear puts the faders of every light on the
+    plan to zero.
+  </p>
+  <p class="hint">Edit places the lights, sets the size of the stage and puts a picture under it.</p>
 }

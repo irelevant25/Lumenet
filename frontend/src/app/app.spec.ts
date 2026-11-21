@@ -1059,6 +1059,7 @@ describe('the desk page', () => {
 
     // Any other color: while it is picked, the desk shows it at once; when the picker closes, it is kept.
     await press(button('Color of Pause'));
+    await press(page.querySelector<HTMLElement>('.palette .other')); // a press in there leaves it open
     const other = page.querySelector<HTMLInputElement>('.palette input[type="color"]')!;
     expect(other.value).toBe('#ff5247');
     other.value = '#ff00ff';
@@ -1074,6 +1075,20 @@ describe('the desk page', () => {
     await press(button('Blue'));
     expect(shown('--channel')).toBe('#4aa3ff');
     expect(sentColors()).toEqual({ pause: '#ff00ff', channel: '#4aa3ff' });
+
+    // A press anywhere else closes the palette, and so does Esc, with the keyboard back on the color.
+    const channels = button('Color of Channels: their keys, pages, independent keys and faders');
+    await press(channels);
+    await press(document.body);
+    expect(page.querySelector('.palette')).toBeNull();
+    expect(channels.getAttribute('aria-expanded')).toBe('false');
+    await press(channels);
+    button('Green').focus();
+    button('Green').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await fixture.whenStable();
+    expect(page.querySelector('.palette')).toBeNull();
+    expect(document.activeElement).toBe(channels);
+    expect(sentColors()).toEqual({ pause: '#ff00ff', channel: '#4aa3ff' }); // nothing taken
 
     // Back to the usual colors: one, then all with ↺ beside the title.
     await press(button('The usual color for Pause'));

@@ -862,9 +862,9 @@ settings to itself, for its screen differs. The autosave and LAN belong to the d
   step that is on, Next the step Play goes to); the keys of Record, of the top bar, Edit of the independents,
   the keys of the Sequences view and of the Stage view. A press on a color opens the colors the keys have at
   first (green, red, yellow, amber, white and blue, the one it has ringed) to take one of them, and Other for
-  any color; while that one is picked, the desk shows it at once. Each has a key back to its usual color, and
-  ↺ beside the title takes all of them back. At first Clear, Solo and Pause are white, Black out blue, Play
-  green, Stack red and the others amber.
+  any color; while that one is picked, the desk shows it at once. A press anywhere else, or Esc, closes them.
+  Each has a key back to its usual color, and ↺ beside the title takes all of them back. At first Clear, Solo
+  and Pause are white, Black out blue, Play green, Stack red and the others amber.
 
 The keys that take something out, ✕ at the end of a step in the Sequences and Stack views and of a shortcut
 in the Keyboard view, are red.
@@ -1151,6 +1151,12 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
   six colors with White ringed, and Red took it; the ✕ keys of the Sequences, Stack and Keyboard views were
   red, with a red edge under the pointer. The two drawings whose notes spelled color the British way were
   made again by their scripts; everything else they draw came out the same.
+* **The palette of a key color closes on a press outside (2026-11-21):** the page passes 168 tests; in them a
+  press elsewhere on the page closed the palette, a press on Other in it did not, and Esc closed it with the
+  keyboard focus back on the color. On a test copy without a box, in Chrome at 1600 × 1000: a click on the
+  hint, on the title of the views and on an empty corner each closed it; a click on another color opened that
+  one instead; Esc, and a color taken with Enter, put the focus back on the color with its ring, and a color
+  taken with the mouse put it there without one.
 * **Show files of a real console (2026-11-19):** 30 show files that ETC SmartFades wrote (software 3.0.1 and
   3.0.2) went through the import. The first version read them wrongly: their "FOLLOWON 0" (no wait) as a
   follow at once, their patch the wrong way round, and it lost their labels. With the SmartFade's dialect

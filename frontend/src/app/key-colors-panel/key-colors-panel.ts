@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, computed, inject, signal } from '@angular/core';
 import { DeskSettings } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
 import { KEY_COLORS, KEY_COLOR_GROUPS, KeyColor, STANDARD_KEY_COLORS } from '../desk/key-colors';
@@ -7,16 +7,21 @@ import { KEY_COLORS, KEY_COLOR_GROUPS, KeyColor, STANDARD_KEY_COLORS } from '../
  * The colors of the keys, in Settings: for each kind of key (channels, memories, sequences) and
  * for each other key, group by group, its color and a key back to its usual one; ↺ beside the
  * title takes all of them back. A press on a color opens the colors the keys have at first, to
- * take one of them, and a field for any other color. While that one is being picked the desk
- * shows it at once; it is kept when the picker closes. On the PC the colors belong to the
- * project, like the layout; a phone keeps its own.
+ * take one of them, and a field for any other color; a press anywhere else, or Esc, closes them.
+ * While another color is being picked the desk shows it at once; it is kept when the picker
+ * closes. On the PC the colors belong to the project, like the layout; a phone keeps its own.
  */
 @Component({
+  host: {
+    '(document:click)': 'closeOutside($event)',
+    '(keydown.escape)': 'close()',
+  },
   selector: 'lm-key-colors-panel',
   styleUrl: './key-colors-panel.css',
   templateUrl: './key-colors-panel.html',
 })
 export class KeyColorsPanel {
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly settings = inject(DeskSettings);
   protected readonly store = inject(DeskStore);
 
@@ -45,6 +50,23 @@ export class KeyColorsPanel {
   /** One of the colors the keys have at first. */
   protected choose(entry: KeyColor, color: string): void {
     this.settings.setColor(entry.id, color);
+    this.close();
+  }
+
+  /** A press anywhere but in the open palette or on a color (that one opens or closes itself) closes it. */
+  protected closeOutside(event: Event): void {
+    if (this.open() === null) return;
+    const target = event.target;
+    if (target instanceof Element && this.host.nativeElement.contains(target) && target.closest('.palette, .color .swatch')) return;
+    this.close();
+  }
+
+  /** The palette closes; the keyboard, when it was in there, goes back to the color that opened it. */
+  protected close(): void {
+    const host = this.host.nativeElement;
+    if (host.querySelector('.palette')?.contains(document.activeElement)) {
+      host.querySelector<HTMLElement>('.swatch[aria-expanded="true"]')?.focus();
+    }
     this.open.set(null);
   }
 

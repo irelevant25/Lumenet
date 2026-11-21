@@ -6,7 +6,7 @@ namespace DmxBox.Server;
 /// </summary>
 internal sealed partial class Desk
 {
-    // The stage plan of the project. A new project keeps it: the rig does not change with the show.
+    // The stage plan of the project. A new project, and one without a plan, has an empty stage.
     private StagePlan _stage = StagePlan.Empty;
 
     // The picture under the plan, as a data URL; null without one. The plan names it by its PictureId.

@@ -121,4 +121,8 @@ public interface IDeskClient
     /// </summary>
     /// <param name="plan">The plan as the desk keeps it now.</param>
     Task StageChanged(StagePlan plan);
+
+    /// <summary>A key was held for a solo, or let go, on some UI, see <see cref="SoloState"/>.</summary>
+    /// <param name="solo">The keys held for a solo now.</param>
+    Task SoloChanged(SoloState solo);
 }

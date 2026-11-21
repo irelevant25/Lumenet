@@ -42,7 +42,7 @@ export class FaderStrip {
   readonly keyPress = output<void>();
   /**
    * The key goes down (true) and up again (false), by a pointer or by Space or Enter while it
-   * has the focus: while SOLO is lit the fader is at full while it is held.
+   * has the focus: while a solo is lit the fader is at full (SOLO UP) or at zero (SOLO DOWN) while it is held.
    */
   readonly keyHold = output<boolean>();
   /**
@@ -69,7 +69,7 @@ export class FaderStrip {
   });
 
   // The main button of a mouse, or a finger or a pen. The key keeps the pointer until it is
-  // let go, so that a SOLO hold ends also when the pointer has left the key by then.
+  // let go, so that a solo hold ends also when the pointer has left the key by then.
   protected onPointerDown(event: PointerEvent): void {
     if (event.button !== 0) return;
     (event.currentTarget as Element).setPointerCapture?.(event.pointerId);

@@ -23,6 +23,7 @@ import {
   NEW_PROJECT_NAME,
   EMPTY_STAGE,
   NO_HISTORY,
+  NO_SOLO,
   PHONE_BELOW_PX,
   Playback,
   ProjectInfo,
@@ -31,6 +32,7 @@ import {
   STRIPS_PER_ROW_WIDE,
   Sequence,
   Sequences,
+  SoloState,
   StackState,
   StackStep,
   StagePlan,
@@ -171,15 +173,51 @@ export class DeskStore {
   });
 
   /**
-   * What goes out to the rig for each channel: what the fader shows, scaled by the master and
-   * rounded as the desk program does; all zero during blackout (the box does the blackout, so
-   * the desk program itself leaves it out). The stage plan draws its lights from it.
+   * What goes out to the rig for each channel: what the fader shows, as a solo leaves it, scaled
+   * by the master and rounded as the desk program does; all zero during blackout (the box does
+   * the blackout, so the desk program itself leaves it out). The stage plan draws its lights
+   * from it.
    */
   readonly output = computed<readonly number[]>(() => {
     if (this.blackout()) return zeros(CHANNEL_COUNT);
     const master = this.master();
+    const levels = this.soloLevels();
+    return master === MAX_LEVEL ? levels : levels.map((level) => Math.floor((level * master + 127) / MAX_LEVEL));
+  });
+
+  /**
+   * What the faders give, as a solo leaves it, the same way as the desk program: with keys held
+   * with SOLO UP only those shine (a channel at full, a memory's look at full, a sequence as it
+   * plays); with keys held with SOLO DOWN their channels and memories give nothing.
+   */
+  private readonly soloLevels = computed<readonly number[]>(() => {
+    const solo = this.solo();
     const shown = this.shownChannels();
-    return master === MAX_LEVEL ? shown : shown.map((level) => Math.floor((level * master + 127) / MAX_LEVEL));
+    if (solo.up.length > 0) {
+      const levels = zeros(CHANNEL_COUNT);
+      const raise = (index: number, level: number) => (levels[index] = Math.max(levels[index], level));
+      for (const key of solo.up) {
+        if (key.target === 'channel') {
+          raise(key.number - 1, MAX_LEVEL);
+          continue;
+        }
+        const look = this.memoryLooks()[key.number];
+        if (look) look.forEach((level, index) => raise(index, level));
+        // a sequence: what it gives now, on the channels its steps use (its fader is at full)
+        for (const step of this.sequences()[key.number]?.steps ?? []) {
+          const channels = step.target === 'channel' ? [step.number - 1] : lookChannels(this.memoryLooks()[step.number]);
+          for (const index of channels) raise(index, shown[index]);
+        }
+      }
+      return levels;
+    }
+    if (solo.down.length === 0) return shown;
+
+    const levels = shown.slice();
+    for (const key of solo.down) {
+      if (key.target === 'channel') levels[key.number - 1] = 0; // a memory: its fader is down already
+    }
+    return levels;
   });
 
   /**
@@ -272,13 +310,17 @@ export class DeskStore {
   /** A short message for the top bar, for example an error from the backend. */
   readonly notice = signal('');
   /**
-   * True while SOLO is lit: the keys under the faders and the independent keys put their fader
-   * to full only while they are held, instead of switching it on and off.
+   * Which solo is lit, if any. SOLO UP: a key under a fader or of the independents puts its fader
+   * to full while it is held, and every other light goes dark. SOLO DOWN: it takes only its own
+   * fader down while it is held, and the rest stays. Let go, everything is as before. Dark: the
+   * keys switch their faders on and off.
    */
-  readonly soloMode = signal(false);
-  // The faders a held key holds at full now, by "channel 5" or "memory 3": the level each had before.
-  private readonly held = new Map<string, number>();
-  /** The rate, a speed master for all sequences (RATE and its wheel), and whether it counts. */
+  readonly soloMode = signal<'up' | 'down' | null>(null);
+  /** The keys held for a solo now, on every page: the desk program lets only those (or all but those) out. */
+  readonly solo = signal<SoloState>(NO_SOLO);
+  // The faders a held key holds now, by "channel 5" or "memory 3": the level each had before, and which solo holds it.
+  private readonly held = new Map<string, { level: number; up: boolean }>();
+  /** The rate, a speed master for all sequences (RATE and its fader), and whether it counts. */
   readonly rate = signal(1);
   readonly rateOn = signal(false);
   /** The autosave of the desk program: on or off, and how often; null while it is not known. */
@@ -340,6 +382,7 @@ export class DeskStore {
     });
     connection.on<[AutosaveOptions]>('AutosaveChanged', (options) => this.autosave.set(options));
     connection.on<[StagePlan]>('StageChanged', (plan) => this.takeStage(plan));
+    connection.on<[SoloState]>('SoloChanged', (solo) => this.solo.set(solo));
     // The project's settings: another page on the PC changed them, or a project was loaded.
     // A phone keeps its own.
     connection.on<[unknown]>('SettingsChanged', (settings) => {
@@ -407,7 +450,7 @@ export class DeskStore {
 
   /**
    * A channel key of the independents switches its channel: to zero when it is up, to full when
-   * it is at zero. In SOLO mode the key holds its fader at full instead, while it is held (holdIndependent).
+   * it is at zero. While a solo is lit the key holds its fader instead, while it is held (holdIndependent).
    */
   toggleIndependent(key: number): void {
     if (this.soloMode()) return;
@@ -424,24 +467,35 @@ export class DeskStore {
 
   // ---------------------------------------------------------------- solo
 
-  /** SOLO: lit, the keys under the faders and the independent keys hold their fader at full while held; dark, they switch it on and off. */
-  toggleSolo(): void {
-    if (this.soloMode()) this.releaseHeld();
-    this.soloMode.update((on) => !on);
+  /** SOLO UP: lit, a held key puts its fader to full and every other light goes dark; dark, the keys switch their faders on and off. */
+  toggleSoloUp(): void {
+    this.switchSolo('up');
+  }
+
+  /** SOLO DOWN: lit, a held key takes only its own fader down; the rest stays. */
+  toggleSoloDown(): void {
+    this.switchSolo('down');
+  }
+
+  // The two solos exclude each other. A key held when its solo goes dark is let go.
+  private switchSolo(solo: 'up' | 'down'): void {
+    this.releaseHeld();
+    this.soloMode.update((lit) => (lit === solo ? null : solo));
   }
 
   /**
-   * The key under the fader of a channel or a memory goes down (true) or up again (false). In
-   * SOLO mode the fader is at full while the key is held, and back where it was when it is let
-   * go. Not while a record key wants the key: a memory key while one waits for a memory, a
-   * channel key while a sequence is recorded.
+   * The key under the fader of a channel or a memory goes down (true) or up again (false). While
+   * a solo is lit, the fader goes to full (SOLO UP) or to zero (SOLO DOWN) while the key is held,
+   * and the desk program lets every other light (SOLO UP), or this one (SOLO DOWN), go dark; let
+   * go, the fader is back where it was. Not while a record key wants the key: a memory key while
+   * one waits for a memory, a channel key while a sequence is recorded.
    */
   holdKey(target: StepTarget, number: number, down: boolean): void {
     if (!down) this.holdOff(target, number);
     else if (this.soloMode() && this.keyIsFree(target)) this.holdOn(target, number);
   }
 
-  /** The same for a key of the independents: it holds the channel or the memory it is bound to at full. */
+  /** The same for a key of the independents: it holds the channel or the memory it is bound to. */
   holdIndependent(kind: StepTarget, key: number, down: boolean): void {
     const number = kind === 'channel' ? this.independents()[key - 1] : this.memoryIndependents()[key - 1];
     if (number === undefined) return;
@@ -457,23 +511,39 @@ export class DeskStore {
 
   private holdOn(target: StepTarget, number: number): void {
     const name = `${target} ${number}`;
+    const up = this.soloMode() === 'up';
     if (this.held.has(name)) return;
 
     const level = target === 'channel' ? this.channels()[number - 1] : this.memoryLevels()[number - 1];
-    this.held.set(name, level);
-    this.setLevel(target, number, MAX_LEVEL);
+    this.held.set(name, { level, up });
+    this.setLevel(target, number, up ? MAX_LEVEL : 0);
+    this.holdSolo(up, target, number, true);
   }
 
   private holdOff(target: StepTarget, number: number): void {
     const name = `${target} ${number}`;
-    const level = this.held.get(name);
-    if (level === undefined) return;
+    const hold = this.held.get(name);
+    if (hold === undefined) return;
 
     this.held.delete(name);
-    this.setLevel(target, number, level);
+    this.setLevel(target, number, hold.level);
+    this.holdSolo(hold.up, target, number, false);
   }
 
-  // Every fader a key holds at full goes back, as if its key were let go.
+  /**
+   * Tells the desk program that a key is held for a solo, or let go: at once, after the fader
+   * move (so that the fader is where it belongs when the solo begins and ends). The page shows
+   * it at once; the desk program answers every page with the keys held.
+   */
+  private holdSolo(up: boolean, target: StepTarget, number: number, held: boolean): void {
+    const side = up ? 'up' : 'down';
+    const others = this.solo()[side].filter((key) => key.target !== target || key.number !== number);
+    this.solo.update((solo) => ({ ...solo, [side]: held ? [...others, { target, number }] : others }));
+    if (this.outboxTimer !== null) this.flushOutbox();
+    this.run('HoldSolo', up, target, number, held);
+  }
+
+  // Every fader a key holds goes back, as if its key were let go.
   private releaseHeld(): void {
     for (const name of [...this.held.keys()]) {
       const [target, number] = name.split(' ');
@@ -1029,6 +1099,7 @@ export class DeskStore {
     this.blackout.set(desk.blackout);
     this.rate.set(desk.rate ?? 1);
     this.rateOn.set(desk.rateOn ?? false);
+    this.solo.set(desk.solo ?? NO_SOLO);
     // The whole desk comes when a memory was stored, copied or emptied, or a project loaded:
     // exactly when a look, a sequence or the stack may be another one.
     void this.fetchMemoryLooks();
@@ -1112,6 +1183,11 @@ export class DeskStore {
 
 function zeros(count: number): number[] {
   return new Array<number>(count).fill(0);
+}
+
+/** The channels a look holds up, as indexes from 0; none for a memory without a look. */
+function lookChannels(look: readonly number[] | undefined): number[] {
+  return (look ?? []).flatMap((level, index) => (level > 0 ? [index] : []));
 }
 
 /** 1, 2, 3 ... count: where the independent keys start, key 1 on channel or memory 1, and so on. */

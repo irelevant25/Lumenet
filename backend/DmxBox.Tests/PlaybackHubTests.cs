@@ -376,6 +376,8 @@ public sealed class PlaybackHubTests
 
         public Task StageChanged(StagePlan plan) => throw new NotSupportedException();
 
+        public Task SoloChanged(SoloState solo) => throw new NotSupportedException();
+
         private Task Note(string message)
         {
             Messages.Add(message);

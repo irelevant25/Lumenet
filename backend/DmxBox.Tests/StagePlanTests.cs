@@ -160,20 +160,24 @@ public sealed class StagePlanTests
     }
 
     [Fact]
-    public void ANewProjectKeepsThePlanAndALoadedOneBringsItsOwnIfItHasOne()
+    public void TheStageIsTheProjectsANewProjectAndOneWithoutAPlanHaveAnEmptyStage()
     {
         var rig = new StagePlan(20, 12, [Light(1, 9, "D")]);
         _desk.SetStage(rig);
+        _desk.SetStagePicture("data:image/png;base64,iVBORw0KGgo=");
+        ProjectContent withPlan = _desk.GetProject().Content;
+
         _desk.StartNewProject();
-        Assert.True(rig.Checked().SameAs(_desk.Stage));
+        Assert.Equal(StagePlan.Empty, _desk.Stage);
+        Assert.Null(_desk.StagePicture);
 
-        ProjectContent old = _desk.GetProject().Content with { Stage = null };   // a file from before plans
-        _desk.ReplaceProject(old);
-        Assert.True(rig.Checked().SameAs(_desk.Stage));
-
-        var other = new StagePlan(8, 8, []);
-        _desk.ReplaceProject(old with { Stage = other });
-        Assert.Equal(other, _desk.Stage);
+        // A project with a plan brings it, with its picture; one from before plans has an empty stage.
+        _desk.ReplaceProject(withPlan);
+        Assert.True(rig.Checked().SameAs(_desk.Stage with { PictureId = null }));
+        Assert.NotNull(_desk.StagePicture);
+        _desk.ReplaceProject(withPlan with { Stage = null });
+        Assert.Equal(StagePlan.Empty, _desk.Stage);
+        Assert.Null(_desk.StagePicture);
     }
 
     [Fact]

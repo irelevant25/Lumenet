@@ -47,14 +47,14 @@
     minmax(calc(var(--frame) + var(--keys-min)), calc(var(--frame) + var(--keys-max)));
 }
 
-/* the general section (Clear, Solo, Rate and the rate fader) over the stack and its wheel */
+/* the general section (Clear, Solo up, Solo down, Rate and the rate fader) over the stack and its wheel */
 .second {
   --wheel-min: calc(var(--place-h) + 2px);
   --wheel-max: calc(var(--wheel-size, 3) * var(--place-h) + 2px);
 
   grid-column: 3;
   grid-template-rows:
-    minmax(calc(var(--fader-section) + 3 * var(--master-key-min) + 5 * var(--strip-gap)), 1fr)
+    minmax(calc(var(--fader-section) + 4 * var(--master-key-min) + 6 * var(--strip-gap)), 1fr)
     minmax(
       calc(var(--frame) + 8px + var(--keys-min) + var(--wheel-min)),
       calc(var(--frame) + 8px + var(--keys-max) + var(--wheel-max))

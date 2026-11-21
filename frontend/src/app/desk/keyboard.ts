@@ -16,8 +16,8 @@ const KEYBOARD_URL = '/keyboard';
  *   text field has the keyboard (a note is being typed) and while a window such as Load is open.
  * - Recording: the next key pressed (with Ctrl, Alt, Shift held as wanted) becomes the shortcut
  *   of one key of the desk. A shortcut that another key had moves over. Esc stops recording.
- * - In SOLO mode the shortcut of a key under a fader or of the independents holds that key's
- *   fader at full for as long as it is held.
+ * - While a solo is lit, the shortcut of a key under a fader or of the independents holds that key's
+ *   fader (at full or at zero) for as long as it is held.
  * - Listening: the desk is shown, and the next click on one of its keys does not press it but
  *   picks it, and the Keyboard view comes back with that key chosen in its list. Esc stops
  *   listening.
@@ -42,7 +42,7 @@ export class Keyboard {
   // A key was picked by the press of a pointer: the click that follows must not press it.
   private swallowClick = false;
 
-  // In SOLO mode: the keys of the keyboard held down now that hold a key of the desk, by the
+  // While a solo is lit: the keys of the keyboard held down now that hold a key of the desk, by the
   // physical key (KeyboardEvent.code), with the name of that key of the desk.
   private readonly held = new Map<string, string>();
 
@@ -141,7 +141,7 @@ export class Keyboard {
 
     event.preventDefault();
 
-    // In SOLO mode the shortcut of a key under a fader or of the independents holds it, for as long as it is held.
+    // While a solo is lit, the shortcut of a key under a fader or of the independents holds it, for as long as it is held.
     const hold = actionWithId(id)?.hold;
     if (hold && this.store.soloMode()) {
       this.held.set(event.code, id);

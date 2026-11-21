@@ -114,4 +114,7 @@ internal sealed class RecordingClient : IDeskClient
 
     /// <inheritdoc />
     public Task StageChanged(StagePlan plan) => throw new NotSupportedException();
+
+    /// <inheritdoc />
+    public Task SoloChanged(SoloState solo) => throw new NotSupportedException();
 }

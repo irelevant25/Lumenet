@@ -20,7 +20,7 @@ public sealed class HubTests
     private static readonly string[] DeskProperties =
     [
         "channels", "memoryLevels", "memoryStored", "master", "blackout", "channelNotes", "memoryNotes", "independents",
-        "memorySequence", "memoryIndependents", "rate", "rateOn",
+        "memorySequence", "memoryIndependents", "rate", "rateOn", "solo",
     ];
 
     [Fact]
@@ -785,13 +785,43 @@ public sealed class HubTests
         await ui.InvokeAsync("Redo");
         Assert.Equal(kept, (await ui.InvokeAsync("GetStage")).GetRawText());
 
-        // It goes into the file. A new project keeps it (the rig stays); loading brings the project's.
+        // It goes into the file. A new project has an empty stage; loading brings the project's.
         await ui.InvokeAsync("SaveProject", "rig");
         await ui.InvokeAsync("NewProject");
-        Assert.Equal(kept, (await ui.InvokeAsync("GetStage")).GetRawText());
-        await ui.InvokeAsync("SetStage", new { width = 8, depth = 8, lights = Array.Empty<object>() });
+        Assert.Equal(empty, (await ui.InvokeAsync("GetStage")).GetRawText());
         await ui.InvokeAsync("LoadProject", "rig");
         Assert.Equal(kept, (await ui.InvokeAsync("GetStage")).GetRawText());
+    }
+
+    // ---------------------------------------------------------------- solo
+
+    [Fact]
+    public async Task KeysHeldForASoloReachEveryUiAndGoWhenTheirUiGoes()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        HubClient ui = await server.ConnectAsync(); // goes away during the test, see below
+        await using HubClient other = await server.ConnectAsync();
+
+        const string none = """{"up":[],"down":[]}""";
+        Assert.Equal(none, (await ui.InvokeAsync("Hello")).GetProperty("desk").GetProperty("solo").GetRawText());
+
+        await ui.InvokeAsync("HoldSolo", true, "channel", 5, true);
+        await AssertNextAsync(other, "SoloChanged", """[{"up":[{"target":"channel","number":5}],"down":[]}]""");
+        await ui.InvokeAsync("HoldSolo", true, "channel", 5, true); // held already: nothing to tell
+        await ui.InvokeAsync("HoldSolo", false, "memory", 2, true);
+        await AssertNextAsync(
+            other,
+            "SoloChanged",
+            """[{"up":[{"target":"channel","number":5}],"down":[{"target":"memory","number":2}]}]""");
+
+        await ui.InvokeAsync("HoldSolo", true, "channel", 5, false);
+        await AssertNextAsync(other, "SoloChanged", """[{"up":[],"down":[{"target":"memory","number":2}]}]""");
+        await AssertRefusedAsync("The channel must be from 1 to 512, not 600.", ui, "HoldSolo", true, "channel", 600, true);
+        await AssertRefusedAsync("A solo is for a channel or a memory, not \"stage\".", ui, "HoldSolo", true, "stage", 1, true);
+
+        // The UI goes while it holds a key: the key is let go, and the others hear of it.
+        await ui.DisposeAsync();
+        await AssertNextAsync(other, "SoloChanged", $"[{none}]");
     }
 
     [Fact]

@@ -70,7 +70,26 @@ export interface DeskState {
   rate?: number;
   /** True while the rate counts (RATE lit). */
   rateOn?: boolean;
+  /** The keys held for a solo now, on any page. An older desk program leaves it out. */
+  solo?: SoloState;
 }
+
+/** A key of a channel or a memory held for a solo. */
+export interface SoloKey {
+  target: StepTarget;
+  number: number;
+}
+
+/**
+ * The keys held for a solo now, on any page: with SOLO UP only their faders shine, at full, and
+ * every other light is dark; with SOLO DOWN their faders give nothing, and the rest stays.
+ */
+export interface SoloState {
+  up: SoloKey[];
+  down: SoloKey[];
+}
+
+export const NO_SOLO: SoloState = { up: [], down: [] };
 
 /** The autosave of the desk program: whether it keeps the work that is not saved, and how often. */
 export interface AutosaveOptions {

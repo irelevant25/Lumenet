@@ -40,8 +40,8 @@ namespace DmxBox.Server;
 /// does not know it passes over it, so it needed no new version. Settings that are no JSON
 /// object, or too long, are left out on reading: the project is good without them.
 /// "stage" is the stage plan, see <see cref="StagePlan"/>; it came the same way, without a new
-/// version. A file without it leaves the plan in use as it is. A light without "shape", "width"
-/// and "depth" is round and one square big; a plan without "picture" has none.
+/// version. A file without it has an empty stage. A light without "shape", "width" and "depth" is
+/// round and one square big; a plan without "picture" has none.
 /// The notes and the independents may be missing: then there are no notes, and the keys are
 /// on channels 1 to 32 and memories 1 to 32. That keeps the files from before these existed
 /// readable. Version 2 added the sequences and the stack; a file of version 1 has neither, and

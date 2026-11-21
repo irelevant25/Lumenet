@@ -1,19 +1,33 @@
 <h2>General</h2>
 
 <button lmLamp type="button" tone="clear" data-action="master.clear" [level]="3" (click)="store.clear()">Clear</button>
-<!-- Lit: the keys under the faders and the independent keys hold their fader at full only while they are held. -->
+<!-- Lit: a key under a fader or of the independents, while it is held, puts its fader to full and every other light out. -->
 <button
   lmLamp
   type="button"
   tone="solo"
-  aria-label="Solo"
+  aria-label="Solo up"
   data-action="master.solo"
-  title="While lit, a key under a fader or of the independents puts its fader to full only while it is held"
-  [level]="store.soloMode() ? 3 : 1"
-  [attr.aria-pressed]="store.soloMode()"
-  (click)="store.toggleSolo()"
+  title="While lit, a key under a fader or of the independents puts its fader to full while it is held, and every other light out"
+  [level]="store.soloMode() === 'up' ? 3 : 1"
+  [attr.aria-pressed]="store.soloMode() === 'up'"
+  (click)="store.toggleSoloUp()"
 >
-  Solo
+  Solo up
+</button>
+<!-- Lit: a key, while it is held, takes only its own fader down. -->
+<button
+  lmLamp
+  type="button"
+  tone="solo-down"
+  aria-label="Solo down"
+  data-action="master.solo-down"
+  title="While lit, a key under a fader or of the independents takes only its own fader down while it is held"
+  [level]="store.soloMode() === 'down' ? 3 : 1"
+  [attr.aria-pressed]="store.soloMode() === 'down'"
+  (click)="store.toggleSoloDown()"
+>
+  Solo down
 </button>
 <!-- The rate, a speed master for the sequences: RATE switches it, the fader under it sets it. -->
 <button

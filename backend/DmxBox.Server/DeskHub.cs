@@ -68,7 +68,29 @@ internal sealed class DeskHub : Hub<IDeskClient>
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         _lan.Untrack(Context.ConnectionId);
+
+        // Keys it held for a solo are let go with it: no solo stays on by itself.
+        if (_desk.DropSolo(Context.ConnectionId))
+            await Clients.Others.SoloChanged(_desk.Solo);
+
         await base.OnDisconnectedAsync(exception);
+    }
+
+    /// <summary>
+    /// A key of a channel or a memory is held for a solo, or let go: with SOLO UP only the faders
+    /// of the held keys shine, at full; with SOLO DOWN their faders give nothing. Every UI hears
+    /// which keys are held. The UI moves the fader of the key as well, to full or to zero, and
+    /// back when it is let go.
+    /// </summary>
+    /// <param name="up">True for SOLO UP, false for SOLO DOWN.</param>
+    /// <param name="target">"channel" or "memory".</param>
+    /// <param name="number">The channel (1-512) or the memory (1-128).</param>
+    /// <param name="held">True while it is held, false when it is let go.</param>
+    public Task HoldSolo(bool up, string target, int number, bool held)
+    {
+        return _desk.HoldSolo(Context.ConnectionId, up, target, number, held)
+            ? Clients.All.SoloChanged(_desk.Solo)
+            : Task.CompletedTask;
     }
 
     /// <summary>The first call of a UI: everything it needs to draw itself.</summary>

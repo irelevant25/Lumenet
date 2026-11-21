@@ -76,7 +76,7 @@ export class Independents {
   }
 
   /**
-   * A key goes down: while SOLO is lit its channel or memory is at full until it is let go. The
+   * A key goes down: while a solo is lit it holds its channel or memory until it is let go. The
    * key keeps the pointer until then, so that the hold ends also when the pointer has left it.
    */
   protected hold(kind: StepTarget, key: number, event: PointerEvent): void {

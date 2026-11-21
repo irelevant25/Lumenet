@@ -33,6 +33,7 @@
   --key-stack: var(--live);
   --key-clear: #f1f3f6;
   --key-solo: #f1f3f6;
+  --key-solo-down: #f1f3f6;
   --key-blackout: #4aa3ff;
   --key-rate: #ffb020;
   --key-prev: #ffb020;

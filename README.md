@@ -443,7 +443,7 @@ things that run by themselves (see below), Stage shows the lights of the rig in 
 for how this browser shows the desk (see [Settings](#settings)), Keyboard for its shortcuts. Beside the name
 stand **LAN**, **Undo** and **Redo**, at the right the keys of the project. At the right of Main stand three
 columns: the **Master** section (Black out and the master fader with its level) over **Record**; the
-**General** section (Clear, Solo, Rate and the rate fader with the rate on top) over the **Stack**; and at
+**General** section (Clear, Solo up, Solo down, Rate and the rate fader with the rate on top) over the **Stack**; and at
 the right edge, over the whole height, the **Independents** (unless Settings shows none of their keys). On a
 phone the master section, the general section and the stack lie across the top, one line each.
 
@@ -488,11 +488,19 @@ phone the master section, the general section and the stack lie across the top, 
 * **Black out** sends zero to every address but leaves the desk as it is; the key blinks while it is active.
   The blackout button on the box does the same, and the desk shows it.
 * **Master** dims the whole output.
-* **Solo** (white, in General under Clear): while it is lit, a key under a fader or of the independents
-  puts its fader to full only for as long as it is held, and lets it go back where it was; so does its
-  shortcut. While a record key waits for a memory, the memory keys are for that, and while a sequence is
-  recorded the channel keys put in steps, as always. Solo dark again: the keys switch on and off as before.
-* **Rate** (in General, under Solo) is a speed master for the sequences. Dark, every sequence plays at its own
+* **Solo up** and **Solo down** (white, in General under Clear) change what a key under a fader or of the
+  independents does while it is held; so does its shortcut. Lighting one darkens the other.
+  * **Solo up:** the key puts its fader to full and every other light goes dark: only that channel (or that
+    memory's look or sequence, at full) shines. Let go, the fader is back where it was and every light as
+    before.
+  * **Solo down:** the key takes only its own fader down, to zero; every other light stays. A channel goes
+    dark even where a memory holds it up. Let go, it is back.
+  * A solo changes what goes out, like Black out: the other faders do not move. The master still dims what a
+    solo lets out, and Black out still darkens it. Several keys can be held at once; a key held on a phone
+    counts for the whole desk, and the desk lets it go if that phone loses its connection. While a record
+    key waits for a memory, the memory keys are for that, and while a sequence is recorded the channel keys
+    put in steps, as always. Both dark again: the keys switch on and off as before.
+* **Rate** (in General, under Solo down) is a speed master for the sequences. Dark, every sequence plays at its own
   speed; lit, at its own speed times the rate of the fader under the key, which stands on top of the fader
   (×1.00). The fader goes from ×0.1 at the bottom to ×10 at the top, with ×1 in the middle (a line marks it),
   as the speed fader of a sequence does: the lower half from ×0.1 to ×1, the upper half from ×1 to ×10, in
@@ -563,10 +571,10 @@ phone the master section, the general section and the stack lie across the top, 
     the channels typed as letters for any other fixture mode: D dimmer, R red, G green, B blue, W white,
     A amber, U UV, and any other letter for a channel that gives no light, such as S for a strobe. A D dims
     the cell it stands in; one D in a light of several cells dims all of them.
-  * The plan belongs to the project: it is saved with it, a new project keeps the plan in use (the rig does
-    not change with the show), a project that is loaded brings its own, and one from before plans or an
-    imported show keeps the plan in use. Changes of the plan are steps of Undo, and like everything stored
-    the plan cannot be changed while the stack is live.
+  * The plan belongs to the project: it is saved with it, and a project that is loaded brings its own. A
+    new project, one from before plans and an imported show have an empty stage (no lights, no picture,
+    16 by 10 squares). Changes of the plan are steps of Undo, and like everything stored the plan cannot be
+    changed while the stack is live.
 * **Project:** New, Save, Load and Import at the top right. A project is one JSON file in
   `Documents\Lumenet`. It holds the memories (looks and sequences), the stack, the notes and what the
   independent keys are bound to, not the fader positions, so loading a project never switches a light on by
@@ -587,8 +595,9 @@ phone the master section, the general section and the stack lie across the top, 
   sequences (every template, some made by hand and some recorded with Rec seq; in a loop, once and at random;
   at speeds from 0.5× to 2×), all twenty independent keys bound, and a stack of 14 steps with steps put in
   between (3.5, 4.1), waits that go on by themselves and a channel step for the hazer. Its stage plan has
-  the 17 channels as 14 lights (the LED bar is one RGBW light, a bar four squares wide; the hazer a square).
-  Copy it into `Documents\Lumenet` and load "Example show".
+  the 17 channels as 14 lights (the LED bar is one RGBW light, a bar four squares wide; the hazer a square)
+  over a drawing of the stage: a wooden floor, the back curtain, masking at the sides, a riser, the fire pot
+  between its two red lights and tape marks. Copy it into `Documents\Lumenet` and load "Example show".
 * **Import** opens the show of a theatre console as a project: a file in the USITT ASCII format (`.asc`, up
   to 8 MB), the plain text in which consoles such as ETC Eos, Ion and Express, the ETC (AVAB) SmartFade or the
   Strand consoles hand a show on (on an Eos: File, Export, USITT ASCII; a SmartFade saves its shows in this
@@ -781,7 +790,7 @@ settings to itself, for its screen differs. The autosave and LAN belong to the d
 * **Network (LAN):** while LAN is on, the address phones use and the password; see above. On the PC only.
 * **Colours of the keys:** a colour for each kind (channels, memories, and the colour a memory with a
   sequence runs into), which is that of all its keys, page keys and faders, and one for each other key, group
-  by group: Black out; Clear, Solo and Rate (with its fader); Stack, Prev, Play, Pause, Next and Add step (Play also colours the
+  by group: Black out; Clear, Solo up, Solo down and Rate (with its fader); Stack, Prev, Play, Pause, Next and Add step (Play also colours the
   step that is on, Next the step Play goes to); the keys of Record, of the top bar, Edit of the independents,
   the keys of the Sequences view and of the Stage view. While a colour is picked, the desk shows it at once. Each has a key back
   to its usual colour, and one key takes all of them back. At first Clear, Solo and Pause are white, Black out
@@ -790,7 +799,7 @@ settings to itself, for its screen differs. The autosave and LAN belong to the d
 ### Keyboard
 
 The Keyboard view gives a shortcut to any key of the desk: the view links, New, Save, Load, Import, LAN,
-Clear, Solo, Black out, Rate, the keys of the stack and of Record, those of the Sequences view and of the Stage
+Clear, Solo up, Solo down, Black out, Rate, the keys of the stack and of Record, those of the Sequences view and of the Stage
 view, Edit and every key of the independents, every page key, the key under every channel and memory fader,
 Undo and Redo. On the
 PC the shortcuts belong to the project, like the layout; a phone keeps its own. Undo and Redo have Ctrl + Z
@@ -829,10 +838,10 @@ and Ctrl + Y until they get others (or none: then they stay without).
   to the pages listed in `Server:AllowedOrigins`, plus the page the backend hands out itself. With `Urls` set
   to `http://localhost:5080` the desk stays on this PC for good.
 
-**Tests:** `dotnet test backend/DmxBox.sln` (435 tests: the client, the desk, sequences and the stack with a
+**Tests:** `dotnet test backend/DmxBox.sln` (440 tests: the client, the desk, solo, sequences and the stack with a
 clock the tests set by hand, the rate, undo and the autosave, the stage plan and its picture, project files
 and the example project, the import of show files, the link to the box, the hub, LAN with a pretend PC and a
-pretend phone), and in `frontend/`: `npm test -- --watch=false` (136 tests of the page).
+pretend phone), and in `frontend/`: `npm test -- --watch=false` (137 tests of the page).
 
 ---
 ## 5. The DX protocol (UDP 7000)
@@ -1015,6 +1024,13 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
   of the desk 255. Made square and four squares wide, it lay on the lines of the grid and turned red all
   over with its one cell. A picture of 2400 × 1500 pixels chosen as a file came out as a JPEG of 68 KB, the
   stage fitted to it, under the stage and then under the whole plan, and went again with Remove.
+* **Solo up, Solo down, and the stage of the project (2026-11-21):** the backend passes 440 tests and the
+  page 137. On a test copy without a box, in Chrome, with the example show and Full stage up: with Solo up
+  lit, Channel key 3 held on Main, the desk program had that key as held and a second page's stage plan
+  showed Front left lit and every other light dark; let go, all came back. With Solo down lit, memory key 4
+  (Full stage) held: its fader went to 0 and its lights dark, and back to full when let go. New gave an
+  empty stage; loading the example brought its 14 lights back. General holds its four keys and the rate
+  fader at 1920 × 1080, at 1366 × 768 (keys 41 pixels, fader 76) and on a phone of 360 pixels.
 * **Show files of a real console (2026-11-19):** 30 show files that ETC SmartFades wrote (software 3.0.1 and
   3.0.2) went through the import. The first version read them wrongly: their "FOLLOWON 0" (no wait) as a
   follow at once, their patch the wrong way round, and it lost their labels. With the SmartFade's dialect

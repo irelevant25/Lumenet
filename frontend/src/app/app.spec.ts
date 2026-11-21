@@ -725,22 +725,30 @@ describe('the desk page', () => {
     expect(button('Undo').disabled).toBe(true);
   });
 
-  it('SOLO makes a key under a fader or of the independents put its fader to full while it is held', async () => {
+  it('SOLO UP: a key held puts its fader to full and every other light out; let go, everything is back', async () => {
     // jsdom knows no PointerEvent; a MouseEvent of that name does the same here.
     const hold = (key: Element, down: boolean) =>
       key.dispatchEvent(new MouseEvent(down ? 'pointerdown' : 'pointerup', { bubbles: true, button: 0 }));
     store.setChannel(5, 40);
+    store.setChannel(6, 100);
 
-    await press(button('Solo'));
-    expect(button('Solo').getAttribute('aria-pressed')).toBe('true');
-    expect(button('Solo').className).toContain('level-3');
+    await press(button('Solo up'));
+    expect(button('Solo up').getAttribute('aria-pressed')).toBe('true');
+    expect(button('Solo up').className).toContain('level-3');
 
     hold(channelKey(5)!, true);
     expect(store.channels()[4]).toBe(255);
+    // The desk program lets only this one out; the stage plan shows it the same way.
+    expect(connection.last('HoldSolo')).toEqual([true, 'channel', 5, true]);
+    expect(store.output()[4]).toBe(255);
+    expect(store.output()[5]).toBe(0); // channel 6 is dark, though its fader stays at 100
+    expect(store.channels()[5]).toBe(100);
     hold(channelKey(5)!, false);
     channelKey(5)!.click(); // the click after a press does not switch the fader as well
     await fixture.whenStable();
     expect(store.channels()[4]).toBe(40); // back where it was
+    expect(connection.last('HoldSolo')).toEqual([true, 'channel', 5, false]);
+    expect(store.output()[5]).toBe(100);
 
     hold(memoryKey(2), true);
     expect(store.memoryLevels()[1]).toBe(255);
@@ -761,16 +769,50 @@ describe('the desk page', () => {
     document.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyJ', key: 'j', bubbles: true }));
     expect(store.channels()[6]).toBe(0);
 
-    // A key held while SOLO goes dark comes back down; then the keys switch on and off again.
+    // A key held while SOLO UP goes dark comes back down; then the keys switch on and off again.
     hold(channelKey(5)!, true);
-    await press(button('Solo'));
+    await press(button('Solo up'));
     expect(store.channels()[4]).toBe(40);
-    expect(button('Solo').className).toContain('level-1');
+    expect(button('Solo up').className).toContain('level-1');
     await press(channelKey(5));
     expect(store.channels()[4]).toBe(255);
   });
 
-  it('at the right of Main: MASTER over RECORD, GENERAL (CLEAR, SOLO, RATE) over STACK, then IND; SOLO and PAUSE are white', async () => {
+  it('SOLO DOWN: a key held takes only its own fader down; let go, it is back; the two solos exclude each other', async () => {
+    const hold = (key: Element, down: boolean) =>
+      key.dispatchEvent(new MouseEvent(down ? 'pointerdown' : 'pointerup', { bubbles: true, button: 0 }));
+    store.setChannel(5, 40);
+    store.setChannel(6, 100);
+    store.setMemoryLevel(2, 255); // memory 2 holds channel 5 at 200
+
+    await press(button('Solo up'));
+    await press(button('Solo down'));
+    expect(button('Solo down').getAttribute('aria-pressed')).toBe('true');
+    expect(button('Solo up').getAttribute('aria-pressed')).toBe('false');
+
+    // A channel: its fader to zero, and its light dark, also where a memory holds it; the rest stays.
+    hold(channelKey(5)!, true);
+    expect(store.channels()[4]).toBe(0);
+    expect(connection.last('HoldSolo')).toEqual([false, 'channel', 5, true]);
+    expect(store.output()[4]).toBe(0);
+    expect(store.output()[5]).toBe(100);
+    hold(channelKey(5)!, false);
+    expect(store.channels()[4]).toBe(40);
+    expect(store.output()[4]).toBe(200);
+
+    // A memory: its fader to zero while held, and back.
+    hold(memoryKey(2), true);
+    expect(store.memoryLevels()[1]).toBe(0);
+    hold(memoryKey(2), false);
+    expect(store.memoryLevels()[1]).toBe(255);
+
+    // What another page holds counts here too.
+    connection.emit('SoloChanged', { up: [{ target: 'channel', number: 6 }], down: [] });
+    expect(store.output()[5]).toBe(255);
+    expect(store.output()[4]).toBe(0);
+  });
+
+  it('at the right of Main: MASTER over RECORD, GENERAL (CLEAR, SOLO UP, SOLO DOWN, RATE) over STACK, then IND; SOLO and PAUSE are white', async () => {
     const columns = [...page.querySelectorAll('lm-main-view > .side')].map((side) => [...side.children].map((child) => child.localName));
     expect(columns).toEqual([
       ['lm-master-section', 'lm-record-section'],
@@ -780,8 +822,13 @@ describe('the desk page', () => {
 
     const keys = (section: string) => [...page.querySelectorAll(`${section} button`)];
     expect(keys('lm-master-section').map((key) => key.getAttribute('aria-label'))).toEqual(['Blackout']);
-    expect(keys('lm-general-section').map((key) => key.getAttribute('aria-label') ?? key.textContent?.trim())).toEqual(['Clear', 'Solo', 'Rate']);
-    expect(keys('lm-general-section').map((key) => /tone-(\S+)/.exec(key.className)?.[1])).toEqual(['clear', 'solo', 'rate']);
+    expect(keys('lm-general-section').map((key) => key.getAttribute('aria-label') ?? key.textContent?.trim())).toEqual([
+      'Clear',
+      'Solo up',
+      'Solo down',
+      'Rate',
+    ]);
+    expect(keys('lm-general-section').map((key) => /tone-(\S+)/.exec(key.className)?.[1])).toEqual(['clear', 'solo', 'solo-down', 'rate']);
     // the rate stands on top of its fader, at the bottom of the section
     const parts = [...page.querySelectorAll('lm-general-section > *')].map((part) => (part.classList.contains('readout') ? 'rate' : part.localName));
     expect(parts.slice(-2)).toEqual(['rate', 'lm-fader']);
@@ -2126,7 +2173,7 @@ describe('the desk page', () => {
     expect(tab('Master').getAttribute('aria-selected')).toBe('true');
     expect(rows()).toEqual(['Blackout']);
     await press(tab('General'));
-    expect(rows()).toEqual(['Clear', 'Solo', 'Rate']);
+    expect(rows()).toEqual(['Clear', 'Solo up', 'Solo down', 'Rate']);
 
     // The arrow keys go from tab to tab.
     tab('General').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));

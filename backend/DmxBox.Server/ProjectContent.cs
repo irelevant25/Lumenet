@@ -33,8 +33,8 @@ internal sealed record ProjectContent(byte[]?[] Looks, string[] ChannelNotes, st
 
     /// <summary>
     /// The stage plan: the lights of the rig and where they hang; null for a project that does not
-    /// say, such as one from a file of an older version or an imported show. Then the plan in use
-    /// stays.
+    /// say, such as one from a file of an older version or an imported show. Then the stage is
+    /// empty.
     /// </summary>
     public StagePlan? Stage { get; init; }
 

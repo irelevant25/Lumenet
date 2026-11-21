@@ -1,12 +1,12 @@
-/* A narrow section beside the master section, over the stack: the title, Clear, Solo and Rate,
-   and the rate fader with the rate above it. The fader takes the height that is left; on a low
-   window the keys get flatter too, down to --master-key-min (set by the main view), and the
-   fader keeps 50 pixels. */
+/* A narrow section beside the master section, over the stack: the title, Clear, Solo up, Solo
+   down and Rate, and the rate fader with the rate above it. The fader takes the height that is
+   left; on a low window the keys get flatter too, down to --master-key-min (set by the main
+   view), and the fader keeps 50 pixels. */
 :host {
   display: grid;
   grid-template-rows:
     auto
-    repeat(3, minmax(var(--master-key-min, var(--key-h)), var(--key-h)))
+    repeat(4, minmax(var(--master-key-min, var(--key-h)), var(--key-h)))
     auto
     minmax(50px, 1fr);
   justify-items: center;

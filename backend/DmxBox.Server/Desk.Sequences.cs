@@ -252,23 +252,31 @@ internal sealed partial class Desk
     }
 
     // Call with the lock held. Raises "levels" to what the running sequences give at "now".
-    // "stepsOn", if given, receives the step each running sequence is on, counted from 1.
-    private void AddSequences(byte[] levels, double now, Dictionary<int, int>? stepsOn)
+    // "stepsOn", if given, receives the step each running sequence is on, counted from 1. The
+    // memories in "leftOut" (held with SOLO DOWN) give nothing.
+    private void AddSequences(byte[] levels, double now, Dictionary<int, int>? stepsOn, HashSet<Fader>? leftOut = null)
     {
         for (int index = 0; index < MemoryCount; index++)
         {
-            byte fader = _memoryLevels[index];
-            if (fader == 0 || _sequences[index] is not { Steps.Length: > 0 } sequence)
-                continue;
-
-            double elapsed = SequenceTime(index, now);
-            int seed = _sequenceSeeds[index];
-            double[] fractions = SequenceTimeline.Fractions(sequence, elapsed, seed);
-            for (int step = 0; step < fractions.Length; step++)
-                AddStep(levels, sequence.Steps[step], fractions[step], fader);
-
-            stepsOn?.Add(index + 1, SequenceTimeline.CurrentStep(sequence, elapsed, seed) + 1);
+            if (_memoryLevels[index] > 0 && leftOut?.Contains(new Fader(true, index + 1)) != true)
+                AddSequence(levels, index, now, _memoryLevels[index], stepsOn);
         }
+    }
+
+    // Call with the lock held. Raises "levels" to what the sequence of one memory gives at "now",
+    // under a fader at "fader".
+    private void AddSequence(byte[] levels, int index, double now, byte fader, Dictionary<int, int>? stepsOn)
+    {
+        if (_sequences[index] is not { Steps.Length: > 0 } sequence)
+            return;
+
+        double elapsed = SequenceTime(index, now);
+        int seed = _sequenceSeeds[index];
+        double[] fractions = SequenceTimeline.Fractions(sequence, elapsed, seed);
+        for (int step = 0; step < fractions.Length; step++)
+            AddStep(levels, sequence.Steps[step], fractions[step], fader);
+
+        stepsOn?.Add(index + 1, SequenceTimeline.CurrentStep(sequence, elapsed, seed) + 1);
     }
 
     // What one step gives while it is "fraction" of the way up, under the fader of its sequence.

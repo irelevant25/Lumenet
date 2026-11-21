@@ -22,7 +22,7 @@ export interface DeskAction {
   readonly label: string;
   readonly run: ((context: ActionContext) => void) | null;
   /**
-   * For a key that holds its fader at full in SOLO mode (under a fader, or of the independents): what holding
+   * For a key that holds its fader while a solo is lit (under a fader, or of the independents): what holding
    * it down (true) and letting it go (false) does. Its shortcut then does the same while it is held.
    */
   readonly hold?: (context: ActionContext, down: boolean) => void;
@@ -86,7 +86,8 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
   // that projects keep under these names go on working.
   { id: 'master.blackout', group: 'Master', label: 'Blackout', run: ({ store }) => store.toggleBlackout() },
   { id: 'master.clear', group: 'General', label: 'Clear', run: ({ store }) => store.clear() },
-  { id: 'master.solo', group: 'General', label: 'Solo', run: ({ store }) => store.toggleSolo() },
+  { id: 'master.solo', group: 'General', label: 'Solo up', run: ({ store }) => store.toggleSoloUp() },
+  { id: 'master.solo-down', group: 'General', label: 'Solo down', run: ({ store }) => store.toggleSoloDown() },
   { id: 'master.rate', group: 'General', label: 'Rate', run: ({ store }) => store.toggleRate() },
 
   {

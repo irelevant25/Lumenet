@@ -40,7 +40,8 @@ export const KEY_COLOURS: readonly KeyColour[] = [
   key('blackout', 'Master', 'Blackout', '#4aa3ff'),
 
   key('clear', 'General', 'Clear', WHITE),
-  key('solo', 'General', 'Solo', WHITE),
+  key('solo', 'General', 'Solo up', WHITE),
+  key('solo-down', 'General', 'Solo down', WHITE),
   key('rate', 'General', 'Rate (and its fader)', AMBER),
 
   colour('stack', 'Stack', 'Stack (live), and the Live mark in the top bar', '--live', '#ff5247'),

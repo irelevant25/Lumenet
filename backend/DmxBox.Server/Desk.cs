@@ -461,8 +461,8 @@ internal sealed partial class Desk
     /// Makes the desk clean for a new project: every channel fader and memory fader down to 0,
     /// every memory empty, an empty stack, no notes, the independent keys back on channels 1 to
     /// 32 and memories 1 to 32. The master and blackout stay: they belong to the evening, not to
-    /// the project. So do the settings: a new project starts with the layout in use. And so does
-    /// the stage plan: the rig does not change with the show.
+    /// the project. So do the settings: a new project starts with the layout in use. The stage
+    /// plan belongs to the project: a new one has an empty stage, without lights and picture.
     /// </summary>
     /// <returns><see cref="ProjectChanges"/> right after the change.</returns>
     /// <exception cref="DeskException">The stack is live.</exception>
@@ -480,6 +480,8 @@ internal sealed partial class Desk
             Array.Fill(_memoryNotes, "");
             DefaultIndependents().CopyTo(_independents, 0);
             DefaultMemoryIndependents().CopyTo(_memoryIndependents, 0);
+            _stage = StagePlan.Empty;
+            _stagePicture = null;
             CountLookChange();
             return _projectChanges;
         }
@@ -488,8 +490,8 @@ internal sealed partial class Desk
     /// <summary>
     /// Replaces everything a project file holds at once, which is what loading a project does:
     /// the looks and sequences of all memories, the stack, all notes, the bindings of the
-    /// independent keys, the stage plan and the settings (a project without a plan or settings
-    /// keeps those in use). Every
+    /// independent keys, the stage plan (a project without one has an empty stage) and the
+    /// settings (a project without settings keeps those in use). Every
     /// memory fader goes down to 0 and the stack stands before its first step, so that nothing
     /// of the new project appears on stage unasked. The channel faders stay.
     /// </summary>
@@ -583,7 +585,8 @@ internal sealed partial class Desk
                 MemorySequence: sequence,
                 MemoryIndependents: Copy(_memoryIndependents),
                 Rate: _rate,
-                RateOn: _rateOn);
+                RateOn: _rateOn,
+                Solo: SoloNow());
         }
     }
 
@@ -610,23 +613,39 @@ internal sealed partial class Desk
     /// <summary>
     /// Computes the levels the box has to send at this moment. For every channel the highest
     /// wins: its own fader, or a memory that holds the channel, scaled by that memory's fader.
-    /// A memory with a sequence gives what its sequence gives right now. The master then
-    /// scales the result. Blackout is left out, see <see cref="Blackout"/>.
+    /// A memory with a sequence gives what its sequence gives right now. A solo changes that (see
+    /// Desk.Solo.cs): with keys held with SOLO UP only their faders count, at full; with keys held
+    /// with SOLO DOWN their faders give nothing. The master then scales the result. Blackout is
+    /// left out, see <see cref="Blackout"/>.
     /// </summary>
     /// <returns>512 levels; channel 1 is at index 0.</returns>
     public byte[] GetOutput()
     {
         lock (_lock)
         {
-            byte[] output = Copy(_channels);
-            for (int index = 0; index < MemoryCount; index++)
+            double now = Now;
+            (HashSet<Fader> up, HashSet<Fader> down) = SoloFaders();
+            byte[] output;
+            if (up.Count > 0)
             {
-                // A memory whose fader is down adds nothing, like an empty one.
-                if (_memories[index] is { } look && _memoryLevels[index] > 0)
-                    RaiseTo(output, look, _memoryLevels[index]);
+                output = SoloUpOutput(up, now);
             }
+            else
+            {
+                output = Copy(_channels);
+                for (int index = 0; index < MemoryCount; index++)
+                {
+                    // A memory whose fader is down adds nothing, like an empty one.
+                    if (_memories[index] is { } look && _memoryLevels[index] > 0 && !down.Contains(new Fader(true, index + 1)))
+                        RaiseTo(output, look, _memoryLevels[index]);
+                }
 
-            AddSequences(output, Now, stepsOn: null);
+                AddSequences(output, now, stepsOn: null, leftOut: down);
+
+                // A channel held with SOLO DOWN is dark, whatever holds it up.
+                foreach (Fader fader in down.Where(fader => !fader.Memory))
+                    output[fader.Number - 1] = 0;
+            }
 
             for (int channel = 0; channel < ChannelCount; channel++)
                 output[channel] = Scale(output[channel], _master);
@@ -686,17 +705,15 @@ internal sealed partial class Desk
     }
 
     // Call with the lock held. The looks and sequences, the stack, the notes, the bindings of the
-    // independent keys and the stage plan (if the project has one) of a project take the place
-    // of the desk's. The project's own arrays are copied where the desk changes its arrays in
-    // place, so that what the project came from (a file, or an earlier moment kept for undo)
-    // stays as it was. The plan is never changed in place.
+    // independent keys and the stage plan with its picture of a project take the place of the
+    // desk's; a project without a plan (a file from before plans, an imported show) has an empty
+    // stage. The project's own arrays are copied where the desk changes its arrays in place, so
+    // that what the project came from (a file, or an earlier moment kept for undo) stays as it
+    // was. The plan is never changed in place.
     private void PutProject(ProjectContent project)
     {
-        if (project.Stage is { } stage)
-        {
-            _stage = stage;
-            _stagePicture = project.StagePicture;
-        }
+        _stage = project.Stage ?? StagePlan.Empty;
+        _stagePicture = project.Stage is null ? null : project.StagePicture;
 
         for (int index = 0; index < MemoryCount; index++)
         {

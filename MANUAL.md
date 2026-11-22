@@ -17,6 +17,10 @@ The desk also works without the box: it shows "No box" and sends the whole state
 The whole desk in one file, for Windows 10 and 11 (64-bit), with nothing to install: the desk program, the
 page and the examples are inside it, and so is .NET. Every release on the [Releases](../../releases) page has it.
 
+![The menu of Lumenet's icon in the taskbar: Open Lumenet, Show the log and Exit](docs/screenshots/tray-menu.png)
+
+![The log window: what the desk program writes, a warning in yellow](docs/screenshots/log-window.png)
+
 * Started, it opens the page in the browser (at http://localhost:5080, the desk program's own address) and
   sits in the notification area of the taskbar; Windows 11 may put the icon among the hidden ones, under ^. A
   click on the icon opens the page again. Its menu has **Open Lumenet**, **Show the log** and **Exit**.
@@ -47,6 +51,8 @@ columns: the **Master** section (Black out and the master fader with its level) 
 **General** section (Clear, Solo up, Solo down, Rate and the rate fader with the rate on top) over the **Stack**; and at
 the right edge, over the whole height, the **Independents** (unless Settings shows none of their keys). On a
 phone the master section, the general section and the stack lie across the top, one line each.
+
+![The Main view on a PC: channel and memory faders, the master, general, record and stack sections, and the independents](docs/screenshots/main.png)
 
 * **Channels:** two rows of faders (or one, as Settings says). The keys at the right choose which of the 512
   channels they show. When they do not fit into one column, they get flatter, and then they go on in another
@@ -137,12 +143,18 @@ phone the master section, the general section and the stack lie across the top, 
   other numbers onto the keys, and press Edit again. A green key is lit when its channel's own fader is up (a
   memory that holds the channel does not light it); a red key is lit like the key under its memory's fader,
   and runs from red to yellow for a sequence. Keys that do not fit into the column go on in another one.
+
+![The Memories view: the levels of memory 3 for every channel](docs/screenshots/memories.png)
+
 * **The Memories view** is for looking only; nothing there changes the desk. The memory keys along the top
   choose a memory, each with the two lines of its note under it, and the table under them shows the level
   that memory holds for each of the 512 channels, with each channel's note under its level, in rows of 32
   (16 in a narrower window). All cells have the same size: when channels have notes, every cell keeps room
   for two lines of one. The page keys at the right choose which memories the keys show. This view and
   the Sequences view go by the window only: what Settings says about Main does not change them.
+
+![The Stage view: the rig of the example concert in its live colors, the LED bar chosen and its faders in the panel](docs/screenshots/stage.png)
+
 * **The Stage view** is a plan of the stage seen from above, for programming without the rig: a grid of
   squares (16 by 10 at first), the audience below it, and the lights of the rig on it, each in the color
   its channels give it at this moment, as it goes out: memories, sequences and the stack included, after
@@ -199,6 +211,9 @@ phone the master section, the general section and the stack lie across the top, 
     new project, one from before plans and an imported show have an empty stage (no lights, no picture,
     16 by 10 squares). Changes of the plan are steps of Undo, and like everything stored the plan cannot be
     changed while the stack is live.
+
+![The Fixtures view: a fader for every light and group, and the panel of a moving head with its colors, where it points and its settings](docs/screenshots/fixtures.png)
+
 * **The Fixtures view** plays the lights of the stage plan as fixtures instead of loose channels. Each light
   has a strip, in the order of their addresses: its color on top, its intensity as a number and a fader,
   its key (to full, and to zero) and its name. The fader moves its dimmer; a light without one, such as an
@@ -248,6 +263,9 @@ phone the master section, the general section and the stack lie across the top, 
     that the color stays.
   * On Main the note fields of a fixture's channels show, dimmed, what the plan says each channel is
     ("Spot 1", "Pan") where no note was typed; the lists of steps name the channels so too.
+
+![The Notes view with the notes of the example concert](docs/screenshots/notes.png)
+
 * **The Notes view** holds the notes of the project: instructions for the show, what it is and how to run
   it. They are read there; **Edit** (faint while off, full while on) makes them a text to write in, with
   the tool keys at the left: **B** (bold), **U** (underline), the **size** (small, normal, large, huge), a
@@ -300,6 +318,9 @@ phone the master section, the general section and the stack lie across the top, 
 
   They are the files in `examples/`; the desk program takes them along when it is built, and the setting
   `Projects:Examples` names another folder for them.
+
+![The Export window with its four checkboxes, none checked](docs/screenshots/export.png)
+
 * **Export** puts parts of the desk into one file on this device: **Project** (everything the project holds,
   as its file has it), **Stage** (the stage alone: its lights, their kinds, the groups and the picture),
   **Settings** (those of this device) and **Keyboard** (its shortcuts). Each has a checkbox, none checked at
@@ -387,6 +408,8 @@ yellow. A sequence runs while the fader of its memory is up: it starts at its fi
 leaves zero, and the fader dims what it gives, like a look. It moves no fader; the channel faders show what
 it gives in red.
 
+![The Sequences view: the rainbow of the LED bar, six steps of a fixture in a loop, step 5 running](docs/screenshots/sequences.png)
+
 * Choose a memory with the keys along the top; the two lines of its note stand under each. Add step puts
   in a step like the last one, on the next channel or memory. Every change goes to the desk at once. Rec
   seq in the main view is the other way to put in steps: by pressing keys.
@@ -422,6 +445,8 @@ it gives in red.
 The project has one stack: a list of steps for a show. The stack moves the real faders:
 going to a step moves the fader of its channel or memory up to the step's value, leaving it moves that fader
 back to zero. A memory that holds a sequence starts running, because its fader goes up.
+
+![The Stack view, live: the previous, the current and the next step over the table of the 14 steps](docs/screenshots/stack.png)
 
 * **Stack** is the switch of the stack. Pressed, it is fully lit and the stack is **live**: every channel
   fader and memory fader goes to zero, and the first step starts. Pressed again, the stack stops and the
@@ -468,6 +493,8 @@ does not change: a page is still 32 channels or 16 memories. Narrower
 than 1300 pixels the top bar takes two lines, the links to the views under the rest. The limits are in
 `frontend/src/app/desk/desk-types.ts`, and only there.
 
+<img src="docs/screenshots/main-phone.png" alt="The Main view on a phone: the sections under each other" width="260">
+
 ### A phone or a tablet (LAN)
 
 The desk can be used from another device in the same network as the PC.
@@ -511,6 +538,8 @@ page cannot move a light. In the small-screen layout the mouse wheel scrolls the
 The settings belong to the device, as the shortcuts of the Keyboard view do: its browser keeps them, every
 project shows them, and a project that is loaded leaves them as they are. **Export** takes them to another
 device, and **Import** brings them from one (see above). The autosave and LAN belong to the desk program.
+
+![The Settings view](docs/screenshots/settings.png)
 
 * **Channels on a page** (Main): Auto (a row of 32 or 16 by the window, as above), or 8, 16, 32, 64 or 128.
 * **Rows of channel faders** and **rows of memory faders** (Main): 1 or 2 of each, at first 2 and 1. A
@@ -556,6 +585,8 @@ LAN, Clear, Solo up, Solo down, Black out, Rate, the keys of the stack and of Re
 view and of the Stage view, Edit of the Notes view, Edit and every key of the independents, every page key, the
 key under every channel and memory fader, Undo and Redo. The shortcuts belong to this device, as the settings
 do. Undo and Redo have Ctrl + Z and Ctrl + Y until they get others (or none: then they stay without).
+
+![The Keyboard view: the keys of the project and LAN, Undo and Redo with their shortcuts](docs/screenshots/keyboard.png)
 
 * The kinds of keys are tabs side by side (Views, Project and LAN, Master, General, Stack, Record, Sequences
   view, Stage view, Notes view, Independents, Channel pages, Memory pages, Channel keys, Memory keys), each with the number of its keys; the

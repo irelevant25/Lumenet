@@ -813,8 +813,10 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
   without Co-Authored-By. The workflow's version and test steps ran in Git's bash (198 and 475 tests). Its
   first two runs on GitHub passed the 198 tests of the page and 458 of the desk program, and failed the 17
   that drive the box simulator, which is built on a PC and is no part of the repository: the workflow now
-  builds it first with `sim\build.cmd` (here those 19 tests passed with it), and a first release lists the
-  commits since the workflow came. Lumenet started a second time (it then only opens the page) was not tried.
+  builds it first with `sim\build.cmd`, and a first release lists the commits since the workflow came. The
+  third run passed every step in four minutes and made release v0.1.28, the latest, with `Lumenet.exe`
+  (61 MB) as its only file and the three commits since the workflow came as its notes. Lumenet started a
+  second time (it then only opens the page) was not tried.
 * **Show files of a real console (2026-11-19):** 30 show files that ETC SmartFades wrote (software 3.0.1 and
   3.0.2) went through the import. The first version read them wrongly: their "FOLLOWON 0" (no wait) as a
   follow at once, their patch the wrong way round, and it lost their labels. With the SmartFade's dialect

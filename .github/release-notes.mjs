@@ -4,7 +4,7 @@
 //
 //   node .github/release-notes.mjs v0.1.26 > notes.md
 //
-// The first release lists only its own commit, not the whole history.
+// The first release lists the commits since this workflow came, not the whole history.
 
 import { execFileSync } from 'node:child_process';
 
@@ -19,7 +19,7 @@ const tryGit = (...args) => {
 };
 
 const previous = tryGit('describe', '--tags', '--abbrev=0', '--match', 'v*', 'HEAD^');
-const range = previous ? [`${previous}..HEAD`] : ['-1', 'HEAD'];
+const range = previous ? [`${previous}..HEAD`] : sinceTheWorkflowCame();
 
 // Title and text of each commit, the newest first: fields end with \x1f, commits with \x1e.
 const commits = git('log', '--format=%s%x1f%b%x1e', ...range)
@@ -53,6 +53,16 @@ if (previous && repository && tag) {
 }
 
 process.stdout.write(`${lines.join('\n')}\n`);
+
+// No release before: the commits from the one that added the release workflow on, whose runs may
+// have made no release (a failed test). Only HEAD if that commit is not to be found.
+function sinceTheWorkflowCame() {
+  const added = tryGit('log', '--format=%H', '--diff-filter=A', '--', '.github/workflows/release.yml')
+    .split('\n')
+    .filter(Boolean)
+    .pop();
+  return added && tryGit('rev-parse', '--verify', `${added}^`) ? [`${added}^..HEAD`] : ['-1', 'HEAD'];
+}
 
 // A commit's text is plain text, the notes are Markdown: "0.1.<number of commits>" would be taken for
 // an HTML tag and left out, so "<" is written as an entity.

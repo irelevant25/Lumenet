@@ -475,10 +475,12 @@ publish.cmd        # builds the page, then publish\Lumenet.exe
   page's icon too.
 * The version is 0.1 and the number of commits (`backend/Version.props` has the 0.1); the page shows it in
   the top bar.
-* `.github/workflows/release.yml` runs after every push to `main`: the tests of the page and of the desk
-  program, then `publish.mjs`, then a release on the [Releases](../../releases) page with `Lumenet.exe` as its only
-  file, named `v0.1.<number of commits>`, whose notes are the messages of the commits since the release before
-  (`.github/release-notes.mjs`). When a test fails, there is no release.
+* `.github/workflows/release.yml` runs after every push to `main`: the tests of the page, the box simulator
+  built with `sim\build.cmd` (GitHub's Windows machines have Visual Studio's C compiler) and the tests of the
+  desk program, then `publish.mjs`, then a release on the [Releases](../../releases) page with `Lumenet.exe` as its
+  only file, named `v0.1.<number of commits>`, whose notes are the messages of the commits since the release
+  before (`.github/release-notes.mjs`; the first release, those since the workflow came). When a test fails,
+  there is no release.
 
 ### Tests
 
@@ -807,10 +809,12 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
   red with its stack under it; five lines that came while the top was read left the top in sight, three that
   came at the bottom were in sight; Esc and the close box hid the window without ending anything, and a line
   that came meanwhile was there when it was shown again; Exit ended the program. The release notes, tried in
-  a copy of the repository: the first release lists its own commit only; with a release three commits back,
-  those three, their lines joined again and without Co-Authored-By. The workflow's version and test steps
-  ran in Git's bash (198 and 475 tests). **The workflow itself has not run yet** (it runs at the next push),
-  and Lumenet started a second time (it then only opens the page) was not tried.
+  a copy of the repository: with a release three commits back, those three, their lines joined again and
+  without Co-Authored-By. The workflow's version and test steps ran in Git's bash (198 and 475 tests). Its
+  first two runs on GitHub passed the 198 tests of the page and 458 of the desk program, and failed the 17
+  that drive the box simulator, which is built on a PC and is no part of the repository: the workflow now
+  builds it first with `sim\build.cmd` (here those 19 tests passed with it), and a first release lists the
+  commits since the workflow came. Lumenet started a second time (it then only opens the page) was not tried.
 * **Show files of a real console (2026-11-19):** 30 show files that ETC SmartFades wrote (software 3.0.1 and
   3.0.2) went through the import. The first version read them wrongly: their "FOLLOWON 0" (no wait) as a
   follow at once, their patch the wrong way round, and it lost their labels. With the SmartFade's dialect

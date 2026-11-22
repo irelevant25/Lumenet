@@ -53,6 +53,12 @@ jobs:
         working-directory: frontend
         run: npm test -- --watch=false
 
+      # Tests of the client and of the box link drive the box simulator, a C program that is no
+      # part of the repository: Visual Studio's C compiler, which the runner has, makes it first.
+      - name: Build the box simulator
+        shell: cmd
+        run: sim\build.cmd
+
       - name: Test the desk program
         run: dotnet test backend/DmxBox.sln
 

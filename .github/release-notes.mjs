@@ -28,7 +28,7 @@ const commits = git('log', '--format=%s%x1f%b%x1e', ...range)
   .filter((entry) => entry !== '')
   .map((entry) => {
     const [title, text = ''] = entry.split('\x1f');
-    return { title: title.trim(), paragraphs: paragraphsOf(text) };
+    return { title: plain(title.trim()), paragraphs: paragraphsOf(text).map(plain) };
   });
 
 const lines = [];
@@ -53,6 +53,12 @@ if (previous && repository && tag) {
 }
 
 process.stdout.write(`${lines.join('\n')}\n`);
+
+// A commit's text is plain text, the notes are Markdown: "0.1.<number of commits>" would be taken for
+// an HTML tag and left out, so "<" is written as an entity.
+function plain(text) {
+  return text.replaceAll('<', '&lt;');
+}
 
 // The text of a commit as paragraphs: the lines of each joined again (they are wrapped in the
 // commit), a list item on a line of its own, and the trailers such as Co-Authored-By left out.

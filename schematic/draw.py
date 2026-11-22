@@ -5,7 +5,7 @@ Run from the repository root:
     uv run --no-project --python 3.13 --with resvg-py --with pillow python schematic/draw.py
 
 It writes dmxbox_schematic.svg/.png, dmxbox_breadboard.svg/.png and dmxbox_drawings.pdf next to
-this file. Add --md to also print the wire list as a Markdown table (the one in the README).
+this file. Add --md to also print the wire list as a Markdown table (the one in DEV.md).
 
 Before it draws the breadboard, the script checks the plan: every leg and every wire end sits in
 a hole of its own, no wire end is under a part, and the holes joined by the board and the wires

@@ -3,7 +3,7 @@
 // Every request carries (session, seq). The box executes each (session, seq)
 // at most once: a retransmitted request gets the cached ACK back, an older
 // seq is dropped. Clients do stop-and-wait (one outstanding request per
-// session) and retransmit on timeout. See README for the wire format.
+// session) and retransmit on timeout. See DEV.md for the wire format.
 #pragma once
 #include <stdint.h>
 #include "engine.h"

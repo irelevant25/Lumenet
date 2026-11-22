@@ -3,7 +3,8 @@
 The Angular app that shows the fader desk. It holds no state of its own: the desk program in
 `../backend/DmxBox.Server` does, and the page talks to it over SignalR (`/hub/desk`).
 
-What the desk does and how to use it is described in the [main README](../README.md#4-lumenet-the-fader-desk).
+What the desk does and how to use it is described in the [manual](../MANUAL.md); how it is built, in
+[DEV.md](../DEV.md#4-the-desk-how-it-is-built).
 
 ## Run
 

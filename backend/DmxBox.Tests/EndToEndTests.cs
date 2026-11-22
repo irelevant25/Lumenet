@@ -282,7 +282,7 @@ public sealed class EndToEndTests
         return buffer[..length];
     }
 
-    // A DX request made by hand: the 12-byte header (see README, section 4), then the payload.
+    // A DX request made by hand: the 12-byte header (see DEV.md, section 5), then the payload.
     private static byte[] BuildRequest(uint session, byte type, ushort sequence, byte[] payload)
     {
         byte[] packet = new byte[12 + payload.Length];

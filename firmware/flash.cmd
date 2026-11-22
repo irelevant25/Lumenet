@@ -121,7 +121,7 @@ echo.
 echo The Pico took the firmware and restarted, but the box does not answer at %BOX%.
 echo The first time on a computer Windows may still be setting up its network adapter:
 echo wait a minute and try "ping %BOX%". If it stays silent, see "Check that it works"
-echo in the README of the dmxbox.
+echo in DEV.md of the dmxbox.
 goto failed
 
 :failed

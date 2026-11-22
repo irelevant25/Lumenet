@@ -17,7 +17,7 @@ set "PICOTOOL=%PICO%\picotool\2.3.1\picotool"
 set "PIOASM=%PICO%\tools\2.3.1\pioasm"
 for %%d in ("%SDK%" "%TOOLCHAIN%\bin" "%PICOTOOL%" "%PIOASM%") do if not exist "%%~d" (
     echo Missing: %%~d
-    echo See "Build" in the README.
+    echo See "Build" in DEV.md.
     exit /b 1
 )
 

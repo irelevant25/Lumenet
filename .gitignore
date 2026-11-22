@@ -2,6 +2,8 @@
 bin/
 obj/
 build/
+# Lumenet.exe, made by publish.cmd
+publish/
 *.exe
 *.pdb
 *.obj

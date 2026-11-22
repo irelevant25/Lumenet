@@ -1,0 +1,65 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    Lumenet.exe: the desk program with the page and the examples inside it, in the notification
+    area of the taskbar instead of a console window. Its icon opens the page; its menu shows the
+    log and ends the program.
+
+    It is the desk program itself: the sources of DmxBox.Server are compiled in here as well,
+    rather than that program being referenced (a program cannot be put into another one's single
+    file). A package that DmxBox.Server takes needs taking here too.
+
+    publish.mjs builds the page and then makes one file of this project that needs nothing
+    installed (node publish.mjs, or publish.cmd); the release workflow on GitHub does the same.
+  -->
+
+  <Import Project="..\Version.props" />
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Lumenet</RootNamespace>
+    <AssemblyName>Lumenet</AssemblyName>
+    <Product>Lumenet</Product>
+    <StartupObject>Lumenet.TrayProgram</StartupObject>
+    <ApplicationIcon>lumenet.ico</ApplicationIcon>
+    <!-- Nothing beside the exe: no web.config and no module for IIS (this is no site for IIS), no
+         documentation of the libraries, and none of the Web SDK's static web assets (the page
+         comes from the resources). -->
+    <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
+    <PublishIISAssets>false</PublishIISAssets>
+    <PublishDocumentationFiles>false</PublishDocumentationFiles>
+    <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
+    <!-- The built page (npm run build in frontend). -->
+    <PageFolder>$(MSBuildThisFileDirectory)..\..\frontend\dist\lumenet\browser\</PageFolder>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The names of Windows Forms stay out of the desk program's sources (Timer, Control, ...):
+         the files of this project name them themselves. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\DmxBox.Server\**\*.cs" Exclude="..\DmxBox.Server\bin\**;..\DmxBox.Server\obj\**" Link="DmxBox.Server\%(RecursiveDir)%(Filename)%(Extension)" />
+    <ProjectReference Include="..\DmxBox\DmxBox.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Built in, read as resources: the icon, the examples (BuiltIn.UnpackExamples) and the
+         page (BuiltInFiles). WithCulture off: a name like "x.de.js" is no German resource. -->
+    <EmbeddedResource Include="lumenet.ico" LogicalName="lumenet.ico" />
+    <EmbeddedResource Include="..\..\examples\*.json" LogicalName="lumenet-examples/%(Filename)%(Extension)" WithCulture="false" />
+    <EmbeddedResource Include="$(PageFolder)**\*" LogicalName="lumenet-page/%(RecursiveDir)%(Filename)%(Extension)" WithCulture="false" />
+  </ItemGroup>
+
+  <!-- An exe without its page would only offer the hub: publishing needs the page built first. -->
+  <Target Name="RequireThePage" BeforeTargets="PrepareForPublish" Condition="!Exists('$(PageFolder)index.html')">
+    <Error Text="The page is not built: $(PageFolder)index.html is missing. publish.mjs builds it first (node publish.mjs)." />
+  </Target>
+
+</Project>

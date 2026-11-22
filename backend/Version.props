@@ -1,0 +1,13 @@
+<Project>
+
+  <!--
+    The version of Lumenet, the one place that holds it: the desk program (DmxBox.Server) and
+    Lumenet.exe (Lumenet) read it from their assemblies, and the page shows it. publish.mjs keeps
+    the first two numbers and puts the number of commits in the third, so that every build that
+    GitHub releases has a number of its own.
+  -->
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+</Project>

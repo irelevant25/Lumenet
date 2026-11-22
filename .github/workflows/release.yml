@@ -1,0 +1,78 @@
+# Every push to main makes Lumenet.exe and puts it on the Releases page of the repository, as the
+# only file of a new release, with the messages of the commits since the release before as its
+# notes. The tests of the page and of the desk program come first: when one fails, there is no
+# release. The version is 0.1.<number of commits> (backend/Version.props has the first two
+# numbers); publish.mjs makes the exe, as publish.cmd does on a PC.
+
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# One release after the other, in the order of the pushes.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    defaults:
+      run:
+        # Git's bash on Windows: PowerShell would swallow the "--" of "npm test -- --watch=false"
+        shell: bash
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          # all commits and tags: the version counts the commits, the notes go back to the last release
+          fetch-depth: 0
+
+      - name: Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install the packages of the page
+        working-directory: frontend
+        run: npm ci
+
+      - name: Test the page
+        working-directory: frontend
+        run: npm test -- --watch=false
+
+      - name: Test the desk program
+        run: dotnet test backend/DmxBox.sln
+
+      - name: Version
+        id: version
+        run: echo "version=$(node publish.mjs --print-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Make Lumenet.exe
+        run: node publish.mjs --version ${{ steps.version.outputs.version }}
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          tag="v$VERSION"
+          node .github/release-notes.mjs "$tag" > notes.md
+          if gh release view "$tag" > /dev/null 2>&1; then
+            # the same commit again (the workflow run again): the exe of this run replaces the other
+            gh release upload "$tag" publish/Lumenet.exe --clobber
+          else
+            gh release create "$tag" publish/Lumenet.exe --title "Lumenet $VERSION" --notes-file notes.md --target "$GITHUB_SHA"
+          fi

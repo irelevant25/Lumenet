@@ -62,7 +62,12 @@ internal static class Program
     /// <param name="pc">
     /// This PC on the network. The tests pass a pretend one; null stands for the real one.
     /// </param>
-    public static WebApplication Build(string[] args, IBox? box = null, ThisPc? pc = null)
+    /// <param name="adjust">
+    /// Changes before anything is read from the settings. Lumenet.exe gives the server its log
+    /// window, the page and the examples it carries this way (see backend/Lumenet); null for none.
+    /// </param>
+    public static WebApplication Build(
+        string[] args, IBox? box = null, ThisPc? pc = null, Action<WebApplicationBuilder>? adjust = null)
     {
         // The program's own folder counts, not the folder it was started from: that is where
         // appsettings.json is, and "wwwroot" with the UI's files.
@@ -71,6 +76,7 @@ internal static class Program
             Args = args,
             ContentRootPath = AppContext.BaseDirectory,
         });
+        adjust?.Invoke(builder);
         AllowedHosts hosts = ReadAllowedHosts(builder.Configuration);
         ApplyDefaults(builder.Configuration);
         AllowedOrigins origins = ReadAllowedOrigins(builder.Configuration);
@@ -275,8 +281,8 @@ internal static class Program
 
     // The UI is built separately. The server hands its files out too: those in the folder of
     // the setting "Ui:Folder" (run.mjs builds the UI and names its folder there), or else those
-    // next to the program, in "wwwroot". Another device gets the UI this way. Without the files
-    // the server offers the hub and the API only.
+    // next to the program, in "wwwroot" (Lumenet.exe carries them inside itself instead). Another
+    // device gets the UI this way. Without the files the server offers the hub and the API only.
     private static void ServeUi(WebApplication app)
     {
         string? folder = app.Configuration["Ui:Folder"];

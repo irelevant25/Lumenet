@@ -1,12 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
+  <!-- The version, shared with Lumenet.exe: the program reads it from its assembly. -->
+  <Import Project="..\Version.props" />
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>DmxBox.Server</RootNamespace>
-    <!-- The one place that holds the version: the program reads it from its assembly. -->
-    <Version>0.1.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

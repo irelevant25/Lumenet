@@ -436,6 +436,40 @@ run.cmd            # starts the backend and the frontend; then open http://local
 Ctrl+C stops both. The desk also works without the box: it shows "No box" and sends the whole state as
 soon as a box answers.
 
+**Lumenet.exe**
+
+The whole desk in one file, for Windows 10 and 11 (64-bit), with nothing to install: the desk program, the
+page and the examples are inside it, and so is .NET (that makes it about 60 MB). GitHub makes it after every
+push to `main` and puts it on the [Releases](../../releases) page, as the only
+file of a release whose notes are the messages of the commits since the release before. The version is 0.1
+and the number of commits (`backend/Version.props` has the 0.1); the page shows it in the top bar. To make it
+on this PC:
+
+```powershell
+publish.cmd        # builds the page, then publish\Lumenet.exe
+```
+
+* Started, it opens the page in the browser (at http://localhost:5080, the desk program's own address) and
+  sits in the notification area of the taskbar; Windows 11 may put the icon among the hidden ones, under ^. A
+  click on the icon opens the page again. Its menu has **Open Lumenet**, **Show the log** and **Exit**.
+* **Show the log** shows what the desk program writes, as its console would (there is no console): warnings
+  in yellow, errors in red. The window can be closed (Esc or ✕) as often as wanted; only Exit ends Lumenet.
+  The page itself has no output of its own here: it is built into the exe and comes from the desk program.
+* Started again while it runs, Lumenet only opens the page. While the desk of `run.cmd` runs, it says that
+  the port is taken and does not start: only one desk at a time may talk to the box.
+* It keeps everything where the desk of `run.cmd` keeps it (the projects in My Documents, the autosave and
+  the LAN password in `%LOCALAPPDATA%\Lumenet`), so both work on the same things. The examples are written to
+  `%LOCALAPPDATA%\Lumenet\examples` at every start. Settings and the keyboard belong to the browser and the
+  address: those of http://localhost:4200 are not those of http://localhost:5080 (Export and Import take
+  them over).
+* Settings are given as for the desk program, on the command line (`Lumenet.exe --Box:Host=127.0.0.1`) or
+  in an `appsettings.json` beside the exe; `--Tray:OpenPage=false` starts it without opening the page.
+* The exe is not signed: Windows may say that it does not know it (More info, then Run anyway), and the
+  firewall asks once whether it may be reached from the network (for LAN).
+* `backend/Lumenet` holds it: the tray and the log window, and the sources of `DmxBox.Server` compiled in
+  as well. `make-icon.ps1` there draws its icon (three faders with knobs in the colors of the keys), which is
+  the page's icon too.
+
 **What is on the page**
 
 The top bar has nine links: **Main**, **Memories**, **Sequences**, **Stack**, **Stage**, **Fixtures**,
@@ -1292,6 +1326,22 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
   B" for Black out and "Left Alt + C" for Clear; on Main the left Ctrl and B left blackout off, and the
   right Ctrl and B switched it on and, pressed again, off. The keys came from the test script, not from a
   keyboard, and a real AltGr key was not tried in Chrome.
+* **Lumenet.exe, its tray and its releases (2026-11-22):** `publish.cmd` made `publish\Lumenet.exe` alone,
+  61 MB, version 0.1.25. Started as a test copy on port 5081 (folders of its own, the box at 127.0.0.1, no
+  page opened), it handed out the page from inside itself (also under /stage), the new icon, the scripts with
+  their types and /api/health with 0.1.25; in Chrome the desk connected, the top bar said v0.1.25, Load listed
+  the six examples and opened "6 Concert" with its 15 lights, and the page had no error. Started on 5080 while
+  the desk of `run.cmd` had it, it said "Lumenet could not start. Another program uses the port of
+  http://*:5080: Lumenet itself, or the desk of run.cmd. Only one desk can run on this PC at a time." and
+  ended with 1 without starting its desk. A check program drove the real tray and log window: the menu Open
+  Lumenet (bold), Show the log, Exit; the log window in Cascadia Mono, dark with dark scroll bars, an error in
+  red with its stack under it; five lines that came while the top was read left the top in sight, three that
+  came at the bottom were in sight; Esc and the close box hid the window without ending anything, and a line
+  that came meanwhile was there when it was shown again; Exit ended the program. The release notes, tried in
+  a copy of the repository: the first release lists its own commit only; with a release three commits back,
+  those three, their lines joined again and without Co-Authored-By. The workflow's version and test steps
+  ran in Git's bash (198 and 475 tests). **The workflow itself has not run yet** (it runs at the next push),
+  and Lumenet started a second time (it then only opens the page) was not tried.
 * **Show files of a real console (2026-11-19):** 30 show files that ETC SmartFades wrote (software 3.0.1 and
   3.0.2) went through the import. The first version read them wrongly: their "FOLLOWON 0" (no wait) as a
   follow at once, their patch the wrong way round, and it lost their labels. With the SmartFade's dialect

@@ -41,14 +41,11 @@ export const DEFAULT_SHORTCUTS: Readonly<Record<string, string>> = {
 };
 
 /**
- * What the owner set in the Settings view and the Keyboard view.
- *
- * On the PC the desk program runs on, the layout of the main view and the shortcuts belong to
- * the project: they are saved with it, and a project that is loaded brings its own (see
- * DeskSettings.takeProject). The lettering belongs to this browser on this device. A phone or a
- * tablet keeps all of its settings itself, for its screen differs. Every browser also keeps the
- * settings it uses, to start with them. (The LAN address and password belong to the desk
- * program; the Settings view changes them there.)
+ * What the owner set in the Settings view and the Keyboard view. They belong to this device, its
+ * browser keeps them, and every project shows them; Export takes them to another device, and
+ * Import brings them from one (see DeskSettings.takeSettings and takeShortcuts). (The LAN
+ * address and password and the autosave belong to the desk program; the Settings view changes
+ * them there.)
  */
 export interface DeskSettingsData {
   readonly channelSize: ChannelSize;
@@ -86,11 +83,11 @@ export const DEFAULT_SETTINGS: DeskSettingsData = {
   viewOrder: DEFAULT_VIEW_ORDER,
 };
 
-/** The part of the settings that belongs to the project on the PC: all but the lettering. */
-export type ProjectSettingsData = Omit<DeskSettingsData, 'fontScale'>;
+/** The settings of the Settings view, as Export writes them: all but the shortcuts, which Keyboard has. */
+export type SettingsPart = Omit<DeskSettingsData, 'shortcuts'>;
 
-/** The project's part of the settings, as the desk program keeps it. */
-export function projectPart(settings: DeskSettingsData): ProjectSettingsData {
+/** The settings without the shortcuts. */
+export function settingsPart(settings: DeskSettingsData): SettingsPart {
   return {
     channelSize: settings.channelSize,
     channelRows: settings.channelRows,
@@ -98,7 +95,7 @@ export function projectPart(settings: DeskSettingsData): ProjectSettingsData {
     wheelSize: settings.wheelSize,
     channelKeys: settings.channelKeys,
     memoryKeys: settings.memoryKeys,
-    shortcuts: settings.shortcuts,
+    fontScale: settings.fontScale,
     colors: settings.colors,
     hiddenViews: settings.hiddenViews,
     viewOrder: settings.viewOrder,
@@ -176,7 +173,7 @@ function oneOf<T>(value: unknown, choices: readonly T[], otherwise: T): T {
  * The shortcuts that make sense. The usual ones (DEFAULT_SHORTCUTS) come with them, unless their
  * key was given a shortcut of its own or none, or their keys belong to another key of the desk.
  */
-function shortcuts(value: unknown): Record<string, string> {
+export function shortcuts(value: unknown): Record<string, string> {
   const kept: Record<string, string> = {};
   if (typeof value === 'object' && value !== null) {
     for (const [action, keys] of Object.entries(value)) {
@@ -194,20 +191,12 @@ function shortcuts(value: unknown): Record<string, string> {
 }
 
 /**
- * The settings of this page, kept in the browser's local storage. A change is kept at once. The
+ * The settings of this device, kept in the browser's local storage. A change is kept at once. The
  * font scale goes onto the page straight away, as the variable --font-scale on <html>.
- *
- * On the PC the desk program runs on, the desk store connects the settings with the project:
- * followProject sends every change of the project's part there, and takeProject puts the
- * project's in place of this browser's.
  */
 @Service()
 export class DeskSettings {
   private readonly data = signal<DeskSettingsData>(DeskSettings.read());
-
-  // Where a change of the project's part goes besides this browser: to the desk program, on the
-  // PC. Null on a phone, and before the page knows.
-  private sendProject: ((settings: ProjectSettingsData) => void) | null = null;
 
   readonly channelSize = computed(() => this.data().channelSize);
   readonly channelRows = computed(() => this.data().channelRows);
@@ -220,8 +209,8 @@ export class DeskSettings {
   readonly colors = computed(() => this.data().colors);
   readonly hiddenViews = computed(() => this.data().hiddenViews);
   readonly viewOrder = computed(() => this.data().viewOrder);
-  /** The part of the settings that belongs to the project. */
-  readonly projectSettings = computed(() => projectPart(this.data()));
+  /** The settings of the Settings view, without the shortcuts: what Export writes as "settings". */
+  readonly settingsPart = computed(() => settingsPart(this.data()));
 
   constructor() {
     effect(() => {
@@ -324,29 +313,23 @@ export class DeskSettings {
   }
 
   /**
-   * From now on, every change of the project's part of the settings also goes to `send` (the
-   * desk program, on the PC); null for none (a phone keeps its settings to itself).
+   * Settings from a file (Import): they take the place of this device's, all but the shortcuts.
+   * Whatever they lack or that makes no sense is the default.
    */
-  followProject(send: ((settings: ProjectSettingsData) => void) | null): void {
-    this.sendProject = send;
+  takeSettings(settings: unknown): void {
+    const taken = settingsOf(settings);
+    this.data.update((old) => ({ ...taken, shortcuts: old.shortcuts }));
+    this.keep();
   }
 
-  /**
-   * The project's settings, as the desk program has them: they take the place of this page's,
-   * all but the lettering. Whatever they lack or that makes no sense is the default.
-   */
-  takeProject(settings: unknown): void {
-    const taken = settingsOf(settings);
-    this.data.update((old) => ({ ...taken, fontScale: old.fontScale }));
-    this.keep();
+  /** Shortcuts from a file (Import): they take the place of this device's, with the usual ones they leave free. */
+  takeShortcuts(value: unknown): void {
+    this.change({ shortcuts: shortcuts(value) });
   }
 
   private change(part: Partial<DeskSettingsData>): void {
     this.data.update((old) => ({ ...old, ...part }));
     this.keep();
-    if (this.sendProject && Object.keys(part).some((key) => key !== 'fontScale')) {
-      this.sendProject(projectPart(this.data()));
-    }
   }
 
   private keep(): void {

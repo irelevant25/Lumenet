@@ -38,6 +38,7 @@ export const ACTION_GROUPS = [
   'Record',
   'Sequences view',
   'Stage view',
+  'Notes view',
   'Independents',
   'Channel pages',
   'Memory pages',
@@ -67,6 +68,7 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
   view('stack', 'Stack view', '/stack'),
   view('stage', 'Stage view', '/stage'),
   view('fixtures', 'Fixtures view', '/fixtures'),
+  view('notes', 'Notes view', '/notes'),
   view('settings', 'Settings view', '/settings'),
   view('keyboard', 'Keyboard view', '/keyboard'),
 
@@ -75,7 +77,8 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
   { id: 'project.new', group: 'Project and LAN', label: 'New project', run: null },
   { id: 'project.save', group: 'Project and LAN', label: 'Save project', run: null },
   { id: 'project.load', group: 'Project and LAN', label: 'Load project', run: null },
-  { id: 'project.import', group: 'Project and LAN', label: 'Import a show', run: null },
+  { id: 'project.import', group: 'Project and LAN', label: 'Import', run: null },
+  { id: 'project.export', group: 'Project and LAN', label: 'Export', run: null },
   {
     id: 'lan',
     group: 'Project and LAN',
@@ -125,6 +128,8 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
   { id: 'stage.add', group: 'Stage view', label: 'Add light', run: null },
   { id: 'stage.clear', group: 'Stage view', label: 'Clear (the lights of the stage plan)', run: ({ store }) => store.clearStageLights() },
   { id: 'fixtures.group', group: 'Stage view', label: 'New group (Fixtures view)', run: null },
+
+  { id: 'notes.edit', group: 'Notes view', label: 'Edit (notes)', run: null },
 
   { id: 'ind.edit', group: 'Independents', label: 'Edit (independents)', run: null },
   ...numbered(CHANNEL_INDEPENDENT_COUNT, (key) => ({
@@ -213,7 +218,27 @@ export interface KeyPress {
   readonly altKey: boolean;
   readonly shiftKey: boolean;
   readonly metaKey: boolean;
+  /**
+   * True while AltGr is held (the right Alt of a keyboard like the Czech or Slovak one): Windows
+   * then says that Ctrl is held too, by a Ctrl that is not there.
+   */
+  readonly altGraph?: boolean;
 }
+
+/** A key press as the shortcuts read it, from the browser's event. */
+export function pressOf(event: KeyboardEvent): KeyPress {
+  return {
+    code: event.code,
+    ctrlKey: event.ctrlKey,
+    altKey: event.altKey,
+    shiftKey: event.shiftKey,
+    metaKey: event.metaKey,
+    altGraph: event.getModifierState?.('AltGraph') ?? false,
+  };
+}
+
+/** The Ctrl and Alt keys, by their codes: a shortcut can name the left or the right one. */
+export const SIDED_KEYS = new Set(['ControlLeft', 'ControlRight', 'AltLeft', 'AltRight']);
 
 /** Keys that are never a shortcut by themselves: those that are held with another one. */
 const MODIFIERS = new Set([
@@ -236,23 +261,65 @@ const MODIFIERS = new Set([
 export const RESERVED_KEYS = new Set(['Escape', 'Tab']);
 
 /**
- * The shortcut a key press makes, like "Ctrl+Shift+KeyP": the keys held with it, then the
+ * The shortcut a key press makes, like "LeftCtrl+Shift+KeyP": the keys held with it, then the
  * physical key, whatever letter the keyboard's language puts on it. Null for a key that is
  * only held with others, and for one that cannot be a shortcut (see RESERVED_KEYS).
+ *
+ * `held` are the Ctrl and Alt keys held down, by their codes ("ControlLeft"), as their own presses
+ * said them: the browser says only that a Ctrl is held, not which. A Ctrl or Alt whose side is not
+ * known (or both of them) is named without one, "Ctrl", and such a shortcut is pressed by either.
+ * AltGr is the right Alt, without the Ctrl that Windows adds to it (a left one; a right Ctrl held
+ * with AltGr is named).
  */
-export function shortcutOf(press: KeyPress): string | null {
+export function shortcutOf(press: KeyPress, held: ReadonlySet<string> = new Set()): string | null {
   if (!press.code || MODIFIERS.has(press.code) || RESERVED_KEYS.has(press.code)) return null;
 
   const parts: string[] = [];
-  if (press.ctrlKey) parts.push('Ctrl');
-  if (press.altKey) parts.push('Alt');
+  if (press.altGraph) {
+    if (held.has('ControlRight')) parts.push('RightCtrl');
+    parts.push('RightAlt');
+  } else {
+    if (press.ctrlKey) parts.push(sideOf(held, 'Control', 'Ctrl'));
+    if (press.altKey) parts.push(sideOf(held, 'Alt', 'Alt'));
+  }
   if (press.shiftKey) parts.push('Shift');
   if (press.metaKey) parts.push('Meta');
   parts.push(press.code);
   return parts.join('+');
 }
 
+// "LeftCtrl" or "RightCtrl" when the key of one side is held; "Ctrl" for both, or for a side not seen.
+function sideOf(held: ReadonlySet<string>, code: string, name: string): string {
+  const left = held.has(`${code}Left`);
+  const right = held.has(`${code}Right`);
+  return left === right ? name : `${left ? 'Left' : 'Right'}${name}`;
+}
+
+/** A shortcut without the sides of its Ctrl and Alt: "LeftCtrl+KeyZ" as "Ctrl+KeyZ". One kept so is pressed by either key. */
+export function withoutSides(shortcut: string): string {
+  return shortcut.replace(/\b(?:Left|Right)(Ctrl|Alt)\b/g, '$1');
+}
+
+/**
+ * The shortcuts a key press presses, in order: the first one that a key of the desk has wins.
+ * First the press with the sides of its Ctrl and Alt ("RightCtrl+KeyZ"), then without them
+ * ("Ctrl+KeyZ"). An AltGr press on Windows, which the desk named "Ctrl+Alt+..." before it told the
+ * sides apart, comes last in that old name too, so that a shortcut recorded with AltGr then still
+ * answers to it. Empty for a key that is never a shortcut.
+ */
+export function shortcutsOf(press: KeyPress, held: ReadonlySet<string> = new Set()): string[] {
+  const shortcut = shortcutOf(press, held);
+  if (shortcut === null) return [];
+
+  const before = press.altGraph && press.ctrlKey && press.altKey ? shortcutOf({ ...press, altGraph: false }) : null;
+  return [...new Set([shortcut, withoutSides(shortcut), before ?? shortcut])];
+}
+
 const KEY_NAMES: Readonly<Record<string, string>> = {
+  LeftCtrl: 'Left Ctrl',
+  RightCtrl: 'Right Ctrl',
+  LeftAlt: 'Left Alt',
+  RightAlt: 'Right Alt',
   Space: 'Space',
   Enter: 'Enter',
   Backspace: 'Backspace',

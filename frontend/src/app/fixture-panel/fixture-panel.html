@@ -25,7 +25,7 @@
             <option value="" selected>{{ choice.value }}</option>
           }
           @for (range of choice.ranges; track $index) {
-            <option [value]="range.from" [selected]="$index === choice.current">{{ range.label }}</option>
+            <option [value]="range.from" [selected]="$index === choice.current">{{ rangeText(range) }}</option>
           }
         </select>
       }

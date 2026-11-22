@@ -35,4 +35,18 @@ lm-fader {
   font-size: calc(13px * var(--font-scale));
   font-weight: 600;
   line-height: 1;
+  cursor: help;
+}
+
+/* what the fader moved last does at its value; before that, how to see it */
+.said {
+  min-height: 1.3em;
+  margin: 8px 0 0;
+  color: var(--legend);
+  font-size: calc(13px * var(--font-scale));
+  line-height: 1.3;
+}
+
+.said.hint {
+  color: var(--legend-dim);
 }

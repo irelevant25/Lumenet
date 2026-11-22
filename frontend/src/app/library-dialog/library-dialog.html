@@ -6,9 +6,12 @@
       <p class="model">
         <span class="maker">{{ fixture.maker }}</span> {{ fixture.model }}
       </p>
-      @if (fixture.categories.length > 0) {
-        <p class="hint">{{ fixture.categories.join(', ') }}</p>
-      }
+      <p class="hint">
+        @if (fixture.categories.length > 0) {
+          {{ fixture.categories.join(', ') }},
+        }
+        from {{ names[fixture.library].full }}
+      </p>
       <div class="fields">
         <label for="library-mode">Mode</label>
         <select id="library-mode" (change)="onMode($event)">
@@ -53,20 +56,25 @@
         <p class="hint">No light of the library has these words.</p>
       }
       @if (found().length > 0) {
-        <ul class="found" aria-label="Lights of the library">
+        <ul class="found" aria-label="Lights of the libraries">
           @for (entry of found(); track entry.source) {
             <li>
-              <button type="button" (click)="choose(entry)">
-                <span class="maker">{{ entry.maker }}</span> {{ entry.model }}
+              <button type="button" [attr.aria-label]="entry.maker + ' ' + entry.model + ', from ' + names[entry.library].full" (click)="choose(entry)">
+                <span><span class="maker">{{ entry.maker }}</span> {{ entry.model }}</span>
+                <span class="from" aria-hidden="true">{{ names[entry.library].short }}</span>
               </button>
             </li>
           }
         </ul>
       }
+      @for (problem of problems(); track problem) {
+        <p class="hint" role="status">{{ problem }} Its lights are missing from the list for now.</p>
+      }
       <p class="hint">
-        From the Open Fixture Library (open-fixture-library.org), {{ entries()?.length ?? 0 }} lights, read from its
-        copy on GitHub; the browser keeps the list for a week.
-        <button type="button" class="link" [disabled]="busy()" (click)="loadList(true)">Read the list again</button>
+        From the Open Fixture Library (open-fixture-library.org, OFL in the list), {{ counts().ofl }} lights, and the
+        library of QLC+ (qlcplus.org), {{ counts().qlcplus }} lights, read from their copies on GitHub; the browser
+        keeps the lists for a week.
+        <button type="button" class="link" [disabled]="busy()" (click)="loadList(true)">Read the lists again</button>
         The channels of the light go into the project: the library is needed only now.
       </p>
       <div class="actions">

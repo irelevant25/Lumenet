@@ -67,13 +67,12 @@ public sealed class UndoHistoryTests
     }
 
     [Fact]
-    public void FadersClearAndSettingsAreNoStepsAndUndoLeavesThemAlone()
+    public void FadersAndClearAreNoStepsAndUndoLeavesThemAlone()
     {
         _desk.SetChannel(3, 100);
         Change("storing memory 1", () => _desk.SaveMemory(1));
         _desk.SetChannel(3, 255);
         _desk.SetMemoryLevel(1, 255);
-        _desk.SetSettings("""{"channelSize":8}""");
         _desk.Clear();
         _desk.SetChannel(4, 50);
 
@@ -83,7 +82,17 @@ public sealed class UndoHistoryTests
         _history.Undo();
         Assert.False(_desk.GetState().MemoryStored[0]);
         Assert.Equal(50, _desk.GetState().Channels[3]);   // the faders stay where they are
-        Assert.Equal("""{"channelSize":8}""", _desk.Settings);
+    }
+
+    [Fact]
+    public void TheNotesOfTheProjectAreAStepAndUndoBringsThemBack()
+    {
+        Change("the notes", () => _desk.SetNotes("<b>Doors</b>"));
+        Change("the notes", () => _desk.SetNotes("<b>Doors at 7</b>"));
+        _history.Undo();
+        Assert.Equal("<b>Doors</b>", _desk.Notes);
+        _history.Redo();
+        Assert.Equal("<b>Doors at 7</b>", _desk.Notes);
     }
 
     [Fact]

@@ -1,11 +1,10 @@
 <dialog #dialog aria-labelledby="import-dialog-title">
-  <!-- the system's own window for choosing a file. It is always there: the window opens it at once,
-       also when it opens again over the report of the last import. -->
-  <input #picker type="file" accept=".asc,.txt" hidden (change)="onPicked($event)" />
+  <!-- the system's own window for choosing a file, opened by the File key -->
+  <input #picker type="file" hidden [accept]="accept()" (change)="onPicked($event)" />
 
   <form (submit)="confirm($event)">
     @if (report(); as lines) {
-      <h2 id="import-dialog-title">Show imported</h2>
+      <h2 id="import-dialog-title">Imported</h2>
       <div class="report" role="status">
         @for (line of lines; track $index) {
           <p>{{ line }}</p>
@@ -15,17 +14,34 @@
         <button #ok lmLamp type="button" tone="system" [level]="3" aria-label="Close" (click)="close()">OK</button>
       </div>
     } @else {
-      <h2 id="import-dialog-title">Import a show</h2>
-      <p class="hint">
-        A show file of a theatre console in the USITT ASCII format (.asc), as ETC Eos, Ion, SmartFade and other
-        consoles write it. Its looks become memories, and its cues the steps of the stack.
-      </p>
+      <h2 id="import-dialog-title">Import</h2>
+      <p class="hint">What to take from a file of this device: one that Export made, or a project file.</p>
+
+      <fieldset class="parts">
+        <legend>Import</legend>
+        @for (part of parts; track part.part) {
+          <label>
+            <input type="checkbox" [checked]="chosen().has(part.part)" (change)="onCheck(part.part, $event)" />
+            {{ part.label }}
+            <small>{{ part.hint }}</small>
+          </label>
+        }
+        <label>
+          <input type="checkbox" [checked]="asc()" (change)="onCheckAsc($event)" />
+          .ASC
+          <small>
+            the show file of a theatre console (USITT ASCII), as ETC Eos, Ion, SmartFade and others write it: its looks
+            become memories and its cues the steps of the stack. A file of its own, so it is taken alone.
+          </small>
+        </label>
+      </fieldset>
+
       @if (losesChanges()) {
-        <p class="hint">The open project has changes that are not saved. Importing drops them.</p>
+        <p class="hint">The open project has changes that are not saved. Importing a project drops them.</p>
       }
 
       <div class="file">
-        <button lmLamp type="button" tone="system" aria-label="Choose a show file" (click)="choose()">File</button>
+        <button lmLamp type="button" tone="system" aria-label="Choose a file" (click)="choose()">File</button>
         <span class="file-name">{{ file()?.name ?? 'No file chosen' }}</span>
       </div>
 
@@ -35,14 +51,7 @@
 
       <div class="actions">
         <button lmLamp type="button" tone="system" (click)="close()">Cancel</button>
-        <button
-          lmLamp
-          type="submit"
-          tone="system"
-          [level]="3"
-          [disabled]="!canImport()"
-          aria-label="Import the show"
-        >
+        <button lmLamp type="submit" tone="system" [level]="3" [disabled]="!canImport()" aria-label="Import the file">
           Import
         </button>
       </div>

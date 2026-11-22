@@ -1,13 +1,17 @@
 import { Component, ElementRef, Injector, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
+import { DeskSettings } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
 import { IMPORT_LIMIT_BYTES } from '../desk/desk-types';
 import { readShowFile } from '../desk/show-file';
+import { TRANSFER_PARTS, TransferPart, missingParts, readImportFile } from '../desk/transfer';
 import { LampButton } from '../lamp-button/lamp-button';
 
 /**
- * The window for importing the show of a theatre console: a file in the USITT ASCII format
- * (".asc"). It opens with the system's window for choosing the file; once the desk has made a
- * project of the show, it says what became of it.
+ * The window of Import: what to take from a file of this device, each with a checkbox, none of
+ * them checked at first. The project, the stage, the settings of this device and its keyboard
+ * shortcuts come from a file that Export made (or a project file); .ASC is the show of a theatre
+ * console in the USITT ASCII format, a file of its own, so it is taken alone. Once it is done the
+ * window says what became of the file.
  */
 @Component({
   imports: [LampButton],
@@ -17,33 +21,59 @@ import { LampButton } from '../lamp-button/lamp-button';
 })
 export class ImportDialog {
   private readonly store = inject(DeskStore);
+  private readonly settings = inject(DeskSettings);
   private readonly injector = inject(Injector);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly picker = viewChild.required<ElementRef<HTMLInputElement>>('picker');
   private readonly okKey = viewChild('ok', { read: ElementRef<HTMLButtonElement> });
 
+  protected readonly parts = TRANSFER_PARTS;
+  protected readonly chosen = signal<ReadonlySet<TransferPart>>(new Set());
+  /** True for the show file of a theatre console. */
+  protected readonly asc = signal(false);
   protected readonly file = signal<File | null>(null);
   protected readonly error = signal('');
   protected readonly busy = signal(false);
-  /** What the desk made of the show, sentence by sentence; null until it is imported. */
+  /** What became of the file, sentence by sentence; null until it is imported. */
   protected readonly report = signal<string[] | null>(null);
 
   /** A file larger than the desk takes in one go. */
   private readonly tooLarge = computed(() => (this.file()?.size ?? 0) > IMPORT_LIMIT_BYTES);
 
-  /** Importing throws away what was changed and not saved. */
-  protected readonly losesChanges = computed(() => this.store.project().unsaved);
+  /** A project or a show in place of the open project throws away what was changed and not saved. */
+  protected readonly losesChanges = computed(() => (this.asc() || this.chosen().has('project')) && this.store.project().unsaved);
 
-  protected readonly canImport = computed(() => this.file() !== null && !this.tooLarge() && !this.busy());
+  /** The kinds of files the system's window offers. */
+  protected readonly accept = computed(() => (this.asc() ? '.asc,.txt' : '.json'));
 
-  /** Opens the window, and over it the system's window for choosing the file. */
+  protected readonly canImport = computed(
+    () => this.file() !== null && !this.tooLarge() && !this.busy() && (this.asc() || this.chosen().size > 0),
+  );
+
+  /** Opens the window with nothing checked and no file. */
   open(): void {
+    this.chosen.set(new Set());
+    this.asc.set(false);
     this.file.set(null);
     this.error.set('');
     this.busy.set(false);
     this.report.set(null);
     this.dialog().nativeElement.showModal();
-    this.choose();
+  }
+
+  protected onCheck(part: TransferPart, event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    const chosen = new Set(this.chosen());
+    if (checked) chosen.add(part);
+    else chosen.delete(part);
+    this.chosen.set(chosen);
+    if (checked && this.asc()) this.takeAsc(false);
+  }
+
+  protected onCheckAsc(event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    if (checked) this.chosen.set(new Set());
+    this.takeAsc(checked);
   }
 
   protected choose(): void {
@@ -59,7 +89,7 @@ export class ImportDialog {
     this.file.set(file);
     this.error.set(
       this.tooLarge()
-        ? `"${file.name}" has ${megabytes(file.size)} MB. A show file can have up to ${megabytes(IMPORT_LIMIT_BYTES)} MB.`
+        ? `"${file.name}" has ${megabytes(file.size)} MB. A file can have up to ${megabytes(IMPORT_LIMIT_BYTES)} MB.`
         : '',
     );
   }
@@ -72,8 +102,7 @@ export class ImportDialog {
     this.busy.set(true);
     this.error.set('');
     try {
-      const text = await readShowFile(file);
-      this.report.set(await this.store.importShow(file.name, text));
+      this.report.set(this.asc() ? await this.store.importShow(file.name, await readShowFile(file)) : await this.importParts(file));
       // The Import key is gone with the question; the key that closes the window takes the focus.
       afterNextRender(() => this.okKey()?.nativeElement.focus(), { injector: this.injector });
     } catch (error) {
@@ -85,6 +114,42 @@ export class ImportDialog {
 
   protected close(): void {
     this.dialog().nativeElement.close();
+  }
+
+  // .ASC on or off: a file of the other kind that was chosen goes.
+  private takeAsc(on: boolean): void {
+    if (this.asc() === on) return;
+    this.asc.set(on);
+    this.file.set(null);
+    this.error.set('');
+  }
+
+  // The checked parts from a file of Export or a project file: all of them, or none when the file lacks one.
+  private async importParts(file: File): Promise<string[]> {
+    const source = readImportFile(file.name, await readShowFile(file));
+    const chosen = this.chosen();
+    const missing = missingParts(chosen, source);
+    if (missing) throw new Error(`"${file.name}" does not have ${missing}. Nothing was imported.`);
+
+    const report: string[] = [];
+    if (chosen.has('project') && source.project !== null) {
+      await this.store.importProjectFile(source.name, source.project);
+      report.push(`The project "${this.store.project().name}" is open. Save keeps it in the projects folder.`);
+    }
+    if (chosen.has('stage') && source.stage !== null) {
+      await this.store.importStage(source.stage);
+      const lights = (JSON.parse(source.stage) as { lights?: unknown[] }).lights?.length ?? 0;
+      report.push(`The stage is that of the file, with ${lights} ${lights === 1 ? 'light' : 'lights'}. Undo takes it back.`);
+    }
+    if (chosen.has('settings')) {
+      this.settings.takeSettings(source.settings);
+      report.push('The settings of this device are those of the file.');
+    }
+    if (chosen.has('keyboard')) {
+      this.settings.takeShortcuts(source.shortcuts);
+      report.push('The keyboard shortcuts of this device are those of the file.');
+    }
+    return report;
   }
 }
 

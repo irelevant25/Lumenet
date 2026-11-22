@@ -20,6 +20,9 @@ internal sealed class ProjectStore
     private readonly Lock _lock = new();
     private readonly Desk _desk;
 
+    // The folder of the example projects that come with the program; null for none.
+    private readonly string? _examples;
+
     private string _name = NewProjectName;
     private string? _path;
 
@@ -37,10 +40,15 @@ internal sealed class ProjectStore
     /// <summary>Starts with a new, empty project. The folder is not touched yet.</summary>
     /// <param name="desk">The desk whose memories and notes make up the project.</param>
     /// <param name="folder">The projects folder. It is created when it is first needed.</param>
-    public ProjectStore(Desk desk, string folder)
+    /// <param name="examples">
+    /// The folder of the example projects that come with the program, which are read and never
+    /// written; null for none. A folder that is not there has no examples.
+    /// </param>
+    public ProjectStore(Desk desk, string folder, string? examples = null)
     {
         _desk = desk;
         Folder = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder));
+        _examples = examples is null ? null : Path.TrimEndingDirectorySeparator(Path.GetFullPath(examples));
         _savedChanges = desk.ProjectChanges;
         _told = CurrentInfo();
     }
@@ -94,8 +102,9 @@ internal sealed class ProjectStore
     }
 
     /// <summary>
-    /// Lists the project files in the folder, the newest first. Creates the folder if it is not
-    /// there yet: the UI shows its path, and a path that leads nowhere would be confusing.
+    /// Lists the project files in the folder, the newest first, and the examples. Creates the
+    /// folder if it is not there yet: the UI shows its path, and a path that leads nowhere would
+    /// be confusing.
     /// </summary>
     public ProjectList List()
     {
@@ -109,11 +118,55 @@ internal sealed class ProjectStore
                     Path.GetFileNameWithoutExtension(file.Name), file.FullName, file.LastWriteTimeUtc))
                 .ToArray();
 
-            return new ProjectList(Folder, projects);
+            return new ProjectList(Folder, projects, Examples());
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
             throw new DeskException($"The projects folder {Folder} cannot be read. {e.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Opens one of the example projects, as loading does. The project gets the example's name
+    /// but no file, so saving asks for a name and the example stays as it is; until something is
+    /// changed there is nothing to save.
+    /// </summary>
+    /// <param name="name">The name of the example, as <see cref="List"/> gives it.</param>
+    /// <returns>The project after it was opened.</returns>
+    public ProjectInfo OpenExample(string name)
+    {
+        // Only a name of the list: nothing else can be read this way.
+        if (_examples is null || !Examples().Contains(name, StringComparer.Ordinal))
+            throw new DeskException($"There is no example \"{name}\".");
+
+        lock (_lock)
+        {
+            ProjectContent content = ReadFile(name, Path.Combine(_examples, name + Extension));
+            _savedChanges = _desk.ReplaceProject(content);
+            _name = name;
+            _path = null;
+            _recovered = null;
+            return CurrentInfo();
+        }
+    }
+
+    // The names of the examples, in the order of their names (they start with a number).
+    private string[] Examples()
+    {
+        if (_examples is null || !Directory.Exists(_examples))
+            return [];
+
+        try
+        {
+            return new DirectoryInfo(_examples)
+                .EnumerateFiles("*" + Extension)
+                .Select(file => Path.GetFileNameWithoutExtension(file.Name))
+                .Order(StringComparer.Ordinal)
+                .ToArray();
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            throw new DeskException($"The examples in {_examples} cannot be read. {e.Message}");
         }
     }
 

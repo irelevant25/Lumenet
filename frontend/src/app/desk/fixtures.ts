@@ -335,6 +335,16 @@ export function rangeAt(ranges: readonly FixtureRange[], value: number): Fixture
   return ranges.find((range) => value >= range.from && value <= range.to);
 }
 
+/** The values of a range as people say them: "32 to 63", or "32" for a range of one value. */
+export function valuesOf(range: FixtureRange): string {
+  return range.from === range.to ? `${range.from}` : `${range.from} to ${range.to}`;
+}
+
+/** A range with its values, as the lists of the panels show it: "Open (32 to 63)". */
+export function rangeText(range: FixtureRange): string {
+  return `${range.label} (${valuesOf(range)})`;
+}
+
 // ---------------------------------------------------------------- moving heads
 
 /** Where a moving head's pan and tilt are: their channels (numbers from 1), with the fine ones. */
@@ -473,4 +483,95 @@ export function shutterClosed(light: StageLight, type: FixtureType | undefined, 
     const range = rangeAt(channel.ranges, levels[light.address - 1 + offset] ?? 0);
     return range !== undefined && /^closed/i.test(range.label);
   });
+}
+
+// ---------------------------------------------------------------- strobe
+
+/** How a light's strobe runs now, from the value of its strobe channel (S). */
+export interface Strobe {
+  /** A strobe flashes; a pulse swells and fades; a ramp rises (or falls) and starts again. */
+  readonly kind: 'strobe' | 'pulse' | 'ramp-up' | 'ramp-down';
+  /** True for a strobe at random moments. */
+  readonly random: boolean;
+  /** Flashes a second, when its light says them (in Hz); null when it says only "slow to fast". */
+  readonly hertz: number | null;
+  /** How fast it is within its range: 0 the slowest, 1 the fastest. */
+  readonly pace: number;
+  /** What it is, in words: "Strobe", "Random strobe", "Pulse". */
+  readonly label: string;
+}
+
+/**
+ * A strobe channel that says nothing of its values (a light of letters, or one whose library gives
+ * it a single range): as most simple lights have it, steady light at its first values, then a
+ * strobe from slow to fast.
+ */
+export const PLAIN_STROBE_FROM = 10;
+
+/**
+ * How the light's strobe runs now; null while it gives steady light (or none). A light of a library
+ * says it in the range its strobe channel stands in: its kind ("Pulse", "Ramp up", "Random strobe"),
+ * and how fast, in Hz ("Strobe, 0.3Hz to 19Hz", at the place of the value in the range) or only as
+ * "slow to fast".
+ */
+export function strobeOf(light: StageLight, type: FixtureType | undefined, levels: readonly number[]): Strobe | null {
+  const channels = [...light.channels].flatMap((letter, offset) => (letter === 'S' ? [{ offset, ranges: type?.channels[offset]?.ranges ?? [] }] : []));
+  // A light whose shutter says its ranges goes by those: another S channel of it (a strobe speed) says no more.
+  const ranged = channels.filter((channel) => channel.ranges.length > 1);
+  for (const channel of ranged.length > 0 ? ranged : channels) {
+    const value = levels[light.address - 1 + channel.offset] ?? 0;
+    const strobe = channel.ranges.length > 1 ? strobeInRange(rangeAt(channel.ranges, value), value) : plainStrobe(value);
+    if (strobe) return strobe;
+  }
+  return null;
+}
+
+function plainStrobe(value: number): Strobe | null {
+  if (value < PLAIN_STROBE_FROM) return null;
+  return { kind: 'strobe', random: false, hertz: null, pace: (value - PLAIN_STROBE_FROM) / (255 - PLAIN_STROBE_FROM), label: 'Strobe' };
+}
+
+const STROBE_NAMES: Readonly<Record<Strobe['kind'], string>> = { strobe: 'Strobe', pulse: 'Pulse', 'ramp-up': 'Ramp up', 'ramp-down': 'Ramp down' };
+
+function strobeInRange(range: FixtureRange | undefined, value: number): Strobe | null {
+  if (!range || /^(open|closed)\b/i.test(range.label)) return null;
+  const label = range.label;
+  const kind: Strobe['kind'] | null =
+    /ramp\s*-?up/i.test(label) ? 'ramp-up'
+    : /ramp\s*-?down/i.test(label) ? 'ramp-down'
+    : /pulse/i.test(label) ? 'pulse'
+    : /strob|flash|lightning|burst|spike/i.test(label) ? 'strobe'
+    : null;
+  if (kind === null) return null;
+
+  const place = range.to > range.from ? (value - range.from) / (range.to - range.from) : 0.5;
+  const pace = /fast\s*(to|-|->|→)\s*slow/i.test(label) ? 1 - place : place;
+  const number = '(\\d+(?:[.,]\\d+)?)\\s*hz';
+  const between = new RegExp(`${number}\\s*(?:to|-|->|→|–)\\s*${number}`, 'i').exec(label);
+  const one = new RegExp(number, 'i').exec(label);
+  const hz = (text: string) => Number(text.replace(',', '.'));
+  const hertz = between ? hz(between[1]) + (hz(between[2]) - hz(between[1])) * place : one ? hz(one[1]) : null;
+  const random = /random/i.test(label);
+  return {
+    kind,
+    random,
+    hertz: hertz === null || !Number.isFinite(hertz) ? null : Math.round(hertz * 10) / 10,
+    pace,
+    label: random ? `Random ${STROBE_NAMES[kind].toLowerCase()}` : STROBE_NAMES[kind],
+  };
+}
+
+/** The most flashes a second a screen may show: more can set off a seizure (WCAG 2.3.1). */
+export const MAX_SHOWN_FLASHES = 3;
+
+/**
+ * How many flashes a second the screen shows for a strobe: as many as the light gives up to 2 a
+ * second, and above that fewer and fewer of them, so that a faster strobe still looks faster, but
+ * never more than three. Without Hz, the place in its range stands for 1 to 20 a second, as most
+ * strobes go.
+ */
+export function shownFlashes(strobe: Strobe): number {
+  const real = strobe.hertz ?? 1 + strobe.pace * 19;
+  if (real <= 2) return Math.max(0.25, real);
+  return Math.min(MAX_SHOWN_FLASHES, 2 + (Math.min(real, 20) - 2) / 18);
 }

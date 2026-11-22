@@ -4,20 +4,21 @@ import { DeskSettings } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
 import { lanAddressInUse } from '../desk/desk-types';
 import { viewNamed } from '../desk/views';
+import { ExportDialog } from '../export-dialog/export-dialog';
 import { ImportDialog } from '../import-dialog/import-dialog';
 import { LampButton } from '../lamp-button/lamp-button';
 import { ProjectDialog } from '../project-dialog/project-dialog';
 
 /**
  * The strip along the top: name and version with the box light and the LAN key, the links to
- * the views (those Settings does not leave out), and the project with its keys New, Save, Load
- * and Import.
+ * the views (those Settings does not leave out), and the project with its keys New, Save, Load,
+ * Import and Export.
  */
 @Component({
   host: {
     role: 'banner',
   },
-  imports: [ImportDialog, LampButton, ProjectDialog, RouterLink, RouterLinkActive],
+  imports: [ExportDialog, ImportDialog, LampButton, ProjectDialog, RouterLink, RouterLinkActive],
   selector: 'lm-top-bar',
   styleUrl: './top-bar.css',
   templateUrl: './top-bar.html',
@@ -27,6 +28,7 @@ export class TopBar {
   private readonly settings = inject(DeskSettings);
   protected readonly dialog = viewChild.required(ProjectDialog);
   protected readonly importDialog = viewChild.required(ImportDialog);
+  protected readonly exportDialog = viewChild.required(ExportDialog);
 
   /** The links to the views: in the order Settings gives them, all but those it leaves out. */
   protected readonly links = computed(() => {

@@ -1,6 +1,6 @@
 import { DestroyRef, Service, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { ActionContext, DESK_ACTIONS, actionWithId, shortcutOf } from './desk-actions';
+import { ActionContext, DESK_ACTIONS, SIDED_KEYS, actionWithId, pressOf, shortcutOf, shortcutsOf } from './desk-actions';
 import { DEFAULT_SHORTCUTS, DeskSettings } from './desk-settings';
 import { DeskStore } from './desk-store';
 
@@ -19,6 +19,11 @@ const DOUBLE_PRESS_MS = 250;
  *   text field has the keyboard (a note is being typed) and while a window such as Load is open.
  * - Recording: the next key pressed (with Ctrl, Alt, Shift held as wanted) becomes the shortcut
  *   of one key of the desk. A shortcut that another key had moves over. Esc stops recording.
+ * - Left and right: a shortcut names the Ctrl and the Alt it was recorded with, left or right
+ *   ("Left Ctrl + Z"); the keyboard notes which of them are down from their own presses. A
+ *   shortcut kept without a side (Ctrl + Z, as Undo has it at first) is pressed by either, unless
+ *   another key has the shortcut with that side. AltGr is the right Alt; a shortcut recorded with
+ *   it before the sides were told apart (Ctrl + Alt + ...) still answers to it.
  * - While a solo is lit, the shortcut of a key under a fader or of the independents holds that key's
  *   fader (at full or at zero) for as long as it is held.
  * - Listening: the desk is shown, and a double click on one of its keys does not press it but
@@ -58,6 +63,10 @@ export class Keyboard {
   // physical key (KeyboardEvent.code), with the name of that key of the desk.
   private readonly held = new Map<string, string>();
 
+  // The Ctrl and Alt keys held down now, by their codes ("ControlLeft"): the browser says only that a
+  // Ctrl is held, so the presses of the keys themselves tell which.
+  private readonly sides = new Set<string>();
+
   private readonly destroyRef = inject(DestroyRef);
 
   /** Starts listening to the keyboard and to clicks. The page calls it once. */
@@ -74,6 +83,8 @@ export class Keyboard {
       if (this.swallowClick) setTimeout(() => (this.swallowClick = false));
     };
     const click = (event: MouseEvent): void => this.onClick(event);
+    // A key let go while the window had no focus says nothing: when it comes back, none is held.
+    const away = (): void => this.sides.clear();
     document.addEventListener('keydown', keyDown, true);
     document.addEventListener('keyup', keyUp, true);
     // In the capture phase: a press that picks a key must not reach the key itself. The presses
@@ -82,13 +93,26 @@ export class Keyboard {
     document.addEventListener('pointerdown', pointerDown, true);
     document.addEventListener('pointerup', pointerUp, true);
     document.addEventListener('click', click, true);
+    window.addEventListener('blur', away);
     this.destroyRef.onDestroy(() => {
       document.removeEventListener('keydown', keyDown, true);
       document.removeEventListener('keyup', keyUp, true);
       document.removeEventListener('pointerdown', pointerDown, true);
       document.removeEventListener('pointerup', pointerUp, true);
       document.removeEventListener('click', click, true);
+      window.removeEventListener('blur', away);
     });
+  }
+
+  // Notes which Ctrl and Alt keys are down. A key whose letting go was not seen (the event says
+  // that no Ctrl is held any more) is let go here.
+  private noteSides(event: KeyboardEvent, down: boolean): void {
+    if (SIDED_KEYS.has(event.code)) {
+      if (down) this.sides.add(event.code);
+      else this.sides.delete(event.code);
+    }
+    if (!event.ctrlKey) ['ControlLeft', 'ControlRight'].forEach((code) => this.sides.delete(code));
+    if (!event.altKey) ['AltLeft', 'AltRight'].forEach((code) => this.sides.delete(code));
   }
 
   /** Shows the desk; the next key clicked there is picked, see the class. */
@@ -138,6 +162,7 @@ export class Keyboard {
   }
 
   private onKeyDown(event: KeyboardEvent): void {
+    this.noteSides(event, true);
     const recording = this.recording();
     if (recording !== null) {
       this.takeShortcut(recording, event);
@@ -154,10 +179,11 @@ export class Keyboard {
 
     if (event.repeat || typing(event.target) || document.querySelector('dialog[open]')) return;
 
-    const shortcut = shortcutOf(event);
-    if (shortcut === null) return;
-
-    const id = Object.entries(this.settings.shortcuts()).find(([, keys]) => keys === shortcut)?.[0];
+    // The shortcut with the sides of its Ctrl and Alt first, then the one kept without a side (see shortcutsOf).
+    const shortcuts = Object.entries(this.settings.shortcuts());
+    const id = shortcutsOf(pressOf(event), this.sides)
+      .map((name) => shortcuts.find(([, keys]) => keys === name)?.[0])
+      .find((found) => found !== undefined);
     if (id === undefined) return;
 
     event.preventDefault();
@@ -175,6 +201,7 @@ export class Keyboard {
 
   // A key let go that holds a key of the desk: its fader goes back.
   private onKeyUp(event: KeyboardEvent): void {
+    this.noteSides(event, false);
     const id = this.held.get(event.code);
     if (id === undefined) return;
 
@@ -195,7 +222,7 @@ export class Keyboard {
       return;
     }
 
-    const shortcut = shortcutOf(event);
+    const shortcut = shortcutOf(pressOf(event), this.sides);
     if (shortcut === null) return; // Ctrl or Shift alone: wait for the key they are held with
 
     const shortcuts = { ...this.settings.shortcuts() };

@@ -18,9 +18,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- The example project of the repository, for ExampleProjectTests, and the example show
-         file of a theatre console, for ExampleShowFileTests -->
-    <None Include="..\..\examples\Example show.json" Link="examples\Example show.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The example show file of a theatre console, for ExampleShowFileTests. The example
+         projects, for ExampleProjectTests, come with DmxBox.Server. -->
     <None Include="..\..\examples\Example theatre show.asc" Link="examples\Example theatre show.asc" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

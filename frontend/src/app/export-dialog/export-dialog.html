@@ -1,0 +1,36 @@
+<dialog #dialog aria-labelledby="export-dialog-title">
+  <form (submit)="confirm($event)">
+    @if (saved(); as name) {
+      <h2 id="export-dialog-title">Exported</h2>
+      <p class="report" role="status">Saved as "{{ name }}". Import takes it back, here or on another device.</p>
+      <div class="actions">
+        <button #ok lmLamp type="button" tone="system" [level]="3" aria-label="Close" (click)="close()">OK</button>
+      </div>
+    } @else {
+      <h2 id="export-dialog-title">Export</h2>
+      <p class="hint">What goes into the file, which is saved on this device.</p>
+
+      <fieldset class="parts">
+        <legend>Export</legend>
+        @for (part of parts; track part.part) {
+          <label>
+            <input type="checkbox" [checked]="chosen().has(part.part)" (change)="onCheck(part.part, $event)" />
+            {{ part.label }}
+            <small>{{ part.hint }}</small>
+          </label>
+        }
+      </fieldset>
+
+      @if (error()) {
+        <p class="error" role="alert">{{ error() }}</p>
+      }
+
+      <div class="actions">
+        <button lmLamp type="button" tone="system" (click)="close()">Cancel</button>
+        <button lmLamp type="submit" tone="system" [level]="3" [disabled]="!canExport()" aria-label="Export the file">
+          Export
+        </button>
+      </div>
+    }
+  </form>
+</dialog>

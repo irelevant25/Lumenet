@@ -14,7 +14,9 @@ import {
   rgbOfHex,
   rgbOfHsv,
   rolesOf,
+  shownFlashes,
   shutterClosed,
+  strobeOf,
   swatchOf,
 } from './fixtures';
 import { NOTE_LINE_SEPARATOR } from './notes';
@@ -53,6 +55,65 @@ const SPOT: FixtureType = {
     { name: 'Dimmer', code: 'D' },
   ],
 };
+
+describe('the strobe of a light', () => {
+  /** A bar of the library with an RGB cell and a strobe channel like those of ADJ, and one with Hz. */
+  const bar = (strobe: { from: number; to: number; label: string }[]): FixtureType => ({
+    ...SPOT,
+    channels: [{ name: 'Red', code: 'R' }, { name: 'Green', code: 'G' }, { name: 'Blue', code: 'B' }, { name: 'Strobe', code: 'S', ranges: strobe }],
+  });
+  const ADJ = bar([
+    { from: 0, to: 31, label: 'Closed' },
+    { from: 32, to: 63, label: 'Open' },
+    { from: 64, to: 95, label: 'Strobe, slow to fast' },
+    { from: 96, to: 127, label: 'Pulse, slow to fast' },
+    { from: 128, to: 159, label: 'Strobe, fast to slow' },
+    { from: 160, to: 191, label: 'Ramp up' },
+    { from: 192, to: 223, label: 'Random strobe' },
+    { from: 224, to: 255, label: 'Strobe, 0.3Hz to 19Hz' },
+  ]);
+  const at = (value: number, type: FixtureType | undefined = ADJ, letters = 'RGBS') => strobeOf(light(letters), type, levels(255, 0, 0, value));
+
+  it('is none while the shutter is open or closed, or the range does something else', () => {
+    expect(at(0)).toBeNull();
+    expect(at(40)).toBeNull();
+    expect(strobeOf(light('RGBS'), bar([{ from: 0, to: 127, label: 'No function' }, { from: 128, to: 255, label: 'Sound active' }]), levels(0, 0, 0, 200))).toBeNull();
+  });
+
+  it('knows its kind and how fast it goes within its range, in Hz where the library says them', () => {
+    expect(at(64)).toEqual({ kind: 'strobe', random: false, hertz: null, pace: 0, label: 'Strobe' });
+    expect(at(95)?.pace).toBe(1);
+    expect(at(128)?.pace).toBe(1); // fast to slow: its first value is the fastest
+    expect(at(100)).toMatchObject({ kind: 'pulse', label: 'Pulse' });
+    expect(at(170)).toMatchObject({ kind: 'ramp-up', label: 'Ramp up' });
+    expect(at(200)).toMatchObject({ kind: 'strobe', random: true, label: 'Random strobe' });
+    expect(at(224)?.hertz).toBe(0.3);
+    expect(at(255)?.hertz).toBe(19);
+    expect(at(240)?.hertz).toBe(10); // 0.3 + 16/31 of the way to 19
+  });
+
+  it('of a light that says nothing of its strobe channel: steady at first, then slow to fast', () => {
+    const plain = (value: number) => strobeOf(light('RGBS'), undefined, levels(255, 0, 0, value));
+    expect(plain(5)).toBeNull();
+    expect(plain(10)).toMatchObject({ kind: 'strobe', pace: 0 });
+    expect(plain(255)?.pace).toBe(1);
+
+    // a light whose shutter has ranges goes by those: its strobe speed channel (no ranges) says no more
+    const shutterAndSpeed: FixtureType = { ...ADJ, channels: [...ADJ.channels, { name: 'Strobe speed', code: 'S' }] };
+    expect(strobeOf(light('RGBSS'), shutterAndSpeed, levels(255, 0, 0, 40, 200))).toBeNull();
+  });
+
+  it('shows on the screen as fast as the light up to 2 flashes a second, and never more than 3', () => {
+    const strobe = (hertz: number | null, pace = 0) => ({ kind: 'strobe' as const, random: false, hertz, pace, label: 'Strobe' });
+    expect(shownFlashes(strobe(1.5))).toBe(1.5);
+    expect(shownFlashes(strobe(0.1))).toBe(0.25);
+    expect(shownFlashes(strobe(11))).toBe(2.5);
+    expect(shownFlashes(strobe(20))).toBe(3);
+    expect(shownFlashes(strobe(50))).toBe(3);
+    expect(shownFlashes(strobe(null, 0))).toBe(1); // without Hz: 1 to 20 a second as it goes
+    expect(shownFlashes(strobe(null, 1))).toBe(3);
+  });
+});
 
 describe('the lights of the plan as fixtures', () => {
   it('know which of their channels are attributes and which give light', () => {

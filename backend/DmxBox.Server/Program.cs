@@ -129,12 +129,13 @@ internal static class Program
     private static void AddDesk(IServiceCollection services, IConfiguration settings, IBox? box)
     {
         string projectsFolder = Setting(settings, "Projects:Folder", DefaultProjectsFolder());
+        string examplesFolder = Setting(settings, "Projects:Examples", Path.Combine(AppContext.BaseDirectory, "examples"));
         string autosaveFile = Setting(settings, "Autosave:File", DefaultAutosaveFile());
         string boxHost = Setting(settings, "Box:Host", DefaultBoxHost);
         int boxPort = settings.GetValue("Box:Port", DmxBoxClient.DefaultPort);
 
         services.AddSingleton<Desk>();
-        services.AddSingleton(provider => new ProjectStore(provider.GetRequiredService<Desk>(), projectsFolder));
+        services.AddSingleton(provider => new ProjectStore(provider.GetRequiredService<Desk>(), projectsFolder, examplesFolder));
         services.AddSingleton(provider => new UndoHistory(provider.GetRequiredService<Desk>()));
         services.AddSingleton(provider => new Autosave(
             provider.GetRequiredService<Desk>(),

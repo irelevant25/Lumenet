@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
 
 namespace DmxBox.Server;
@@ -22,6 +21,9 @@ namespace DmxBox.Server;
 /// </remarks>
 internal sealed class DeskHub : Hub<IDeskClient>
 {
+    // The name of an imported project whose file's name cannot be one.
+    private const string ImportedProjectName = "Imported project";
+
     private readonly Desk _desk;
     private readonly ProjectStore _projects;
     private readonly BoxLink _boxLink;
@@ -469,44 +471,28 @@ internal sealed class DeskHub : Hub<IDeskClient>
         return _history.State;
     }
 
-    /// <summary>
-    /// The settings of the UI on the PC that belong to the project (its layout and keyboard
-    /// shortcuts), as the UI wrote them; null while the desk has none.
-    /// </summary>
-    public JsonElement? GetSettings()
+    /// <summary>The notes of the project: instructions for the show, as the Notes view wrote them; an empty text for none.</summary>
+    public string GetNotes()
     {
-        return ProjectSettings.Element(_desk.Settings);
+        return _desk.Notes;
     }
 
     /// <summary>
-    /// The owner changed settings of the project in the UI on the PC. The other UIs hear of it;
-    /// the project has something to save. Only a UI on this PC can do this: phones and tablets
-    /// keep settings of their own.
+    /// Takes the notes as the owner wrote them on the Notes view. Every UI hears of it, also the
+    /// one that wrote them (which goes on writing in its own editor meanwhile). Changes in quick
+    /// succession, as while typing, are one step of the history.
     /// </summary>
-    /// <param name="settings">The settings, a JSON object.</param>
-    public async Task SetSettings(JsonElement settings)
+    /// <param name="notes">The notes as the UI wrote them; empty for none.</param>
+    public async Task SetNotes(string notes)
     {
-        RequireLocal("Only the PC keeps its settings in the project.");
-        if (_desk.SetSettings(ProjectSettings.Checked(settings)))
-            await Clients.Others.SettingsChanged(ProjectSettings.Element(_desk.Settings));
+        bool changed;
+        using (_history.Change("the notes", "notes"))
+            changed = _desk.SetNotes(notes);
+
+        if (changed)
+            await Clients.All.NotesChanged(_desk.Notes);
 
         await TellProjectAsync();
-    }
-
-    /// <summary>
-    /// A UI on the PC brings its settings along while the desk has none, as after a start
-    /// without a project: they become the project's, without making it unsaved.
-    /// </summary>
-    /// <param name="settings">The settings, a JSON object.</param>
-    /// <returns>True if the desk took them, false if it has settings already (then the UI asks for those).</returns>
-    public async Task<bool> AdoptSettings(JsonElement settings)
-    {
-        RequireLocal("Only the PC keeps its settings in the project.");
-        bool taken = _desk.AdoptSettings(ProjectSettings.Checked(settings));
-        if (taken)
-            await Clients.Others.SettingsChanged(ProjectSettings.Element(_desk.Settings));
-
-        return taken;
     }
 
     /// <summary>Whether the autosave keeps the work that is not saved, and how often.</summary>
@@ -628,7 +614,7 @@ internal sealed class DeskHub : Hub<IDeskClient>
         await _lan.TellPcAsync();
     }
 
-    /// <summary>Lists the projects that can be loaded, the newest first.</summary>
+    /// <summary>Lists the projects that can be loaded, the newest first, and the examples.</summary>
     public ProjectList GetProjects()
     {
         return _projects.List();
@@ -670,9 +656,87 @@ internal sealed class DeskHub : Hub<IDeskClient>
     {
         ProjectInfo project = _projects.Load(name);
         _history.Clear();
-        await Clients.All.SettingsChanged(ProjectSettings.Element(_desk.Settings));   // the project's, or those in use
         await TellDeskAsync();
         return project;
+    }
+
+    /// <summary>
+    /// Opens one of the example projects that come with the program, in place of the open one, as
+    /// loading does. The example itself never changes: the project has its name but no file, and
+    /// nothing to save until something is changed.
+    /// </summary>
+    /// <param name="name">The name of the example, as <see cref="GetProjects"/> lists it.</param>
+    /// <returns>The project after the load.</returns>
+    public async Task<ProjectInfo> LoadExample(string name)
+    {
+        ProjectInfo project = _projects.OpenExample(name);
+        _history.Clear();
+        await TellDeskAsync();
+        return project;
+    }
+
+    /// <summary>
+    /// The open project as a project file, as saving would write it, for Export: the UI hands it
+    /// to the user as a file on their device. The project and its file stay as they are.
+    /// </summary>
+    public string ExportProject()
+    {
+        return ProjectFormat.WriteText(_desk.GetProject().Content);
+    }
+
+    /// <summary>
+    /// Opens a project file that the user chose on their device (Import), in place of the open
+    /// one, as loading does: all memory faders go to 0. The project has a name but no file until
+    /// it is saved.
+    /// </summary>
+    /// <param name="name">What the project is to be called, like the name of the file it came in.</param>
+    /// <param name="text">The project file, as saving or Export writes it.</param>
+    /// <returns>The project, now open.</returns>
+    public async Task<ProjectInfo> ImportProjectFile(string name, string text)
+    {
+        ProjectContent content;
+        try
+        {
+            content = ProjectFormat.ReadText(text);
+        }
+        catch (InvalidDataException e)
+        {
+            throw new DeskException($"The project cannot be imported. {e.Message}");
+        }
+
+        ProjectInfo project = _projects.Import(ProjectName.Suggest(name, ImportedProjectName), content);
+        _history.Clear();
+        await TellDeskAsync();
+        return project;
+    }
+
+    /// <summary>
+    /// Puts a stage that the user chose on their device (Import) in place of the project's: its
+    /// lights, kinds of lights, groups and picture, see <see cref="Desk.ReplaceStage"/>. One step
+    /// of the history; every UI gets the plan.
+    /// </summary>
+    /// <param name="text">The stage as a project file has it under "stage".</param>
+    public async Task ImportStage(string text)
+    {
+        StagePlan plan;
+        string? picture;
+        try
+        {
+            (plan, picture) = ProjectFormat.ReadStage(text);
+        }
+        catch (InvalidDataException e)
+        {
+            throw new DeskException($"The stage cannot be imported. {e.Message}");
+        }
+
+        bool changed;
+        using (_history.Change("importing a stage"))
+            changed = _desk.ReplaceStage(plan, picture);
+
+        if (changed)
+            await Clients.All.StageChanged(_desk.Stage);
+
+        await TellProjectAsync();
     }
 
     /// <summary>

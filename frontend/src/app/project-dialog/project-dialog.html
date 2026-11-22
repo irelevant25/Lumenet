@@ -40,8 +40,8 @@
           <li>
             <button
               type="button"
-              [class.picked]="project.name === name()"
-              [attr.aria-pressed]="project.name === name()"
+              [class.picked]="!example() && project.name === name()"
+              [attr.aria-pressed]="!example() && project.name === name()"
               (click)="pick(project.name)"
             >
               <span class="project-name">{{ project.name }}</span>
@@ -58,6 +58,26 @@
           </li>
         }
       </ul>
+
+      @if (task() === 'load' && examples().length > 0) {
+        <!-- the examples that come with the desk program: one opens as a new project, and the example stays as it is -->
+        <h3 id="examples-title">Examples</h3>
+        <p class="hint">Each shows what the desk can do, with notes on how to use it. The first ones show one thing each; the last ones all of it together.</p>
+        <ul class="projects" aria-labelledby="examples-title">
+          @for (entry of examples(); track entry) {
+            <li>
+              <button
+                type="button"
+                [class.picked]="example() && entry === name()"
+                [attr.aria-pressed]="example() && entry === name()"
+                (click)="pickExample(entry)"
+              >
+                <span class="project-name">{{ entry }}</span>
+              </button>
+            </li>
+          }
+        </ul>
+      }
     }
 
     @if (error()) {

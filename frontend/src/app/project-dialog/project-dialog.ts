@@ -25,8 +25,12 @@ export class ProjectDialog {
   /** The folder on the PC where the backend keeps the project files. */
   protected readonly folder = signal('');
   protected readonly projects = signal<ProjectFile[]>([]);
+  /** The examples that come with the desk program; Load offers them under the projects. */
+  protected readonly examples = signal<string[]>([]);
   /** The name typed in (save) or picked from the list (load). */
   protected readonly name = signal('');
+  /** True when the name picked (load) is one of the examples. */
+  protected readonly example = signal(false);
   protected readonly error = signal('');
   protected readonly busy = signal(false);
 
@@ -50,6 +54,7 @@ export class ProjectDialog {
 
     const name = this.name().trim();
     if (name === '') return false;
+    if (this.task() === 'load' && this.example()) return this.examples().includes(name);
     return this.task() === 'save' || this.exists(name);
   });
 
@@ -62,6 +67,7 @@ export class ProjectDialog {
     // called after its show file. A new one waits for a name to be typed.
     const named = current.path !== null || current.name !== NEW_PROJECT_NAME;
     this.name.set(task === 'save' && named ? current.name : '');
+    this.example.set(false);
     this.dialog().nativeElement.showModal();
     if (task === 'new') return; // nothing to choose: only yes or no
 
@@ -69,6 +75,7 @@ export class ProjectDialog {
       const list = await this.store.listProjects();
       this.folder.set(list.folder);
       this.projects.set(list.projects);
+      this.examples.set(list.examples ?? []);
     } catch (error) {
       this.error.set(messageOf(error));
     }
@@ -84,6 +91,12 @@ export class ProjectDialog {
 
   protected pick(name: string): void {
     this.name.set(name);
+    this.example.set(false);
+  }
+
+  protected pickExample(name: string): void {
+    this.name.set(name);
+    this.example.set(true);
   }
 
   protected async confirm(event: Event): Promise<void> {
@@ -96,6 +109,7 @@ export class ProjectDialog {
     try {
       if (this.task() === 'new') await this.store.newProject();
       else if (this.task() === 'save') await this.store.saveProject(name);
+      else if (this.example()) await this.store.loadExample(name);
       else await this.store.loadProject(name);
       this.close();
     } catch (error) {

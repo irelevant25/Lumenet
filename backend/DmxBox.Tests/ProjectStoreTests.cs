@@ -677,7 +677,31 @@ public sealed class ProjectStoreTests : IDisposable
         ProjectList list = store.List();
 
         Assert.Empty(list.Projects);
+        Assert.Empty(list.Examples);
         Assert.True(Directory.Exists(folder));
+    }
+
+    [Fact]
+    public void ExamplesAreListedByNameAndOpenWithoutAFileAndWithNothingToSave()
+    {
+        string examples = Path.Combine(_folder.FullName, "examples");
+        Directory.CreateDirectory(examples);
+        _desk.SetNotes("How to use it");
+        _store.Save("2 Second");
+        File.Move(PathOf("2 Second"), Path.Combine(examples, "2 Second.json"));
+        File.Copy(Path.Combine(examples, "2 Second.json"), Path.Combine(examples, "1 First.json"));
+        File.WriteAllText(Path.Combine(examples, "readme.txt"), "not an example");
+        var store = new ProjectStore(_desk, _folder.FullName, examples);
+        _desk.StartNewProject();
+
+        Assert.Equal(["1 First", "2 Second"], store.List().Examples);
+        Assert.Equal(new ProjectInfo("2 Second", Path: null, Unsaved: false), store.OpenExample("2 Second"));
+        Assert.Equal("How to use it", _desk.Notes);
+
+        // Only an example of the list: a project of the projects folder, or a way out of the folder, is none.
+        Assert.Equal("There is no example \"show\".", Assert.Throws<DeskException>(() => store.OpenExample("show")).Message);
+        Assert.Throws<DeskException>(() => store.OpenExample("../examples/1 First"));
+        Assert.Throws<DeskException>(() => _store.OpenExample("1 First"));   // a store without examples
     }
 
     // ---------------------------------------------------------------- the "unsaved" mark

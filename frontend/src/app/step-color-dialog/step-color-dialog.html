@@ -1,11 +1,28 @@
 <dialog #dialog aria-labelledby="step-color-title">
-  <div class="body">
+  <form class="body" (submit)="use($event)">
     <h2 id="step-color-title">{{ title() }}</h2>
-    <lm-color-picker [mixes]="true" [color]="color()" (pick)="onPick($event)" />
-    <p class="hint">A moving head with a color wheel turns it to the color nearest this one.</p>
+    <lm-color-picker [mixes]="true" [color]="chosen()" (pick)="onPick($event)" />
+
+    <!-- what Use will give the step -->
+    <p class="chosen" aria-live="polite">
+      <span class="swatch" aria-hidden="true" [class.white]="chosen() === null" [style.--swatch]="chosen() ?? '#ffffff'"></span>
+      @if (chosen(); as color) {
+        Chosen: {{ color }}
+      } @else {
+        Chosen: white, no color
+      }
+    </p>
+    <p class="hint">
+      Press a color, or drag across the field, until it is the one; Use gives it to the step. A moving head with a
+      color wheel turns it to the color nearest this one.
+    </p>
+
     <div class="actions">
-      <button lmLamp type="button" tone="system" aria-label="White, no color" (click)="white()">White</button>
+      <button lmLamp type="button" tone="system" aria-label="White, no color" [level]="chosen() === null ? 2 : 1" (click)="white()">
+        White
+      </button>
       <button lmLamp type="button" tone="system" (click)="close()">Cancel</button>
+      <button lmLamp type="submit" tone="system" [level]="3" aria-label="Use this color">Use</button>
     </div>
-  </div>
+  </form>
 </dialog>

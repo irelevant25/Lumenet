@@ -112,6 +112,9 @@
           [style.--gw]="item.glowWidth"
           [style.--gd]="item.glowDepth"
           [style.rotate]="item.light.angle + 'deg'"
+          [class.strobe]="item.strobe !== null"
+          [attr.data-strobe]="item.strobe?.kind ?? null"
+          [style.--strobe-period]="item.strobe?.period ?? null"
         >
           @for (cell of item.cells; track $index) {
             <span
@@ -133,6 +136,10 @@
         </div>
         @if (item.light.name) {
           <span class="name" [style.--below]="item.below">{{ item.light.name }}</span>
+        }
+        @if (item.strobe; as strobe) {
+          <!-- over a light that strobes: what it gives, as the screen may not flash so fast -->
+          <span class="strobe-mark" aria-hidden="true" [style.--below]="item.below">{{ strobe.mark }}</span>
         }
       </div>
     }

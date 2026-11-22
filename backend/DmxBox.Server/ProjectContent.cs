@@ -25,11 +25,10 @@ internal sealed record ProjectContent(byte[]?[] Looks, string[] ChannelNotes, st
     public ProjectStep[] Stack { get; init; } = [];
 
     /// <summary>
-    /// The settings of the UI on the PC that belong to the project (its layout and keyboard
-    /// shortcuts), as a JSON object, see <see cref="ProjectSettings"/>; null for a project
-    /// without settings of its own, such as one from a file of an older version.
+    /// The notes of the project, instructions for the show, as the UI wrote them, see
+    /// <see cref="ProjectNotes"/>; an empty text for none.
     /// </summary>
-    public string? Settings { get; init; }
+    public string Notes { get; init; } = "";
 
     /// <summary>
     /// The stage plan: the lights of the rig and where they hang; null for a project that does not

@@ -34,6 +34,11 @@ export const routes: Routes = [
     title: 'Lumenet: fixtures',
   },
   {
+    path: 'notes',
+    loadComponent: () => import('./notes-view/notes-view').then((file) => file.NotesView),
+    title: 'Lumenet: notes',
+  },
+  {
     path: 'settings',
     loadComponent: () => import('./settings-view/settings-view').then((file) => file.SettingsView),
     title: 'Lumenet: settings',

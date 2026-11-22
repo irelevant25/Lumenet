@@ -101,7 +101,7 @@ internal sealed class RecordingClient : IDeskClient
     public Task LanAccessChanged(LanState lan) => throw new NotSupportedException();
 
     /// <inheritdoc />
-    public Task SettingsChanged(System.Text.Json.JsonElement? settings) => throw new NotSupportedException();
+    public Task NotesChanged(string notes) => throw new NotSupportedException();
 
     /// <inheritdoc />
     public Task HistoryChanged(HistoryState history) => throw new NotSupportedException();

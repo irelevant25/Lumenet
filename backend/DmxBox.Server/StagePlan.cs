@@ -220,7 +220,11 @@ internal static class PlanText
 /// <param name="Maker">The maker, like "American DJ".</param>
 /// <param name="Model">The model, like "Inno Pocket Spot".</param>
 /// <param name="Mode">The mode of the model, like "11-channel".</param>
-/// <param name="Source">Where it is in the library: maker and model as the library names their files, like "american-dj/inno-pocket-spot".</param>
+/// <param name="Source">
+/// Where it is in its library: in the Open Fixture Library maker and model as it names their files,
+/// like "american-dj/inno-pocket-spot"; in the library of QLC+ its file after "qlcplus:", like
+/// "qlcplus:American_DJ/American-DJ-Dotz-Bar-1.4.qxf".
+/// </param>
 /// <param name="Channels">Its channels, in their order from the address.</param>
 public sealed record FixtureType(int Id, string Maker, string Model, string Mode, string Source, FixtureChannel[] Channels)
 {
@@ -237,8 +241,9 @@ public sealed record FixtureType(int Id, string Maker, string Model, string Mode
         if (Id < 1)
             throw new DeskException($"{where} needs a number of 1 or more.");
 
+        // Letters, digits and the few signs the two libraries use in the names of their files.
         string source = (Source ?? "").Trim();
-        if (source.Length > MaxTextLength * 2 || !source.All(character => character is >= 'a' and <= 'z' or >= '0' and <= '9' or '-' or '/'))
+        if (source.Length > MaxTextLength * 2 || !source.All(character => char.IsAsciiLetterOrDigit(character) || "-/_.:+&(),".Contains(character)))
             throw new DeskException($"{where}: \"{Source}\" is not where a light is in the library.");
 
         FixtureChannel?[] channels = Channels ?? [];

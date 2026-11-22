@@ -62,6 +62,37 @@ internal sealed partial class Desk
     }
 
     /// <summary>
+    /// Puts a whole plan from elsewhere in place of the project's, with its picture: what importing
+    /// a stage does. Its lights and groups keep the numbers they have in their file, from 1 in the
+    /// order of its lists, so a step that played light 3 of the old plan plays light 3 of the new
+    /// one, and one whose light or group the new plan does not have plays nothing.
+    /// </summary>
+    /// <param name="plan">The plan, as <see cref="ProjectFormat.ReadStage"/> made it.</param>
+    /// <param name="picture">Its picture as a data URL; null for none.</param>
+    /// <returns>True if the plan or the picture differs from what the desk had.</returns>
+    /// <exception cref="DeskException">Something in the plan cannot be used, or the stack is live.</exception>
+    public bool ReplaceStage(StagePlan plan, string? picture)
+    {
+        string? keptPicture = DmxBox.Server.StagePicture.Checked(picture);
+        StagePlan kept = plan.Checked() with
+        {
+            PictureId = keptPicture is null ? null : DmxBox.Server.StagePicture.IdOf(keptPicture),
+        };
+
+        lock (_lock)
+        {
+            RequireUnlocked();
+            if (kept.SameAs(_stage) && keptPicture == _stagePicture)
+                return false;
+
+            PutStage(kept);
+            _stagePicture = keptPicture;
+            _projectChanges++;
+            return true;
+        }
+    }
+
+    /// <summary>
     /// Puts a picture under the plan, a photo or a drawing of the stage, or takes it away. It
     /// belongs to the project, like the plan.
     /// </summary>

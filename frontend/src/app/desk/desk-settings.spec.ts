@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, fontScale, keyCount, parseSettings, projectPart } from './desk-settings';
+import { DEFAULT_SETTINGS, fontScale, keyCount, parseSettings, settingsPart } from './desk-settings';
 
 describe('the settings this browser keeps', () => {
   it('are the defaults when there are none, or when they cannot be read', () => {
@@ -16,7 +16,7 @@ describe('the settings this browser keeps', () => {
       shortcuts: { 'project.undo': 'Ctrl+KeyZ', 'project.redo': 'Ctrl+KeyY' },
       colors: {},
       hiddenViews: [],
-      viewOrder: ['main', 'memories', 'sequences', 'stack', 'stage', 'fixtures', 'settings', 'keyboard'],
+      viewOrder: ['main', 'memories', 'sequences', 'stack', 'stage', 'fixtures', 'notes', 'settings', 'keyboard'],
     });
   });
 
@@ -32,12 +32,13 @@ describe('the settings this browser keeps', () => {
     });
   });
 
-  it('belong to the project, all but the lettering', () => {
-    expect(projectPart(DEFAULT_SETTINGS)).not.toHaveProperty('fontScale');
-    expect(projectPart({ ...DEFAULT_SETTINGS, channelSize: 8 }).channelSize).toBe(8);
-    expect(projectPart({ ...DEFAULT_SETTINGS, colors: { pause: '#ffffff' } }).colors).toEqual({ pause: '#ffffff' });
-    expect(projectPart({ ...DEFAULT_SETTINGS, hiddenViews: ['stage'] }).hiddenViews).toEqual(['stage']);
-    expect(projectPart({ ...DEFAULT_SETTINGS, viewOrder: ['stage'] }).viewOrder).toEqual(['stage']);
+  it('go into a file of Export as the settings of the Settings view, the shortcuts apart', () => {
+    expect(settingsPart(DEFAULT_SETTINGS)).not.toHaveProperty('shortcuts');
+    expect(settingsPart({ ...DEFAULT_SETTINGS, fontScale: 1.2 }).fontScale).toBe(1.2);
+    expect(settingsPart({ ...DEFAULT_SETTINGS, channelSize: 8 }).channelSize).toBe(8);
+    expect(settingsPart({ ...DEFAULT_SETTINGS, colors: { pause: '#ffffff' } }).colors).toEqual({ pause: '#ffffff' });
+    expect(settingsPart({ ...DEFAULT_SETTINGS, hiddenViews: ['stage'] }).hiddenViews).toEqual(['stage']);
+    expect(settingsPart({ ...DEFAULT_SETTINGS, viewOrder: ['stage'] }).viewOrder).toEqual(['stage']);
   });
 
   it('leave known views out of the top bar, each once, never Settings', () => {
@@ -46,10 +47,24 @@ describe('the settings this browser keeps', () => {
     expect(parseSettings(JSON.stringify({ hiddenViews: 'stage' })).hiddenViews).toEqual([]);
   });
 
-  it('put every view in the top bar once: the known ones in their order, then the others as usual', () => {
+  it('put every view in the top bar once: the known ones in their order, the others after the view they follow', () => {
     const order = parseSettings(JSON.stringify({ viewOrder: ['keyboard', 'stage', 'nothing', 'keyboard', 3, 'main'] })).viewOrder;
-    expect(order).toEqual(['keyboard', 'stage', 'main', 'memories', 'sequences', 'stack', 'fixtures', 'settings']);
+    expect(order).toEqual(['keyboard', 'stage', 'fixtures', 'notes', 'settings', 'main', 'memories', 'sequences', 'stack']);
     expect(parseSettings(JSON.stringify({ viewOrder: 'stage' })).viewOrder).toEqual(DEFAULT_SETTINGS.viewOrder);
+
+    // An order kept before there were notes: Notes comes after Fixtures, where it usually is.
+    const before = ['main', 'memories', 'sequences', 'stack', 'stage', 'fixtures', 'keyboard', 'settings'];
+    expect(parseSettings(JSON.stringify({ viewOrder: before })).viewOrder).toEqual([
+      'main',
+      'memories',
+      'sequences',
+      'stack',
+      'stage',
+      'fixtures',
+      'notes',
+      'keyboard',
+      'settings',
+    ]);
   });
 
   it('read the colors that were kept before they were called so', () => {

@@ -12,6 +12,7 @@ namespace DmxBox.Server;
 /// {
 ///   "format": "lumenet-project",
 ///   "version": 4,
+///   "notes": "&lt;div&gt;Cue 1 &lt;b&gt;on the house lights out&lt;/b&gt;&lt;/div&gt;",
 ///   "memories": [
 ///     { "number": 1, "levels": { "5": 255, "6": 128 } }
 ///   ],
@@ -26,7 +27,6 @@ namespace DmxBox.Server;
 ///   "stack": [
 ///     { "cue": "1.0", "target": "memory", "number": 1, "value": 255, "up": 2, "wait": 0, "down": 2 }
 ///   ],
-///   "settings": { "channelSize": "auto", "shortcuts": { "master.clear": "Ctrl+KeyC" } },
 ///   "stage": { "width": 16, "depth": 10, "lights": [
 ///     { "name": "LED bar", "address": 30, "channels": "RGBRGBRGBRGB", "x": 8, "y": 1, "angle": 0,
 ///       "shape": "square", "width": 4, "depth": 1 },
@@ -35,12 +35,13 @@ namespace DmxBox.Server;
 ///     "picture": "data:image/jpeg;base64,...", "pictureOpacity": 0.6, "pictureOver": "stage" }
 /// }
 /// </code>
-/// "settings" holds the layout and the keyboard shortcuts of the UI on the PC, see
-/// <see cref="ProjectSettings"/>. It is there only for a project that has some, and a reader that
-/// does not know it passes over it, so it needed no new version. Settings that are no JSON
-/// object, or too long, are left out on reading: the project is good without them.
-/// "stage" is the stage plan, see <see cref="StagePlan"/>; it came the same way, without a new
-/// version. A file without it has an empty stage. A light without "shape", "width" and "depth" is
+/// "notes" are the notes of the project, instructions for the show, see <see cref="ProjectNotes"/>.
+/// They are there only for a project that has some, and a reader that does not know them passes
+/// over them, so they needed no new version. Files that earlier versions of the program wrote can
+/// have "settings", the layout and the keyboard shortcuts of the UI on the PC; those belong to each
+/// device now, and the reader passes over them.
+/// "stage" is the stage plan, see <see cref="StagePlan"/>; it came without a new version too. A
+/// file without it has an empty stage. A light without "shape", "width" and "depth" is
 /// round and one square big; a plan without "picture" has none. A plan can also list "types",
 /// the kinds of lights from the fixture library with the names of their channels, and "groups"
 /// of lights; a light names its kind ("type") and a group its lights by their place in the
@@ -89,6 +90,7 @@ internal static class ProjectFormat
         {
             Format = FormatName,
             Version = CurrentVersion,
+            Notes = project.Notes.Length == 0 ? null : project.Notes,
             Memories = [],
             ChannelNotes = NotesThatAreNotEmpty(project.ChannelNotes),
             MemoryNotes = NotesThatAreNotEmpty(project.MemoryNotes),
@@ -96,7 +98,6 @@ internal static class ProjectFormat
             MemoryIndependents = project.MemoryIndependents.ToList(),
             Sequences = [],
             Stack = project.Stack.Select(step => FileStep(step.Step, step.Cue.ToString(), places)).ToList<ProjectFileStep?>(),
-            Settings = ProjectSettings.Element(project.Settings),
             Stage = FileStage(project.Stage, project.StagePicture),
         };
 
@@ -124,6 +125,15 @@ internal static class ProjectFormat
         JsonSerializer.Serialize(stream, file, Options);
     }
 
+    /// <summary>A project file as text, as <see cref="Write"/> writes it: for Export, which hands it to the UI.</summary>
+    /// <param name="project">The project.</param>
+    public static string WriteText(ProjectContent project)
+    {
+        using var stream = new MemoryStream();
+        Write(stream, project);
+        return System.Text.Encoding.UTF8.GetString(stream.ToArray());
+    }
+
     /// <summary>Reads a project file.</summary>
     /// <param name="stream">The file.</param>
     /// <returns>The looks, the notes and the independents, with an entry for every memory, fader and key.</returns>
@@ -146,10 +156,42 @@ internal static class ProjectFormat
             MemoryIndependents = MemoryIndependentsOf(file.MemoryIndependents, version),
             Sequences = SequencesOf(file.Sequences, looks),
             Stack = StackOf(file.Stack),
-            Settings = SettingsOf(file.Settings),
             Stage = stage,
             StagePicture = picture,
+            Notes = ProjectNotesOf(file.Notes),
         };
+    }
+
+    /// <summary>Reads a project file from its text, as Import hands it over.</summary>
+    /// <param name="text">The project file.</param>
+    /// <exception cref="InvalidDataException">This is not a project file the program can use. The message says why.</exception>
+    public static ProjectContent ReadText(string text)
+    {
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(text));
+        return Read(stream);
+    }
+
+    /// <summary>
+    /// Reads a stage plan on its own, as a project file has it under "stage": what Import hands over
+    /// to put the stage of another project in place of this one's.
+    /// </summary>
+    /// <param name="text">The plan as JSON.</param>
+    /// <returns>The plan, its lights numbered from 1 in the order of the file, and its picture; null for none.</returns>
+    /// <exception cref="InvalidDataException">This is no stage plan the program can use. The message says why.</exception>
+    public static (StagePlan Stage, string? Picture) ReadStage(string text)
+    {
+        ProjectFileStage? stage;
+        try
+        {
+            stage = JsonSerializer.Deserialize<ProjectFileStage>(text, Options);
+        }
+        catch (JsonException e)
+        {
+            throw Bad($"The stage is damaged: {e.Message}");
+        }
+
+        (StagePlan? plan, string? picture) = StageOf(stage);
+        return (plan ?? throw Bad("There is no stage in it."), picture);
     }
 
     // The stage plan and its picture, with the same rules as for a plan made on the UI; none for
@@ -282,20 +324,16 @@ internal static class ProjectFormat
         };
     }
 
-    // Settings that are no JSON object of a sensible size are left out: the project is good
-    // without them, and the UI keeps the ones it has.
-    private static string? SettingsOf(JsonElement? settings)
+    // The same rules as for notes written on the UI.
+    private static string ProjectNotesOf(string? notes)
     {
-        if (settings is not { ValueKind: JsonValueKind.Object } element)
-            return null;
-
         try
         {
-            return ProjectSettings.Checked(element);
+            return ProjectNotes.Checked(notes);
         }
-        catch (DeskException)
+        catch (DeskException e)
         {
-            return null;
+            throw Bad($"The notes of the project in the file cannot be used. {e.Message}");
         }
     }
 

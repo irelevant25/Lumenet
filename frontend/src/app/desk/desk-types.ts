@@ -155,7 +155,10 @@ export interface FixtureType {
   maker: string;
   model: string;
   mode: string;
-  /** Where it is in the library, like "american-dj/inno-pocket-spot". */
+  /**
+   * Where it is in its library: "american-dj/inno-pocket-spot" in the Open Fixture Library,
+   * "qlcplus:American_DJ/American-DJ-Dotz-Bar-1.4.qxf" in that of QLC+.
+   */
   source: string;
   channels: FixtureChannel[];
 }
@@ -452,4 +455,6 @@ export interface ProjectFile {
 export interface ProjectList {
   folder: string;
   projects: ProjectFile[];
+  /** The names of the example projects that come with the desk program; missing with an older one. */
+  examples?: string[];
 }

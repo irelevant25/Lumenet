@@ -1,0 +1,331 @@
+{
+  "format": "lumenet-project",
+  "version": 4,
+  "notes": "<div><font size=\"5\"><b>Memories and the stack</b></font></div><div>A small theatre stage with eight lamps. Six looks are stored in memories, and the stack plays them one after the other, like the cues of a play.</div><div><b><font color=\"#ffb020\">What is in it</font></b></div><ul><li>Channels 1 to 8: one lamp each. The note under a channel fader says which; <b>Stage</b> shows where it hangs, in the color of its gel.</li><li>Memories 1 to 6: house light, warm wash, blue night, a spot, a sunset and the full stage. Each holds a look: the levels of the channels.</li><li>The stack: nine steps. Each brings a memory up over its up time; going on takes it down over its down time.</li></ul><div><b><font color=\"#ffb020\">Try it</font></b></div><ol><li>On <b>Main</b>, push a channel fader up, then a memory fader: the memory gives its look, and the higher level of the two wins.</li><li>Open <b>Memories</b> to see which levels each memory holds.</li><li>Press <b>Stack</b>: it lights up, the stack is live and stands on its first step. <b>Play</b> goes to the next step, <b>Prev</b> back. Step 6.0 goes on by itself after its wait.</li><li>Watch <b>Stage</b> while the stack plays: the lamps show the light they give.</li><li>Make a look of your own: set the channel faders, press <b>Save mem</b>, then a free memory key. <b>Add step</b> on the <b>Stack</b> view puts it into the stack.</li></ol><div>Press <b>Stack</b> again to stop the show: while it is live, nothing that is stored can be changed.</div>",
+  "memories": [
+    {
+      "number": 1,
+      "levels": {
+        "8": 255
+      }
+    },
+    {
+      "number": 2,
+      "levels": {
+        "1": 220,
+        "2": 220,
+        "5": 110,
+        "6": 110
+      }
+    },
+    {
+      "number": 3,
+      "levels": {
+        "1": 35,
+        "2": 35,
+        "3": 210,
+        "4": 210
+      }
+    },
+    {
+      "number": 4,
+      "levels": {
+        "3": 60,
+        "4": 60,
+        "7": 255
+      }
+    },
+    {
+      "number": 5,
+      "levels": {
+        "1": 70,
+        "2": 70,
+        "3": 90,
+        "4": 90,
+        "5": 255,
+        "6": 255
+      }
+    },
+    {
+      "number": 6,
+      "levels": {
+        "1": 255,
+        "2": 255,
+        "3": 255,
+        "4": 255,
+        "5": 255,
+        "6": 255,
+        "7": 255
+      }
+    }
+  ],
+  "channelNotes": {
+    "1": "Front\u2028left",
+    "2": "Front\u2028right",
+    "3": "Back blue\u2028left",
+    "4": "Back blue\u2028right",
+    "5": "Side amber\u2028left",
+    "6": "Side amber\u2028right",
+    "7": "Spot",
+    "8": "House\u2028light"
+  },
+  "memoryNotes": {
+    "1": "House\u2028lights",
+    "2": "Warm\u2028wash",
+    "3": "Blue\u2028night",
+    "4": "Spot\u2028solo",
+    "5": "Sunset",
+    "6": "Full\u2028stage"
+  },
+  "independents": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32
+  ],
+  "memoryIndependents": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    1,
+    2,
+    3,
+    4,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32
+  ],
+  "sequences": [],
+  "stack": [
+    {
+      "cue": "1.0",
+      "target": "memory",
+      "number": 1,
+      "value": 255,
+      "up": 2,
+      "wait": 0,
+      "down": 3
+    },
+    {
+      "cue": "2.0",
+      "target": "memory",
+      "number": 2,
+      "value": 255,
+      "up": 3,
+      "wait": 0,
+      "down": 3
+    },
+    {
+      "cue": "3.0",
+      "target": "memory",
+      "number": 4,
+      "value": 255,
+      "up": 1,
+      "wait": 0,
+      "down": 2
+    },
+    {
+      "cue": "4.0",
+      "target": "memory",
+      "number": 2,
+      "value": 255,
+      "up": 2,
+      "wait": 0,
+      "down": 2
+    },
+    {
+      "cue": "5.0",
+      "target": "memory",
+      "number": 3,
+      "value": 255,
+      "up": 4,
+      "wait": 0,
+      "down": 3
+    },
+    {
+      "cue": "6.0",
+      "target": "memory",
+      "number": 5,
+      "value": 255,
+      "up": 3,
+      "wait": 6,
+      "down": 3
+    },
+    {
+      "cue": "7.0",
+      "target": "memory",
+      "number": 6,
+      "value": 255,
+      "up": 1,
+      "wait": 0,
+      "down": 2
+    },
+    {
+      "cue": "8.0",
+      "target": "memory",
+      "number": 3,
+      "value": 160,
+      "up": 3,
+      "wait": 0,
+      "down": 5
+    },
+    {
+      "cue": "9.0",
+      "target": "memory",
+      "number": 1,
+      "value": 255,
+      "up": 3,
+      "wait": 0,
+      "down": 0
+    }
+  ],
+  "stage": {
+    "width": 12,
+    "depth": 8,
+    "lights": [
+      {
+        "name": "Front left",
+        "address": 1,
+        "channels": "D",
+        "x": 3,
+        "y": 11,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Front right",
+        "address": 2,
+        "channels": "D",
+        "x": 9,
+        "y": 11,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Back left",
+        "address": 3,
+        "channels": "D",
+        "color": "#2a55ff",
+        "x": 2,
+        "y": 1,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Back right",
+        "address": 4,
+        "channels": "D",
+        "color": "#2a55ff",
+        "x": 10,
+        "y": 1,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Side left",
+        "address": 5,
+        "channels": "D",
+        "color": "#ff9a2a",
+        "x": -1,
+        "y": 4,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Side right",
+        "address": 6,
+        "channels": "D",
+        "color": "#ff9a2a",
+        "x": 13,
+        "y": 4,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Spot",
+        "address": 7,
+        "channels": "D",
+        "color": "#f2f4ff",
+        "x": 6,
+        "y": 11.5,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "House light",
+        "address": 8,
+        "channels": "D",
+        "x": -1,
+        "y": 11.5,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      }
+    ]
+  }
+}

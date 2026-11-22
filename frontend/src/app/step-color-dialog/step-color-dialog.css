@@ -35,6 +35,29 @@ h2 {
   line-height: 1.35;
 }
 
+/* the color chosen so far: what Use gives the step */
+.chosen {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: calc(14px * var(--font-scale));
+  font-variant-numeric: tabular-nums;
+}
+
+.chosen .swatch {
+  width: 40px;
+  height: 24px;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: var(--swatch);
+}
+
+/* white without a color: a dashed edge says "none" */
+.chosen .swatch.white {
+  border-style: dashed;
+}
+
 .actions {
   display: flex;
   justify-content: flex-end;

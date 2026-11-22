@@ -192,6 +192,8 @@ h2 {
   pointer-events: none;
 }
 
+/* (A light that strobes flashes: styles.css has it, for this sheet is at its size limit.) */
+
 .nothing {
   position: absolute;
   inset: 0;

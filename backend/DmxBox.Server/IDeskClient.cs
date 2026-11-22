@@ -93,11 +93,11 @@ public interface IDeskClient
     Task LanAccessChanged(LanState lan);
 
     /// <summary>
-    /// The settings of the UI on the PC that belong to the project changed: in another UI on the
-    /// PC, or because a project was loaded. Phones and tablets keep their own and pass over it.
+    /// The notes of the project were changed in a UI. (After undo, redo, a load, a new project or
+    /// an import the UIs get the whole desk instead, and ask for the notes with it.)
     /// </summary>
-    /// <param name="settings">The settings as the UI wrote them, a JSON object; null while the desk has none.</param>
-    Task SettingsChanged(System.Text.Json.JsonElement? settings);
+    /// <param name="notes">The notes as the desk keeps them now; an empty text for none.</param>
+    Task NotesChanged(string notes);
 
     /// <summary>What undo and redo would do changed: after a change of the project, an undo, a redo or a load.</summary>
     /// <param name="history">What undo and redo would do now.</param>

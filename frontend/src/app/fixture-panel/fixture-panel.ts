@@ -10,6 +10,7 @@ import {
   panTiltOf,
   positionOf,
   rangeAt,
+  rangeText,
   typeOf,
   wheelColorOf,
   wheelColors,
@@ -44,6 +45,8 @@ export class FixturePanel {
   readonly choice = model<FixtureChoice | null>(null);
 
   protected readonly channelRange = channelRange;
+  /** A choice of a list with its values: "Open (32 to 63)". */
+  protected readonly rangeText = rangeText;
   protected readonly nameLength = GROUP_NAME_LENGTH;
 
   protected readonly light = computed(() => {

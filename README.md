@@ -22,7 +22,7 @@ at **192.168.7.1**. So the box is controlled over UDP like a network device, but
 | `backend/` | .NET: the `DmxBox` library, the `dmxbox` command-line tool, the server of the Lumenet desk, and the tests. |
 | `frontend/` | Angular: the page of the Lumenet fader desk. |
 | `run.cmd` | Starts the Lumenet desk: backend and frontend together. |
-| `examples/` | An example project for the desk, to load and look at, and an example show file of a theatre console, to import. |
+| `examples/` | The example projects of the desk, which its Load window lists, and an example show file of a theatre console, to import. |
 | `schematic/` | The schematic, the breadboard plan and the perfboard plan (SVG, PNG, PDF for printing), and the scripts that draw them. |
 | `3d/` | Blender model, renders, and a drawing of the board's tracks. |
 | [BOM.md](BOM.md) | Parts list for ordering. |
@@ -438,11 +438,11 @@ soon as a box answers.
 
 **What is on the page**
 
-The top bar has eight links: **Main**, **Memories**, **Sequences**, **Stack**, **Stage**, **Fixtures**,
-**Settings** and **Keyboard** (in this order until Settings gives them another). Main is the desk itself. Memories only shows what is stored. Sequences and Stack
+The top bar has nine links: **Main**, **Memories**, **Sequences**, **Stack**, **Stage**, **Fixtures**,
+**Notes**, **Settings** and **Keyboard** (in this order until Settings gives them another). Main is the desk itself. Memories only shows what is stored. Sequences and Stack
 are for the two things that run by themselves (see below), Stage shows the lights of the rig in their colors,
-Fixtures plays them as fixtures, Settings is
-for how this browser shows the desk (see [Settings](#settings)), Keyboard for its shortcuts. Beside the name
+Fixtures plays them as fixtures, Notes holds the instructions for the show, Settings is
+for how this device shows the desk (see [Settings](#settings)), Keyboard for its shortcuts. Beside the name
 stand **LAN**, **Undo** and **Redo**, at the right the keys of the project. At the right of Main stand three
 columns: the **Master** section (Black out and the master fader with its level) over **Record**; the
 **General** section (Clear, Solo up, Solo down, Rate and the rate fader with the rate on top) over the **Stack**; and at
@@ -550,6 +550,15 @@ phone the master section, the general section and the stack lie across the top, 
   the master, and dark during blackout. A light glows around itself, and where lights meet their light adds
   up. Every window shows the same desk, so the plan can stay open in a second window, on a second screen or
   on a tablet over LAN while you program on Main.
+  * **Shutter and strobe:** a light whose shutter is closed is dark. A light that strobes flashes, as its
+    strobe channel (S) says: a strobe flashes, a pulse swells and fades, a ramp rises or falls, and a random
+    strobe flashes at uneven moments. A light of a library says in which range of its strobe channel it
+    stands, and often how fast ("Strobe, 0.3Hz to 19Hz": by the place of the value in the range); a light
+    of letters strobes above 9, slow to fast. The screen flashes as fast as the light up to 2 flashes a
+    second, faster settings flash faster but never more than three times a second (more can set off a
+    seizure in people with photosensitive epilepsy), and a mark over the light gives the real speed: ⚡ 13.3
+    Hz, or ⚡ alone when the light does not say it. When the system asks for less motion, the mark alone
+    shows it.
   * **The panel** at the right (under the plan on a phone) is always there, so the plan never changes its
     place or size. **A click on a light** shows it there: its name, its kind and its channels, and a fader
     for each of its channels (R red, D dimmer, ... under it, then the channel's number), colored as its
@@ -604,8 +613,15 @@ phone the master section, the general section and the stack lie across the top, 
     (white at the bottom) for a light that mixes its color, a white channel taking the white part of it; the
     colors of a moving head's color wheel; a pad for where a moving head points (pan across, tilt down; in
     16 bits with fine channels), with a slider for each that the keyboard moves too; a list for each channel
-    that does several things (a gobo wheel, a shutter, a mode); and the faders of all its channels. For a
-    group: its name, its lights and a color for all of them.
+    that does several things (a gobo wheel, a shutter, a mode), each choice with its values, like "Open (32
+    to 63)"; and the faders of all its channels. What the library says a channel does is there too, so its
+    manual is seldom needed: the pointer on a fader's letter lists all its values ("0 to 31: Closed",
+    "32 to 63: Open"), and under the faders a line says what the fader moved last does at its value
+    ("S (8) at 32: Open (32 to 63)"); a screen reader hears it with the fader's value. A choice that comes
+    more than once, like the four Opens of an ADJ strobe, is the same at other values: makers put steady
+    light between the effects of a strobe channel. When a fixture gets a color, its shutter is opened at
+    the first value of its first Open. For a group: its name, its lights and a color for all of them. The
+    faders of a light, with their letters and the line under them, are the same in the Stage view.
   * **Moving heads:** a pan, a tilt, a wheel, a shutter and every other channel of a light that is not a
     dimmer or a color is an attribute. Latest takes precedence for it: the fader or the memory that took
     it last gives it, at the value it holds, not scaled by any fader. A channel fader takes its channel when
@@ -613,25 +629,45 @@ phone the master section, the general section and the stack lie across the top, 
     it gives any level, a sequence those its steps use; the stack does it through the faders it moves);
     when it goes back to zero, the one that took them before gives them again. The master, Black out and a
     solo act on the light only, so a head stays where it points. Dimmers and colors still add up.
-  * **The fixture library:** in Edit on the Stage view, the kind **From the fixture library…** searches the
-    Open Fixture Library (open-fixture-library.org) for a maker and a model, read from its copy on GitHub
-    (the browser keeps the list for a week), and shows the modes of the model with their channels. The
-    light gets the channels of the mode chosen, with their names and what they do at their values (wheel
-    slots with their colors, a shutter that is open or closed). The project keeps all of it, so the library
-    is needed only while lights are set up. **Copy the light** puts the next one of the same kind on the
-    next free channels.
+  * **The fixture libraries:** in Edit on the Stage view, the kind **From the fixture library…** searches two
+    open libraries at once, each read from its copy on GitHub (the browser keeps their lists for a week):
+    the Open Fixture Library (open-fixture-library.org, MIT license, about 670 lights) and the library of
+    QLC+ (qlcplus.org, Apache 2.0 license, about 1,800 lights; its list is FixturesMap.xml). Each light of
+    the list says which library it is from (OFL or QLC+); a model that is in both is there twice. The
+    search finds every word in the maker and the model: ADJ finds American DJ, as the libraries still call
+    it (HES and Claypaky work the same way), and a word may leave out spaces and dashes ("flatpro" finds
+    Flat Pro). When a library cannot be reached, the list has the lights of the other and says so. The
+    window shows the modes of the model chosen with their channels. The light gets the channels of the mode
+    chosen, with their names and what they do at their values (wheel slots with their colors, a shutter
+    that is open or closed: QLC+'s "shutter open" becomes a range called Open, which a step opens; a strobe
+    keeps how fast and whether at random, like "Strobe, slow to fast" and "Random strobe"). The
+    project keeps all of it, with the maker, the model, the mode and where the light is in its library,
+    so the library is needed only while lights are set up. A light that is in neither is set up with
+    letters, as before. **Copy the light** puts the next one of the same kind on the next free channels.
   * **Limit:** a light limited to, say, 60 per cent (a hazer) gives at most that: its dimmers and the
     channels of a device stop there, and the colors of a cell without a dimmer are dimmed together, so
     that the color stays.
   * On Main the note fields of a fixture's channels show, dimmed, what the plan says each channel is
     ("Spot 1", "Pan") where no note was typed; the lists of steps name the channels so too.
-* **Project:** New, Save, Load and Import at the top right. A project is one JSON file in
-  `Documents\Lumenet`. It holds the memories (looks and sequences), the stack, the notes and what the
-  independent keys are bound to, not the fader positions, so loading a project never switches a light on by
-  itself. New empties the desk; it asks first. A project keeps 32 channel keys and 32 memory keys of the
-  independents, however many the page shows. An older project keeps the keys it has (10 of each, or 16
-  channel keys from before there were memory keys); the others are where they are on a new desk. The
-  project also keeps the layout of Main and the shortcuts of the PC (see [Settings](#settings)).
+* **The Notes view** holds the notes of the project: instructions for the show, what it is and how to run
+  it. They are read there; **Edit** (faint while off, full while on) makes them a text to write in, with
+  the tool keys at the left: **B** (bold), **U** (underline), the **size** (small, normal, large, huge), a
+  bulleted and a numbered **list**, and a **color** (the six colors of the desk, and **A** for the usual
+  one). A tool key lights up when the text at the cursor has its mark, and works on the text that is
+  chosen; Ctrl + B and Ctrl + U work as everywhere. Pasted text comes in as plain text. What is written goes
+  to the desk program as soon as the typing rests, and when Edit goes off; every page shows it. The notes
+  belong to the project: saved with it, a step of Undo (typing that goes on is one step), and locked while
+  the stack is live. The page shows only those marks, whatever a file holds: anything else (a script, a
+  picture, a link) is taken out, and its text stays.
+* **Project:** New, Save, Load, Import and Export at the top right. A project is one JSON file in
+  `Documents\Lumenet`. It holds the memories (looks and sequences), the stack, the notes under the faders
+  and of the Notes view, the stage plan and what the independent keys are bound to, not the fader
+  positions, so loading a project never switches a light on by itself. New empties the desk; it asks first.
+  A project keeps 32 channel keys and 32 memory keys of the independents, however many the page shows. An
+  older project keeps the keys it has (10 of each, or 16 channel keys from before there were memory keys);
+  the others are where they are on a new desk. The layout, the colors of the keys and the shortcuts belong
+  to each device, not to the project (see [Settings](#settings)); a project file of an earlier version that
+  holds those of the PC is loaded without them, and Import can take them from it.
 * **Autosave:** what is not saved yet is kept every five seconds in a file of its own on this PC
   (`%LOCALAPPDATA%\Lumenet\autosave.json`, the setting `Autosave:File`), and that file goes once the
   project is saved. If the desk program stops before that (a crash, Windows restarting, the window
@@ -639,22 +675,48 @@ phone the master section, the general section and the stack lie across the top, 
   and the top bar says so. Saving keeps it; loading the project again drops it. The faders are not brought
   back: a desk program that starts switches no light on by itself. Settings switches the autosave off and
   on and sets how often it keeps the work (see [Settings](#settings)).
-* **Example:** `examples/Example show.json` is a small show to look at, for 17 channels: two red lights in a
-  pot, a front wash, four blue back lights, a spot, an RGBW LED bar, a hazer, a mirror ball and the house
-  light. It has notes on every light and memory, ten looks (memory 10 is a copy of 1, made dimmer), eleven
-  sequences (every template, some made by hand and some recorded with Rec seq; in a loop, once and at random;
-  at speeds from 0.5× to 2×), all twenty independent keys bound, and a stack of 14 steps with steps put in
-  between (3.5, 4.1), waits that go on by themselves and a channel step for the hazer. Its stage plan has
-  the 17 channels as 14 lights (the LED bar is one RGBW light, a bar four squares wide; the hazer a square)
-  over a drawing of the stage: a wooden floor, the back curtain, masking at the sides, a riser, the fire pot
-  between its two red lights and tape marks. Copy it into `Documents\Lumenet` and load "Example show".
-* **Import** opens the show of a theatre console as a project: a file in the USITT ASCII format (`.asc`, up
-  to 8 MB), the plain text in which consoles such as ETC Eos, Ion and Express, the ETC (AVAB) SmartFade or the
-  Strand consoles hand a show on (on an Eos: File, Export, USITT ASCII; a SmartFade saves its shows in this
-  format). Press Import, choose the file, and press Import in the
-  window; the window then says what came across and what was left out. Like Load, it replaces the open
-  project, and the window warns when that has changes that are not saved. The imported project is called
-  after the file and is not saved until Save.
+* **Examples:** the Load window lists them under the projects. One opens as a project of its name, without a
+  file: the example itself stays as it is, and Save asks for a name. Each has notes on what it shows and how
+  to use it (the Notes view), and none brings settings or shortcuts. The first four show one thing each, the
+  last two all of it together:
+  * **1 Memories and the stack:** eight lamps of a small theatre, six looks in memories and a stack of nine
+    cues, one of which goes on by itself.
+  * **2 Sequences:** a row of six lamps, two washes and a blinder: a chase, a bounce, a random sparkle at
+    1.5×, a sequence of memories, an intro that runs once and two slow breaths at 0.5×.
+  * **3 Fixtures and the stage:** RGBW and RGB pars, an LED bar and a hazer, in three groups. The stack is
+    made of lights and groups of the stage only, each step with its color; memory 1 holds a chase of light
+    steps.
+  * **4 Moving heads:** two moving heads from the fixture library (American DJ Inno Pocket Spot, 9 channels),
+    a front wash and a hazer: positions with colors and gobos in memories, a swing between two of them.
+  * **5 Theatre show:** the whole show of a small theatre on 17 channels: two red lights in a pot, a front
+    wash, four blue back lights, a spot, an RGBW LED bar, a hazer, a mirror ball and the house light. Notes on
+    every light and memory, ten looks, eleven sequences (every template, some made by hand and some recorded
+    with Rec seq; in a loop, once and at random; at speeds from 0.5× to 2×), all twenty independent keys
+    bound, and a stack of 14 steps with steps put in between (3.5, 4.1), waits that go on by themselves and a
+    channel step for the hazer. Its stage plan lies over a drawing of the stage: a wooden floor, the back
+    curtain, masking at the sides, a riser, the fire pot between its two red lights and tape marks.
+  * **6 Concert:** two moving heads, front and back pars, an LED bar, blinders, a hazer and the house light,
+    in five groups: looks and positions in memories, sequences of lights and of memories, and a stack that
+    mixes memories, groups, a light and a channel.
+
+  They are the files in `examples/`; the desk program takes them along when it is built, and the setting
+  `Projects:Examples` names another folder for them.
+* **Export** puts parts of the desk into one file on this device: **Project** (everything the project holds,
+  as its file has it), **Stage** (the stage alone: its lights, their kinds, the groups and the picture),
+  **Settings** (those of this device) and **Keyboard** (its shortcuts). Each has a checkbox, none checked at
+  first. Chrome and Edge on the PC ask where to save the file; other browsers put it among the downloads.
+* **Import** takes parts back from such a file, here or on another device: the same checkboxes, none checked
+  at first, then **File** and **Import**. It also takes a project file of the projects folder (its project
+  and its stage). A project comes in place of the open one, as with Load, called after the file and not
+  saved until Save; a stage comes in place of the project's stage (a step of Undo), and a step that played
+  light 3 of the old stage plays light 3 of the new one; settings and shortcuts become this device's. When
+  the file lacks a part that is checked, nothing is imported, and the window says which part. The window
+  then says what came in. **.ASC** is the fifth checkbox, for the show of a theatre console, a file of its
+  own, so it is taken alone (it unchecks the others): a file in the USITT ASCII format (`.asc`, up to 8 MB),
+  the plain text in which consoles such as ETC Eos, Ion and Express, the ETC (AVAB) SmartFade or the Strand
+  consoles hand a show on (on an Eos: File, Export, USITT ASCII; a SmartFade saves its shows in this format).
+  It becomes the project, like Load replacing the open one, and the window warns when that has changes that
+  are not saved and then says what came across and what was left out.
   * **Cues:** every cue of the first cue list becomes a memory with its look, and a step of the stack that
     brings that memory up: with the cue's number, its up time, and as down the down time of the cue after it
     (the stack takes the old step down while the new one comes up). A follow time becomes the step's wait,
@@ -685,9 +747,10 @@ phone the master section, the general section and the stack lie across the top, 
     up, as on the console, and a wait of 0 waits for Play. Its patch has the DMX address first; the labels of
     its channels become the notes under them, and its independents IND 1 and IND 2 get independent keys 1
     and 2. A percentage becomes a DMX value rounded up, as the console has it (17 % is 44).
-  * `examples/Example theatre show.asc` is a short play for the lights of the example project, written by
-    hand to show all of this: a patch, a blackout, a cue in two parts with a delay, a storm whose cues follow
-    on by themselves, a fade of 1:30, submasters and groups. Import it from the `examples` folder.
+  * `examples/Example theatre show.asc` is a short play for the lights of the example "5 Theatre show",
+    written by hand to show all of this: a patch, a blackout, a cue in two parts with a delay, a storm whose
+    cues follow on by themselves, a fade of 1:30, submasters and groups. Import it from the `examples` folder
+    with .ASC checked.
 * **LAN** (top left, beside the name) lets a phone or a tablet in the same network use the desk; see below.
 
 **Steps.** A sequence and the stack are both made of steps. A step stands for a channel, a memory, a
@@ -695,8 +758,10 @@ phone the master section, the general section and the stack lie across the top, 
 and three times in seconds: **up** (from zero to the value), **wait** (how long it stays) and **down** (back
 to zero when the next step takes over). The old step goes down while the new one goes up.
 
-A step of a fixture or a group has a **color** too: the box before its name in the Notes column; a press on
-it gives the colors of the Fixtures view, and White. Its value is the intensity of its lights: the dimmer,
+A step of a fixture or a group has a **color** too: the box before its name in the Notes column. A press on
+it opens a window with the colors of the Fixtures view, the field of every hue, and White (no color): a press
+or a drag there only chooses, the window shows the color chosen with its code, and **Use** gives it to the
+step; Cancel or Esc leave the step as it was. Its value is the intensity of its lights: the dimmer,
 and the colors mixing the step's color (a light without a dimmer mixes it at that level); a moving head's
 shutter opens, and its color wheel turns to the slot nearest the color, at once. Where a head points stays
 with the memories, which hold whole looks: a memory step does that. In the stack, a step of a fixture or a
@@ -826,11 +891,9 @@ page cannot move a light. In the small-screen layout the mouse wheel scrolls the
 
 ### Settings
 
-On the PC the desk program runs on, the layout of Main (all but the lettering below) and the colors of the
-keys belong to the project, as the shortcuts of the Keyboard view do: they are saved with the project, a
-project that is loaded brings its own, and a new project, an imported one or one from before this starts with
-the ones in use. The lettering belongs to the browser on this device. A phone or a tablet keeps all of its
-settings to itself, for its screen differs. The autosave and LAN belong to the desk program.
+The settings belong to the device, as the shortcuts of the Keyboard view do: its browser keeps them, every
+project shows them, and a project that is loaded leaves them as they are. **Export** takes them to another
+device, and **Import** brings them from one (see above). The autosave and LAN belong to the desk program.
 
 * **Channels on a page** (Main): Auto (a row of 32 or 16 by the window, as above), or 8, 16, 32, 64 or 128.
 * **Rows of channel faders** and **rows of memory faders** (Main): 1 or 2 of each, at first 2 and 1. A
@@ -854,13 +917,13 @@ settings to itself, for its screen differs. The autosave and LAN belong to the d
   ticked leaves the top bar (its keyboard shortcut still opens it). Settings is always ticked, so that the
   others can come back. ▲ and ▼ move a view one place to the left or right in the top bar (the keyboard focus
   stays on the arrow), and ↺ beside the title brings every view back in the usual order. A desk without Main
-  in its top bar opens on the first view that is. On the PC this goes with the project, as the layout does;
-  a phone or tablet keeps its own.
+  in its top bar opens on the first view that is. A view that came later than the order kept (Notes) stands
+  after the view it follows in the usual order.
 * **Colors of the keys:** a color for each kind (channels, memories, and the color a memory with a
   sequence runs into), which is that of all its keys, page keys and faders, and one for each other key, group
   by group: Black out; Clear, Solo up, Solo down and Rate (with its fader); Stack, Prev, Play, Pause, Next and Add step (Play also colors the
   step that is on, Next the step Play goes to); the keys of Record, of the top bar, Edit of the independents,
-  the keys of the Sequences view and of the Stage view. A press on a color opens the colors the keys have at
+  the keys of the Sequences view, of the Stage view and of the Notes view. A press on a color opens the colors the keys have at
   first (green, red, yellow, amber, white and blue, the one it has ringed) to take one of them, and Other for
   any color; while that one is picked, the desk shows it at once. A press anywhere else, or Esc, closes them.
   Each has a key back to its usual color, and ↺ beside the title takes all of them back. At first Clear, Solo
@@ -871,21 +934,28 @@ in the Keyboard view, are red.
 
 ### Keyboard
 
-The Keyboard view gives a shortcut to any key of the desk: the view links, New, Save, Load, Import, LAN,
-Clear, Solo up, Solo down, Black out, Rate, the keys of the stack and of Record, those of the Sequences view and of the Stage
-view, Edit and every key of the independents, every page key, the key under every channel and memory fader,
-Undo and Redo. On the
-PC the shortcuts belong to the project, like the layout; a phone keeps its own. Undo and Redo have Ctrl + Z
-and Ctrl + Y until they get others (or none: then they stay without).
+The Keyboard view gives a shortcut to any key of the desk: the view links, New, Save, Load, Import, Export,
+LAN, Clear, Solo up, Solo down, Black out, Rate, the keys of the stack and of Record, those of the Sequences
+view and of the Stage view, Edit of the Notes view, Edit and every key of the independents, every page key, the
+key under every channel and memory fader, Undo and Redo. The shortcuts belong to this device, as the settings
+do. Undo and Redo have Ctrl + Z and Ctrl + Y until they get others (or none: then they stay without).
 
 * The kinds of keys are tabs side by side (Views, Project and LAN, Master, General, Stack, Record, Sequences
-  view, Stage view, Independents, Channel pages, Memory pages, Channel keys, Memory keys), each with the number of its keys; the
+  view, Stage view, Notes view, Independents, Channel pages, Memory pages, Channel keys, Memory keys), each with the number of its keys; the
   arrow keys go from tab to tab. The search field searches all of them: then each tab shows how many of its
   keys it finds beside the number of its keys (1/4), and when the tab that is open finds none, the first tab
   that finds some opens.
 * The list under the tabs has the keys at the left and their shortcuts at the right. **Set**, then press the
   keys of the shortcut (with Ctrl, Alt or Shift as wanted; Esc stops, Tab and Esc cannot be shortcuts). A
   shortcut that another key had moves over, and the page says so.
+* Set tells the left Ctrl and Alt from the right ones ("Right Ctrl + B", "Left Alt + C"), and such a shortcut
+  is pressed only with that side. A shortcut without a side (Ctrl + Z and Ctrl + Y of Undo and Redo at first,
+  and every shortcut set before the sides were told apart) is pressed with either side; when a press fits a
+  shortcut with a side and another without, the one with the side takes it. AltGr, the right Alt of many
+  keyboards, counts as Right Alt (the Ctrl that Windows adds to it is left out); a shortcut set with AltGr
+  before the sides were told apart shows Ctrl + Alt and still answers to it. Shift has no side, and a Ctrl
+  or Alt that was already down when the page got the keyboard has none either: the page did not see which
+  one went down.
 * **Listen** shows the desk; the key you double-click there is not pressed but picked, and the Keyboard view
   comes back with its tab open and the key chosen in the list and scrolled into sight (Esc stops listening).
   A single click works as always, a moment later: it opens another view or page of faders, or presses the
@@ -902,8 +972,9 @@ and Ctrl + Y until they get others (or none: then they stay without).
   notes, the project), works out the output and sends it to the box through the `DmxBox` library. A small
   clock in it lets time pass about 30 times a second, for the sequences and the stack. Its settings are in
   `appsettings.json`: the address of the box (`Box:Host`), the projects folder (`Projects:Folder`), the
-  built page it hands out (`Ui:Folder`), the file with the LAN password (`Lan:PasswordFile`) and the
-  autosave file (`Autosave:File`; the autosave's own settings go beside it).
+  folder of the examples (`Projects:Examples`, at first `examples` beside the program), the built page it
+  hands out (`Ui:Folder`), the file with the LAN password (`Lan:PasswordFile`) and the autosave file
+  (`Autosave:File`; the autosave's own settings go beside it).
 * `frontend/` is an Angular app. It only shows the desk and passes on what you do, over SignalR (`/hub/desk`).
   Because the state lives in the backend, reloading the page loses nothing.
 * The backend listens on every network card (`Urls` is `http://*:5080`), but serves another device only while
@@ -913,11 +984,11 @@ and Ctrl + Y until they get others (or none: then they stay without).
   to the pages listed in `Server:AllowedOrigins`, plus the page the backend hands out itself. With `Urls` set
   to `http://localhost:5080` the desk stays on this PC for good.
 
-**Tests:** `dotnet test backend/DmxBox.sln` (456 tests: the client, the desk, solo, sequences and the stack with a
+**Tests:** `dotnet test backend/DmxBox.sln` (475 tests: the client, the desk, solo, sequences and the stack with a
 clock the tests set by hand, the rate, undo and the autosave, the stage plan and its picture, fixtures, their
-attributes and their steps, project files
-and the example project, the import of show files, the link to the box, the hub, LAN with a pretend PC and a
-pretend phone), and in `frontend/`: `npm test -- --watch=false` (168 tests of the page).
+attributes and their steps, the notes, project files with Export and Import,
+the examples, the import of show files, the link to the box, the hub, LAN with a pretend PC and a
+pretend phone), and in `frontend/`: `npm test -- --watch=false` (198 tests of the page).
 
 ---
 ## 5. The DX protocol (UDP 7000)
@@ -1157,6 +1228,70 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
   hint, on the title of the views and on an empty corner each closed it; a click on another color opened that
   one instead; Esc, and a color taken with Enter, put the focus back on the color with its ring, and a color
   taken with the mouse put it there without one.
+* **Notes, Export and Import, settings per device and six examples (2026-11-21):** the backend passes 474
+  tests and the page 184. In the tests: the notes of a project in its file, in the history (typing that goes
+  on is one step), locked while the stack is live and gone with a new project; a file of an earlier version
+  with the settings of the PC read without them; a project exported and imported back in place of the open
+  one, a stage imported in place of the project's and undone; every example opens without a file, with
+  notes, in the current format, without settings, and with every memory, light and group its steps and keys
+  use; the notes shown with only their marks (a script, a picture and their handlers taken out); Export and
+  Import with nothing checked at first, .ASC taken alone, and nothing imported when a checked part is
+  missing. The example files were made by a script and written by the desk program's own code; their notes
+  come through the page's cleaner unchanged. On a test copy without a box, in Chrome at 1600 × 1000: Load
+  listed the six examples and opened "3 Fixtures and the stage" without a file and with nothing to save;
+  Notes showed its notes, Edit went from faint to full and put the keyboard in the text; a word typed,
+  chosen, made bold, red and large lit B and ringed red, and went to the desk program (the page loaded
+  again showed it); Export with Project, Settings and Keyboard saved one file with those three parts; a new
+  project took the stage of that file with Import (10 lights, and Undo offered "importing a stage"). At
+  390 × 844 the tools of Notes went into two lines with Edit at the right, and nothing scrolled sideways.
+* **The library of QLC+ beside the Open Fixture Library (2026-11-22):** the backend passes 475 tests and the
+  page 187. In the tests: both lists in one, each light with its library, kept for a week each; one library
+  out of reach leaves the other's lights; ADJ finds American DJ and "flatpro" finds Flat Pro; QLC+'s newer
+  files (a preset per channel) and older ones (groups, a byte for the fine part, Colour and Color) made into
+  letters, fine channels, ranges with their colors (none for a slot of two colors) and an open shutter; a
+  name with a sign such as "+" written for its address, and a name that leads out of the library refused;
+  the desk program takes QLC+'s names of files as where a kind of light is. With the real libraries: of 84
+  lights of QLC+ (the user's Dotz Bar 1.4, Inno Color Beam Quad 7 and CLP Flat Pro series, and every
+  21st light of the list) all were read, and all 247 of their modes passed the desk program's own check of
+  a kind of light; the Dotz Bar 1.4 in 12 channels is four cells of red, green and blue. On a test copy
+  without a box, in Chrome: the window counted 666 lights of the Open Fixture Library (7 of them have
+  capitals in their file names, which it had left out before) and 1,781 of QLC+; "adj dotz bar" found the
+  Dotz Bar 1.4 of QLC+, and its 12-channel mode made the light a bar of four cells.
+* **What the channels of a fixture do (2026-11-22):** the page passes 189 tests. In the tests: the list of a
+  strobe with the values of each choice; the line under the faders before a fader moved and after (a fader
+  moved to 32 said "S (4) at 32: Open (32 to 63)", and a screen reader hears "32, Open"); the pointer on a
+  letter with all its values; a strobe of the Open Fixture Library named with its speed and at random. The
+  moving head of the examples "4 Moving heads" and "6 Concert" was read again from the library for these
+  names. On a test copy without a box, in Chrome: the Ultra Hex Bar 12 of ADJ from the Open Fixture
+  Library in 12 channels showed its strobe as Closed (0 to 31), Open (32 to 63), Strobe, slow to fast (64 to
+  95), Open (96 to 127), Pulse, slow to fast (128 to 159), Open (160 to 191), Random strobe (192 to 223) and
+  Open (224 to 255); a color opened it at 32 ("32, Open"), and the strobe moved to 64 said "S (8) at 64:
+  Strobe, slow to fast (64 to 95)" under the faders.
+* **A strobe on the Stage view (2026-11-22):** the page passes 194 tests. In the tests: no strobe with the
+  shutter open or closed, or in a range that does something else; the kind (strobe, pulse, ramp, at
+  random) and the speed from the range (Hz at the place of the value, "fast to slow" turned round); a light
+  of letters strobing above 9; a strobe speed channel without ranges ignored beside a shutter with ranges;
+  the flashes on the screen (1.5 a second as they are, 11 as 2.5, 20 and more as 3); on the plan a bar at 20
+  Hz flashing every 0.333 s with "⚡ 20 Hz" over it and in its title, and nothing while it gives no light.
+  On a test copy without a box, in Chrome, with the example "4 Moving heads": the left head, its dimmer up
+  and its shutter at 96 ("Strobe, 0.3Hz to 19Hz"), flashed on the plan every 0.381 s with "⚡ 13.3 Hz"
+  over it; with less motion asked for it stopped flashing and kept the mark.
+* **The color window of a step (2026-11-22):** the page passes 194 tests. In the tests: a press on Blue, then
+  Red, left the window open, said "Chosen: #ff0000" and sent nothing; Use gave the step red and closed it;
+  the window opened again on the step's color, White chose no color, and Cancel sent nothing. On a test copy
+  without a box, in Chrome, with the example "3 Fixtures and the stage": the window of step 2.0 opened on
+  its blue, Red and a drag across the field changed the color chosen while the window stayed open (also with
+  the drag ending outside it), and Use closed it.
+* **Left and right Ctrl and Alt in shortcuts (2026-11-22):** the page passes 198 tests. In the tests: the side
+  of Ctrl and Alt in a shortcut as their own presses said it, no side when both are down or the side was not
+  seen, AltGr as Right Alt without its Ctrl (and with a right Ctrl held with it), and the names "Left Ctrl +
+  Z" and "Right Alt + 1"; on the desk, Set with the left Ctrl and B gave Black out "Left Ctrl + B", the right
+  Ctrl and B then did not press it, and Undo's Ctrl + Z, which has no side, worked with the right Ctrl;
+  AltGr and B pressed a Black out set earlier as Ctrl + Alt + B, and Set with them gave "Right Alt + B",
+  which they then pressed. On a test copy without a box, in Chrome at 1600 × 1000: Set gave "Right Ctrl +
+  B" for Black out and "Left Alt + C" for Clear; on Main the left Ctrl and B left blackout off, and the
+  right Ctrl and B switched it on and, pressed again, off. The keys came from the test script, not from a
+  keyboard, and a real AltGr key was not tried in Chrome.
 * **Show files of a real console (2026-11-19):** 30 show files that ETC SmartFades wrote (software 3.0.1 and
   3.0.2) went through the import. The first version read them wrongly: their "FOLLOWON 0" (no wait) as a
   follow at once, their patch the wrong way round, and it lost their labels. With the SmartFade's dialect

@@ -174,9 +174,6 @@ export class SettingsView {
     if (autosave) this.store.setAutosave(autosave.on, Number((event.target as HTMLSelectElement).value));
   }
 
-  /** True on the PC the desk program runs on: there the project keeps the layout and the shortcuts. */
-  protected readonly projectKeeps = computed(() => this.store.lan()?.local === true);
-
   // ---------------------------------------------------------------- LAN
 
   /** LAN as the desk program has it, for a page on the PC; null on another device and with an older desk program. */

@@ -1,6 +1,6 @@
 /**
  * A color of the desk that Settings can change: of a kind of key (channels, memories,
- * sequences), or of one key. On the PC it is saved with the project, like the layout.
+ * sequences), or of one key. It belongs to this device, like the other settings.
  */
 export interface KeyColor {
   /** Its name in the settings, and the tone of its keys (see LampButton). */
@@ -25,6 +25,7 @@ export const KEY_COLOR_GROUPS = [
   'Independents',
   'Sequences view',
   'Stage view',
+  'Notes view',
 ] as const;
 export type KeyColorGroup = (typeof KEY_COLOR_GROUPS)[number];
 
@@ -64,6 +65,7 @@ export const KEY_COLORS: readonly KeyColor[] = [
   key('save-project', 'Top bar', 'Save', AMBER),
   key('load', 'Top bar', 'Load', AMBER),
   key('import', 'Top bar', 'Import', AMBER),
+  key('export', 'Top bar', 'Export', AMBER),
 
   key('ind-edit', 'Independents', 'Edit', AMBER),
 
@@ -77,6 +79,9 @@ export const KEY_COLORS: readonly KeyColor[] = [
   key('stage-clear', 'Stage view', 'Clear', WHITE),
   key('stage-edit', 'Stage view', 'Edit', AMBER),
   key('stage-add', 'Stage view', 'Add light', AMBER),
+
+  key('notes-edit', 'Notes view', 'Edit', AMBER),
+  key('notes-tools', 'Notes view', 'The tools (bold, underline, size, lists, color)', AMBER),
 ];
 
 /** The colors the keys have at first, each once, with a name: the palette Settings offers for any key. */

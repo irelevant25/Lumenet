@@ -2,6 +2,7 @@ import { Component, ElementRef, computed, inject, signal, viewChild } from '@ang
 import { DeskStore } from '../desk/desk-store';
 import { StageLight } from '../desk/desk-types';
 import {
+  LIBRARY_NAMES,
   LibraryEntry,
   LibraryFixture,
   libraryFixture,
@@ -12,9 +13,10 @@ import {
 import { LampButton } from '../lamp-button/lamp-button';
 
 /**
- * The window that makes a light of the stage plan a light of the fixture library (the Open
- * Fixture Library): search the maker and the model, choose it, choose its mode, and the light
- * gets the channels of that mode, each with its name and what it does at its values.
+ * The window that makes a light of the stage plan a light of a fixture library (the Open Fixture
+ * Library, or that of QLC+): search the maker and the model in both, choose a light (the list says
+ * which library it is from), choose its mode, and the light gets the channels of that mode, each
+ * with its name and what it does at its values.
  */
 @Component({
   imports: [LampButton],
@@ -29,8 +31,16 @@ export class LibraryDialog {
 
   /** The light that is to become a light of the library. */
   private readonly lightId = signal<number | null>(null);
-  /** Every light of the library; null until the list has come. */
+  protected readonly names = LIBRARY_NAMES;
+  /** Every light of both libraries; null until the lists have come. */
   protected readonly entries = signal<LibraryEntry[] | null>(null);
+  /** A library whose list could not be read: what went wrong. Its lights are missing from the list. */
+  protected readonly problems = signal<string[]>([]);
+  /** How many lights each library has in the list. */
+  protected readonly counts = computed(() => {
+    const entries = this.entries() ?? [];
+    return { ofl: entries.filter((entry) => entry.library === 'ofl').length, qlcplus: entries.filter((entry) => entry.library === 'qlcplus').length };
+  });
   protected readonly search = signal('');
   protected readonly found = computed(() => searchLibrary(this.entries() ?? [], this.search()));
   /** The model chosen, read from its file; null while the list is shown. */
@@ -54,11 +64,13 @@ export class LibraryDialog {
     this.dialog().nativeElement.close();
   }
 
-  /** The list of the library: from the browser's copy, or fetched again. */
+  /** The lists of the libraries: from the browser's copies, or fetched again. */
   protected async loadList(fresh: boolean): Promise<void> {
     this.busy.set(true);
     try {
-      this.entries.set(await libraryIndex(fetch, Date.now(), fresh));
+      const index = await libraryIndex(fetch, Date.now(), fresh);
+      this.entries.set(index.entries);
+      this.problems.set(index.problems);
       this.error.set('');
     } catch (error) {
       this.error.set((error as Error).message);

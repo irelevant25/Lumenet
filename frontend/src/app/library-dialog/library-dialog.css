@@ -86,8 +86,12 @@ select {
   list-style: none;
 }
 
+/* a light found: maker and model, and at the right the library it is from */
 .found button {
-  display: block;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
   width: 100%;
   padding: 7px 10px;
   border: 0;
@@ -102,6 +106,12 @@ select {
 .found button:hover,
 .found button:focus-visible {
   background: var(--panel);
+}
+
+.from {
+  flex: none;
+  color: var(--legend-dim);
+  font-size: calc(12px * var(--font-scale));
 }
 
 .channels li {

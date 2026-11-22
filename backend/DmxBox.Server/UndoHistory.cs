@@ -2,8 +2,8 @@ namespace DmxBox.Server;
 
 /// <summary>
 /// Undo and redo for what the project holds: the looks and sequences of the memories, the
-/// stack, the notes and the bindings of the independent keys. The faders, Clear, the master,
-/// blackout and the settings of the UI are no steps of the history.
+/// stack, the notes, the bindings of the independent keys and the stage plan. The faders, Clear,
+/// the master and blackout are no steps of the history.
 /// </summary>
 /// <remarks>
 /// <para>

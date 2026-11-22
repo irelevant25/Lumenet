@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace DmxBox.Server;
@@ -15,6 +14,14 @@ internal sealed class ProjectFile
 
     /// <summary>The version of the file format, so that a later format can be told apart.</summary>
     public int? Version { get; set; }
+
+    /// <summary>
+    /// The notes of the project, instructions for the show, see <see cref="ProjectNotes"/>.
+    /// Written only for a project that has some; files from before there were such notes do not
+    /// have the property, nor do imported shows.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Notes { get; set; }
 
     /// <summary>The memories that hold a look. Empty memories are not listed.</summary>
     public List<ProjectFileMemory?>? Memories { get; set; }
@@ -49,14 +56,6 @@ internal sealed class ProjectFile
 
     /// <summary>The steps of the stack. Files of version 1 do not have the property.</summary>
     public List<ProjectFileStep?>? Stack { get; set; }
-
-    /// <summary>
-    /// The settings of the UI on the PC that belong to the project, see
-    /// <see cref="ProjectSettings"/>. Written only for a project that has some; files from before
-    /// there were such settings do not have the property, nor do imported shows.
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public JsonElement? Settings { get; set; }
 
     /// <summary>
     /// The stage plan: the size of the stage and the lights of the rig on it. Files from before

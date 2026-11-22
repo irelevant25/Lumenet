@@ -1,6 +1,6 @@
 import { Service, computed, inject, signal } from '@angular/core';
 import { DeskConnection } from './desk-connection';
-import { DeskSettings, ProjectSettingsData } from './desk-settings';
+import { DeskSettings } from './desk-settings';
 import {
   AutosaveOptions,
   BoxStatus,
@@ -419,6 +419,10 @@ export class DeskStore {
   readonly stageKnown = signal(false);
   /** The picture under the plan, as a data URL; null without one (or until it has come). */
   readonly stagePicture = signal<string | null>(null);
+  /** The notes of the project, instructions for the show, as the Notes view wrote them (a little HTML); empty for none. */
+  readonly notes = signal('');
+  /** False while the notes could not be fetched: a desk program from before notes. */
+  readonly notesKnown = signal(false);
   // The name of the picture that stagePicture holds or is being fetched.
   private stagePictureId: string | null = null;
   // True once this page said that unsaved work was brought back.
@@ -473,11 +477,7 @@ export class DeskStore {
     connection.on<[AutosaveOptions]>('AutosaveChanged', (options) => this.autosave.set(options));
     connection.on<[StagePlan]>('StageChanged', (plan) => this.takeStage(plan));
     connection.on<[SoloState]>('SoloChanged', (solo) => this.solo.set(solo));
-    // The project's settings: another page on the PC changed them, or a project was loaded.
-    // A phone keeps its own.
-    connection.on<[unknown]>('SettingsChanged', (settings) => {
-      if (this.lan()?.local && settings) this.settings.takeProject(settings);
-    });
+    connection.on<[string]>('NotesChanged', (notes) => this.notes.set(notes ?? ''));
     connection.on<[number, number]>('SequenceSpeedChanged', (memory, speed) =>
       this.sequences.update((all) => (all[memory] ? { ...all, [memory]: { ...all[memory], speed } } : all)),
     );
@@ -1131,6 +1131,49 @@ export class DeskStore {
     this.project.set(await this.connection.invoke<ProjectInfo>('LoadProject', name));
   }
 
+  /** Opens one of the examples that come with the desk program, as loading does; the example itself stays as it is. */
+  async loadExample(name: string): Promise<void> {
+    this.mode.set(IDLE);
+    this.project.set(await this.connection.invoke<ProjectInfo>('LoadExample', name));
+  }
+
+  /** The open project as its file says it, for Export. Nothing changes. */
+  exportProject(): Promise<string> {
+    return this.connection.invoke<string>('ExportProject');
+  }
+
+  /**
+   * Opens a project file from this device (Import) in place of the open project, as loading does.
+   * The project is called `name` and has no file in the projects folder until it is saved.
+   */
+  async importProjectFile(name: string, text: string): Promise<void> {
+    this.mode.set(IDLE);
+    this.dropOutbox();
+    this.project.set(await this.connection.invoke<ProjectInfo>('ImportProjectFile', name, text));
+  }
+
+  /** Puts a stage from a file of this device (Import) in place of the project's: its lights, groups and picture. */
+  async importStage(text: string): Promise<void> {
+    await this.connection.invoke<void>('ImportStage', text);
+  }
+
+  // ---------------------------------------------------------------- the notes of the project
+
+  /**
+   * The notes as the Notes view wrote them: shown here at once, and kept by the desk program,
+   * which tells the other pages. Rejects with the desk program's message when it refuses them
+   * (while the stack is live, or when they are too long).
+   */
+  async setNotes(notes: string): Promise<void> {
+    this.notes.set(notes);
+    try {
+      await this.connection.invoke<void>('SetNotes', notes);
+    } catch (error) {
+      void this.fetchNotes(); // the notes the desk program keeps, in place of those it refused
+      throw error;
+    }
+  }
+
   /**
    * Opens the show of a theatre console, from a file in the USITT ASCII format, as a project in
    * place of the open one, as loading does. Gives back what the desk made of it, sentence by sentence.
@@ -1248,33 +1291,6 @@ export class DeskStore {
       // A desk program from before LAN does not know the question. Then the page has no LAN key.
       this.lan.set(null);
     }
-    await this.joinProjectSettings();
-  }
-
-  /**
-   * On the PC the desk program runs on, the layout and the shortcuts belong to the project: the
-   * page takes the project's, or, while the desk program has none (after a start without a
-   * project), hands it its own. From then on every change goes there too. A phone or a tablet
-   * keeps its settings to itself.
-   */
-  private async joinProjectSettings(): Promise<void> {
-    if (!this.lan()?.local) {
-      this.settings.followProject(null);
-      return;
-    }
-
-    try {
-      let project = await this.connection.invoke<unknown>('GetSettings');
-      if (project === null || project === undefined) {
-        const taken = await this.connection.invoke<boolean>('AdoptSettings', this.settings.projectSettings());
-        if (!taken) project = await this.connection.invoke<unknown>('GetSettings');
-      }
-      if (project !== null && project !== undefined) this.settings.takeProject(project);
-      this.settings.followProject((settings: ProjectSettingsData) => this.run('SetSettings', settings));
-    } catch {
-      // A desk program from before settings in the project: this browser keeps them, as before.
-      this.settings.followProject(null);
-    }
   }
 
   private async fetchHistory(): Promise<void> {
@@ -1369,6 +1385,18 @@ export class DeskStore {
     void this.fetchMemoryLooks();
     void this.fetchSequencesAndStack();
     void this.fetchStage();
+    void this.fetchNotes();
+  }
+
+  private async fetchNotes(): Promise<void> {
+    try {
+      this.notes.set((await this.connection.invoke<string | undefined>('GetNotes')) ?? '');
+      this.notesKnown.set(true);
+    } catch {
+      // A desk program from before notes. The Notes view says so.
+      this.notes.set('');
+      this.notesKnown.set(false);
+    }
   }
 
   private async fetchStage(): Promise<void> {

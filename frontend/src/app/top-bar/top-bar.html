@@ -131,15 +131,27 @@
     lmLamp
     type="button"
     tone="import"
-    aria-label="Import a show"
+    aria-label="Import"
     data-action="project.import"
-    title="Opens the show file of a theatre console (USITT ASCII, .asc) as a project"
+    title="Takes a project, a stage, settings or keyboard shortcuts from a file, or opens the show file of a theatre console (.asc)"
     [disabled]="store.live()"
     (click)="importDialog().open()"
   >
     Import
   </button>
+  <button
+    lmLamp
+    type="button"
+    tone="export"
+    aria-label="Export"
+    data-action="project.export"
+    title="Puts the project, the stage, the settings or the keyboard shortcuts into a file on this device"
+    (click)="exportDialog().open()"
+  >
+    Export
+  </button>
 </div>
 
 <lm-project-dialog />
 <lm-import-dialog />
+<lm-export-dialog />

@@ -1,0 +1,364 @@
+{
+  "format": "lumenet-project",
+  "version": 4,
+  "notes": "<div><font size=\"5\"><b>Fixtures and the stage</b></font></div><div>A stage of LED lights: four RGBW pars at the front, four RGB pars at the back, an LED bar of four cells and a hazer. The stack is made of the lights of the stage and their groups only: no memory, no channel.</div><div><b><font color=\"#ffb020\">What is in it</font></b></div><ul><li><b>Stage</b>: the plan of the rig. Each light knows its channels (D dims, R G B W mix the color), so the desk plays it as a light, not as loose channels.</li><li>Groups: Front, Back and All washes. A group plays its lights together.</li><li>The stack: each step lights a light or a group in a color, at a level, over its times. Going on takes it down again.</li><li>Memory 1: a chase over the back pars, made of light steps with a color each.</li></ul><div><b><font color=\"#ffb020\">Try it</font></b></div><ol><li>Open <b>Fixtures</b>: every light with its fader and its color; the groups under them. Move a fader, choose a color: the light follows, and <b>Stage</b> shows it.</li><li>Press <b>Stack</b> and go through the steps with <b>Play</b>. On the <b>Stack</b> view each step names its light or group, with its color.</li><li>Make a step of your own: on the <b>Stack</b> view, <b>Add step</b>, then choose a group as its target and a color.</li><li>On <b>Stage</b>, <b>Edit</b> lets you move the lights, change their channels, and make new ones.</li></ol><div>A light that is missing in a group, or a group that is gone, makes its steps play nothing: the steps say so.</div>",
+  "memories": [],
+  "channelNotes": {},
+  "memoryNotes": {
+    "1": "Back\u2028colors"
+  },
+  "independents": [
+    1,
+    6,
+    11,
+    16,
+    45,
+    21,
+    24,
+    27,
+    30,
+    33,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32
+  ],
+  "memoryIndependents": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32
+  ],
+  "sequences": [
+    {
+      "number": 1,
+      "loop": true,
+      "random": false,
+      "speed": 1,
+      "steps": [
+        {
+          "target": "fixture",
+          "number": 5,
+          "color": "#ff2040",
+          "value": 255,
+          "up": 0.5,
+          "wait": 0.5,
+          "down": 0.5
+        },
+        {
+          "target": "fixture",
+          "number": 6,
+          "color": "#ff9a2a",
+          "value": 255,
+          "up": 0.5,
+          "wait": 0.5,
+          "down": 0.5
+        },
+        {
+          "target": "fixture",
+          "number": 7,
+          "color": "#3ddc84",
+          "value": 255,
+          "up": 0.5,
+          "wait": 0.5,
+          "down": 0.5
+        },
+        {
+          "target": "fixture",
+          "number": 8,
+          "color": "#4aa3ff",
+          "value": 255,
+          "up": 0.5,
+          "wait": 0.5,
+          "down": 0.5
+        }
+      ]
+    }
+  ],
+  "stack": [
+    {
+      "cue": "1.0",
+      "target": "group",
+      "number": 3,
+      "color": "#ffd9a0",
+      "value": 200,
+      "up": 3,
+      "wait": 0,
+      "down": 2
+    },
+    {
+      "cue": "2.0",
+      "target": "group",
+      "number": 2,
+      "color": "#2040ff",
+      "value": 255,
+      "up": 2,
+      "wait": 0,
+      "down": 2
+    },
+    {
+      "cue": "3.0",
+      "target": "fixture",
+      "number": 2,
+      "color": "#ffffff",
+      "value": 255,
+      "up": 1,
+      "wait": 0,
+      "down": 1
+    },
+    {
+      "cue": "4.0",
+      "target": "group",
+      "number": 1,
+      "color": "#ff9a2a",
+      "value": 230,
+      "up": 4,
+      "wait": 0,
+      "down": 3
+    },
+    {
+      "cue": "4.5",
+      "target": "group",
+      "number": 3,
+      "color": "#ff1010",
+      "value": 255,
+      "up": 0.2,
+      "wait": 2,
+      "down": 0.5
+    },
+    {
+      "cue": "5.0",
+      "target": "fixture",
+      "number": 9,
+      "color": "#d040ff",
+      "value": 255,
+      "up": 1,
+      "wait": 0,
+      "down": 1
+    },
+    {
+      "cue": "6.0",
+      "target": "fixture",
+      "number": 10,
+      "value": 120,
+      "up": 0,
+      "wait": 8,
+      "down": 0
+    },
+    {
+      "cue": "7.0",
+      "target": "group",
+      "number": 2,
+      "color": "#3ddc84",
+      "value": 255,
+      "up": 3,
+      "wait": 0,
+      "down": 3
+    },
+    {
+      "cue": "8.0",
+      "target": "group",
+      "number": 3,
+      "color": "#ffffff",
+      "value": 255,
+      "up": 2,
+      "wait": 0,
+      "down": 4
+    }
+  ],
+  "stage": {
+    "width": 14,
+    "depth": 9,
+    "lights": [
+      {
+        "name": "Front 1",
+        "address": 1,
+        "channels": "DRGBW",
+        "x": 2,
+        "y": 11,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Front 2",
+        "address": 6,
+        "channels": "DRGBW",
+        "x": 5.3,
+        "y": 11,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Front 3",
+        "address": 11,
+        "channels": "DRGBW",
+        "x": 8.6,
+        "y": 11,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Front 4",
+        "address": 16,
+        "channels": "DRGBW",
+        "x": 11.9,
+        "y": 11,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Back 1",
+        "address": 21,
+        "channels": "RGB",
+        "x": 2,
+        "y": 1,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Back 2",
+        "address": 24,
+        "channels": "RGB",
+        "x": 5.3,
+        "y": 1,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Back 3",
+        "address": 27,
+        "channels": "RGB",
+        "x": 8.6,
+        "y": 1,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Back 4",
+        "address": 30,
+        "channels": "RGB",
+        "x": 11.9,
+        "y": 1,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "LED bar",
+        "address": 33,
+        "channels": "RGBRGBRGBRGB",
+        "x": 7,
+        "y": 6,
+        "angle": 0,
+        "shape": "square",
+        "width": 4,
+        "depth": 1
+      },
+      {
+        "name": "Hazer",
+        "address": 45,
+        "channels": "X",
+        "x": 13.5,
+        "y": 8,
+        "angle": 0,
+        "shape": "square",
+        "width": 1,
+        "depth": 1
+      }
+    ],
+    "groups": [
+      {
+        "name": "Front",
+        "lights": [
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      {
+        "name": "Back",
+        "lights": [
+          5,
+          6,
+          7,
+          8
+        ]
+      },
+      {
+        "name": "All washes",
+        "lights": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      }
+    ]
+  }
+}

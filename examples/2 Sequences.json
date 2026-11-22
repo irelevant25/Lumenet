@@ -1,0 +1,508 @@
+{
+  "format": "lumenet-project",
+  "version": 4,
+  "notes": "<div><font size=\"5\"><b>Sequences</b></font></div><div>A row of six lamps, two washes and a blinder. Six of the memories hold sequences: steps that run by themselves while the memory fader is up.</div><div><b><font color=\"#ffb020\">What is in it</font></b></div><ul><li>Memories 1 and 2: plain looks, the washes and the row.</li><li>Memory 3: a chase from left to right, in a loop. Memory 4: a bounce, there and back.</li><li>Memory 5: a sparkle in random order, faster than written (speed 1.5).</li><li>Memory 6: a sequence of memories: the washes and the row take turns.</li><li>Memory 7: an intro that runs once and stops, with a flash of the blinder.</li><li>Memory 8: two slow breaths of the washes, at half speed.</li></ul><div><b><font color=\"#ffb020\">Try it</font></b></div><ol><li>On <b>Main</b>, push the fader of memory 3 up: the chase runs. Its level is how bright it runs.</li><li>The memory keys of the independents (at the right) switch memories 1 to 8 on and off.</li><li>Open <b>Sequences</b>: every step with its target, level and times (up, wait, down). <b>Once</b>, <b>Loop</b> and <b>Random</b> change how it runs, and the speed fader how fast.</li><li><b>Rate</b> on <b>Main</b> makes every sequence faster or slower at once, without changing them.</li><li><b>Template</b> on <b>Sequences</b> makes a whole chase over a range of channels at once.</li><li><b>Rec seq</b> records a sequence key by key: press it, a free memory, then the channel keys in their order.</li></ol>",
+  "memories": [
+    {
+      "number": 1,
+      "levels": {
+        "7": 200,
+        "8": 200
+      }
+    },
+    {
+      "number": 2,
+      "levels": {
+        "1": 180,
+        "2": 180,
+        "3": 180,
+        "4": 180,
+        "5": 180,
+        "6": 180
+      }
+    }
+  ],
+  "channelNotes": {
+    "1": "Lamp\u20281",
+    "2": "Lamp\u20282",
+    "3": "Lamp\u20283",
+    "4": "Lamp\u20284",
+    "5": "Lamp\u20285",
+    "6": "Lamp\u20286",
+    "7": "Wash\u2028left",
+    "8": "Wash\u2028right",
+    "9": "Blinder"
+  },
+  "memoryNotes": {
+    "1": "Washes",
+    "2": "Lamp row",
+    "3": "Chase\u2028left-right",
+    "4": "Bounce",
+    "5": "Sparkle\u2028random",
+    "6": "Washes and\u2028row",
+    "7": "Intro\u2028once",
+    "8": "Slow\u2028breath"
+  },
+  "independents": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    9,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32
+  ],
+  "memoryIndependents": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    1,
+    2,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32
+  ],
+  "sequences": [
+    {
+      "number": 3,
+      "loop": true,
+      "random": false,
+      "speed": 1,
+      "steps": [
+        {
+          "target": "channel",
+          "number": 1,
+          "value": 255,
+          "up": 0,
+          "wait": 0.2,
+          "down": 0.3
+        },
+        {
+          "target": "channel",
+          "number": 2,
+          "value": 255,
+          "up": 0,
+          "wait": 0.2,
+          "down": 0.3
+        },
+        {
+          "target": "channel",
+          "number": 3,
+          "value": 255,
+          "up": 0,
+          "wait": 0.2,
+          "down": 0.3
+        },
+        {
+          "target": "channel",
+          "number": 4,
+          "value": 255,
+          "up": 0,
+          "wait": 0.2,
+          "down": 0.3
+        },
+        {
+          "target": "channel",
+          "number": 5,
+          "value": 255,
+          "up": 0,
+          "wait": 0.2,
+          "down": 0.3
+        },
+        {
+          "target": "channel",
+          "number": 6,
+          "value": 255,
+          "up": 0,
+          "wait": 0.2,
+          "down": 0.3
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "loop": true,
+      "random": false,
+      "speed": 1,
+      "steps": [
+        {
+          "target": "channel",
+          "number": 1,
+          "value": 255,
+          "up": 0.1,
+          "wait": 0.2,
+          "down": 0.2
+        },
+        {
+          "target": "channel",
+          "number": 2,
+          "value": 255,
+          "up": 0.1,
+          "wait": 0.2,
+          "down": 0.2
+        },
+        {
+          "target": "channel",
+          "number": 3,
+          "value": 255,
+          "up": 0.1,
+          "wait": 0.2,
+          "down": 0.2
+        },
+        {
+          "target": "channel",
+          "number": 4,
+          "value": 255,
+          "up": 0.1,
+          "wait": 0.2,
+          "down": 0.2
+        },
+        {
+          "target": "channel",
+          "number": 5,
+          "value": 255,
+          "up": 0.1,
+          "wait": 0.2,
+          "down": 0.2
+        },
+        {
+          "target": "channel",
+          "number": 6,
+          "value": 255,
+          "up": 0.1,
+          "wait": 0.2,
+          "down": 0.2
+        },
+        {
+          "target": "channel",
+          "number": 5,
+          "value": 255,
+          "up": 0.1,
+          "wait": 0.2,
+          "down": 0.2
+        },
+        {
+          "target": "channel",
+          "number": 4,
+          "value": 255,
+          "up": 0.1,
+          "wait": 0.2,
+          "down": 0.2
+        },
+        {
+          "target": "channel",
+          "number": 3,
+          "value": 255,
+          "up": 0.1,
+          "wait": 0.2,
+          "down": 0.2
+        },
+        {
+          "target": "channel",
+          "number": 2,
+          "value": 255,
+          "up": 0.1,
+          "wait": 0.2,
+          "down": 0.2
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "loop": true,
+      "random": true,
+      "speed": 1.5,
+      "steps": [
+        {
+          "target": "channel",
+          "number": 1,
+          "value": 255,
+          "up": 0,
+          "wait": 0.1,
+          "down": 0.4
+        },
+        {
+          "target": "channel",
+          "number": 2,
+          "value": 255,
+          "up": 0,
+          "wait": 0.1,
+          "down": 0.4
+        },
+        {
+          "target": "channel",
+          "number": 3,
+          "value": 255,
+          "up": 0,
+          "wait": 0.1,
+          "down": 0.4
+        },
+        {
+          "target": "channel",
+          "number": 4,
+          "value": 255,
+          "up": 0,
+          "wait": 0.1,
+          "down": 0.4
+        },
+        {
+          "target": "channel",
+          "number": 5,
+          "value": 255,
+          "up": 0,
+          "wait": 0.1,
+          "down": 0.4
+        },
+        {
+          "target": "channel",
+          "number": 6,
+          "value": 255,
+          "up": 0,
+          "wait": 0.1,
+          "down": 0.4
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "loop": true,
+      "random": false,
+      "speed": 1,
+      "steps": [
+        {
+          "target": "memory",
+          "number": 1,
+          "value": 255,
+          "up": 2,
+          "wait": 1,
+          "down": 2
+        },
+        {
+          "target": "memory",
+          "number": 2,
+          "value": 255,
+          "up": 2,
+          "wait": 1,
+          "down": 2
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "loop": false,
+      "random": false,
+      "speed": 1,
+      "steps": [
+        {
+          "target": "channel",
+          "number": 9,
+          "value": 255,
+          "up": 0,
+          "wait": 0.2,
+          "down": 1
+        },
+        {
+          "target": "memory",
+          "number": 2,
+          "value": 255,
+          "up": 3,
+          "wait": 2,
+          "down": 3
+        },
+        {
+          "target": "memory",
+          "number": 1,
+          "value": 255,
+          "up": 3,
+          "wait": 0,
+          "down": 0
+        }
+      ]
+    },
+    {
+      "number": 8,
+      "loop": true,
+      "random": false,
+      "speed": 0.5,
+      "steps": [
+        {
+          "target": "channel",
+          "number": 7,
+          "value": 255,
+          "up": 3,
+          "wait": 0.5,
+          "down": 3
+        },
+        {
+          "target": "channel",
+          "number": 8,
+          "value": 255,
+          "up": 3,
+          "wait": 0.5,
+          "down": 3
+        }
+      ]
+    }
+  ],
+  "stack": [],
+  "stage": {
+    "width": 12,
+    "depth": 8,
+    "lights": [
+      {
+        "name": "Lamp 1",
+        "address": 1,
+        "channels": "D",
+        "color": "#ffb020",
+        "x": 1,
+        "y": 1,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Lamp 2",
+        "address": 2,
+        "channels": "D",
+        "color": "#ffb020",
+        "x": 3,
+        "y": 1,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Lamp 3",
+        "address": 3,
+        "channels": "D",
+        "color": "#ffb020",
+        "x": 5,
+        "y": 1,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Lamp 4",
+        "address": 4,
+        "channels": "D",
+        "color": "#ffb020",
+        "x": 7,
+        "y": 1,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Lamp 5",
+        "address": 5,
+        "channels": "D",
+        "color": "#ffb020",
+        "x": 9,
+        "y": 1,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Lamp 6",
+        "address": 6,
+        "channels": "D",
+        "color": "#ffb020",
+        "x": 11,
+        "y": 1,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Wash left",
+        "address": 7,
+        "channels": "D",
+        "x": 3,
+        "y": 11,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Wash right",
+        "address": 8,
+        "channels": "D",
+        "x": 9,
+        "y": 11,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Blinder",
+        "address": 9,
+        "channels": "D",
+        "x": 6,
+        "y": 10,
+        "angle": 0,
+        "shape": "square",
+        "width": 2,
+        "depth": 1
+      }
+    ]
+  }
+}

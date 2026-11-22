@@ -1,0 +1,139 @@
+<header>
+  <h2>Notes</h2>
+  <p class="summary">
+    Instructions for the show: what it is, and how to run it. They belong to the project and are saved with it.
+  </p>
+</header>
+
+<!-- the tool keys at the left, Edit at the right. A tool key keeps the cursor where it is in the text. -->
+<div class="bar" role="toolbar" aria-label="Notes" aria-controls="notes-text">
+  <div class="tools">
+    <button
+      lmLamp
+      type="button"
+      tone="notes-tools"
+      aria-label="Bold"
+      [level]="tools().bold ? 3 : 1"
+      [attr.aria-pressed]="tools().bold"
+      [disabled]="!editing()"
+      (mousedown)="$event.preventDefault()"
+      (click)="apply('bold')"
+    >
+      <b>B</b>
+    </button>
+    <button
+      lmLamp
+      type="button"
+      tone="notes-tools"
+      aria-label="Underline"
+      [level]="tools().underline ? 3 : 1"
+      [attr.aria-pressed]="tools().underline"
+      [disabled]="!editing()"
+      (mousedown)="$event.preventDefault()"
+      (click)="apply('underline')"
+    >
+      <u>U</u>
+    </button>
+    <label class="size">
+      <span>Size</span>
+      <select aria-label="Size of the text" [disabled]="!editing()" (change)="onSize($event)">
+        @for (size of sizes; track size.size) {
+          <option [value]="size.size" [selected]="tools().size === size.size">{{ size.name }}</option>
+        }
+      </select>
+    </label>
+    <button
+      lmLamp
+      type="button"
+      tone="notes-tools"
+      aria-label="Bulleted list"
+      [level]="tools().bulleted ? 3 : 1"
+      [attr.aria-pressed]="tools().bulleted"
+      [disabled]="!editing()"
+      (mousedown)="$event.preventDefault()"
+      (click)="apply('insertUnorderedList')"
+    >
+      • List
+    </button>
+    <button
+      lmLamp
+      type="button"
+      tone="notes-tools"
+      aria-label="Numbered list"
+      [level]="tools().numbered ? 3 : 1"
+      [attr.aria-pressed]="tools().numbered"
+      [disabled]="!editing()"
+      (mousedown)="$event.preventDefault()"
+      (click)="apply('insertOrderedList')"
+    >
+      1. List
+    </button>
+    <div class="colors" role="group" aria-label="Color of the text">
+      <button
+        type="button"
+        class="swatch usual"
+        aria-label="Usual color"
+        title="Usual color"
+        [class.current]="editing() && isColor(null)"
+        [attr.aria-pressed]="editing() && isColor(null)"
+        [disabled]="!editing()"
+        (mousedown)="$event.preventDefault()"
+        (click)="setColor(null)"
+      >
+        A
+      </button>
+      @for (color of colors; track color.color) {
+        <button
+          type="button"
+          class="swatch"
+          [style.--swatch]="color.color"
+          [attr.aria-label]="color.name"
+          [title]="color.name"
+          [class.current]="editing() && isColor(color.color)"
+          [attr.aria-pressed]="editing() && isColor(color.color)"
+          [disabled]="!editing()"
+          (mousedown)="$event.preventDefault()"
+          (click)="setColor(color.color)"
+        ></button>
+      }
+    </div>
+  </div>
+
+  <button
+    lmLamp
+    type="button"
+    tone="notes-edit"
+    data-action="notes.edit"
+    aria-label="Edit the notes"
+    [level]="editing() ? 3 : 1"
+    [attr.aria-pressed]="editing()"
+    [disabled]="!editing() && (store.live() || !store.notesKnown())"
+    [attr.title]="store.live() ? 'The stack is live: nothing that is stored can be changed.' : null"
+    (click)="toggleEdit()"
+  >
+    Edit
+  </button>
+</div>
+
+@if (error()) {
+  <p class="error" role="alert">{{ error() }}</p>
+} @else if (!store.notesKnown() && store.online()) {
+  <p class="error" role="status">The desk program that runs is older than the notes. Start it again to have them.</p>
+}
+
+<div
+  #editor
+  id="notes-text"
+  class="text"
+  role="textbox"
+  aria-multiline="true"
+  aria-label="Notes of the project"
+  [class.editing]="editing()"
+  [attr.contenteditable]="editing() ? 'true' : 'false'"
+  [attr.aria-readonly]="!editing()"
+  [attr.data-empty]="editing() ? 'Write the instructions for the show here.' : 'No notes yet. Edit lets you write the instructions for the show here.'"
+  (input)="onInput()"
+  (paste)="onPaste($event)"
+  (drop)="$event.preventDefault()"
+  (keydown)="onKeyDown($event)"
+></div>

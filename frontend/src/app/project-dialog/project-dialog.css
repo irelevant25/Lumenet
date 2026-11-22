@@ -47,6 +47,15 @@ input {
   font-size: calc(16px * var(--font-scale));
 }
 
+h3 {
+  margin: 4px 0 -4px;
+  color: var(--legend-dim);
+  font-size: calc(12px * var(--font-scale));
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .hint {
   margin: 0;
   color: var(--legend-dim);

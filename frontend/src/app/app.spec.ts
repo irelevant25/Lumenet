@@ -5,7 +5,7 @@ import { App } from './app';
 import { routes } from './app.routes';
 import { ACTION_GROUPS, DESK_ACTIONS, actionWithId } from './desk/desk-actions';
 import { DeskConnection } from './desk/desk-connection';
-import { DeskSettings } from './desk/desk-settings';
+import { DeskSettings, SETTINGS_STORAGE_KEY } from './desk/desk-settings';
 import { DeskStore } from './desk/desk-store';
 import {
   AutosaveOptions,
@@ -15,6 +15,7 @@ import {
   LanAccess,
   MEMORY_COUNT,
   Playback,
+  ProjectList,
   Sequence,
   StackPlayback,
   StackState,
@@ -82,8 +83,18 @@ class FakeConnection {
   };
   importRefusal: string | null = null;
 
-  /** The project's settings, as the backend keeps them for the page on the PC: none at first. */
-  projectSettings: unknown = null;
+  /** The notes of the project, as the backend answers "GetNotes": none at first. */
+  notes = '';
+  /** The open project as its file says it, as the backend answers "ExportProject". */
+  projectFile = JSON.stringify({
+    format: 'lumenet-project',
+    version: 4,
+    notes: '<b>Doors at 7</b>',
+    memories: [],
+    stage: { width: 12, depth: 8, lights: [{ name: 'Wash', address: 1, channels: 'RGB', x: 2, y: 2 }] },
+  });
+  /** The projects and the examples, as the backend answers "GetProjects". */
+  projectList: ProjectList = { folder: 'C:\\Lumenet', projects: [], examples: ['1 Memories and the stack', '6 Concert'] };
   /** What the backend answers to "GetRecovered": when unsaved work was brought back, or null. */
   recovered: string | null = null;
   /** The autosave of the desk program, as the backend answers "GetAutosave" (on the PC). */
@@ -119,12 +130,15 @@ class FakeConnection {
       if (this.importRefusal) throw new Error(this.importRefusal);
       return this.importAnswer;
     }
-    if (method === 'GetSettings') return this.projectSettings;
-    if (method === 'AdoptSettings') {
-      if (this.projectSettings !== null) return false;
-      this.projectSettings = args[0];
-      return true;
+    if (method === 'GetNotes') return this.notes;
+    if (method === 'SetNotes') {
+      this.notes = args[0] as string;
+      return undefined;
     }
+    if (method === 'ExportProject') return this.projectFile;
+    if (method === 'ImportProjectFile') return { name: args[0], path: null, unsaved: true };
+    if (method === 'GetProjects') return this.projectList;
+    if (method === 'LoadExample') return { name: args[0], path: null, unsaved: false };
     if (method === 'GetHistory') return { undo: null, redo: null };
     if (method === 'GetRecovered') return this.recovered;
     if (method === 'Undo' || method === 'Redo') return 'storing memory 4';
@@ -176,8 +190,7 @@ const QUESTIONS = [
   'GetLanAccess',
   'GetHistory',
   'GetRecovered',
-  'GetSettings',
-  'AdoptSettings',
+  'GetNotes',
   'GetAutosave',
   'GetStage',
   'GetStagePicture',
@@ -287,6 +300,23 @@ describe('the desk page', () => {
     Object.defineProperty(picker, 'files', { value: [file], configurable: true });
     picker.dispatchEvent(new Event('change'));
     await fixture.whenStable();
+  }
+
+  /** Checks (or unchecks) a part in the window of Import or Export, by what its label starts with. */
+  async function check(dialog: 'lm-import-dialog' | 'lm-export-dialog', label: string): Promise<void> {
+    const box = [...page.querySelectorAll<HTMLLabelElement>(`${dialog} .parts label`)]
+      .find((item) => item.textContent?.trim().startsWith(label))
+      ?.querySelector('input');
+    if (!box) throw new Error(`no checkbox "${label}"`);
+    box.click();
+    await fixture.whenStable();
+  }
+
+  /** Whether a part in the window of Import or Export is checked. */
+  function checked(dialog: 'lm-import-dialog' | 'lm-export-dialog', label: string): boolean {
+    return [...page.querySelectorAll<HTMLLabelElement>(`${dialog} .parts label`)]
+      .find((item) => item.textContent?.trim().startsWith(label))!
+      .querySelector('input')!.checked;
   }
 
   /** Waits for what the page does on its own, such as reading a file and waiting for the desk. */
@@ -689,11 +719,11 @@ describe('the desk page', () => {
     expect(button('New project')).toBeTruthy();
   });
 
-  it('LAN, Undo and Redo stand at the top left; New, Save, Load and Import at the right', () => {
+  it('LAN, Undo and Redo stand at the top left; New, Save, Load, Import and Export at the right', () => {
     const labels = (selector: string) =>
       [...page.querySelectorAll(`lm-top-bar ${selector} button`)].map((key) => key.getAttribute('aria-label'));
     expect(labels('.left')).toEqual(['LAN', 'Undo', 'Redo']);
-    expect(labels('.project')).toEqual(['New project', 'Save project', 'Load project', 'Import a show']);
+    expect(labels('.project')).toEqual(['New project', 'Save project', 'Load project', 'Import', 'Export']);
   });
 
   // ---------------------------------------------------------------- undo, solo, rate, project settings, autosave, colors
@@ -901,6 +931,7 @@ describe('the desk page', () => {
       'Stack',
       'Stage',
       'Fixtures',
+      'Notes',
       'Settings',
       'Keyboard',
     ]);
@@ -910,8 +941,8 @@ describe('the desk page', () => {
     box('Stage').click();
     box('Main').click();
     await fixture.whenStable();
-    expect(links()).toEqual(['Memories', 'Sequences', 'Stack', 'Fixtures', 'Settings', 'Keyboard']);
-    expect(connection.last('SetSettings')?.[0]).toMatchObject({ hiddenViews: ['main', 'stage'] }); // with the project, on the PC
+    expect(links()).toEqual(['Memories', 'Sequences', 'Stack', 'Fixtures', 'Notes', 'Settings', 'Keyboard']);
+    expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY)!)).toMatchObject({ hiddenViews: ['main', 'stage'] }); // kept on this device
 
     box('Stage').click();
     await fixture.whenStable();
@@ -919,7 +950,7 @@ describe('the desk page', () => {
 
     // Stage to the front
     for (let place = 0; place < 4; place++) await press(button('Move Stage up'));
-    expect(links()).toEqual(['Stage', 'Memories', 'Sequences', 'Stack', 'Fixtures', 'Settings', 'Keyboard']);
+    expect(links()).toEqual(['Stage', 'Memories', 'Sequences', 'Stack', 'Fixtures', 'Notes', 'Settings', 'Keyboard']);
 
     // a desk that starts at Main, while Main is left out, opens on the first view in the top bar
     const router = TestBed.inject(Router);
@@ -930,7 +961,7 @@ describe('the desk page', () => {
   });
 
   it('Settings puts the views in another order with ▲ and ▼, and ↺ brings back the usual ones', async () => {
-    const usual = ['Main', 'Memories', 'Sequences', 'Stack', 'Stage', 'Fixtures', 'Settings', 'Keyboard'];
+    const usual = ['Main', 'Memories', 'Sequences', 'Stack', 'Stage', 'Fixtures', 'Notes', 'Settings', 'Keyboard'];
     const links = () => [...page.querySelectorAll('nav[aria-label="Views"] a')].map((link) => link.textContent?.trim().split(/\s/)[0]);
     const listed = () => [...page.querySelectorAll('ul.views label')].map((label) => label.textContent?.trim().split(/\s/)[0]);
     await show('/settings');
@@ -940,11 +971,11 @@ describe('the desk page', () => {
 
     // One place earlier, in Settings and in the top bar; the keyboard focus goes with it.
     await press(button('Move Keyboard up'));
-    const moved = ['Main', 'Memories', 'Sequences', 'Stack', 'Stage', 'Fixtures', 'Keyboard', 'Settings'];
+    const moved = ['Main', 'Memories', 'Sequences', 'Stack', 'Stage', 'Fixtures', 'Notes', 'Keyboard', 'Settings'];
     expect(listed()).toEqual(moved);
     expect(links()).toEqual(moved);
     expect(document.activeElement).toBe(button('Move Keyboard up'));
-    expect(connection.last('SetSettings')?.[0]).toMatchObject({ viewOrder: moved.map((name) => name.toLowerCase()) });
+    expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY)!)).toMatchObject({ viewOrder: moved.map((name) => name.toLowerCase()) });
     expect(button('The usual views').disabled).toBe(false);
 
     // Back at the top, ▲ goes dark and the focus moves to ▼.
@@ -964,33 +995,20 @@ describe('the desk page', () => {
     expect(button('The usual views').disabled).toBe(true);
   });
 
-  it('on the PC the layout and the shortcuts go with the project', async () => {
-    // The desk program had none: the page handed it its own.
-    await until(() => connection.calls.some((call) => call.method === 'AdoptSettings'));
-    expect(connection.projectSettings).toMatchObject({ channelSize: 'auto', channelRows: 2 });
-    expect(connection.projectSettings).not.toHaveProperty('fontScale'); // lettering stays with the device
-
-    // A change goes to the project; the lettering does not.
+  it('the settings and the shortcuts belong to this device, on the PC as on a phone', async () => {
     await show('/settings');
+    expect(textOf('lm-settings-view .summary')).toContain('The settings belong to this device');
     const rows = page.querySelector<HTMLSelectElement>('#channel-rows')!;
     rows.value = '1';
     rows.dispatchEvent(new Event('change'));
     await press(button('Bigger lettering'));
-    expect(connection.methods().filter((method) => method === 'SetSettings').length).toBe(1);
-    expect(connection.last('SetSettings')?.[0]).toMatchObject({ channelRows: 1 });
+    expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY)!)).toMatchObject({ channelRows: 1, fontScale: 1.1 });
 
-    // A project that is loaded brings its own.
-    connection.emit('SettingsChanged', { channelSize: 8, channelRows: 2, shortcuts: { 'master.clear': 'KeyC' } });
+    // Nothing of them goes to the desk program, and a project that is loaded leaves them as they are.
+    expect(connection.methods().filter((method) => method.includes('Settings'))).toEqual([]);
+    connection.emit('DeskChanged', connection.welcome.desk);
     await fixture.whenStable();
-    expect(store.stripsPerRow()).toBe(4);
-    expect(TestBed.inject(DeskSettings).shortcuts()['master.clear']).toBe('KeyC');
-    expect(TestBed.inject(DeskSettings).fontScale()).toBe(1.1);
-
-    // A phone keeps its own.
-    connection.emit('LanAccessChanged', { ...connection.lan, local: false });
-    connection.emit('SettingsChanged', { channelSize: 128 });
-    await fixture.whenStable();
-    expect(store.stripsPerRow()).toBe(4);
+    expect(TestBed.inject(DeskSettings).channelRows()).toBe(1);
   });
 
   it('says once that the work which was not saved when the desk program stopped is back', async () => {
@@ -1037,10 +1055,9 @@ describe('the desk page', () => {
     expect(page.querySelector('lm-settings-view')?.textContent).toContain('Only the PC the desk program runs on can set the autosave.');
   });
 
-  it('the color of a kind of keys or of one key is set in Settings, and goes with the project on the PC', async () => {
+  it('the color of a kind of keys or of one key is set in Settings, and kept on this device', async () => {
     const shown = (variable: string) => document.documentElement.style.getPropertyValue(variable);
-    const sentColors = () => (connection.last('SetSettings')?.[0] as { colors?: object } | undefined)?.colors;
-    await until(() => connection.calls.some((call) => call.method === 'AdoptSettings'));
+    const sentColors = () => (JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}') as { colors?: object }).colors;
     await show('/settings');
 
     // A press on a color offers the colors of the desk; one of them is taken, and they close.
@@ -1099,8 +1116,8 @@ describe('the desk page', () => {
     expect(sentColors()).toEqual({});
     expect(button('All the usual colors').disabled).toBe(true);
 
-    // A project that is loaded brings its own.
-    connection.emit('SettingsChanged', { colors: { play: '#123456', nonsense: '#000000', next: 'red' } });
+    // Settings from a file (Import) bring theirs; what makes no sense is left out.
+    TestBed.inject(DeskSettings).takeSettings({ colors: { play: '#123456', nonsense: '#000000', next: 'red' } });
     await fixture.whenStable();
     expect(shown('--key-play')).toBe('#123456');
     expect(TestBed.inject(DeskSettings).colors()).toEqual({ play: '#123456' });
@@ -1314,6 +1331,111 @@ describe('the desk page', () => {
     expect(store.channels().slice(10, 13)).toEqual([255, 0, 0]); // red again, as it was
   });
 
+  it('a light that strobes flashes on the Stage view, never more than three times a second, with a mark of how fast', async () => {
+    const color = (name: string, code: string) => ({ name, code, fine: null, ranges: [] });
+    const strobe = {
+      name: 'Strobe',
+      code: 'S',
+      fine: null,
+      ranges: [
+        { from: 0, to: 31, label: 'Closed', color: null },
+        { from: 32, to: 63, label: 'Open', color: null },
+        { from: 64, to: 255, label: 'Strobe, 1Hz to 20Hz', color: null },
+      ],
+    };
+    connection.emit('StageChanged', {
+      ...EMPTY_STAGE,
+      lights: [{ ...stageLight(1, 'Bar', 1, 'RGBS', null, 2, 2), type: 1 }, stageLight(2, 'Par', 11, 'RGBS', null, 6, 2)],
+      types: [{ id: 1, maker: 'Maker', model: 'Bar', mode: '4-channel', source: 'maker/bar', channels: [color('Red', 'R'), color('Green', 'G'), color('Blue', 'B'), strobe] }],
+    } satisfies StagePlan);
+    await show('/stage');
+    const body = (id: number) => page.querySelector<HTMLElement>(`[data-light="${id}"] .fixture`)!;
+    const mark = (id: number) => page.querySelector(`[data-light="${id}"] .strobe-mark`)?.textContent?.trim();
+
+    // red with its shutter open: steady light
+    store.setChannel(1, 255);
+    store.setChannel(4, 40);
+    await fixture.whenStable();
+    expect(body(1).classList).not.toContain('strobe');
+    expect(mark(1)).toBeUndefined();
+
+    // a strobe of 20 a second: the screen flashes 3 times a second, and the mark says the 20
+    store.setChannel(4, 255);
+    await fixture.whenStable();
+    expect(body(1).classList).toContain('strobe');
+    expect(body(1).dataset['strobe']).toBe('strobe');
+    expect(body(1).style.getPropertyValue('--strobe-period')).toBe('0.333s');
+    expect(mark(1)).toBe('⚡ 20 Hz');
+    expect(page.querySelector('[data-light="1"]')?.getAttribute('title')).toBe('Bar: channels 1 to 4; strobe, 20 Hz');
+
+    // a light of letters says nothing of its strobe: above its first values it strobes, at a speed it does not say
+    store.setChannel(11, 255);
+    store.setChannel(14, 128);
+    await fixture.whenStable();
+    expect(mark(2)).toBe('⚡');
+
+    // a light that gives no light shows no strobe
+    store.setChannel(1, 0);
+    await fixture.whenStable();
+    expect(body(1).classList).not.toContain('strobe');
+  });
+
+  it('the panel of a fixture says what its channels do at their values: in its lists, under its faders and on its letters', async () => {
+    const strobe = { name: 'Strobe', code: 'S', fine: null, ranges: [
+      { from: 0, to: 31, label: 'Closed', color: null },
+      { from: 32, to: 63, label: 'Open', color: null },
+      { from: 64, to: 95, label: 'Strobe, slow to fast', color: null },
+      { from: 96, to: 255, label: 'Open', color: null },
+    ] };
+    connection.emit('StageChanged', {
+      ...EMPTY_STAGE,
+      lights: [{ ...stageLight(1, 'Hex bar', 1, 'RGBS', null, 2, 8), type: 1 }],
+      types: [
+        {
+          id: 1,
+          maker: 'American DJ',
+          model: 'Ultra Hex Bar 12',
+          mode: '4-channel',
+          source: 'american-dj/ultra-hex-bar-12',
+          channels: [
+            { name: 'Red', code: 'R', fine: null, ranges: [] },
+            { name: 'Green', code: 'G', fine: null, ranges: [] },
+            { name: 'Blue', code: 'B', fine: null, ranges: [] },
+            strobe,
+          ],
+        },
+      ],
+    } satisfies StagePlan);
+    await fixture.whenStable();
+    await show('/fixtures');
+    await press(button('Hex bar: color and settings'));
+
+    // the list of the strobe: every choice with its values, so the two Opens are told apart
+    const list = page.querySelector<HTMLSelectElement>('lm-fixture-panel .form select')!;
+    expect([...list.options].map((option) => option.text.trim())).toEqual([
+      'Closed (0 to 31)',
+      'Open (32 to 63)',
+      'Strobe, slow to fast (64 to 95)',
+      'Open (96 to 255)',
+    ]);
+
+    // under the faders: what the fader moved last does at its value
+    const said = () => page.querySelector('lm-fixture-panel lm-light-faders .said')?.textContent?.trim();
+    expect(said()).toBe('Move a fader to see here what its value does; the pointer on its letter shows all its values.');
+    const fader = page.querySelectorAll<HTMLElement>('lm-fixture-panel lm-light-faders lm-fader')[3];
+    for (const press of [1, 2]) fader.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageUp', bubbles: true, detail: press }));
+    await fixture.whenStable();
+    expect(store.channels()[3]).toBe(32);
+    expect(said()).toBe('S (4) at 32: Open (32 to 63)');
+    expect(fader.getAttribute('aria-valuetext')).toBe('32, Open');
+    expect(list.selectedOptions[0].text.trim()).toBe('Open (32 to 63)');
+
+    // the pointer on the letter: all its values
+    const letters = page.querySelectorAll<HTMLElement>('lm-fixture-panel lm-light-faders .letter');
+    expect(letters[3].title).toBe('Strobe\n0 to 31: Closed\n32 to 63: Open\n64 to 95: Strobe, slow to fast\n96 to 255: Open');
+    expect(letters[0].title).toBe('Red');
+  });
+
   it('a moving head takes its place from the memory raised last; the master and blackout leave it where it is', async () => {
     await planWith(stageLight(1, 'Head', 1, 'PTD', null, 2, 2));
     const look = (pan: number, tilt: number) => [pan, tilt, 255, ...new Array<number>(CHANNEL_COUNT - 3).fill(0)];
@@ -1433,10 +1555,28 @@ describe('the desk page', () => {
     expect(first.querySelector<HTMLSelectElement>('td.number select')!.selectedOptions[0].text.trim()).toBe('5');
     expect(first.querySelector('td.note')?.textContent?.trim()).toBe('Front');
 
-    // its color: the colors of the Fixtures page
+    // its color: the colors of the Fixtures page. A press only chooses, the window shows it; Use gives it to the step.
+    const colorWindow = page.querySelector<HTMLDialogElement>('lm-step-color-dialog dialog')!;
+    const sent = connection.calls.length;
     await press(button('Step 1, color'));
+    await press(page.querySelector<HTMLButtonElement>('lm-step-color-dialog button[aria-label="Blue"]'));
     await press(page.querySelector<HTMLButtonElement>('lm-step-color-dialog button[aria-label="Red"]'));
+    expect(colorWindow.open).toBe(true);
+    expect(textOf('lm-step-color-dialog .chosen')).toBe('Chosen: #ff0000');
+    expect(connection.calls.slice(sent).map((call) => call.method)).not.toContain('SetSequence');
+    await press(button('Use this color'));
+    expect(colorWindow.open).toBe(false);
     expect(connection.last('SetSequence')?.[1]).toMatchObject({ steps: [{ target: 'fixture', number: 2, color: '#ff0000' }, step(6, 100, { wait: 0 })] });
+
+    // Cancel leaves the step as it was
+    const before = connection.calls.length;
+    await press(button('Step 1, color'));
+    expect(textOf('lm-step-color-dialog .chosen')).toBe('Chosen: #ff0000'); // it opens on the step's color
+    await press(button('White, no color'));
+    expect(textOf('lm-step-color-dialog .chosen')).toBe('Chosen: white, no color');
+    await press(page.querySelector<HTMLButtonElement>('lm-step-color-dialog .actions button:nth-child(2)')); // Cancel
+    expect(colorWindow.open).toBe(false);
+    expect(connection.calls.slice(before).map((call) => call.method)).not.toContain('SetSequence');
 
     // a group: its name is the note, "G1" the closed field
     kind.value = 'group';
@@ -1568,20 +1708,31 @@ describe('the desk page', () => {
     expect(textOf('lm-stage-view .nothing')).toBe('No lights yet. Edit, then Add light.');
   });
 
-  it('import: a show file becomes the project, and the window says what became of it', async () => {
+  it('import: a show file (.ASC) becomes the project, and the window says what became of it', async () => {
     connection.emit('ProjectChanged', { name: 'Untitled', path: null, unsaved: true });
-    await press(button('Import a show'));
+    await press(button('Import'));
     const dialog = page.querySelector<HTMLDialogElement>('lm-import-dialog dialog');
     expect(dialog?.open).toBe(true);
+    expect(['Project', 'Stage', 'Settings', 'Keyboard', '.ASC'].map((part) => checked('lm-import-dialog', part))).toEqual([
+      false,
+      false,
+      false,
+      false,
+      false,
+    ]);
     expect(textOf('lm-import-dialog .file-name')).toBe('No file chosen');
-    expect(button('Import the show').disabled).toBe(true);
+    expect(button('Import the file').disabled).toBe(true);
+
+    // .ASC is a file of its own: taken alone, the others go off.
+    await check('lm-import-dialog', 'Stage');
+    await check('lm-import-dialog', '.ASC');
+    expect(checked('lm-import-dialog', 'Stage')).toBe(false);
+    expect(page.querySelector<HTMLInputElement>('lm-import-dialog input[type="file"]')?.accept).toBe('.asc,.txt');
+    expect(page.querySelector('lm-import-dialog')?.textContent).toContain('The open project has changes that are not saved.');
 
     await pick(new File(['Cue 1\nChan 1 FL\n'], 'Hamlet.asc'));
     expect(textOf('lm-import-dialog .file-name')).toBe('Hamlet.asc');
-    expect(page.querySelector('lm-import-dialog')?.textContent).toContain(
-      'The open project has changes that are not saved. Importing drops them.',
-    );
-    await press(button('Import the show'));
+    await press(button('Import the file'));
     await until(() => page.querySelector('lm-import-dialog .report') !== null);
 
     expect(connection.last('ImportProject')).toEqual(['Hamlet.asc', 'Cue 1\nChan 1 FL\n']);
@@ -1589,14 +1740,12 @@ describe('the desk page', () => {
     expect(report).toEqual(connection.importAnswer.report);
     expect(textOf('lm-top-bar .name strong')).toBe('Hamlet');
 
-    // OK closes the window. Import again asks for a file at once, over a new question.
+    // OK closes the window; Import again starts with nothing checked and no file.
     await press(button('Close'));
     expect(dialog?.open).toBe(false);
-    const asked = vi.spyOn(HTMLInputElement.prototype, 'click');
-    await press(button('Import a show'));
-    expect(asked).toHaveBeenCalledTimes(1);
+    await press(button('Import'));
+    expect(checked('lm-import-dialog', '.ASC')).toBe(false);
     expect(textOf('lm-import-dialog .file-name')).toBe('No file chosen');
-    asked.mockRestore();
     await press(page.querySelector<HTMLButtonElement>('lm-import-dialog .actions button')); // Cancel
     expect(dialog?.open).toBe(false);
 
@@ -1607,25 +1756,182 @@ describe('the desk page', () => {
 
   it('import says why the desk refused a file, and another one can be tried', async () => {
     connection.importRefusal = '"notes.txt" has no cues, submasters or groups.';
-    await press(button('Import a show'));
+    await press(button('Import'));
+    await check('lm-import-dialog', '.ASC');
     await pick(new File(['Dear diary,'], 'notes.txt'));
-    await press(button('Import the show'));
+    await press(button('Import the file'));
     await until(() => page.querySelector('lm-import-dialog .error') !== null);
 
     expect(textOf('lm-import-dialog .error')).toBe('"notes.txt" has no cues, submasters or groups.');
     expect(page.querySelector<HTMLDialogElement>('lm-import-dialog dialog')?.open).toBe(true);
-    expect(button('Import the show').disabled).toBe(false);
+    expect(button('Import the file').disabled).toBe(false);
   });
 
   it('import takes no file larger than the desk takes, and sends nothing', async () => {
-    await press(button('Import a show'));
+    await press(button('Import'));
+    await check('lm-import-dialog', '.ASC');
     const file = new File(['Cue 1'], 'huge.asc');
     Object.defineProperty(file, 'size', { value: 9 * 1024 * 1024 });
     await pick(file);
 
-    expect(textOf('lm-import-dialog .error')).toBe('"huge.asc" has 9.0 MB. A show file can have up to 8.0 MB.');
-    expect(button('Import the show').disabled).toBe(true);
+    expect(textOf('lm-import-dialog .error')).toBe('"huge.asc" has 9.0 MB. A file can have up to 8.0 MB.');
+    expect(button('Import the file').disabled).toBe(true);
     expect(connection.methods()).not.toContain('ImportProject');
+  });
+
+  it('import takes the checked parts of a file that Export made, and none when one of them is missing', async () => {
+    const file = JSON.stringify({
+      format: 'lumenet-export',
+      version: 1,
+      name: 'Concert',
+      project: JSON.parse(connection.projectFile),
+      settings: { channelRows: 1, colors: { play: '#123456' } },
+      keyboard: { shortcuts: { 'stack.play': 'Space' } },
+    });
+    await press(button('Import'));
+    await check('lm-import-dialog', 'Project');
+    await check('lm-import-dialog', 'Settings');
+    await check('lm-import-dialog', 'Keyboard');
+    expect(page.querySelector<HTMLInputElement>('lm-import-dialog input[type="file"]')?.accept).toBe('.json');
+    await pick(new File([file], 'Concert - project, settings, keyboard.json'));
+    await press(button('Import the file'));
+    await until(() => page.querySelector('lm-import-dialog .report') !== null);
+
+    expect(connection.last('ImportProjectFile')).toEqual(['Concert', JSON.stringify(JSON.parse(connection.projectFile))]);
+    expect(textOf('lm-top-bar .name strong')).toBe('Concert');
+    const settings = TestBed.inject(DeskSettings);
+    expect(settings.channelRows()).toBe(1);
+    expect(settings.colors()).toEqual({ play: '#123456' });
+    expect(settings.shortcuts()['stack.play']).toBe('Space');
+    expect([...page.querySelectorAll('lm-import-dialog .report p')].map((line) => line.textContent?.trim())).toEqual([
+      'The project "Concert" is open. Save keeps it in the projects folder.',
+      'The settings of this device are those of the file.',
+      'The keyboard shortcuts of this device are those of the file.',
+    ]);
+
+    // The stage of a project file: on its own, in place of the project's.
+    await press(button('Close'));
+    await press(button('Import'));
+    await check('lm-import-dialog', 'Stage');
+    await pick(new File([connection.projectFile], 'Evening.json'));
+    await press(button('Import the file'));
+    await until(() => page.querySelector('lm-import-dialog .report') !== null);
+    expect(JSON.parse(connection.last('ImportStage')![0] as string).lights.length).toBe(1);
+    expect(textOf('lm-import-dialog .report')).toContain('The stage is that of the file, with 1 light.');
+
+    // A project file has no keyboard of this device: nothing is imported.
+    await press(button('Close'));
+    await press(button('Import'));
+    await check('lm-import-dialog', 'Stage');
+    await check('lm-import-dialog', 'Keyboard');
+    const imported = connection.calls.length;
+    await pick(new File([connection.projectFile], 'Evening.json'));
+    await press(button('Import the file'));
+    await until(() => page.querySelector('lm-import-dialog .error') !== null);
+    expect(textOf('lm-import-dialog .error')).toBe('"Evening.json" does not have the keyboard. Nothing was imported.');
+    expect(connection.calls.slice(imported).map((call) => call.method)).not.toContain('ImportStage');
+  });
+
+  it('export puts the checked parts into one file on this device', async () => {
+    const written: string[] = [];
+    let suggested = '';
+    const picker = vi.fn(async (options: { suggestedName: string }) => {
+      suggested = options.suggestedName;
+      return {
+        name: options.suggestedName,
+        createWritable: async () => ({ write: async (text: string) => void written.push(text), close: async () => undefined }),
+      };
+    });
+    (globalThis as { showSaveFilePicker?: unknown }).showSaveFilePicker = picker;
+    try {
+      TestBed.inject(DeskSettings).setShortcuts({ 'stack.play': 'Space' });
+      await press(button('Export'));
+      const dialog = page.querySelector<HTMLDialogElement>('lm-export-dialog dialog');
+      expect(dialog?.open).toBe(true);
+      expect(['Project', 'Stage', 'Settings', 'Keyboard'].map((part) => checked('lm-export-dialog', part))).toEqual([false, false, false, false]);
+      expect(button('Export the file').disabled).toBe(true);
+
+      await check('lm-export-dialog', 'Stage');
+      await check('lm-export-dialog', 'Keyboard');
+      await press(button('Export the file'));
+      await until(() => written.length > 0);
+      await fixture.whenStable();
+
+      expect(suggested).toBe('Untitled - stage, keyboard.json');
+      const file = JSON.parse(written[0]);
+      expect(Object.keys(file)).toEqual(['format', 'version', 'name', 'stage', 'keyboard']);
+      expect(file.stage.lights[0].name).toBe('Wash');
+      expect(file.keyboard.shortcuts['stack.play']).toBe('Space');
+      expect(textOf('lm-export-dialog .report')).toContain('Saved as "Untitled - stage, keyboard.json"');
+      await press(button('Close'));
+      expect(dialog?.open).toBe(false);
+    } finally {
+      delete (globalThis as { showSaveFilePicker?: unknown }).showSaveFilePicker;
+    }
+  });
+
+  it('Notes: the notes of the project are read, written while Edit is lit, and kept by the desk program', async () => {
+    connection.notes = '<div><b>Cue 1</b> at the bell</div><script>alert(1)</script><img src="x" onerror="alert(1)">';
+    connection.emit('DeskChanged', connection.welcome.desk);
+    await show('/notes');
+    await until(() => page.querySelector('lm-notes-view .text b') !== null);
+    const text = page.querySelector<HTMLElement>('lm-notes-view .text')!;
+    const edit = button('Edit the notes');
+
+    // Read: only the marks of the notes are shown, and nothing can be changed.
+    expect(text.innerHTML).toBe('<div><b>Cue 1</b> at the bell</div>');
+    expect(text.getAttribute('contenteditable')).toBe('false');
+    expect(edit.className).toContain('level-1');
+    expect(edit.getAttribute('aria-pressed')).toBe('false');
+    for (const tool of ['Bold', 'Underline', 'Bulleted list', 'Numbered list', 'Usual color', 'Red']) expect(button(tool).disabled).toBe(true);
+
+    // Edit: full, the text can be written in, and the tool keys work on it with the browser's editor.
+    const commands: unknown[][] = [];
+    const editor = document as unknown as { execCommand: (...args: unknown[]) => boolean };
+    editor.execCommand = (...args: unknown[]) => commands.push(args) > 0;
+    try {
+      await press(edit);
+      expect(edit.className).toContain('level-3');
+      expect(text.getAttribute('contenteditable')).toBe('true');
+      expect(button('Bold').disabled).toBe(false);
+      await press(button('Bold'));
+      await press(button('Red'));
+      expect(commands).toContainEqual(['bold', false, undefined]);
+      expect(commands).toContainEqual(['foreColor', false, '#ff5247']);
+    } finally {
+      delete (editor as { execCommand?: unknown }).execCommand;
+    }
+
+    // What is written goes to the desk program, made into the marks of the notes; Edit goes faint again.
+    text.innerHTML = '<div><b>Cue 1</b> at the bell</div><div>Cue 2 <u>after the song</u><span>!</span></div>';
+    text.dispatchEvent(new Event('input'));
+    await press(edit);
+    expect(connection.last('SetNotes')).toEqual(['<div><b>Cue 1</b> at the bell</div><div>Cue 2 <u>after the song</u>!</div>']);
+    expect(text.getAttribute('contenteditable')).toBe('false');
+    expect(edit.className).toContain('level-1');
+
+    // Notes from another page come in; while the stack is live, Edit is locked, and a writer is stopped.
+    connection.emit('NotesChanged', '<ul><li>Doors at 7</li></ul>');
+    await fixture.whenStable();
+    expect(text.innerHTML).toBe('<ul><li>Doors at 7</li></ul>');
+    await press(edit);
+    await stackStands(LIVE);
+    expect(text.getAttribute('contenteditable')).toBe('false');
+    expect(edit.disabled).toBe(true);
+  });
+
+  it('Load offers the examples under the projects; one opens as a project without a file', async () => {
+    await press(button('Load project'));
+    await until(() => page.querySelector('lm-project-dialog #examples-title') !== null);
+    const examples = [...page.querySelectorAll('lm-project-dialog [aria-labelledby="examples-title"] button')];
+    expect(examples.map((entry) => entry.textContent?.trim())).toEqual(['1 Memories and the stack', '6 Concert']);
+
+    await press(examples[1] as HTMLButtonElement);
+    await press(page.querySelector<HTMLButtonElement>('lm-project-dialog button[type="submit"]'));
+    await until(() => connection.methods().includes('LoadExample'));
+    expect(connection.last('LoadExample')).toEqual(['6 Concert']);
+    expect(connection.methods()).not.toContain('LoadProject');
+    expect(textOf('lm-top-bar .name strong')).toBe('6 Concert');
   });
 
   it('LAN lit shows the address and the password under the box light; off shows neither', async () => {
@@ -1773,6 +2079,7 @@ describe('the desk page', () => {
       'Stack',
       'Stage',
       'Fixtures',
+      'Notes',
       'Settings',
       'Keyboard',
     ]);
@@ -2161,7 +2468,7 @@ describe('the desk page', () => {
       'Delete memory',
       'New project',
       'Load project',
-      'Import a show',
+      'Import',
       'Edit the channels and memories of the independent keys',
     ]) {
       expect(button(key).disabled).toBe(true);
@@ -2171,7 +2478,7 @@ describe('the desk page', () => {
     store.pressFunction('save'); // a press that gets through anyway starts nothing
     expect(store.mode()).toEqual(IDLE);
     // what a show needs is not locked
-    for (const key of ['Save project', 'Clear', 'Blackout', 'Independent 3, channel 3']) {
+    for (const key of ['Save project', 'Export', 'Clear', 'Blackout', 'Independent 3, channel 3']) {
       expect(button(key).disabled).toBe(false);
     }
 
@@ -2549,16 +2856,32 @@ describe('the desk page', () => {
     await press(button('Set the shortcut of Blackout'));
     expect(page.querySelector('tr[data-row="master.blackout"] .waiting')).toBeTruthy();
 
-    // Ctrl alone is held, not a shortcut; Ctrl with B is.
-    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'ControlLeft', key: 'Control', ctrlKey: true, bubbles: true }));
-    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyB', key: 'b', ctrlKey: true, bubbles: true }));
+    // Ctrl alone is held, not a shortcut; Ctrl with B is, with the side of that Ctrl.
+    const key = (type: 'keydown' | 'keyup', code: string, ctrlKey: boolean) =>
+      document.dispatchEvent(new KeyboardEvent(type, { code, key: code === 'KeyB' ? 'b' : code === 'KeyZ' ? 'z' : 'Control', ctrlKey, bubbles: true, cancelable: true }));
+    key('keydown', 'ControlLeft', true);
+    key('keydown', 'KeyB', true);
     await fixture.whenStable();
-    expect(page.querySelector('tr[data-row="master.blackout"] td.keys')?.textContent?.trim()).toBe('Ctrl + B');
+    expect(page.querySelector('tr[data-row="master.blackout"] td.keys')?.textContent?.trim()).toBe('Left Ctrl + B');
 
     await show('/');
-    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyB', key: 'b', ctrlKey: true, bubbles: true, cancelable: true }));
+    key('keydown', 'KeyB', true);
     await fixture.whenStable();
     expect(connection.last('SetBlackout')).toEqual([true]);
+
+    // The right Ctrl is another key: Right Ctrl + B presses nothing; Ctrl + Z, kept without a side (Undo), works with it too.
+    key('keyup', 'ControlLeft', false);
+    key('keydown', 'ControlRight', true);
+    key('keydown', 'KeyB', true);
+    await fixture.whenStable();
+    expect(connection.methods().filter((method) => method === 'SetBlackout').length).toBe(1);
+    connection.emit('HistoryChanged', { undo: 'storing memory 4', redo: null });
+    await fixture.whenStable();
+    key('keydown', 'KeyZ', true);
+    await fixture.whenStable();
+    expect(connection.methods()).toContain('Undo');
+    key('keyup', 'ControlRight', false);
+    key('keydown', 'ControlLeft', true);
 
     // While a note is typed, the keys are the note's.
     const note = page.querySelector<HTMLInputElement>('input[aria-label="Note for Channel 1"]')!;
@@ -2572,10 +2895,45 @@ describe('the desk page', () => {
     await press(button('Set the shortcut of Clear'));
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyB', key: 'b', ctrlKey: true, bubbles: true }));
     await fixture.whenStable();
-    expect(page.querySelector('tr[data-row="master.clear"] td.keys')?.textContent?.trim()).toBe('Ctrl + B');
+    expect(page.querySelector('tr[data-row="master.clear"] td.keys')?.textContent?.trim()).toBe('Left Ctrl + B');
     await press(tab('Master'));
     expect(page.querySelector('tr[data-row="master.blackout"] td.keys')?.textContent?.trim()).toBe('');
     expect(page.textContent).toContain('That shortcut was the one of Blackout before');
+  });
+
+  it('AltGr is the right Alt, and still presses a shortcut recorded with it as Ctrl + Alt', async () => {
+    // AltGr on Windows: a left Ctrl that is not there goes down first, and every press says Ctrl and Alt.
+    const altGr = (type: 'keydown' | 'keyup', code: string, down: boolean) =>
+      document.dispatchEvent(
+        new KeyboardEvent(type, { code, key: code === 'KeyB' ? 'b' : 'AltGraph', ctrlKey: down, altKey: down, modifierAltGraph: down, bubbles: true, cancelable: true }),
+      );
+    const pressAltGrB = () => {
+      altGr('keydown', 'ControlLeft', true);
+      altGr('keydown', 'AltRight', true);
+      altGr('keydown', 'KeyB', true);
+      altGr('keyup', 'AltRight', false);
+      altGr('keyup', 'ControlLeft', false);
+    };
+    const settings = TestBed.inject(DeskSettings);
+    settings.setShortcuts({ ...settings.shortcuts(), 'master.blackout': 'Ctrl+Alt+KeyB' });
+
+    await show('/');
+    pressAltGrB();
+    await fixture.whenStable();
+    expect(connection.last('SetBlackout')).toEqual([true]);
+
+    await show('/keyboard');
+    await press(tab('Master'));
+    await press(button('Set the shortcut of Blackout'));
+    pressAltGrB();
+    await fixture.whenStable();
+    expect(page.querySelector('tr[data-row="master.blackout"] td.keys')?.textContent?.trim()).toBe('Right Alt + B');
+    expect(settings.shortcuts()['master.blackout']).toBe('RightAlt+KeyB');
+
+    await show('/');
+    pressAltGrB();
+    await fixture.whenStable();
+    expect(connection.methods().filter((method) => method === 'SetBlackout').length).toBe(2);
   });
 
   it('listening picks the key that is double-clicked on the desk; a single click works as always, a moment later', async () => {

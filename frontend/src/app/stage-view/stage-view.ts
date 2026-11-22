@@ -17,7 +17,7 @@ import {
   withoutLight,
   zoneAt,
 } from '../desk/stage-lights';
-import { shutterClosed, typeOf, wheelColorOf } from '../desk/fixtures';
+import { shownFlashes, shutterClosed, strobeOf, typeOf, wheelColorOf } from '../desk/fixtures';
 import { LampButton } from '../lamp-button/lamp-button';
 import { StagePanel } from '../stage-panel/stage-panel';
 
@@ -50,6 +50,12 @@ interface ShownLight {
   readonly glowDepth: number;
   /** From the middle of the light to its name under it, in squares. */
   readonly below: number;
+  /**
+   * While it gives light and strobes: how its cells flash ("strobe", "pulse", "ramp-up",
+   * "ramp-down", "random"), the time between two flashes on the screen, and the mark over it
+   * ("⚡ 12 Hz"); null for steady light.
+   */
+  readonly strobe: { readonly kind: string; readonly period: string; readonly mark: string } | null;
   readonly title: string;
 }
 
@@ -132,6 +138,9 @@ export class StageView {
       const at = dragged?.id === light.id ? dragged : light;
       const type = typeOf(plan, light);
       const look = lookOf(light, output, type ? { color: wheelColorOf(light, type, output), dark: shutterClosed(light, type, output) } : {});
+      // A strobe shows while the light gives light: at most three flashes a second on the screen.
+      const strobe = look.cells.some((cell) => cell.brightness > 0) ? strobeOf(light, type, output) : null;
+      const hertz = strobe?.hertz ?? null;
       const square = light.shape === 'square';
       const width = at.width - (square ? SQUARE_INSET : ROUND_INSET);
       const depth = at.depth - (square ? SQUARE_INSET : ROUND_INSET);
@@ -156,7 +165,14 @@ export class StageView {
         glowWidth: (vertical ? width : width / count) + 2,
         glowDepth: (vertical ? depth / count : depth) + 2,
         below: halfHeight + 0.12,
-        title: `${light.name || 'A light'}: ${light.channels.length === 1 ? 'channel' : 'channels'} ${channelRange(light)}`,
+        strobe: strobe && {
+          kind: strobe.random ? 'random' : strobe.kind,
+          period: `${(1 / shownFlashes(strobe)).toFixed(3)}s`,
+          mark: hertz === null ? '⚡' : `⚡ ${hertz} Hz`,
+        },
+        title:
+          `${light.name || 'A light'}: ${light.channels.length === 1 ? 'channel' : 'channels'} ${channelRange(light)}` +
+          (strobe ? `; ${strobe.label.toLowerCase()}${hertz === null ? '' : `, ${hertz} Hz`}` : ''),
       };
     });
   });

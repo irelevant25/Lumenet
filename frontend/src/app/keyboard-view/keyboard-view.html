@@ -1,12 +1,7 @@
 <header>
   <h2>Keyboard</h2>
   <p class="summary">
-    A shortcut for any key of the desk.
-    @if (store.lan()?.local) {
-      The shortcuts belong to the project: they are saved with it.
-    } @else {
-      The shortcuts belong to this device.
-    }
+    A shortcut for any key of the desk. The shortcuts belong to this device; Export takes them to another one.
     {{ mapped() }} {{ mapped() === 1 ? 'key has' : 'keys have' }} a shortcut.
   </p>
 </header>

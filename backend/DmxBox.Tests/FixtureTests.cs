@@ -206,6 +206,20 @@ public sealed class FixtureTests
     }
 
     [Fact]
+    public void AKindComesFromTheOpenFixtureLibraryOrFromQlcPlus()
+    {
+        StagePlan plan = Plan(new StageLight(1, "Bar", 1, "PTD", null, 4, 4, 0) { Type = 1 });
+        StagePlan With(string source) => plan with { Types = [SpotType(1) with { Source = source }] };
+
+        Assert.Equal("maker/spot", With("maker/spot").Checked().Types[0].Source);
+        Assert.Equal(
+            "qlcplus:Cameo/Cameo-Studio-PAR-64-Q-8W-(CLPST64Q8W).qxf",
+            With("qlcplus:Cameo/Cameo-Studio-PAR-64-Q-8W-(CLPST64Q8W).qxf").Checked().Types[0].Source);
+        AssertRefused("Kind 1 of the plan's lights: \"maker/<spot>\" is not where a light is in the library.", With("maker/<spot>"));
+        AssertRefused("Kind 1 of the plan's lights: \"a b\" is not where a light is in the library.", With("a b"));
+    }
+
+    [Fact]
     public void FadersThatTakeSomethingGetEverLaterNumbersInTheState()
     {
         _desk.SetChannel(5, 1);

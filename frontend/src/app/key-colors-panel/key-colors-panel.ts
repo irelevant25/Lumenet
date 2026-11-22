@@ -1,6 +1,5 @@
 import { Component, ElementRef, computed, inject, signal } from '@angular/core';
 import { DeskSettings } from '../desk/desk-settings';
-import { DeskStore } from '../desk/desk-store';
 import { KEY_COLORS, KEY_COLOR_GROUPS, KeyColor, STANDARD_KEY_COLORS } from '../desk/key-colors';
 
 /**
@@ -9,7 +8,7 @@ import { KEY_COLORS, KEY_COLOR_GROUPS, KeyColor, STANDARD_KEY_COLORS } from '../
  * title takes all of them back. A press on a color opens the colors the keys have at first, to
  * take one of them, and a field for any other color; a press anywhere else, or Esc, closes them.
  * While another color is being picked the desk shows it at once; it is kept when the picker
- * closes. On the PC the colors belong to the project, like the layout; a phone keeps its own.
+ * closes. The colors belong to this device, like the rest of the settings.
  */
 @Component({
   host: {
@@ -23,7 +22,6 @@ import { KEY_COLORS, KEY_COLOR_GROUPS, KeyColor, STANDARD_KEY_COLORS } from '../
 export class KeyColorsPanel {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly settings = inject(DeskSettings);
-  protected readonly store = inject(DeskStore);
 
   protected readonly groups = KEY_COLOR_GROUPS.map((name) => ({
     name,
@@ -75,7 +73,7 @@ export class KeyColorsPanel {
     document.documentElement.style.setProperty(entry.variable, (event.target as HTMLInputElement).value);
   }
 
-  /** The picker closed: the color is kept (and goes with the project, on the PC). */
+  /** The picker closed: the color is kept. */
   protected onChange(entry: KeyColor, event: Event): void {
     this.settings.setColor(entry.id, (event.target as HTMLInputElement).value);
   }

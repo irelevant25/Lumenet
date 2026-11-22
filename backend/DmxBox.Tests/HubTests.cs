@@ -483,9 +483,9 @@ public sealed class HubTests
         await AssertNextAsync(other, "ProjectChanged", $"[{savedProject}]");
         Assert.True(File.Exists(path));
 
-        // The list of projects.
+        // The list of projects, and the examples that come with the program.
         JsonElement list = await ui.InvokeAsync("GetProjects");
-        Assert.Equal(["folder", "projects"], NamesIn(list));
+        Assert.Equal(["folder", "projects", "examples"], NamesIn(list));
         Assert.Equal(server.ProjectsFolder, list.GetProperty("folder").GetString());
         JsonElement entry = Assert.Single(list.GetProperty("projects").EnumerateArray());
         Assert.Equal(["name", "path", "modified"], NamesIn(entry));
@@ -687,30 +687,114 @@ public sealed class HubTests
     }
 
     [Fact]
-    public async Task SettingsOfTheProjectComeFromThePcAndReachTheOtherUis()
+    public async Task NotesOfTheProjectReachTheOtherUisAndTypingIsOneStepOfTheHistory()
     {
         await using TestServer server = await TestServer.StartAsync();
         await using HubClient ui = await server.ConnectAsync();
         await using HubClient other = await server.ConnectAsync();
 
-        Assert.Equal(JsonValueKind.Null, (await ui.InvokeAsync("GetSettings")).ValueKind);
-        Assert.True((await ui.InvokeAsync("AdoptSettings", new { channelSize = "auto" })).GetBoolean());
-        await AssertNextAsync(other, "SettingsChanged", """[{"channelSize":"auto"}]""");
-        Assert.False((await ui.InvokeAsync("AdoptSettings", new { channelSize = 8 })).GetBoolean());
-
-        // Brought along, they make nothing unsaved; changed, they do.
-        await ui.InvokeAsync("SetSettings", new { channelSize = 8, shortcuts = new Dictionary<string, string> { ["master.clear"] = "Ctrl+KeyC" } });
-        await AssertNextAsync(other, "SettingsChanged", """[{"channelSize":8,"shortcuts":{"master.clear":"Ctrl+KeyC"}}]""");
+        Assert.Equal("", (await ui.InvokeAsync("GetNotes")).GetString());
+        await ui.InvokeAsync("SetNotes", "<b>Doors</b>");
+        Assert.Equal("<b>Doors</b>", Assert.Single((await NextAsync(other, "NotesChanged")).Arguments).GetString());
         await AssertNextAsync(other, "ProjectChanged", """[{"name":"Untitled","path":null,"unsaved":true}]""");
-        await AssertRefusedAsync("The settings must be a JSON object.", ui, "SetSettings", 5);
 
-        // They go into the file, and come back with it.
+        // Typing on, the notes go again: the same step of the history.
+        await ui.InvokeAsync("SetNotes", "<b>Doors at 7</b>");
+        Assert.Equal("""{"undo":"the notes","redo":null}""", (await ui.InvokeAsync("GetHistory")).GetRawText());
+
+        // They go into the file and come back with it; undo brings back those from before.
         await ui.InvokeAsync("SaveProject", "show");
-        await ui.InvokeAsync("SetSettings", new { channelSize = 128 });
+        await ui.InvokeAsync("Undo");
+        Assert.Equal("", (await ui.InvokeAsync("GetNotes")).GetString());
         await ui.InvokeAsync("LoadProject", "show");
+        Assert.Equal("<b>Doors at 7</b>", (await ui.InvokeAsync("GetNotes")).GetString());
+    }
+
+    [Fact]
+    public async Task AProjectGoesOutAsAFileAndComesBackInPlaceOfTheOpenOne()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+
+        await ui.InvokeAsync("SetChannel", 3, 200);
+        await ui.InvokeAsync("SaveMemory", 1);
+        await ui.InvokeAsync("SetNotes", "Cue 1 at the bell");
+        await ui.InvokeAsync("SaveProject", "Evening");
+
+        // Export hands the project over as its file says it, and changes nothing.
+        string file = (await ui.InvokeAsync("ExportProject")).GetString()!;
+        Assert.Contains("\"format\": \"lumenet-project\"", file, StringComparison.Ordinal);
         Assert.Equal(
-            """{"channelSize":8,"shortcuts":{"master.clear":"Ctrl+KeyC"}}""",
-            (await ui.InvokeAsync("GetSettings")).GetRawText());
+            File.ReadAllText(Path.Combine(server.ProjectsFolder, "Evening.json")).Replace("\r\n", "\n", StringComparison.Ordinal),
+            file.Replace("\r\n", "\n", StringComparison.Ordinal));
+        Assert.False((await ui.InvokeAsync("Hello")).GetProperty("project").GetProperty("unsaved").GetBoolean());
+
+        // Imported, it is the open project: called as asked, without a file, with nothing undone.
+        await ui.InvokeAsync("NewProject");
+        JsonElement project = await ui.InvokeAsync("ImportProjectFile", "Evening at home", file);
+        Assert.Equal("""{"name":"Evening at home","path":null,"unsaved":true}""", project.GetRawText());
+        Assert.Equal("Cue 1 at the bell", (await ui.InvokeAsync("GetNotes")).GetString());
+        Assert.Equal(200, (await ui.InvokeAsync("GetMemories")).GetProperty("1")[2].GetInt32());
+        Assert.Equal("""{"undo":null,"redo":null}""", (await ui.InvokeAsync("GetHistory")).GetRawText());
+
+        // A file that is no project leaves the open one as it is.
+        await AssertRefusedAsync("The project cannot be imported. The file is not a Lumenet project.", ui, "ImportProjectFile", "Other", """{"format":"something"}""");
+        Assert.Equal("Cue 1 at the bell", (await ui.InvokeAsync("GetNotes")).GetString());
+    }
+
+    [Fact]
+    public async Task AStageComesInPlaceOfTheProjectsAndIsOneStepOfTheHistory()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await using HubClient other = await server.ConnectAsync();
+
+        await ui.InvokeAsync("SetStage", new
+        {
+            width = 16,
+            depth = 10,
+            lights = new object[] { new { id = 1, name = "Old", address = 1, channels = "D", color = (string?)null, x = 1.0, y = 1.0, angle = 0 } },
+        });
+        await NextAsync(other, "StageChanged");
+        await NextAsync(other, "ProjectChanged");
+
+        // The stage as a project file has it: lights by their place, a group of them.
+        const string stage = """
+            { "width": 12, "depth": 8, "lights": [
+                { "name": "Wash left", "address": 1, "channels": "RGB", "x": 2, "y": 2 },
+                { "name": "Wash right", "address": 4, "channels": "RGB", "x": 10, "y": 2 } ],
+              "groups": [ { "name": "Washes", "lights": [ 1, 2 ] } ] }
+            """;
+        await ui.InvokeAsync("ImportStage", stage);
+        JsonElement plan = Assert.Single((await NextAsync(other, "StageChanged")).Arguments);
+        Assert.Equal(12, plan.GetProperty("width").GetInt32());
+        Assert.Equal(["Wash left", "Wash right"], plan.GetProperty("lights").EnumerateArray().Select(light => light.GetProperty("name").GetString()));
+        Assert.Equal("[1,2]", plan.GetProperty("groups")[0].GetProperty("lights").GetRawText());
+        Assert.Equal("""{"undo":"importing a stage","redo":null}""", (await ui.InvokeAsync("GetHistory")).GetRawText());
+
+        await ui.InvokeAsync("Undo");
+        Assert.Equal("Old", (await ui.InvokeAsync("GetStage")).GetProperty("lights")[0].GetProperty("name").GetString());
+
+        await AssertRefusedAsync("The stage cannot be imported. There is no stage in it.", ui, "ImportStage", "null");
+    }
+
+    [Fact]
+    public async Task AnExampleOpensAsAProjectWithoutAFileAndStaysAsItIs()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+
+        JsonElement list = await ui.InvokeAsync("GetProjects");
+        string[] examples = [.. list.GetProperty("examples").EnumerateArray().Select(name => name.GetString()!)];
+        Assert.Contains("5 Theatre show", examples);
+
+        JsonElement project = await ui.InvokeAsync("LoadExample", "5 Theatre show");
+        Assert.Equal("""{"name":"5 Theatre show","path":null,"unsaved":false}""", project.GetRawText());
+        Assert.NotEqual("", (await ui.InvokeAsync("GetNotes")).GetString());
+
+        // Saving asks for a name: the example is not the project's file.
+        await AssertRefusedAsync("This project has no file yet. Save it under a name.", ui, "SaveProject", (string?)null);
+        await AssertRefusedAsync("There is no example \"..\\5 Theatre show\".", ui, "LoadExample", "..\\5 Theatre show");
     }
 
     [Fact]
@@ -907,13 +991,13 @@ public sealed class HubTests
         return JsonSerializer.Serialize(new { name, path, unsaved }, AsOnTheWire);
     }
 
-    // The next message of the server with this name. What undo and redo would do and the settings
-    // of the project come along with many changes; a test that does not ask for them by name
-    // passes over them, the others see them in their place.
+    // The next message of the server with this name. What undo and redo would do comes along with
+    // many changes; a test that does not ask for it by name passes over it, the others see it in
+    // its place.
     private static async Task<HubMessage> NextAsync(HubClient ui, string expectedName)
     {
         HubMessage message = await ui.NextMessageAsync();
-        while (message.Name is "HistoryChanged" or "SettingsChanged" && message.Name != expectedName)
+        while (message.Name is "HistoryChanged" && message.Name != expectedName)
             message = await ui.NextMessageAsync();
 
         Assert.Equal(expectedName, message.Name);

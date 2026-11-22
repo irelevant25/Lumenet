@@ -47,7 +47,7 @@ public sealed class AutosaveTests : IDisposable
         first.SetChannel(4, 255);
         first.SaveMemory(2);
         first.SetMemoryNote(2, "Warm");
-        first.SetSettings("""{"channelSize":16}""");
+        first.SetNotes("<b>Doors at 7</b>");
         firstAutosave.Keep();
 
         (Desk desk, ProjectStore projects, Autosave autosave) = StartDesk();
@@ -60,7 +60,7 @@ public sealed class AutosaveTests : IDisposable
         Assert.NotNull(projects.Recovered);
         Assert.Equal(255, desk.GetMemoryLooks()[2][3]);
         Assert.Equal("Warm", desk.GetState().MemoryNotes[1]);
-        Assert.Equal("""{"channelSize":16}""", desk.Settings);
+        Assert.Equal("<b>Doors at 7</b>", desk.Notes);
         Assert.Equal(new int[512], desk.GetState().Channels);   // no fader is brought back: no light comes on by itself
 
         // Saved, it is an ordinary project again, and the autosave file goes.

@@ -57,7 +57,7 @@ jobs:
       # part of the repository: Visual Studio's C compiler, which the runner has, makes it first.
       - name: Build the box simulator
         shell: cmd
-        run: sim\build.cmd
+        run: firmware\sim\build.cmd
 
       - name: Test the desk program
         run: dotnet test backend/DmxBox.sln

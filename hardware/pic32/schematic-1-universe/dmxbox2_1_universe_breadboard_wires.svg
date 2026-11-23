@@ -1,0 +1,310 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1460 812" width="1460" height="812" font-family="Arial, Helvetica, sans-serif">
+<rect width="1460" height="812" fill="white"/>
+<text x="30.0" y="42.0" font-size="22" text-anchor="start" font-weight="bold" fill="#1f2328">dmxbox 2 with one output, on two breadboards: the wires</text>
+<text x="30.0" y="64.0" font-size="13" text-anchor="start" font-weight="normal" fill="#6b7280">Each wire joins two holes. A: board A, B: board B; a power line by its color and the row the wire goes in at.</text>
+<rect x="30.0" y="89.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#111827" stroke-width="1.4"/>
+<text x="45.0" y="100.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A1</text>
+<text x="68.0" y="100.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: top blue line (12)  →  A: j12</text>
+<text x="470.0" y="100.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#111827">GND</text>
+<rect x="30.0" y="108.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#111827" stroke-width="1.4"/>
+<text x="45.0" y="119.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A2</text>
+<text x="68.0" y="119.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: h12  →  A: h13</text>
+<text x="470.0" y="119.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#111827">GND</text>
+<rect x="30.0" y="127.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#c026d3" stroke-width="1.4"/>
+<text x="45.0" y="138.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A3</text>
+<text x="68.0" y="138.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: c12  →  A: c41</text>
+<text x="470.0" y="138.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#c026d3">N32</text>
+<rect x="30.0" y="146.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#111827" stroke-width="1.4"/>
+<text x="45.0" y="157.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A4</text>
+<text x="68.0" y="157.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: g13  →  A: g14</text>
+<text x="470.0" y="157.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#111827">GND</text>
+<rect x="30.0" y="165.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#a16207" stroke-width="1.4"/>
+<text x="45.0" y="176.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A5</text>
+<text x="68.0" y="176.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: c13  →  A: c40</text>
+<text x="470.0" y="176.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#a16207">N16</text>
+<rect x="30.0" y="184.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#111827" stroke-width="1.4"/>
+<text x="45.0" y="195.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A6</text>
+<text x="68.0" y="195.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: h14  →  A: h15</text>
+<text x="470.0" y="195.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#111827">GND</text>
+<rect x="30.0" y="203.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#ea580c" stroke-width="1.4"/>
+<text x="45.0" y="214.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A7</text>
+<text x="68.0" y="214.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: c14  →  A: c36</text>
+<text x="470.0" y="214.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#ea580c">N8</text>
+<rect x="30.0" y="222.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#111827" stroke-width="1.4"/>
+<text x="45.0" y="233.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A8</text>
+<text x="68.0" y="233.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: g15  →  A: g16</text>
+<text x="470.0" y="233.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#111827">GND</text>
+<rect x="30.0" y="241.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#16a34a" stroke-width="1.4"/>
+<text x="45.0" y="252.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A9</text>
+<text x="68.0" y="252.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: c15  →  A: c35</text>
+<text x="470.0" y="252.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#16a34a">N4</text>
+<rect x="30.0" y="260.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#111827" stroke-width="1.4"/>
+<text x="45.0" y="271.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A10</text>
+<text x="68.0" y="271.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: h16  →  A: h17</text>
+<text x="470.0" y="271.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#111827">GND</text>
+<rect x="30.0" y="279.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#0891b2" stroke-width="1.4"/>
+<text x="45.0" y="290.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A11</text>
+<text x="68.0" y="290.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: c16  →  A: c32</text>
+<text x="470.0" y="290.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#0891b2">N2</text>
+<rect x="30.0" y="298.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#65a30d" stroke-width="1.4"/>
+<text x="45.0" y="309.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A12</text>
+<text x="68.0" y="309.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: c17  →  A: c31</text>
+<text x="470.0" y="309.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#65a30d">N1</text>
+<rect x="30.0" y="317.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#7c3aed" stroke-width="1.4"/>
+<text x="45.0" y="328.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A13</text>
+<text x="68.0" y="328.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: c20  →  A: c30</text>
+<text x="470.0" y="328.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#7c3aed">MCLR</text>
+<rect x="30.0" y="336.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#f59e0b" stroke-width="1.4"/>
+<text x="45.0" y="347.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A14</text>
+<text x="68.0" y="347.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: b21  →  A: bottom red line (21)</text>
+<text x="470.0" y="347.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#f59e0b">+3V3</text>
+<rect x="30.0" y="355.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#111827" stroke-width="1.4"/>
+<text x="45.0" y="366.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A15</text>
+<text x="68.0" y="366.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: top blue line (22)  →  A: e22</text>
+<text x="470.0" y="366.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#111827">GND</text>
+<rect x="30.0" y="374.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#111827" stroke-width="1.4"/>
+<text x="45.0" y="385.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A16</text>
+<text x="68.0" y="385.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: b22  →  A: bottom blue line (22)</text>
+<text x="470.0" y="385.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#111827">GND</text>
+<rect x="30.0" y="393.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#c026d3" stroke-width="1.4"/>
+<text x="45.0" y="404.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A17</text>
+<text x="68.0" y="404.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: c23  →  A: c33</text>
+<text x="470.0" y="404.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#c026d3">BLACKOUT</text>
+<rect x="30.0" y="412.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#0d9488" stroke-width="1.4"/>
+<text x="45.0" y="423.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A18</text>
+<text x="68.0" y="423.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: c24  →  A: c34</text>
+<text x="470.0" y="423.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#0d9488">PRESET</text>
+<rect x="30.0" y="431.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#f59e0b" stroke-width="1.4"/>
+<text x="45.0" y="442.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A19</text>
+<text x="68.0" y="442.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: j30  →  A: bottom red line (30)</text>
+<text x="470.0" y="442.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#f59e0b">+3V3</text>
+<rect x="30.0" y="450.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#f59e0b" stroke-width="1.4"/>
+<text x="45.0" y="461.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A20</text>
+<text x="68.0" y="461.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: i30  →  A: i35</text>
+<text x="470.0" y="461.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#f59e0b">+3V3</text>
+<rect x="500.0" y="89.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#111827" stroke-width="1.4"/>
+<text x="515.0" y="100.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A21</text>
+<text x="538.0" y="100.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: top blue line (31)  →  A: j31</text>
+<text x="940.0" y="100.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#111827">GND</text>
+<rect x="500.0" y="108.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#c026d3" stroke-width="1.4"/>
+<text x="515.0" y="119.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A22</text>
+<text x="538.0" y="119.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: d33  →  A: c56</text>
+<text x="940.0" y="119.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#c026d3">BLACKOUT</text>
+<rect x="500.0" y="127.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#0d9488" stroke-width="1.4"/>
+<text x="515.0" y="138.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A23</text>
+<text x="538.0" y="138.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: d34  →  A: c60</text>
+<text x="940.0" y="138.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#0d9488">PRESET</text>
+<rect x="500.0" y="146.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#7c3aed" stroke-width="1.4"/>
+<text x="515.0" y="157.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A24</text>
+<text x="538.0" y="157.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: h36  →  A: h47</text>
+<text x="940.0" y="157.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#7c3aed">D−</text>
+<rect x="500.0" y="165.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#111827" stroke-width="1.4"/>
+<text x="515.0" y="176.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A25</text>
+<text x="538.0" y="176.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: bottom blue line (36)  →  A: a37</text>
+<text x="940.0" y="176.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#111827">GND</text>
+<rect x="500.0" y="184.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#4f46e5" stroke-width="1.4"/>
+<text x="515.0" y="195.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A26</text>
+<text x="538.0" y="195.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: h37  →  A: h48</text>
+<text x="940.0" y="195.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#4f46e5">D+</text>
+<rect x="500.0" y="203.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#111827" stroke-width="1.4"/>
+<text x="515.0" y="214.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A27</text>
+<text x="538.0" y="214.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: top blue line (39)  →  A: j39</text>
+<text x="940.0" y="214.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#111827">GND</text>
+<rect x="500.0" y="222.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#dc2626" stroke-width="1.4"/>
+<text x="515.0" y="233.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A28</text>
+<text x="538.0" y="233.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: top red line (42)  →  A: j43</text>
+<text x="940.0" y="233.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#dc2626">+5V</text>
+<rect x="500.0" y="241.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#f59e0b" stroke-width="1.4"/>
+<text x="515.0" y="252.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A29</text>
+<text x="538.0" y="252.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: a42  →  A: bottom red line (42)</text>
+<text x="940.0" y="252.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#f59e0b">+3V3</text>
+<rect x="500.0" y="260.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#dc2626" stroke-width="1.4"/>
+<text x="515.0" y="271.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A30</text>
+<text x="538.0" y="271.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: h43  →  A: h46</text>
+<text x="940.0" y="271.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#dc2626">+5V</text>
+<rect x="500.0" y="279.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#111827" stroke-width="1.4"/>
+<text x="515.0" y="290.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A31</text>
+<text x="538.0" y="290.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: i51  →  A: top blue line (55)</text>
+<text x="940.0" y="290.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#111827">GND</text>
+<rect x="500.0" y="298.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#111827" stroke-width="1.4"/>
+<text x="515.0" y="309.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A32</text>
+<text x="538.0" y="309.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: h51  →  A: g52</text>
+<text x="940.0" y="309.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#111827">GND</text>
+<rect x="500.0" y="317.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#dc2626" stroke-width="1.4"/>
+<text x="515.0" y="328.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A33</text>
+<text x="538.0" y="328.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: top red line (53)  →  A: j53</text>
+<text x="940.0" y="328.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#dc2626">+5V</text>
+<rect x="500.0" y="336.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#f59e0b" stroke-width="1.4"/>
+<text x="515.0" y="347.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A34</text>
+<text x="538.0" y="347.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: f54  →  A: bottom red line (54)</text>
+<text x="940.0" y="347.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#f59e0b">+3V3</text>
+<rect x="500.0" y="355.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#111827" stroke-width="1.4"/>
+<text x="515.0" y="366.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A35</text>
+<text x="538.0" y="366.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: top blue line (58)  →  A: j58</text>
+<text x="940.0" y="366.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#111827">GND</text>
+<rect x="500.0" y="374.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#111827" stroke-width="1.4"/>
+<text x="515.0" y="385.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">A36</text>
+<text x="538.0" y="385.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: top blue line (61)  →  A: j62</text>
+<text x="940.0" y="385.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#111827">GND</text>
+<rect x="500.0" y="393.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#111827" stroke-width="1.4"/>
+<text x="515.0" y="404.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">B1</text>
+<text x="538.0" y="404.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">B: a2  →  B: bottom blue line (3)</text>
+<text x="940.0" y="404.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#111827">GND</text>
+<rect x="500.0" y="412.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#65a30d" stroke-width="1.4"/>
+<text x="515.0" y="423.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">B2</text>
+<text x="538.0" y="423.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">B: g3  →  B: d40</text>
+<text x="940.0" y="423.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#65a30d">RO1</text>
+<rect x="500.0" y="431.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#dc2626" stroke-width="1.4"/>
+<text x="515.0" y="442.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">B3</text>
+<text x="538.0" y="442.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">B: c4  →  B: c5</text>
+<text x="940.0" y="442.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#dc2626">+5V</text>
+<rect x="500.0" y="450.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#dc2626" stroke-width="1.4"/>
+<text x="515.0" y="461.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">B4</text>
+<text x="538.0" y="461.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">B: a4  →  B: bottom red line (4)</text>
+<text x="940.0" y="461.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#dc2626">+5V</text>
+<rect x="970.0" y="89.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#2563eb" stroke-width="1.4"/>
+<text x="985.0" y="100.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">B5</text>
+<text x="1008.0" y="100.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">B: top blue line (7)  →  B: j8</text>
+<text x="1410.0" y="100.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#2563eb">GND2</text>
+<rect x="970.0" y="108.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#0d9488" stroke-width="1.4"/>
+<text x="985.0" y="119.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">B6</text>
+<text x="1008.0" y="119.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">B: g7  →  B: d41</text>
+<text x="1410.0" y="119.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#0d9488">DE1</text>
+<rect x="970.0" y="127.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#111827" stroke-width="1.4"/>
+<text x="985.0" y="138.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">B7</text>
+<text x="1008.0" y="138.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">B: bottom blue line (7)  →  B: a8</text>
+<text x="1410.0" y="138.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#111827">GND</text>
+<rect x="970.0" y="146.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#db2777" stroke-width="1.4"/>
+<text x="985.0" y="157.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">B8</text>
+<text x="1008.0" y="157.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">B: top red line (10)  →  B: j10</text>
+<text x="1410.0" y="157.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#db2777">+5V_ISO</text>
+<rect x="970.0" y="165.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#db2777" stroke-width="1.4"/>
+<text x="985.0" y="176.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">B9</text>
+<text x="1008.0" y="176.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">B: g10  →  B: g11</text>
+<text x="1410.0" y="176.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#db2777">+5V_ISO</text>
+<rect x="970.0" y="184.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#65a30d" stroke-width="1.4"/>
+<text x="985.0" y="195.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">B10</text>
+<text x="1008.0" y="195.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">B: g12  →  B: d43</text>
+<text x="1410.0" y="195.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#65a30d">DI1</text>
+<rect x="970.0" y="203.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#2563eb" stroke-width="1.4"/>
+<text x="985.0" y="214.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">B11</text>
+<text x="1008.0" y="214.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">B: top blue line (13)  →  B: j13</text>
+<text x="1410.0" y="214.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#2563eb">GND2</text>
+<rect x="970.0" y="222.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#dc2626" stroke-width="1.4"/>
+<text x="985.0" y="233.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">B12</text>
+<text x="1008.0" y="233.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">B: a28  →  B: bottom red line (28)</text>
+<text x="1410.0" y="233.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#dc2626">+5V</text>
+<rect x="970.0" y="241.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#111827" stroke-width="1.4"/>
+<text x="985.0" y="252.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">B13</text>
+<text x="1008.0" y="252.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">B: a29  →  B: bottom blue line (29)</text>
+<text x="1410.0" y="252.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#111827">GND</text>
+<rect x="970.0" y="260.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#2563eb" stroke-width="1.4"/>
+<text x="985.0" y="271.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">B14</text>
+<text x="1008.0" y="271.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">B: top blue line (31)  →  B: d32</text>
+<text x="1410.0" y="271.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#2563eb">GND2</text>
+<rect x="970.0" y="279.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#db2777" stroke-width="1.4"/>
+<text x="985.0" y="290.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">B15</text>
+<text x="1008.0" y="290.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">B: top red line (34)  →  B: d34</text>
+<text x="1410.0" y="290.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#db2777">+5V_ISO</text>
+<rect x="970.0" y="298.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#db2777" stroke-width="1.4"/>
+<text x="985.0" y="309.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">B16</text>
+<text x="1008.0" y="309.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">B: top red line (40)  →  B: j40</text>
+<text x="1410.0" y="309.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#db2777">+5V_ISO</text>
+<rect x="970.0" y="317.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#0d9488" stroke-width="1.4"/>
+<text x="985.0" y="328.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">B17</text>
+<text x="1008.0" y="328.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">B: c41  →  B: c42</text>
+<text x="1410.0" y="328.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#0d9488">DE1</text>
+<rect x="970.0" y="336.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#2563eb" stroke-width="1.4"/>
+<text x="985.0" y="347.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">B18</text>
+<text x="1008.0" y="347.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">B: top blue line (42)  →  B: j43</text>
+<text x="1410.0" y="347.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#2563eb">GND2</text>
+<rect x="970.0" y="355.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#111827" stroke-width="1.4"/>
+<text x="985.0" y="366.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">X1</text>
+<text x="1008.0" y="366.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: i12  →  B: bottom blue line (12)</text>
+<text x="1410.0" y="366.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#111827">GND</text>
+<rect x="970.0" y="374.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#dc2626" stroke-width="1.4"/>
+<text x="985.0" y="385.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">X2</text>
+<text x="1008.0" y="385.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: top red line (28)  →  B: b28</text>
+<text x="1410.0" y="385.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#dc2626">+5V</text>
+<rect x="970.0" y="393.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#0891b2" stroke-width="1.4"/>
+<text x="985.0" y="404.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">X3</text>
+<text x="1008.0" y="404.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: j28  →  B: a7</text>
+<text x="1410.0" y="404.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#0891b2">DIR1_LED</text>
+<rect x="970.0" y="412.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#c026d3" stroke-width="1.4"/>
+<text x="985.0" y="423.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">X4</text>
+<text x="1008.0" y="423.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: j32  →  B: a12</text>
+<text x="1410.0" y="423.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#c026d3">TX1</text>
+<rect x="970.0" y="431.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#0891b2" stroke-width="1.4"/>
+<text x="985.0" y="442.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">X5</text>
+<text x="1008.0" y="442.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: j34  →  B: a3</text>
+<text x="1410.0" y="442.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#0891b2">RX1</text>
+<rect x="970.0" y="450.0" width="30.0" height="14.0" rx="6" fill="white" stroke="#16a34a" stroke-width="1.4"/>
+<text x="985.0" y="461.0" font-size="9.5" text-anchor="middle" font-weight="bold" fill="#1f2328">X6</text>
+<text x="1008.0" y="461.0" font-size="11" text-anchor="start" font-weight="normal" fill="#1f2328">A: e51  →  B: a11</text>
+<text x="1410.0" y="461.0" font-size="10.5" text-anchor="end" font-weight="bold" fill="#16a34a">TX1_LED</text>
+<text x="30.0" y="510.0" font-size="14" text-anchor="start" font-weight="bold" fill="#1f2328">The parts with two legs</text>
+<text x="30.0" y="534.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">C1  10 µF</text>
+<text x="150.0" y="534.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">A: top red line (43)  –  A: top blue line (43)</text>
+<text x="30.0" y="551.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">C2  10 µF</text>
+<text x="150.0" y="551.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">A: bottom red line (5)  –  A: bottom blue line (5)</text>
+<text x="30.0" y="568.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">C3  100 nF</text>
+<text x="150.0" y="568.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">A: c42  –  A: bottom blue line (43)</text>
+<text x="30.0" y="585.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">C4  100 nF</text>
+<text x="150.0" y="585.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">A: g30  –  A: g31</text>
+<text x="30.0" y="602.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">C5  100 nF</text>
+<text x="150.0" y="602.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">A: h35  –  A: top blue line (35)</text>
+<text x="30.0" y="619.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">C6  10 µF</text>
+<text x="150.0" y="619.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">A: h38  –  A: top blue line (37)</text>
+<text x="30.0" y="636.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">C7  22 pF</text>
+<text x="150.0" y="636.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">A: b38  –  A: bottom blue line (37)</text>
+<text x="30.0" y="653.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">C8  22 pF</text>
+<text x="150.0" y="653.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">A: b39  –  A: bottom blue line (39)</text>
+<text x="30.0" y="670.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">C9  100 nF</text>
+<text x="150.0" y="670.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">A: b27  –  A: bottom blue line (28)</text>
+<text x="30.0" y="687.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">C10  10 µF</text>
+<text x="150.0" y="687.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">B: bottom red line (27)  –  B: bottom blue line (27)</text>
+<text x="30.0" y="704.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">C11  10 µF</text>
+<text x="150.0" y="704.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">B: top red line (37)  –  B: top blue line (37)</text>
+<text x="500.0" y="534.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">C12  100 nF</text>
+<text x="620.0" y="534.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">B: h10  –  B: h13</text>
+<text x="500.0" y="551.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">C13  100 nF</text>
+<text x="620.0" y="551.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">B: b5  –  B: b2</text>
+<text x="500.0" y="568.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">C14  100 nF</text>
+<text x="620.0" y="568.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">B: h40  –  B: h43</text>
+<text x="500.0" y="585.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">D1  LED 3 mm</text>
+<text x="620.0" y="585.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">A: a48  –  A: bottom blue line (49)</text>
+<text x="500.0" y="602.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">D2  P6KE6.8CA</text>
+<text x="620.0" y="602.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">B: i42  –  B: top blue line (43)</text>
+<text x="500.0" y="619.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">D3  P6KE6.8CA</text>
+<text x="620.0" y="619.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">B: i41  –  B: top blue line (40)</text>
+<text x="500.0" y="636.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">R1  5.1 kΩ</text>
+<text x="620.0" y="636.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">A: i49  –  A: top blue line (53)</text>
+<text x="500.0" y="653.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">R2  5.1 kΩ</text>
+<text x="620.0" y="653.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">A: g50  –  A: top blue line (54)</text>
+<text x="500.0" y="670.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">R3  10 kΩ</text>
+<text x="620.0" y="670.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">A: bottom red line (27)  –  A: c27</text>
+<text x="500.0" y="687.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">R4  1 kΩ</text>
+<text x="620.0" y="687.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">A: d27  –  A: d30</text>
+<text x="500.0" y="704.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">R5  470 Ω</text>
+<text x="620.0" y="704.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">A: c43  –  A: c48</text>
+<text x="970.0" y="534.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">R6  180 Ω</text>
+<text x="1090.0" y="534.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">A: bottom red line (51)  –  A: b51</text>
+<text x="970.0" y="551.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">R7  1 kΩ</text>
+<text x="1090.0" y="551.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">B: top red line (12)  –  B: j12</text>
+<text x="970.0" y="568.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">R8  390 Ω</text>
+<text x="1090.0" y="568.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">B: top red line (4)  –  B: j4</text>
+<text x="970.0" y="585.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">R9  1 kΩ</text>
+<text x="1090.0" y="585.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">A: h30  –  A: h34</text>
+<text x="970.0" y="602.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">R10  470 Ω</text>
+<text x="1090.0" y="602.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">A: i33  –  A: i28</text>
+<text x="970.0" y="619.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">R11  10 kΩ</text>
+<text x="1090.0" y="619.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">B: top red line (7)  –  B: j7</text>
+<text x="970.0" y="636.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">R12  560 Ω</text>
+<text x="1090.0" y="636.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">B: top red line (42)  –  B: h42</text>
+<text x="970.0" y="653.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">R13  130 Ω</text>
+<text x="1090.0" y="653.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">B: g42  –  B: g41</text>
+<text x="970.0" y="670.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">R14  560 Ω</text>
+<text x="1090.0" y="670.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">B: h41  –  B: top blue line (41)</text>
+<text x="970.0" y="687.0" font-size="11" text-anchor="start" font-weight="bold" fill="#1f2328">Y1  8 MHz</text>
+<text x="1090.0" y="687.0" font-size="10.5" text-anchor="start" font-weight="normal" fill="#1f2328">A: a38  –  A: a39</text>
+</svg>

@@ -9,8 +9,9 @@ publish/
 *.obj
 .vs/
 TestResults/
-# the copy of the firmware that build.cmd puts next to flash.cmd
-firmware/dmxbox.uf2
+# the copies of the firmware that the build.cmd files put next to them
+firmware/pico/dmxbox.uf2
+firmware/pic32/*.hex
 
 # Python's compiled copies of scripts
 __pycache__/
@@ -25,4 +26,4 @@ presets.bin
 FUTURE_PLANS.md
 
 # saved shop pages: they contain the customer number of the person who saved them
-tme/*.mhtml
+*.mhtml

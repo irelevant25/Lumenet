@@ -542,6 +542,33 @@ public sealed class DeskStackTests
     }
 
     // Lets time pass and the desk notice it, as the desk clock does 30 times a second.
+    [Fact]
+    public void ANewStepCanGoRightAfterAnotherOne()
+    {
+        int first = _desk.AddStackStep(new Step("channel", 1, 255, 0, 0, 0));
+        int second = _desk.AddStackStep(new Step("channel", 2, 255, 0, 0, 0));
+        int third = _desk.AddStackStep(new Step("channel", 3, 255, 0, 0, 0));
+        long before = _desk.ProjectChanges;
+
+        int added = _desk.AddStackStep(new Step("channel", 7, 255, 0, 0, 0), afterId: first);
+
+        Assert.Equal(["1.0", "1.1", "2.0", "3.0"], Cues());
+        Assert.Equal([first, added, second, third], _desk.GetStack().Steps.Select(step => step.Id));
+        Assert.Equal(7, _desk.GetStack().Steps[1].Number);
+        Assert.True(_desk.ProjectChanges > before);
+
+        int again = _desk.AddStackStep(new Step("channel", 8, 255, 0, 0, 0), afterId: first);
+        Assert.Equal(["1.0", "1.1", "1.2", "2.0", "3.0"], Cues());   // 1.1 was taken: it gave way
+        Assert.Equal([first, again, added, second, third], _desk.GetStack().Steps.Select(step => step.Id));
+
+        _desk.AddStackStep(new Step("channel", 9, 255, 0, 0, 0), afterId: third);
+        Assert.Equal("4.0", Cues()[^1]);              // after the last one: the next whole number, as at the end
+
+        var error = Assert.Throws<DeskException>(() => _desk.AddStackStep(new Step("channel", 9, 255, 0, 0, 0), afterId: 9999));
+        Assert.Equal("That step is not in the stack any more.", error.Message);
+        Assert.Equal(6, Cues().Length);              // nothing was put in
+    }
+
     private void Pass(double seconds)
     {
         _time.Pass(seconds);

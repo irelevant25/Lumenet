@@ -4,7 +4,7 @@
     <button type="button" class="close" aria-label="Close" title="Close" (click)="lightId.set(null)">✕</button>
   </div>
   <p class="facts">
-    {{ kindSaid() }}, on {{ light.channels.length === 1 ? 'channel' : 'channels' }} {{ channelRange(light) }}
+    {{ kindSaid() }}, on {{ light.channels.length === 1 ? 'channel' : 'channels' }} {{ range(light) }}
   </p>
 
   @if (editing()) {
@@ -14,7 +14,17 @@
       <input id="light-name" type="text" maxlength="24" autocomplete="off" [value]="light.name" (change)="rename(light, $event)" />
 
       <label for="light-address">Address</label>
-      <input id="light-address" class="number" type="number" min="1" max="512" step="1" [value]="light.address" (change)="setAddress(light, $event)" />
+      <!-- "30", or "113 U2" in a project of several universes (letters as well as digits then) -->
+      <input
+        id="light-address"
+        class="number"
+        type="text"
+        maxlength="9"
+        autocomplete="off"
+        [attr.inputmode]="store.universes() > 1 ? 'text' : 'numeric'"
+        [value]="addressField(light)"
+        (change)="setAddress(light, $event)"
+      />
 
       <label for="light-type">Kind</label>
       <select id="light-type" (change)="setType(light, $event)">

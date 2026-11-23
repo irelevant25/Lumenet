@@ -2,8 +2,9 @@ import { Component, ElementRef, Injector, afterNextRender, computed, effect, inj
 import { ACTION_GROUPS, ActionGroup, DESK_ACTIONS, DeskAction, actionWithId, shortcutName } from '../desk/desk-actions';
 import { DeskSettings } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
-import { CHANNEL_COUNT, MEMORY_COUNT } from '../desk/desk-types';
+import { MEMORY_COUNT, UNIVERSE_SIZE } from '../desk/desk-types';
 import { Keyboard } from '../desk/keyboard';
+import { channelLabel } from '../desk/universes';
 
 /** One tab of the list: a kind of keys, how many there are, and how many the search finds. */
 interface Tab {
@@ -38,13 +39,29 @@ export class KeyboardView {
   /** True while a search runs. */
   protected readonly searching = computed(() => this.search().trim() !== '');
 
+  /**
+   * The keys this project has: the channel keys of its universes, and a U key for each of them
+   * (none for a project of one). The shortcuts of the others are kept for a project that has them.
+   */
+  private readonly actions = computed(() => {
+    const channels = this.store.channelCount();
+    const universes = this.store.universes();
+    return DESK_ACTIONS.filter((action) => {
+      const channel = /^channel\.(\d+)$/.exec(action.id);
+      if (channel) return Number(channel[1]) <= channels;
+      const universe = /^universe\.(\d+)$/.exec(action.id);
+      return !universe || (universes > 1 && Number(universe[1]) <= universes);
+    });
+  });
+
   // For each kind of keys: its keys that the search finds (all of them without a search).
   private readonly found = computed(() => {
     const words = this.search().trim().toLowerCase();
     const shortcuts = this.settings.shortcuts();
+    const actions = this.actions();
     return new Map(
       ACTION_GROUPS.map((group) => {
-        const all = DESK_ACTIONS.filter((action) => action.group === group);
+        const all = actions.filter((action) => action.group === group);
         return [group, words === '' ? all : all.filter((action) => this.matches(action, words, shortcuts[action.id]))];
       }),
     );
@@ -54,7 +71,7 @@ export class KeyboardView {
   protected readonly tabs = computed<readonly Tab[]>(() =>
     ACTION_GROUPS.map((group) => ({
       group,
-      total: DESK_ACTIONS.filter((action) => action.group === group).length,
+      total: this.actions().filter((action) => action.group === group).length,
       found: this.found().get(group)?.length ?? 0,
     })),
   );
@@ -120,17 +137,23 @@ export class KeyboardView {
     this.search.set((event.target as HTMLInputElement).value);
   }
 
-  /** What the list calls a key: with the channels or memories of its page, where it has a page. */
+  /**
+   * What the list calls a key: a channel key with its universe, "113 (U2)"; a page
+   * key with the channels or memories of its page (channels in the universe shown).
+   */
   protected label(action: DeskAction): string {
+    const channel = /^channel\.(\d+)$/.exec(action.id);
+    if (channel) return `Channel key ${channelLabel(Number(channel[1]))}`;
     const page = /^page\.(channel|memory)\.(\d+)$/.exec(action.id);
     if (!page) return action.label;
 
     const perPage = page[1] === 'channel' ? this.store.channelsPerPage() : this.store.memoriesPerPage();
-    const count = page[1] === 'channel' ? CHANNEL_COUNT : MEMORY_COUNT;
+    const count = page[1] === 'channel' ? UNIVERSE_SIZE : MEMORY_COUNT;
     const first = (Number(page[2]) - 1) * perPage + 1;
+    const where = page[1] === 'channel' && this.store.universes() > 1 ? ' of the universe shown' : '';
     return first > count
       ? `${action.label} (not there with this channel size)`
-      : `${action.label} (${first}-${first + perPage - 1})`;
+      : `${action.label} (${first}-${first + perPage - 1}${where})`;
   }
 
   protected shortcutOf(action: DeskAction): string {

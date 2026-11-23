@@ -70,7 +70,7 @@
             [disabled]="store.live()"
             (change)="toggleMember(group, member.id, $event)"
           />
-          {{ member.name || 'A light' }} <span class="dim">{{ channelRange(member) }}</span>
+          {{ member.name || 'A light' }} <span class="dim">{{ range(member) }}</span>
         </label>
       </li>
     } @empty {

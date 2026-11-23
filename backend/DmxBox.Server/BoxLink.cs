@@ -4,10 +4,16 @@ using System.Net.Sockets;
 namespace DmxBox.Server;
 
 /// <summary>
-/// Keeps the box showing what the desk says, for as long as the server runs. It looks for the
+/// Keeps one box showing what the desk says, for as long as the server runs. It looks for the
 /// box until it answers, sends it every change of the desk's output, and watches for the two
-/// things the box does by itself: its blackout button, and a restart.
+/// things the box does by itself: its blackout button, and a restart. <see cref="BoxNetwork"/>
+/// has a link for every box it looks for.
 /// </summary>
+/// <remarks>
+/// A box has an output for each universe it sends: its channels, as its answer says them, divided
+/// by 512. Each output gets the levels of the universe the wiring gives it (<see cref="BoxWiring"/>),
+/// and nothing (zeros) where it plays none.
+/// </remarks>
 /// <remarks>
 /// The desk's blackout is part of its output: it darkens the light and leaves the attributes of
 /// the lights, such as the pan of a moving head, where they are. The box has a blackout of its
@@ -19,7 +25,7 @@ namespace DmxBox.Server;
 /// The link has a thread of its own, because a request to a box that does not answer blocks
 /// for most of a second. All requests come from that thread, one after the other.
 /// </remarks>
-internal sealed class BoxLink : BackgroundService
+internal sealed class BoxLink : IDisposable
 {
     // 40 rounds a second. The box sends about 43 DMX frames a second, so more would be wasted.
     private static readonly TimeSpan RoundInterval = TimeSpan.FromMilliseconds(25);
@@ -34,9 +40,14 @@ internal sealed class BoxLink : BackgroundService
     private readonly IBox _box;
     private readonly IDeskClient _clients;
     private readonly ILogger<BoxLink> _logger;
+    private readonly Func<int[]> _universesOf;
+    private readonly Action? _changed;
 
-    // Read by the hub, replaced by the link's thread.
+    // Read by the network and the hub, replaced by the link's thread.
     private volatile BoxStatus _status;
+
+    // 1 when the wiring changed: the next round sends the output again.
+    private int _resend;
 
     // Everything below belongs to the link's thread alone.
     private bool _connected;
@@ -46,25 +57,50 @@ internal sealed class BoxLink : BackgroundService
     private long _sentOutput;       // the desk's OutputChanges that belong to the last frame sent
     private string? _lastFailure;   // why the box was not reached the last time
 
-    /// <summary>Prepares the link. Nothing is sent until the server starts it.</summary>
+    /// <summary>Prepares the link. Nothing is sent until it is run.</summary>
     /// <param name="desk">The desk whose output the box has to show.</param>
-    /// <param name="box">The box. The link closes it when the server stops.</param>
-    /// <param name="clients">
-    /// All connected UIs. They are told when the box comes or goes, and when its blackout button was pressed.
-    /// </param>
-    /// <param name="host">The address of the box, for the UI and the log.</param>
+    /// <param name="box">The box. The link closes it when it is disposed.</param>
+    /// <param name="clients">All connected UIs. They are told when the box's blackout button was pressed.</param>
+    /// <param name="host">The address of the box, as in <see cref="BoxPlan.Address"/>, for the UI and the log.</param>
     /// <param name="logger">Gets a line when the box comes or goes.</param>
-    public BoxLink(Desk desk, IBox box, IDeskClient clients, string host, ILogger<BoxLink> logger)
+    /// <param name="universesOf">
+    /// The universe each output of the box plays now, output 1 first, 0 for none. Null for a box
+    /// alone: output 1 plays U1, output 2 U2, as far as the desk has universes.
+    /// </param>
+    /// <param name="changed">Called on the link's thread when the box comes or goes.</param>
+    public BoxLink(
+        Desk desk,
+        IBox box,
+        IDeskClient clients,
+        string host,
+        ILogger<BoxLink> logger,
+        Func<int[]>? universesOf = null,
+        Action? changed = null)
     {
         _desk = desk;
         _box = box;
         _clients = clients;
         _logger = logger;
+        _universesOf = universesOf ?? AloneOf;
+        _changed = changed;
         _status = new BoxStatus(Connected: false, host, Firmware: null);
     }
 
-    /// <summary>Whether the box is connected right now.</summary>
+    /// <summary>Whether the box is connected right now, with its outputs.</summary>
     public BoxStatus Status => _status;
+
+    /// <summary>The wiring changed: the box gets its output again in the next round. Any thread may call this.</summary>
+    public void ResendSoon()
+    {
+        Interlocked.Exchange(ref _resend, 1);
+    }
+
+    // A box alone plays the first universes, one per output.
+    private int[] AloneOf()
+    {
+        int universes = _desk.Universes;
+        return [.. Enumerable.Range(1, _status.Outputs).Select(universe => universe <= universes ? universe : 0)];
+    }
 
     /// <summary>
     /// One round of the link's work: look for the box, or serve the box that is connected.
@@ -91,28 +127,36 @@ internal sealed class BoxLink : BackgroundService
         }
     }
 
-    /// <summary>Stops the link's thread and closes the connection to the box.</summary>
-    public override void Dispose()
+    /// <summary>Closes the connection to the box. Stop the link's thread first.</summary>
+    public void Dispose()
     {
-        base.Dispose();
         _box.Dispose();
     }
 
-    /// <summary>Starts the link's thread. The host calls this once, when the server starts.</summary>
-    /// <param name="stoppingToken">Signals that the server is shutting down.</param>
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        return Task.Factory.StartNew(
-            () => Run(stoppingToken), stoppingToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
-    }
-
-    private void Run(CancellationToken stopping)
+    /// <summary>
+    /// The link's thread: 40 rounds a second until it is told to stop. <see cref="BoxNetwork"/>
+    /// runs it on a thread of its own for every box.
+    /// </summary>
+    /// <param name="stopping">Signals that the link is to stop.</param>
+    public void Run(CancellationToken stopping)
     {
         var clock = Stopwatch.StartNew();
         TimeSpan nextRound = TimeSpan.Zero;
         while (!stopping.IsCancellationRequested)
         {
-            Step(clock.Elapsed);
+            try
+            {
+                Step(clock.Elapsed);
+            }
+            catch (Exception)
+            {
+                // Step handles every failure of the box itself. What gets here failed while it was
+                // being handled: writing the log line, most likely, because the server is shutting
+                // down and its log is closed. An exception that left this thread would end the
+                // whole program, so it ends here.
+                if (stopping.IsCancellationRequested)
+                    return;
+            }
 
             // Wait until the next round is due, not for a fixed 25 ms: Windows wakes a thread
             // in steps of about 16 ms, and this way the error does not add up.
@@ -128,14 +172,25 @@ internal sealed class BoxLink : BackgroundService
     private void Connect(TimeSpan now)
     {
         PingInfo info = _box.Ping();
-        PushEverything();
+        int outputs = OutputsOf(info);
 
+        // Connected before the first frame goes out: the wiring gives a box its universes while
+        // it is connected, and the first frame has to carry them. Should the frame fail, the box
+        // is reported gone again at once.
         _connected = true;
         _lastUptime = info.Uptime;
         _nextPing = now + PingInterval;
         _lastFailure = null;
-        _logger.LogInformation("The box at {Host} is connected, firmware {Firmware}.", _status.Host, info.Firmware);
-        Report(new BoxStatus(Connected: true, _status.Host, info.Firmware));
+        _logger.LogInformation(
+            "The box at {Host} is connected, firmware {Firmware}, outputs: {Outputs}.", _status.Host, info.Firmware, outputs);
+        Report(new BoxStatus(Connected: true, _status.Host, info.Firmware) { Outputs = outputs });
+        PushEverything();
+    }
+
+    // 512 channels for each output; a box that says fewer has one.
+    private static int OutputsOf(PingInfo info)
+    {
+        return Math.Clamp(info.Channels / Desk.UniverseSize, 1, BoxPlan.MaxOutputs);
     }
 
     private void Serve(TimeSpan now)
@@ -198,7 +253,7 @@ internal sealed class BoxLink : BackgroundService
 
     private void SendOutputIfChanged()
     {
-        if (_desk.OutputChanges != _sentOutput)
+        if (_desk.OutputChanges != _sentOutput || Interlocked.Exchange(ref _resend, 0) == 1)
             SendOutput();
     }
 
@@ -207,8 +262,25 @@ internal sealed class BoxLink : BackgroundService
         // The count first, then the output: a change in between is sent once more than
         // needed, but never missed.
         long changes = _desk.OutputChanges;
-        _box.SetLevels(_desk.GetOutput());
+        _box.SetLevels(FrameOf(_desk.GetOutput()));
         _sentOutput = changes;
+    }
+
+    // The box's levels: for each of its outputs, the 512 levels of the universe it plays; zeros
+    // where it plays none, or a universe the project does not have.
+    private byte[] FrameOf(byte[] output)
+    {
+        int outputs = _status.Outputs;
+        int[] universes = _universesOf();
+        byte[] frame = new byte[outputs * Desk.UniverseSize];
+        for (int index = 0; index < outputs && index < universes.Length; index++)
+        {
+            int universe = universes[index];
+            if (universe >= 1 && universe * Desk.UniverseSize <= output.Length)
+                Array.Copy(output, (universe - 1) * Desk.UniverseSize, frame, index * Desk.UniverseSize, Desk.UniverseSize);
+        }
+
+        return frame;
     }
 
     // The box's button was pressed: the desk's blackout follows it, and the UIs hear of it.
@@ -227,7 +299,7 @@ internal sealed class BoxLink : BackgroundService
             return;
 
         _connected = false;
-        Report(new BoxStatus(Connected: false, _status.Host, Firmware: null));
+        Report(new BoxStatus(Connected: false, _status.Host, Firmware: null) { Outputs = _status.Outputs });
     }
 
     // A missing box fails every second, each time for the same reason. The log gets a reason
@@ -245,12 +317,10 @@ internal sealed class BoxLink : BackgroundService
         _logger.LogWarning(fault, "The box at {Host} is not connected: {Reason}", _status.Host, reason.Message);
     }
 
+    // The network tells the UIs, with all boxes at once.
     private void Report(BoxStatus status)
     {
         _status = status;
-
-        // Not awaited: a browser that is slow to read its messages must not hold up the
-        // lights. A UI whose connection fails is SignalR's business.
-        _ = _clients.BoxChanged(status);
+        _changed?.Invoke();
     }
 }

@@ -51,6 +51,7 @@ internal sealed partial class Desk
         lock (_lock)
         {
             RequireUnlocked();
+            RequirePlanFits(kept);
             kept = kept with { PictureId = _stage.PictureId };
             if (kept.SameAs(_stage))
                 return false;
@@ -82,6 +83,7 @@ internal sealed partial class Desk
         lock (_lock)
         {
             RequireUnlocked();
+            RequirePlanFits(kept);
             if (kept.SameAs(_stage) && keptPicture == _stagePicture)
                 return false;
 
@@ -89,6 +91,22 @@ internal sealed partial class Desk
             _stagePicture = keptPicture;
             _projectChanges++;
             return true;
+        }
+    }
+
+    // Call with the lock held: every light of a plan must be on channels of the project's universes.
+    private void RequirePlanFits(StagePlan plan)
+    {
+        foreach (StageLight light in plan.Lights)
+        {
+            int last = light.Address + light.Channels.Length - 1;
+            if (last > Channels)
+            {
+                string which = light.Name.Length > 0 ? $"The light \"{light.Name}\"" : "A light";
+                throw new DeskException(
+                    $"{which} ends on channel {ChannelLabel(last)}, and the project has {UniversesSaid(_universes)}. " +
+                    "Add universes in Settings first.");
+            }
         }
     }
 

@@ -2,7 +2,7 @@
 rem Lumenet - starts the backend (.NET) and the frontend (Angular) in THIS console.
 rem
 rem   run.cmd                          the dmxbox on its USB cable (192.168.7.1)
-rem   run.cmd --Box:Host=127.0.0.1     another address, for example the simulator in sim\
+rem   run.cmd --Box:Host=127.0.0.1     another address, for example the simulator in firmware\sim\
 rem
 rem Then open http://localhost:4200. Ctrl+C stops both.
 rem The desk also works without the box: it shows "No box" until one answers.

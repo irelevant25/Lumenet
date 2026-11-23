@@ -1,0 +1,176 @@
+/* The element takes no room in the top bar: only the window it opens is seen. It looks like the
+   windows of the projects, Import and Export. */
+:host {
+  display: contents;
+}
+
+dialog {
+  width: min(720px, calc(100vw - 40px));
+  padding: 0;
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  background: var(--panel-raised);
+  color: var(--legend);
+  user-select: text;
+}
+
+dialog::backdrop {
+  background: rgb(0 0 0 / 60%);
+}
+
+.body {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+}
+
+h2 {
+  margin: 0;
+  font-size: calc(20px * var(--font-scale));
+  font-weight: 600;
+}
+
+.hint,
+.none,
+.remark {
+  margin: 0;
+  color: var(--legend-dim);
+  font-size: calc(13px * var(--font-scale));
+  line-height: 1.35;
+}
+
+.remark {
+  color: var(--system);
+}
+
+/* one row for each box: its address, whether it answers, a list for each output */
+table {
+  border-collapse: collapse;
+  font-size: calc(14px * var(--font-scale));
+}
+
+caption,
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+th,
+td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--edge);
+  text-align: left;
+  vertical-align: middle;
+}
+
+thead th {
+  color: var(--legend-dim);
+  font-size: calc(12px * var(--font-scale));
+  font-weight: 600;
+}
+
+tbody th {
+  font-weight: 400;
+}
+
+.address {
+  display: block;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+small {
+  color: var(--legend-dim);
+  font-size: calc(12px * var(--font-scale));
+}
+
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--legend-dim);
+}
+
+.light {
+  box-sizing: border-box;
+  width: 9px;
+  height: 9px;
+  border: 1px solid var(--legend-dim);
+  border-radius: 50%;
+}
+
+.state.connected {
+  color: var(--legend);
+}
+
+.state.connected .light {
+  border-color: var(--channel);
+  background: var(--channel);
+}
+
+.outputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+select,
+input {
+  box-sizing: border-box;
+  min-height: 30px;
+  padding: 4px 6px;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: var(--well);
+  color: var(--legend);
+  font: inherit;
+}
+
+.act {
+  text-align: right;
+}
+
+.remove {
+  width: 32px;
+  height: 32px;
+  border: 1px solid color-mix(in srgb, #ff8f87 50%, transparent);
+  border-radius: 4px;
+  background: transparent;
+  color: #ff8f87;
+  cursor: pointer;
+}
+
+/* adding a box by hand: its address, its outputs, and the key */
+.add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.add input {
+  width: 12em;
+}
+
+.error {
+  margin: 0;
+  color: #ff8f87;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--strip-gap);
+}
+
+/* a narrow window: the table scrolls sideways rather than the page */
+@media (max-width: 600px) {
+  table {
+    display: block;
+    overflow-x: auto;
+  }
+}

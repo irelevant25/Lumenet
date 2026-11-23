@@ -1,6 +1,7 @@
 {
   "format": "lumenet-project",
-  "version": 4,
+  "version": 5,
+  "universes": 1,
   "notes": "<div><font size=\"5\"><b>Sequences</b></font></div><div>A row of six lamps, two washes and a blinder. Six of the memories hold sequences: steps that run by themselves while the memory fader is up.</div><div><b><font color=\"#ffb020\">What is in it</font></b></div><ul><li>Memories 1 and 2: plain looks, the washes and the row.</li><li>Memory 3: a chase from left to right, in a loop. Memory 4: a bounce, there and back.</li><li>Memory 5: a sparkle in random order, faster than written (speed 1.5).</li><li>Memory 6: a sequence of memories: the washes and the row take turns.</li><li>Memory 7: an intro that runs once and stops, with a flash of the blinder.</li><li>Memory 8: two slow breaths of the washes, at half speed.</li></ul><div><b><font color=\"#ffb020\">Try it</font></b></div><ol><li>On <b>Main</b>, push the fader of memory 3 up: the chase runs. Its level is how bright it runs.</li><li>The memory keys of the independents (at the right) switch memories 1 to 8 on and off.</li><li>Open <b>Sequences</b>: every step with its target, level and times (up, wait, down). <b>Once</b>, <b>Loop</b> and <b>Random</b> change how it runs, and the speed fader how fast.</li><li><b>Rate</b> on <b>Main</b> makes every sequence faster or slower at once, without changing them.</li><li><b>Template</b> on <b>Sequences</b> makes a whole chase over a range of channels at once.</li><li><b>Rec seq</b> records a sequence key by key: press it, a free memory, then the channel keys in their order.</li></ol>",
   "memories": [
     {

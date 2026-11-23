@@ -1,5 +1,6 @@
-import { StagePlan } from './desk-types';
+import { StagePlan, UNIVERSE_SIZE } from './desk-types';
 import { noteInOneLine } from './notes';
+import { channelLabel, channelNumber, universeStart } from './universes';
 
 /**
  * One line of the list from which the number of a step is chosen: the number of a channel or
@@ -14,23 +15,30 @@ export interface StepChoice {
   readonly short?: string;
 }
 
-/** The lists for the four kinds of step. */
+/**
+ * The lists for the kinds of step. `release` only in the stack: the steps a release can take
+ * down, by their ids; a table without it offers no release.
+ */
 export interface StepChoices {
   readonly channel: readonly StepChoice[];
   readonly memory: readonly StepChoice[];
   readonly fixture: readonly StepChoice[];
   readonly group: readonly StepChoice[];
+  readonly release?: readonly StepChoice[];
 }
 
 /**
- * The fixtures of the plan by their address, "18: Spot 1", and its groups in their order,
+ * The fixtures of the plan by their address, "18 (U1): Spot 1", and its groups in their order,
  * "G1: Back"; their numbers are their ids.
  */
 export function lightChoices(plan: Pick<StagePlan, 'lights' | 'groups'>): Pick<StepChoices, 'fixture' | 'group'> {
   return {
     fixture: [...plan.lights]
       .sort((a, b) => a.address - b.address)
-      .map((light) => ({ number: light.id, text: `${light.address}: ${light.name || 'Light'}`, short: String(light.address) })),
+      .map((light) => {
+        const address = channelLabel(light.address);
+        return { number: light.id, text: `${address}: ${light.name || 'Light'}`, short: address };
+      }),
     group: plan.groups.map((group, index) => ({
       number: group.id,
       text: `G${index + 1}: ${group.name || 'Group'}`,
@@ -46,6 +54,26 @@ export function lightChoices(plan: Pick<StagePlan, 'lights' | 'groups'>): Pick<S
 export function stepChoice(number: number, note: string): StepChoice {
   const words = noteInOneLine(note);
   return { number, text: words === '' ? String(number) : `${number}: ${words}` };
+}
+
+/**
+ * The choices for the channels of the project, each with its number in its universe and its
+ * note or what the plan says it is: "113: Front left", or "113" alone. The universe is not in
+ * them: a step's kind says it ("Channel (U2)"), and its list holds the channels of that universe
+ * only (channelsOf). `names` holds that of channel 1 at index 0, and so on.
+ */
+export function channelChoices(names: readonly string[]): StepChoice[] {
+  return names.map((name, index) => {
+    const label = String(channelNumber(index + 1));
+    const words = noteInOneLine(name);
+    return { number: index + 1, text: words === '' ? label : `${label}: ${words}`, short: label };
+  });
+}
+
+/** The choices of the channels of one universe, out of those of the whole project. */
+export function channelsOf(choices: readonly StepChoice[], universe: number): StepChoice[] {
+  const first = universeStart(universe) - 1;
+  return choices.slice(first, first + UNIVERSE_SIZE);
 }
 
 /**

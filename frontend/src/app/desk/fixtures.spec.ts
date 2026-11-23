@@ -1,4 +1,4 @@
-import { CHANNEL_COUNT, EMPTY_STAGE, FixtureType, StageLight, StagePlan, recordedStep, stepAfter } from './desk-types';
+import { UNIVERSE_SIZE, EMPTY_STAGE, FixtureType, StageLight, StagePlan, recordedStep, stepAfter } from './desk-types';
 import {
   applyLimits,
   channelName,
@@ -28,7 +28,7 @@ function light(channels: string, more: Partial<StageLight> = {}): StageLight {
 
 /** The levels the faders show: these from channel 1 on, the rest at 0. */
 function levels(...values: number[]): number[] {
-  return [...values, ...new Array<number>(CHANNEL_COUNT - values.length).fill(0)];
+  return [...values, ...new Array<number>(UNIVERSE_SIZE - values.length).fill(0)];
 }
 
 /** A moving head of the library: pan with its fine channel, tilt, a color wheel, a shutter, a dimmer. */

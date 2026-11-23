@@ -121,7 +121,7 @@ internal sealed partial class Desk
     // plays at full.
     private byte[] SoloUpOutput(HashSet<Fader> up, double now)
     {
-        byte[] output = new byte[ChannelCount];
+        byte[] output = new byte[Channels];
         foreach (Fader fader in up)
         {
             if (!fader.Memory)

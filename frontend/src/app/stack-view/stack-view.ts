@@ -1,8 +1,10 @@
 import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { DeskStore } from '../desk/desk-store';
 import { StackStep, TimedStep } from '../desk/desk-types';
-import { StepChoices, lightChoices, stepChoices } from '../desk/step-choices';
+import { StepChoices, channelChoices, lightChoices, stepChoices } from '../desk/step-choices';
 import { LampButton } from '../lamp-button/lamp-button';
+import { StackCards } from '../stack-cards/stack-cards';
+import { StackKeys } from '../stack-keys/stack-keys';
 import { StepColorDialog } from '../step-color-dialog/step-color-dialog';
 import { StepRow } from '../step-row/step-row';
 
@@ -27,7 +29,7 @@ interface DropMark {
  * that fits its new place.
  */
 @Component({
-  imports: [LampButton, StepColorDialog, StepRow],
+  imports: [LampButton, StackCards, StackKeys, StepColorDialog, StepRow],
   selector: 'lm-stack-view',
   styleUrl: './stack-view.css',
   templateUrl: './stack-view.html',
@@ -37,30 +39,32 @@ export class StackView {
   private readonly colorDialog = viewChild.required(StepColorDialog);
 
   protected readonly steps = computed(() => this.store.stack().steps);
-  private readonly playback = computed(() => this.store.playback().stack);
 
   /** True while the stack is live: it runs, and its steps are locked. */
   protected readonly live = this.store.live;
   protected readonly previous = computed(() => this.store.stackPosition().previous);
   protected readonly current = computed(() => this.store.stackPosition().current);
   protected readonly next = computed(() => this.store.stackPosition().next);
-  protected readonly paused = this.store.stackPaused;
-
-  /** True while the stack moves by itself: a fade or a countdown that is not paused. */
-  protected readonly running = this.store.stackRunning;
 
   /** The step that is being dragged, and where it would land. */
   private readonly dragged = signal<number | null>(null);
   protected readonly dropMark = signal<DropMark | null>(null);
 
+  /** The steps that are on: the current one and those it came on top of (Add). */
+  protected readonly on = this.store.stackOn;
+
   /**
    * What the number of a step is chosen from: every channel, the memories that hold something
-   * (a look or a sequence), and the fixtures and groups of the stage plan.
+   * (a look or a sequence), the fixtures and groups of the stage plan, and for a release the
+   * steps of the stack that are no release, "2.0: Memory 2 (Wash)".
    */
   protected readonly choices = computed<StepChoices>(() => ({
-    channel: stepChoices(this.store.channelNames()),
+    channel: channelChoices(this.store.channelNames()),
     memory: stepChoices(this.store.memoryNotes(), (memory) => this.store.memoryStored()[memory - 1]),
     ...lightChoices(this.store.stage()),
+    release: this.steps()
+      .filter((step) => step.target !== 'release')
+      .map((step) => ({ number: step.id, text: `${step.cue}: ${this.store.stepWithNote(step)}`, short: step.cue })),
   }));
 
   protected readonly summary = computed(() => {
@@ -76,37 +80,9 @@ export class StackView {
       : `${size} Stack takes it live: every fader goes to zero and the first step starts.`;
   });
 
-  /** What the stack is doing with the current step, in a few words. */
-  protected readonly progress = computed(() => {
-    if (!this.live()) return this.steps().length > 0 ? 'The stack is not live.' : '';
-
-    const { state, paused, remaining } = this.playback();
-    const left = `${remaining.toFixed(1)} s`;
-    if (paused) return remaining > 0 ? `Paused, with ${left} left. Play goes on.` : 'Paused. Play goes on.';
-
-    switch (state) {
-      case 'fading':
-        return `On its way up, ${left} left.`;
-      case 'waiting':
-        return `Up. The stack goes on by itself in ${left}.`;
-      case 'holding':
-        return this.next() ? 'Up. The stack waits for Play.' : 'Up. It is the only step.';
-      default:
-        return 'Play goes to the first step.';
-    }
-  });
-
   /** The note under the fader of the step's channel or memory, or the name of its fixture or group, in one line. */
   protected noteOf(step: TimedStep): string {
     return this.store.stepNote(step);
-  }
-
-  /** A step in words: "Channel 5 (PAR 1 red) at 200", "Fixture Spot 1 at 255". */
-  protected describe(step: TimedStep): string {
-    const name = this.store.stepName(step);
-    if (step.target === 'fixture' || step.target === 'group') return `${name} at ${step.value}`;
-    const note = this.noteOf(step);
-    return `${note ? `${name} (${note})` : name} at ${step.value}`;
   }
 
   /** The color of a step of a fixture or a group was pressed: the window asks for another. */
@@ -114,21 +90,24 @@ export class StackView {
     this.colorDialog().open(`Color of step ${step.cue}`, step.color ?? null, (color) => this.changeStep(step.id, { ...step, color }));
   }
 
-  /** The times of a step in words, for the "next" card. */
-  protected times(step: TimedStep): string {
-    const wait = step.wait > 0 ? `then goes on after ${step.wait.toFixed(1)} s` : 'then waits for Play';
-    return `Up in ${step.up.toFixed(1)} s, ${wait}.`;
-  }
-
   /** Puts a step at the end: the first one, or one like the last on the next channel or memory. */
   protected addStep(): void {
     this.store.addStackStepAtEnd();
   }
 
-  /** A row hands back its step with one field changed. Only the step itself goes to the desk, not its name and number. */
+  /**
+   * A row hands back its step with one field changed. Only the step itself goes to the desk, not
+   * its name and number; whether it adds only when it does (a release never does).
+   */
   protected changeStep(id: number, step: TimedStep): void {
-    const { target, number, value, up, wait, down, color } = step;
-    this.store.updateStackStep(id, color === undefined ? { target, number, value, up, wait, down } : { target, number, value, up, wait, down, color });
+    const { target, number, value, up, wait, down, color, add } = step;
+    const sent: TimedStep = color === undefined ? { target, number, value, up, wait, down } : { target, number, value, up, wait, down, color };
+    this.store.updateStackStep(id, add && target !== 'release' ? { ...sent, add: true } : sent);
+  }
+
+  /** The Add box of a step: checked, the step comes up on top of what is on and takes nothing down. */
+  protected setAdd(step: StackStep, event: Event): void {
+    this.changeStep(step.id, { ...step, add: (event.target as HTMLInputElement).checked });
   }
 
   /**

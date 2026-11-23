@@ -131,7 +131,7 @@ internal static class Program
     }
 
     // The parts that live as long as the server: the desk, the projects with their undo history
-    // and their autosave, the box link.
+    // and their autosave, the boxes.
     private static void AddDesk(IServiceCollection services, IConfiguration settings, IBox? box)
     {
         string projectsFolder = Setting(settings, "Projects:Folder", DefaultProjectsFolder());
@@ -139,6 +139,10 @@ internal static class Program
         string autosaveFile = Setting(settings, "Autosave:File", DefaultAutosaveFile());
         string boxHost = Setting(settings, "Box:Host", DefaultBoxHost);
         int boxPort = settings.GetValue("Box:Port", DmxBoxClient.DefaultPort);
+
+        // False for a test desk beside the real one: it must not find the real boxes on the PC's
+        // adapters (10.1.n.x) and play on them.
+        bool discover = settings.GetValue("Box:Discover", true);
 
         services.AddSingleton<Desk>();
         services.AddSingleton(provider => new ProjectStore(provider.GetRequiredService<Desk>(), projectsFolder, examplesFolder));
@@ -149,15 +153,18 @@ internal static class Program
             autosaveFile,
             provider.GetRequiredService<ILogger<Autosave>>()));
         services.AddHostedService(provider => provider.GetRequiredService<Autosave>());
-        services.AddSingleton(provider => new BoxLink(
+        services.AddSingleton(provider => new BoxNetwork(
             provider.GetRequiredService<Desk>(),
-            box ?? new RealBox(boxHost, boxPort),
             provider.GetRequiredService<IHubContext<DeskHub, IDeskClient>>().Clients.All,
+            provider.GetRequiredService<ThisPc>(),
             boxHost,
-            provider.GetRequiredService<ILogger<BoxLink>>()));
+            boxPort,
+            discover,
+            box,
+            provider.GetRequiredService<ILoggerFactory>()));
 
-        // The same link as above: the host starts and stops it, the hub asks it for the box's state.
-        services.AddHostedService(provider => provider.GetRequiredService<BoxLink>());
+        // The same network as above: the host starts and stops it, the hub asks it for the boxes.
+        services.AddHostedService(provider => provider.GetRequiredService<BoxNetwork>());
 
         // Lets time pass on the desk, for the sequences and the stack.
         services.AddHostedService(provider => new DeskClock(

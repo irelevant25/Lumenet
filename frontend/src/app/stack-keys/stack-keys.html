@@ -1,0 +1,68 @@
+<!-- The switch of the stack. Lit: the stack is live, and everything that is stored is locked. -->
+<button
+  lmLamp
+  type="button"
+  class="live"
+  tone="stack"
+  aria-label="Stack live"
+  data-action="stack.live"
+  [level]="live() ? 3 : 1"
+  [disabled]="!live() && empty()"
+  [attr.aria-pressed]="live()"
+  (click)="store.setStackLive(!live())"
+>
+  Stack
+</button>
+
+<!-- The keys a show is run with: bigger than the other keys, Play the biggest. -->
+<div class="transport" role="group" aria-label="Going through the stack">
+  <button
+    lmLamp
+    type="button"
+    tone="prev"
+    aria-label="Previous step"
+    data-action="stack.previous"
+    [disabled]="!live()"
+    (click)="store.stackPrevious()"
+  >
+    Prev
+  </button>
+  <button
+    lmLamp
+    type="button"
+    class="play"
+    tone="play"
+    aria-label="Play"
+    data-action="stack.play"
+    [level]="running() ? 3 : 1"
+    [disabled]="!live()"
+    (click)="store.stackPlay()"
+  >
+    Play
+  </button>
+  <button
+    lmLamp
+    type="button"
+    tone="pause"
+    aria-label="Pause"
+    data-action="stack.pause"
+    [level]="paused() ? 3 : 1"
+    [blink]="paused()"
+    [disabled]="!live()"
+    [attr.aria-pressed]="paused()"
+    (click)="store.stackPause()"
+  >
+    Pause
+  </button>
+  <button
+    lmLamp
+    type="button"
+    tone="next"
+    aria-label="Next step"
+    data-action="stack.next"
+    [disabled]="!live()"
+    (click)="store.stackNext()"
+  >
+    Next
+  </button>
+</div>

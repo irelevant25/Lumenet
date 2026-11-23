@@ -57,13 +57,20 @@ namespace DmxBox.Server;
 /// channels and 32 for memories among the independents; version 3 had 10 of each, versions 1
 /// and 2 had 16 keys for channels and none for memories. The keys an older file does not have
 /// are where they are on a new desk: key 11 on channel 11, and so on.
+/// Version 6 has steps of the stack that add ("add": true) and releases ("target": "release",
+/// "number": 0, "releases": "2.0", the number of the step it takes down). An older program would
+/// play a step that adds as one that does not, and cannot read a release; so a file with either
+/// says version 6, which an older program refuses with a clear message, and a file without them
+/// still says version 5, which it reads.
 /// </remarks>
 internal static class ProjectFormat
 {
     private const string FormatName = "lumenet-project";
 
-    // The version this program writes, and the newest it can read.
-    private const int CurrentVersion = 4;
+    // The newest version this program reads, and the one it writes for a stack with steps that add or
+    // release (see the remarks). Version 5 has the universes and the boxes.
+    private const int CurrentVersion = 6;
+    private const int VersionWithoutAddOrRelease = 5;
 
     // The channel keys of the independents in a file of version 1 or 2, and the keys of each
     // kind in a file of version 3.
@@ -86,10 +93,15 @@ internal static class ProjectFormat
     public static void Write(Stream stream, ProjectContent project)
     {
         StepPlaces places = StepPlaces.Of(project.Stage);
+        bool addsOrReleases = project.Stack.Any(step => step.Step.Add || step.Step.IsRelease);
         var file = new ProjectFile
         {
             Format = FormatName,
-            Version = CurrentVersion,
+            Version = addsOrReleases ? CurrentVersion : VersionWithoutAddOrRelease,
+            Universes = project.Universes,
+            Boxes = project.Boxes.Length == 0
+                ? null
+                : project.Boxes.Select(box => new ProjectFileBox { Address = box.Address, Universes = [.. box.Universes] }).ToList<ProjectFileBox?>(),
             Notes = project.Notes.Length == 0 ? null : project.Notes,
             Memories = [],
             ChannelNotes = NotesThatAreNotEmpty(project.ChannelNotes),
@@ -97,7 +109,7 @@ internal static class ProjectFormat
             Independents = project.Independents.ToList(),
             MemoryIndependents = project.MemoryIndependents.ToList(),
             Sequences = [],
-            Stack = project.Stack.Select(step => FileStep(step.Step, step.Cue.ToString(), places)).ToList<ProjectFileStep?>(),
+            Stack = project.Stack.Select(step => FileStackStep(step, places)).ToList<ProjectFileStep?>(),
             Stage = FileStage(project.Stage, project.StagePicture),
         };
 
@@ -144,15 +156,19 @@ internal static class ProjectFormat
     {
         ProjectFile file = Parse(stream);
         int version = RequireFormat(file);
+        int universes = UniversesOf(file);
+        int channels = universes * Desk.UniverseSize;
 
-        byte[]?[] looks = LooksOf(file);
+        byte[]?[] looks = LooksOf(file, channels);
         (StagePlan? stage, string? picture) = StageOf(file.Stage);
-        return new ProjectContent(
+        var content = new ProjectContent(
             looks,
-            NotesOf(file.ChannelNotes, Desk.ChannelCount, "channel"),
+            NotesOf(file.ChannelNotes, channels, "channel"),
             NotesOf(file.MemoryNotes, Desk.MemoryCount, "memory"),
-            IndependentsOf(file.Independents, version))
+            IndependentsOf(file.Independents, version, channels))
         {
+            Universes = universes,
+            Boxes = BoxesOf(file.Boxes),
             MemoryIndependents = MemoryIndependentsOf(file.MemoryIndependents, version),
             Sequences = SequencesOf(file.Sequences, looks),
             Stack = StackOf(file.Stack),
@@ -160,6 +176,15 @@ internal static class ProjectFormat
             StagePicture = picture,
             Notes = ProjectNotesOf(file.Notes),
         };
+
+        // A step or a light beyond the project's universes: a file edited by hand.
+        if (Desk.UseAbove(channels, content.Sequences, content.Stack.Select(step => (step.Cue, step.Step)), stage ?? StagePlan.Empty, content.Independents)
+            is { } use)
+        {
+            throw Bad($"The project has {Desk.UniversesSaid(universes)}, but {use}.");
+        }
+
+        return content;
     }
 
     /// <summary>Reads a project file from its text, as Import hands it over.</summary>
@@ -368,8 +393,46 @@ internal static class ProjectFormat
         return version;
     }
 
+    // The universes of the project: 1 for a file before version 5.
+    private static int UniversesOf(ProjectFile file)
+    {
+        int universes = file.Universes ?? 1;
+        if (universes < 1 || universes > Desk.MaxUniverses)
+            throw Bad($"The file says {universes} universes; a project has 1 to {Desk.MaxUniverses}.");
+
+        return universes;
+    }
+
+    // The boxes the project lists; none when the file lists none.
+    private static BoxPlan[] BoxesOf(List<ProjectFileBox?>? listed)
+    {
+        if (listed is null)
+            return [];
+        if (listed.Count > BoxPlan.MaxBoxes)
+            throw Bad($"The file lists {listed.Count} boxes; a project can have {BoxPlan.MaxBoxes}.");
+
+        var boxes = new List<BoxPlan>();
+        for (int index = 0; index < listed.Count; index++)
+        {
+            ProjectFileBox box = listed[index] ?? throw Bad("The list of boxes in the file has an empty entry.");
+            try
+            {
+                BoxPlan plan = new BoxPlan(box.Address ?? "", [.. box.Universes ?? []]).Checked($"Box {index + 1} of the file");
+                if (boxes.Any(other => other.Address == plan.Address))
+                    throw Bad($"The file lists the box at {plan.Address} twice.");
+                boxes.Add(plan);
+            }
+            catch (DeskException e)
+            {
+                throw Bad(e.Message);
+            }
+        }
+
+        return [.. boxes];
+    }
+
     // One entry per memory: its look, or null for a memory the file does not list.
-    private static byte[]?[] LooksOf(ProjectFile file)
+    private static byte[]?[] LooksOf(ProjectFile file, int channels)
     {
         List<ProjectFileMemory?> memories = file.Memories ?? throw Bad("The file has no list of memories.");
 
@@ -383,7 +446,7 @@ internal static class ProjectFormat
             if (looks[number - 1] is not null)
                 throw Bad($"The file lists memory {number} twice.");
 
-            looks[number - 1] = LookOf(memory, number);
+            looks[number - 1] = LookOf(memory, number, channels);
         }
 
         return looks;
@@ -399,18 +462,18 @@ internal static class ProjectFormat
         return number;
     }
 
-    private static byte[] LookOf(ProjectFileMemory memory, int number)
+    private static byte[] LookOf(ProjectFileMemory memory, int number, int channels)
     {
         SortedDictionary<int, int> levels = memory.Levels ?? throw Bad($"Memory {number} in the file has no levels.");
 
-        byte[] look = new byte[Desk.ChannelCount];
+        byte[] look = new byte[channels];
         foreach ((int channel, int level) in levels)
         {
-            if (channel < 1 || channel > Desk.ChannelCount)
+            if (channel < 1 || channel > channels)
             {
                 throw Bad(
                     $"Memory {number} in the file has a channel {channel}; " +
-                    $"channels go from 1 to {Desk.ChannelCount}.");
+                    $"the project's channels go from 1 to {channels}.");
             }
 
             if (level < 0 || level > Desk.MaxLevel)
@@ -467,7 +530,7 @@ internal static class ProjectFormat
     // the keys are where they are on a new desk. A list that is there has to be whole for its
     // version: 32 keys, 10 in a file of version 3, 16 in one of version 1 or 2. The keys an older
     // file does not have are where they are on a new desk.
-    private static int[] IndependentsOf(List<int>? listed, int version)
+    private static int[] IndependentsOf(List<int>? listed, int version, int channels)
     {
         if (listed is null)
             return Desk.DefaultIndependents();
@@ -481,7 +544,7 @@ internal static class ProjectFormat
         if (listed.Count != count)
             throw Bad($"The file lists {listed.Count} independents; there must be {count}.");
 
-        CheckKeys(listed, "Independent", ("channel", "channels"), Desk.ChannelCount);
+        CheckKeys(listed, "Independent", ("channel", "channels"), channels);
         return [.. listed, .. Desk.DefaultIndependents().Skip(count)];
     }
 
@@ -533,7 +596,7 @@ internal static class ProjectFormat
             string where = $"of the sequence of memory {number}";
             sequences[number - 1] = new Sequence(
                 entry.Loop ?? Sequence.DefaultLoop,
-                steps.Select((step, index) => StepOf(step, $"Step {index + 1} {where}")).ToArray())
+                steps.Select((step, index) => StepOf(step, $"Step {index + 1} {where}", inStack: false)).ToArray())
             {
                 Random = entry.Random ?? false,
                 Speed = SpeedOf(entry.Speed, number),
@@ -576,7 +639,24 @@ internal static class ProjectFormat
             if (steps.Any(step => step.Cue == cue))
                 throw Bad($"The file lists step {cue} of the stack twice.");
 
-            steps.Add(new ProjectStep(cue, StepOf(entry, where)));
+            // A release names its step by that step's number ("releases"); its own "number" is not
+            // used. One whose step the stack does not have releases nothing, as after taking it out.
+            Step step = StepOf(entry, where, inStack: true);
+            CueNumber? releases = null;
+            if (step.IsRelease)
+            {
+                step = step with { Number = 0 };
+                try
+                {
+                    releases = entry?.Releases is { } released ? CueNumber.Parse(released) : null;
+                }
+                catch (DeskException e)
+                {
+                    throw Bad($"{where} in the file cannot be used: the step it releases has no proper number. {e.Message}");
+                }
+            }
+
+            steps.Add(new ProjectStep(cue, step) { Releases = releases });
         }
 
         if (steps.Count > Desk.MaxStackSteps)
@@ -586,23 +666,41 @@ internal static class ProjectFormat
     }
 
     // The same rules as for a step made on the UI, so that a file cannot bring in a step that
-    // the desk itself would refuse. "where" names the step for the message.
-    private static Step StepOf(ProjectFileStep? entry, string where)
+    // the desk itself would refuse. "where" names the step for the message. A step of the stack
+    // may add or release; one of a sequence does neither.
+    private static Step StepOf(ProjectFileStep? entry, string where, bool inStack)
     {
         if (entry is null || entry.Target is null || entry.Number is null || entry.Value is null)
             throw Bad($"{where} in the file is not complete: it needs a target, a number and a value.");
 
         try
         {
-            return new Step(entry.Target, entry.Number.Value, entry.Value.Value, entry.Up ?? 0, entry.Wait ?? 0, entry.Down ?? 0)
+            var step = new Step(entry.Target, entry.Number.Value, entry.Value.Value, entry.Up ?? 0, entry.Wait ?? 0, entry.Down ?? 0)
             {
                 Color = entry.Color,
-            }.Checked();
+                Add = inStack && entry.Add == true,
+            };
+            return inStack ? step.Checked() : step.CheckedForSequence();
         }
         catch (DeskException e)
         {
             throw Bad($"{where} in the file cannot be used. {e.Message}");
         }
+    }
+
+    // A step of the stack as the file has it: with its number, and whether it adds or what it releases.
+    private static ProjectFileStep FileStackStep(ProjectStep step, StepPlaces places)
+    {
+        ProjectFileStep file = FileStep(step.Step, step.Cue.ToString(), places);
+        if (step.Step.Add)
+            file.Add = true;
+        if (step.Step.IsRelease)
+        {
+            file.Number = 0;
+            file.Releases = step.Releases?.ToString();
+        }
+
+        return file;
     }
 
     // A step as the file has it. "places" gives a fixture or a group its place in the file's

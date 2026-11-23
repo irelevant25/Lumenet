@@ -139,27 +139,52 @@ public class ShowImportTests
         Assert.Equal(128, look[6]);   // address 7
         Assert.Equal(3, look.Count(level => level > 0));
 
+        // Address 600 is in the second universe: the project has two.
+        Assert.Equal(2, show.Content.Universes);
+        Assert.Equal(1024, look.Length);
+
         string[] notes = show.Content.ChannelNotes;
         Assert.Equal("Ch 5", notes[7]);
         Assert.Equal("Ch 5" + SecondLine + "80%", notes[8]);
         Assert.Equal("FRONTLEFTWA" + SecondLine + "SH", notes[6]);   // the dimmer's name, over both lines
-        Assert.Equal(3, notes.Count(note => note != ""));
+        Assert.Equal("Ch 3", notes[599]);
+        Assert.Equal(4, notes.Count(note => note != ""));
 
-        Assert.Contains("Channels without a DMX address from 1 to 512: 1 (channel 6). Their levels are left out.", show.Report);
-        Assert.Contains("Dimmers above 512 in the patch: 1. They are left out: the box sends one universe, addresses 1 to 512.", show.Report);
+        Assert.Contains("Channels without a DMX address from 1 to 1024: 1 (channel 6). Their levels are left out.", show.Report);
+        Assert.Contains("The show uses addresses up to 600, so the project has 2 universes: address 513 of the show is channel 1 (U2), and so on.", show.Report);
+    }
+
+    [Fact]
+    public void DimmersAboveTheEighthUniverseAreLeftOut()
+    {
+        ImportedShow show = Import("Patch 1 1<1@100 2<5000@100\nCue 1\nChan 1 FL 2 FL");
+
+        Assert.Equal(1, show.Content.Universes);
+        Assert.Contains("Dimmers above 4096 in the patch: 1. They are left out: the desk has 8 universes at most.", show.Report);
+        Assert.Contains("Channels without a DMX address from 1 to 512: 1 (channel 2). Their levels are left out.", show.Report);
     }
 
     [Fact]
     public void WithoutPatchChannelOneIsAddressOne()
     {
-        ImportedShow show = Import("Cue 1\nChan 1 FL 512 FL 513 FL 600 FL 601 FL 602 FL 603 FL 604 FL");
+        ImportedShow show = Import("Cue 1\nChan 1 FL 512 FL");
 
         byte[] look = show.Content.Looks[0]!;
+        Assert.Equal(1, show.Content.Universes);
         Assert.Equal<(int, int)>((255, 255), (look[0], look[511]));
         Assert.All(show.Content.ChannelNotes, note => Assert.Equal("", note));
-        Assert.Contains(
-            "Channels without a DMX address from 1 to 512: 6 (channels 513, 600, 601, 602, 603 and 1 more). Their levels are left out.",
-            show.Report);
+        Assert.DoesNotContain(show.Report, line => line.Contains("universes", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void WithoutPatchTheHighestChannelDecidesTheUniverses()
+    {
+        ImportedShow show = Import("Cue 1\nChan 1 FL 512 FL 513 FL 4096 FL 4097 FL");
+
+        byte[] look = show.Content.Looks[0]!;
+        Assert.Equal(8, show.Content.Universes);
+        Assert.Equal<(int, int, int, int)>((255, 255, 255, 255), (look[0], look[511], look[512], look[4095]));
+        Assert.Contains("Channels without a DMX address from 1 to 4096: 1 (channel 4097). Their levels are left out.", show.Report);
     }
 
     [Fact]

@@ -62,7 +62,7 @@ internal sealed partial class Desk
 
         Sequence checkedSequence = sequence with
         {
-            Steps = Array.ConvertAll(steps, step => (step ?? throw new DeskException("A step is missing.")).Checked()),
+            Steps = Array.ConvertAll(steps, step => (step ?? throw new DeskException("A step is missing.")).CheckedForSequence()),
             Speed = Sequence.CheckedSpeed(sequence.Speed),
         };
 
@@ -70,6 +70,7 @@ internal sealed partial class Desk
         {
             RequireUnlocked();
             RequireNoLook(memory);
+            Array.ForEach(checkedSequence.Steps, RequireStepFits);
             StoreSequence(memory, checkedSequence);
             CountLookChange();
         }
@@ -166,12 +167,13 @@ internal sealed partial class Desk
     public void AddSequenceStep(int memory, Step? step)
     {
         RequireMemory(memory);
-        Step checkedStep = (step ?? throw new DeskException("A step is missing.")).Checked();
+        Step checkedStep = (step ?? throw new DeskException("A step is missing.")).CheckedForSequence();
 
         lock (_lock)
         {
             RequireUnlocked();
             RequireNoLook(memory);
+            RequireStepFits(checkedStep);
 
             Sequence old = _sequences[memory - 1] ?? new Sequence(Sequence.DefaultLoop, []);
             if (old.Steps.Length >= Sequence.MaxSteps)
@@ -269,6 +271,13 @@ internal sealed partial class Desk
 
     // Call with the lock held. Raises "levels" to what the sequence of one memory gives at "now",
     // under a fader at "fader".
+    //
+    // Going from one step to the next is a crossfade without a dip: every channel moves from its
+    // level in the step before to its level in the step that comes. A channel both steps hold at
+    // the same level stays where it is; one that rises follows the up time of the step that comes,
+    // one that falls the down time of the step that goes (to 0 if the next step does not hold it).
+    // A step played earlier that is still on its way down (a down time longer than the steps
+    // after it) holds its channels up the same way, from where the newer steps have them.
     private void AddSequence(byte[] levels, int index, double now, byte fader, Dictionary<int, int>? stepsOn)
     {
         if (_sequences[index] is not { Steps.Length: > 0 } sequence)
@@ -276,11 +285,67 @@ internal sealed partial class Desk
 
         double elapsed = SequenceTime(index, now);
         int seed = _sequenceSeeds[index];
-        double[] fractions = SequenceTimeline.Fractions(sequence, elapsed, seed);
-        for (int step = 0; step < fractions.Length; step++)
-            AddStep(levels, sequence.Steps[step], fractions[step], fader);
+        List<SequenceTimeline.Play> plays = SequenceTimeline.Recent(sequence, elapsed, seed);
+        stepsOn?.Add(index + 1, plays[0].Step + 1);
+        if (plays.Count == 1)
+        {
+            // The first step of a run: nothing before it, it comes up from dark.
+            AddStep(levels, sequence.Steps[plays[0].Step], plays[0].Fraction, fader);
+            return;
+        }
 
-        stepsOn?.Add(index + 1, SequenceTimeline.CurrentStep(sequence, elapsed, seed) + 1);
+        var looks = new Dictionary<int, byte[]>();
+        byte[] LookOf(int step) => looks.TryGetValue(step, out byte[]? look) ? look : looks[step] = FullLook(sequence.Steps[step], levels.Length);
+
+        byte[][] stepLooks = plays.Select(play => LookOf(play.Step)).ToArray();
+        byte[] coming = stepLooks[0], before = stepLooks[1];
+        double up = plays[0].Fraction;
+        for (int channel = 0; channel < levels.Length; channel++)
+        {
+            // Rising: from the level of the step before, with the step that comes. Falling: the
+            // steps that go hold it up, each with how far up it still is.
+            double value = coming[channel] >= before[channel]
+                ? before[channel] + (coming[channel] - before[channel]) * up
+                : coming[channel];
+            for (int at = 1; at < plays.Count; at++)
+            {
+                if (stepLooks[at][channel] > value)
+                    value += (stepLooks[at][channel] - value) * plays[at].Fraction;
+            }
+
+            if (value > 0)
+                levels[channel] = Math.Max(levels[channel], Scale((byte)Math.Round(value), fader));
+        }
+    }
+
+    // What one step gives when it is all the way up, before the fader of its sequence: a channel
+    // its value, a memory its look at the step's value, a fixture or a group the light of its parts.
+    private byte[] FullLook(Step step, int channels)
+    {
+        byte[] look = new byte[channels];
+        if (step.Value == 0)
+            return look;
+
+        if (step.IsLights)
+        {
+            foreach (FixtureLooks.Part part in LookOfLights(step))
+            {
+                if (!part.Attribute && part.Channel < channels)
+                    look[part.Channel] = Math.Max(look[part.Channel], part.Value);
+            }
+        }
+        else if (!step.IsMemory)
+        {
+            if (step.Number - 1 < channels)
+                look[step.Number - 1] = (byte)step.Value;
+        }
+        else if (_memories[step.Number - 1] is { } stored)
+        {
+            for (int channel = 0; channel < channels; channel++)
+                look[channel] = Scale(stored[channel], (byte)step.Value);
+        }
+
+        return look;
     }
 
     // What one step gives while it is "fraction" of the way up, under the fader of its sequence.
@@ -296,7 +361,7 @@ internal sealed partial class Desk
         {
             foreach (FixtureLooks.Part part in LookOfLights(step))
             {
-                if (!part.Attribute)
+                if (!part.Attribute && part.Channel < levels.Length)
                     levels[part.Channel] = Math.Max(levels[part.Channel], Scale((byte)Math.Round(part.Value * fraction), fader));
             }
 
@@ -314,7 +379,7 @@ internal sealed partial class Desk
         if (_memories[step.Number - 1] is not { } look)
             return;
 
-        for (int channel = 0; channel < ChannelCount; channel++)
+        for (int channel = 0; channel < levels.Length; channel++)
         {
             if (look[channel] > 0)
                 levels[channel] = Math.Max(levels[channel], Scale(Scale(look[channel], level), fader));

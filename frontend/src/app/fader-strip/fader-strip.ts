@@ -19,8 +19,12 @@ const NO_STEPS: readonly number[] = [];
 })
 export class FaderStrip {
   readonly kind = input.required<'channel' | 'memory'>();
-  /** The channel or memory number printed on the key. */
+  /** The channel or memory number: the key's name for the shortcuts ("channel.625"), and what it prints unless `caption` says otherwise. */
   readonly number = input.required<number>();
+  /** What the key prints in place of the number: a channel's number in its universe, 113 for channel 625. */
+  readonly caption = input<number | null>(null);
+  /** What screen readers and the note's field call the fader in place of "Channel 625": "Channel 113 (U2)". */
+  readonly called = input<string | null>(null);
   /** The level the fader shows, 0 to 255. */
   readonly value = input(0);
   /** The level the owner asks for by moving the fader. */
@@ -69,7 +73,7 @@ export class FaderStrip {
   readonly locked = input(false);
 
   protected readonly name = computed(
-    () => `${this.kind() === 'channel' ? 'Channel' : 'Memory'} ${this.number()}`,
+    () => this.called() ?? `${this.kind() === 'channel' ? 'Channel' : 'Memory'} ${this.number()}`,
   );
 
   /** What a screen reader calls the key: "Channel 5 key", and the steps it is used in. */

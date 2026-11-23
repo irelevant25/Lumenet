@@ -11,12 +11,21 @@ internal sealed class FakeBox : IBox
 {
     private readonly Lock _lock = new();
     private readonly List<string> _calls = [];
-    private byte[] _levels = new byte[512];
+    private readonly int _channels;
+    private byte[] _levels;
     private byte _masterLevel = 255;
     private bool _blackoutOn;
     private TimeSpan _uptime = TimeSpan.FromSeconds(10);
     private Exception? _failure;
     private bool _disposed;
+
+    /// <summary>A box that answers, with nothing set yet.</summary>
+    /// <param name="outputs">Its outputs, each a universe of 512 channels.</param>
+    public FakeBox(int outputs = 1)
+    {
+        _channels = outputs * 512;
+        _levels = new byte[_channels];
+    }
 
     /// <summary>
     /// Every request the box got, in order: "ping", "levels", "master 255", "blackout on",
@@ -33,7 +42,7 @@ internal sealed class FakeBox : IBox
         }
     }
 
-    /// <summary>The 512 levels the box holds.</summary>
+    /// <summary>The levels the box holds: 512 for each output, output 1 first.</summary>
     public byte[] Levels
     {
         get
@@ -136,7 +145,7 @@ internal sealed class FakeBox : IBox
     {
         lock (_lock)
         {
-            _levels = new byte[512];
+            _levels = new byte[_channels];
             _masterLevel = 255;
             _blackoutOn = false;
             _uptime = TimeSpan.FromMilliseconds(100);
@@ -158,7 +167,7 @@ internal sealed class FakeBox : IBox
                 Master: _masterLevel,
                 Uptime: _uptime,
                 Presets: [],
-                Channels: 512);
+                Channels: _channels);
         }
     }
 

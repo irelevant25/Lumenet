@@ -1,5 +1,7 @@
 import { Component, computed, inject, viewChild } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { BoxesButton } from '../boxes-button/boxes-button';
+import { BoxesDialog } from '../boxes-dialog/boxes-dialog';
 import { DeskSettings } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
 import { lanAddressInUse } from '../desk/desk-types';
@@ -10,15 +12,15 @@ import { LampButton } from '../lamp-button/lamp-button';
 import { ProjectDialog } from '../project-dialog/project-dialog';
 
 /**
- * The strip along the top: name and version with the box light and the LAN key, the links to
- * the views (those Settings does not leave out), and the project with its keys New, Save, Load,
- * Import and Export.
+ * The strip along the top: name and version with the boxes (how many answer; a press opens their
+ * window) and the LAN key, the links to the views (those Settings does not leave out), and the
+ * project with its keys New, Save, Load, Import and Export.
  */
 @Component({
   host: {
     role: 'banner',
   },
-  imports: [ExportDialog, ImportDialog, LampButton, ProjectDialog, RouterLink, RouterLinkActive],
+  imports: [BoxesButton, BoxesDialog, ExportDialog, ImportDialog, LampButton, ProjectDialog, RouterLink, RouterLinkActive],
   selector: 'lm-top-bar',
   styleUrl: './top-bar.css',
   templateUrl: './top-bar.html',
@@ -29,6 +31,7 @@ export class TopBar {
   protected readonly dialog = viewChild.required(ProjectDialog);
   protected readonly importDialog = viewChild.required(ImportDialog);
   protected readonly exportDialog = viewChild.required(ExportDialog);
+  protected readonly boxesDialog = viewChild.required(BoxesDialog);
 
   /** The links to the views: in the order Settings gives them, all but those it leaves out. */
   protected readonly links = computed(() => {
@@ -37,13 +40,6 @@ export class TopBar {
       .viewOrder()
       .filter((name) => !hidden.includes(name))
       .map(viewNamed);
-  });
-
-  /** Shown when the pointer rests on the connection light. */
-  protected readonly boxHint = computed(() => {
-    const box = this.store.box();
-    if (!box.connected) return `No dmxbox answers at ${box.host}. The desk works without it.`;
-    return `dmxbox at ${box.host}, firmware ${box.firmware ?? 'unknown'}`;
   });
 
   /** The LAN key, on the PC only: a page on a phone cannot switch LAN, and needs no key for it. */

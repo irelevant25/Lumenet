@@ -7,9 +7,10 @@ Pico that takes what the desk sends over USB to the DMX512 cable of the lights.
 
 ## What it does
 
-* **Faders for 512 channels**, a page at a time, and **128 memories**: looks stored from the faders, each with a
-  fader of its own. Keys under the faders, independents at the side, a master, blackout, solo up and down, and a
-  rate for everything that runs.
+* **Faders for 1 to 8 universes** of 512 channels, a page at a time, and **128 memories**: looks stored from the
+  faders, each with a fader of its own. Keys under the faders, independents at the side, a master, blackout,
+  solo up and down, and a rate for everything that runs.
+* **Several boxes at once**, each output playing a universe: by themselves, or as the project says.
 * **Sequences**, made by hand or from a template (chase, wave, strobe, fire, storm), and a **stack**: the cues
   of a show with their fades and waits, played one after the other.
 * **Fixtures:** lights by their kind, taken from the Open Fixture Library (666 lights) or the library of QLC+
@@ -37,9 +38,13 @@ screen, and get in with a password.
 cable powers it and carries the data. Windows sees it as a network adapter, so it needs no driver (tried on
 Windows 11). It is built from through-hole parts, on a breadboard or soldered on a perfboard.
 
-<img src="3d/dmxbox_usb_top.png" alt="A render of the dmxbox board from above, in its box with the lid off: the Pico, two buttons, the isolated side and the XLR socket" width="560">
+<img src="hardware/pico/3d/dmxbox_usb_top.png" alt="A render of the dmxbox board from above, in its box with the lid off: the Pico, two buttons, the isolated side and the XLR socket" width="560">
 
 This is a render of the board's design; the boxes built so far are on a breadboard and on a perfboard.
+
+A second box, **dmxbox 2**, has two DMX outputs (one in a smaller version), a USB-C socket and a switch on its
+side that gives each box its own number, so that several work on one computer. It is drawn down to a perfboard
+plan and EAGLE files, and its firmware builds, but it has not been built yet.
 
 ## Get it
 
@@ -51,8 +56,9 @@ say that it does not know the program, as it is not signed: More info, then Run 
 **From the sources:** with the .NET 10 SDK and Node.js 22, `run.cmd` starts the desk; then open
 http://localhost:4200.
 
-**The box:** the parts are in [BOM.md](BOM.md). The schematic, the plans for a breadboard and a perfboard, and
+**The box:** the parts are in [BOM.md](hardware/pico/BOM.md). The schematic, the plans for a breadboard and a perfboard, and
 the firmware, which is built with the Pico SDK and copied onto the Pico, are in [DEV.md](DEV.md#1-hardware).
+For dmxbox 2: [its parts](hardware/pic32/BOM.md) and [its plans and firmware](DEV.md#dmxbox-2-the-pic32-box).
 
 ## More
 

@@ -119,6 +119,57 @@ public sealed class PlaybackHubTests
     }
 
     [Fact]
+    public async Task StepsThatAddAndReleasesGoThroughTheHubAndTheUndoHistory()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        int first = (await ui.InvokeAsync("AddStackStep", new { target = "channel", number = 1, value = 255, up = 0, wait = 0, down = 0 })).GetInt32();
+        var light = new { target = "channel", number = 2, value = 255, up = 0, wait = 0, down = 0, add = true };
+        int adds = (await ui.InvokeAsync("AddStackStep", light)).GetInt32();
+        await ui.InvokeAsync("AddStackStep", new { target = "release", number = adds, value = 0, up = 0, wait = 0, down = 1 });
+
+        JsonElement steps = (await ui.InvokeAsync("GetStack")).GetProperty("steps");
+        Assert.False(steps[0].TryGetProperty("add", out _));               // sent only when it is true
+        Assert.True(steps[1].GetProperty("add").GetBoolean());
+        Assert.Equal(("release", adds), (steps[2].GetProperty("target").GetString(), steps[2].GetProperty("number").GetInt32()));
+
+        // Undo puts the project back with new names: the release still names the step that adds.
+        await ui.InvokeAsync("UpdateStackStep", adds, light with { add = false });
+        Assert.False((await ui.InvokeAsync("GetStack")).GetProperty("steps")[1].TryGetProperty("add", out _));
+        await ui.InvokeAsync("Undo");
+        steps = (await ui.InvokeAsync("GetStack")).GetProperty("steps");
+        Assert.True(steps[1].GetProperty("add").GetBoolean());
+        Assert.Equal(steps[1].GetProperty("id").GetInt32(), steps[2].GetProperty("number").GetInt32());
+
+        await ui.InvokeAsync("SetStackLive", true);
+        await ui.InvokeAsync("StackNext");
+        JsonElement stack = (await ui.InvokeAsync("GetPlayback")).GetProperty("stack");
+        Assert.Equal(2, stack.GetProperty("on").GetArrayLength());           // the first step and the one that adds
+        Assert.NotEqual(first, steps[0].GetProperty("id").GetInt32());       // new names after the undo
+    }
+
+    [Fact]
+    public async Task AStepPutInAfterAnotherIsOneStepOfTheHistory()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        var step = new { target = "channel", number = 5, value = 200, up = 1, wait = 0, down = 2 };
+        int first = (await ui.InvokeAsync("AddStackStep", step)).GetInt32();
+        await ui.InvokeAsync("AddStackStep", step);
+
+        int added = (await ui.InvokeAsync("AddStackStepAfter", first, step)).GetInt32();
+
+        JsonElement steps = (await ui.InvokeAsync("GetStack")).GetProperty("steps");
+        Assert.Equal(["1.0", "1.1", "2.0"], steps.EnumerateArray().Select(item => item.GetProperty("cue").GetString()));
+        Assert.Equal(added, steps[1].GetProperty("id").GetInt32());
+        Assert.Equal("""{"undo":"a new step after step 1.0 of the stack","redo":null}""", (await ui.InvokeAsync("GetHistory")).GetRawText());
+
+        await ui.InvokeAsync("Undo");
+        steps = (await ui.InvokeAsync("GetStack")).GetProperty("steps");
+        Assert.Equal(["1.0", "2.0"], steps.EnumerateArray().Select(item => item.GetProperty("cue").GetString()));
+    }
+
+    [Fact]
     public async Task PlaybackTellsWhereTheStackStands()
     {
         await using TestServer server = await TestServer.StartAsync();
@@ -128,7 +179,7 @@ public sealed class PlaybackHubTests
         Assert.Equal(["levels", "sequenceSteps", "stack"], idle.EnumerateObject().Select(property => property.Name));
         Assert.Equal(512, idle.GetProperty("levels").GetArrayLength());
         Assert.Equal(
-            """{"currentId":null,"nextId":null,"state":"idle","paused":false,"remaining":0,"live":false}""",
+            """{"currentId":null,"nextId":null,"state":"idle","paused":false,"remaining":0,"live":false,"on":[]}""",
             idle.GetProperty("stack").GetRawText());
 
         // A step that takes a quarter of an hour to come up, so that the test finds it on its way whenever it looks.
@@ -143,6 +194,7 @@ public sealed class PlaybackHubTests
         Assert.Equal(second, stack.GetProperty("nextId").GetInt32());
         Assert.Equal("fading", stack.GetProperty("state").GetString());
         Assert.True(stack.GetProperty("remaining").GetDouble() > 800);
+        Assert.Equal($"[{id}]", stack.GetProperty("on").GetRawText());
 
         await ui.InvokeAsync("StackPause");
         Assert.True((await ui.InvokeAsync("GetPlayback")).GetProperty("stack").GetProperty("paused").GetBoolean());
@@ -154,7 +206,7 @@ public sealed class PlaybackHubTests
 
         await ui.InvokeAsync("SetStackLive", false);
         Assert.Equal(
-            $$"""{"currentId":null,"nextId":{{id}},"state":"idle","paused":false,"remaining":0,"live":false}""",
+            $$"""{"currentId":null,"nextId":{{id}},"state":"idle","paused":false,"remaining":0,"live":false,"on":[]}""",
             (await ui.InvokeAsync("GetPlayback")).GetProperty("stack").GetRawText());
     }
 
@@ -311,7 +363,8 @@ public sealed class PlaybackHubTests
     [InlineData("""  "sequences": [ { "number": 4, "loop": false, "steps": [] } ]  """, "lists memory 4 twice")]
     [InlineData("""  "sequences": [ { "number": 200, "steps": [] } ]  """, "from 1 to 128")]
     [InlineData("""  "sequences": [ { "number": 5 } ]  """, "has no steps list")]
-    [InlineData("""  "sequences": [ { "number": 5, "steps": [ { "target": "channel", "number": 600, "value": 1 } ] } ]  """, "Step 1 of the sequence of memory 5")]
+    [InlineData("""  "sequences": [ { "number": 5, "steps": [ { "target": "channel", "number": 5000, "value": 1 } ] } ]  """, "Step 1 of the sequence of memory 5")]
+    [InlineData("""  "sequences": [ { "number": 5, "steps": [ { "target": "channel", "number": 600, "value": 1 } ] } ]  """, "The project has 1 universe, but step 1 of the sequence of memory 5 is on channel 88 (U2).")]
     [InlineData("""  "sequences": [ { "number": 5, "speed": 0.05, "steps": [] } ]  """, "The speed of a sequence must be from 0.1 to 10")]
     [InlineData("""  "stack": [ { "cue": "1.0", "target": "channel", "number": 1, "value": 1 }, { "cue": "1", "target": "channel", "number": 2, "value": 1 } ]  """, "step 1.0 of the stack twice")]
     [InlineData("""  "stack": [ { "cue": "first", "target": "channel", "number": 1, "value": 1 } ]  """, "looks like 3 or 2.1")]
@@ -356,7 +409,7 @@ public sealed class PlaybackHubTests
 
         public Task DeskChanged(DeskState desk) => throw new NotSupportedException();
 
-        public Task BoxChanged(BoxStatus box) => throw new NotSupportedException();
+        public Task BoxesChanged(BoxView[] boxes) => throw new NotSupportedException();
 
         public Task ProjectChanged(ProjectInfo project) => throw new NotSupportedException();
 

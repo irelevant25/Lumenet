@@ -1,5 +1,5 @@
 /* One section over the whole view: the title with a sentence about the memory, the memory
-   keys, under them the table of the 512 channels, and the page keys at the right. */
+   keys, under them the table of the 512 channels of a universe, and the page keys at the right. */
 :host {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -17,6 +17,14 @@ header {
   align-items: baseline;
   gap: 16px;
   min-width: 0;
+}
+
+/* in a project of several universes: their keys between the title and the sentence */
+.universes {
+  display: flex;
+  flex: none;
+  align-self: center;
+  gap: var(--strip-gap);
 }
 
 h2 {
@@ -80,7 +88,7 @@ h2 {
   scrollbar-width: thin;
 }
 
-/* 512 cells in columns of equal width. The rows share the height that is there. */
+/* 512 cells (a universe) in columns of equal width. The rows share the height that is there. */
 .matrix {
   width: 100%;
   height: 100%;

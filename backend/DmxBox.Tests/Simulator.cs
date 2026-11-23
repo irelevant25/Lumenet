@@ -6,9 +6,10 @@ using System.Net.Sockets;
 namespace DmxBox.Tests;
 
 /// <summary>
-/// A running dmxbox simulator (sim/dmxbox_sim): the firmware's engine and protocol code behind
-/// ordinary UDP sockets. Every instance has its own two UDP ports and its own presets file, so
-/// tests cannot disturb each other. Dispose stops the process and deletes the file.
+/// A running dmxbox simulator (firmware/sim/dmxbox_sim, or dmxbox_sim2 for the box with two
+/// outputs): the firmware's engine and protocol code behind ordinary UDP sockets. Every instance
+/// has its own two UDP ports and its own presets file, so tests cannot disturb each other.
+/// Dispose stops the process and deletes the file.
 /// </summary>
 internal sealed class Simulator : IDisposable
 {
@@ -18,11 +19,13 @@ internal sealed class Simulator : IDisposable
 
     private readonly DirectoryInfo _folder = Directory.CreateTempSubdirectory("dmxbox-test-");
     private readonly double _drop;
+    private readonly int _outputs;
     private Process? _process;
 
-    private Simulator(double drop)
+    private Simulator(double drop, int outputs)
     {
         _drop = drop;
+        _outputs = outputs;
         (ArtNetPort, ControlPort) = FindTwoFreeUdpPorts();
     }
 
@@ -34,9 +37,13 @@ internal sealed class Simulator : IDisposable
 
     /// <summary>Starts a simulator and waits until it answers.</summary>
     /// <param name="drop">Fraction of the control packets that the simulator loses, in each direction.</param>
-    public static Simulator Start(double drop = 0.0)
+    /// <param name="outputs">1 for the Pico box, 2 for the PIC32 box with two outputs.</param>
+    public static Simulator Start(double drop = 0.0, int outputs = 1)
     {
-        var simulator = new Simulator(drop);
+        if (outputs is not (1 or 2))
+            throw new ArgumentOutOfRangeException(nameof(outputs), outputs, "There are simulators with 1 and with 2 outputs.");
+
+        var simulator = new Simulator(drop, outputs);
         try
         {
             simulator.StartProcess();
@@ -104,7 +111,7 @@ internal sealed class Simulator : IDisposable
             "--presets", Path.Combine(_folder.FullName, "presets.bin"),
             "--quiet",
         ];
-        var startInfo = new ProcessStartInfo(FindExecutable(), arguments)
+        var startInfo = new ProcessStartInfo(FindExecutable(_outputs), arguments)
         {
             CreateNoWindow = true,
             RedirectStandardOutput = true,
@@ -146,19 +153,22 @@ internal sealed class Simulator : IDisposable
         }
     }
 
-    // DMXBOX_SIM names the simulator. Without it, the simulator is sim/dmxbox_sim in the first
-    // folder, going up from the test assembly, that has such a file: the root of the repository.
-    private static string FindExecutable()
+    // DMXBOX_SIM (DMXBOX_SIM2 for two outputs) names the simulator. Without it, the simulator is
+    // firmware/sim/dmxbox_sim (dmxbox_sim2) in the first folder, going up from the test assembly,
+    // that has such a file: the root of the repository.
+    private static string FindExecutable(int outputs)
     {
-        string? fromEnvironment = Environment.GetEnvironmentVariable("DMXBOX_SIM");
+        string name = outputs == 1 ? "dmxbox_sim" : "dmxbox_sim2";
+        string variable = name.Replace("dmxbox_sim", "DMXBOX_SIM", StringComparison.Ordinal);
+        string? fromEnvironment = Environment.GetEnvironmentVariable(variable);
         if (!string.IsNullOrEmpty(fromEnvironment))
         {
             return File.Exists(fromEnvironment)
                 ? fromEnvironment
-                : throw NotFound($"DMXBOX_SIM is {fromEnvironment}, and that file does not exist");
+                : throw NotFound($"{variable} is {fromEnvironment}, and that file does not exist");
         }
 
-        string relativePath = Path.Combine("sim", OperatingSystem.IsWindows() ? "dmxbox_sim.exe" : "dmxbox_sim");
+        string relativePath = Path.Combine("firmware", "sim", OperatingSystem.IsWindows() ? $"{name}.exe" : name);
         for (DirectoryInfo? folder = new(AppContext.BaseDirectory); folder is not null; folder = folder.Parent)
         {
             string candidate = Path.Combine(folder.FullName, relativePath);
@@ -172,8 +182,8 @@ internal sealed class Simulator : IDisposable
     private static FileNotFoundException NotFound(string detail)
     {
         return new FileNotFoundException(
-            $"The dmxbox simulator was not found: {detail}. Build it with sim\\build.cmd (Windows) or " +
-            "make -C sim (Linux, macOS), or set DMXBOX_SIM to the path of the simulator.");
+            $"The dmxbox simulator was not found: {detail}. Build it with firmware\\sim\\build.cmd (Windows) or " +
+            "make -C firmware/sim (Linux, macOS), or set DMXBOX_SIM (DMXBOX_SIM2) to the path of the simulator.");
     }
 
     // Both sockets stay open until both ports are known, so the two ports are certainly different.

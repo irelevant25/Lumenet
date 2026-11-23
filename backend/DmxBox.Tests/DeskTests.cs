@@ -857,6 +857,96 @@ public sealed class DeskTests
         Assert.Equal(changes, desk.ProjectChanges);
     }
 
+    // ---------------------------------------------------------------- universes
+
+    [Fact]
+    public void MoreUniversesGiveMoreChannelsAndTheyReachTheOutput()
+    {
+        var desk = new Desk();
+        Assert.Equal(1, desk.Universes);
+        Assert.Equal(512, desk.GetOutput().Length);
+
+        desk.SetUniverses(3);
+        desk.SetChannel(1536, 200);
+
+        Assert.Equal(1536, desk.ChannelCount);
+        Assert.Equal(3, desk.GetState().Universes);
+        Assert.Equal(1536, desk.GetState().Channels.Length);
+        Assert.Equal(1536, desk.GetState().ChannelNotes.Length);
+        Assert.Equal(200, desk.GetOutput()[1535]);
+        AssertOutOfRange("from 1 to 1536", () => desk.SetChannel(1537, 1));
+        AssertOutOfRange("The number of universes must be from 1 to 8, not 9.", () => desk.SetUniverses(9));
+        AssertOutOfRange("The number of universes must be from 1 to 8, not 0.", () => desk.SetUniverses(0));
+    }
+
+    [Fact]
+    public void FewerUniversesDropTheLevelsAndNotesAboveThemAndUndoBringsThemBack()
+    {
+        var desk = new Desk();
+        var history = new UndoHistory(desk);
+        desk.SetUniverses(2);
+        Store(desk, 1, (Channel: 1, Level: 10), (Channel: 600, Level: 20));
+        desk.SetChannel(600, 30);
+        desk.SetChannelNote(600, "Hazer");
+
+        using (history.Change("the universes"))
+            desk.SetUniverses(1);
+
+        Assert.Equal(512, desk.GetOutput().Length);
+        Assert.Equal(512, Looks(desk)[0]!.Length);
+        Assert.Equal(10, Looks(desk)[0]![0]);
+
+        Assert.Equal("the universes", history.Undo());
+        Assert.Equal(2, desk.Universes);
+        Assert.Equal(20, Looks(desk)[0]![599]);
+        Assert.Equal("Hazer", desk.GetState().ChannelNotes[599]);
+        Assert.Equal(0, desk.GetState().Channels[599]);   // a fader is no part of the project
+    }
+
+    [Fact]
+    public void FewerUniversesAreRefusedWhileSomethingOfTheProjectUsesThem()
+    {
+        var desk = new Desk();
+        desk.SetUniverses(2);
+
+        desk.SetSequence(1, loop: true, [new Step("channel", 600, 255, 1, 0, 1)]);
+        AssertRefused(
+            "Universe 2 is still in use: step 1 of the sequence of memory 1 is on channel 88 (U2). Take it out of there first.",
+            () => desk.SetUniverses(1));
+        desk.SetSequence(1, loop: true, []);
+
+        int step = desk.AddStackStep(new Step("channel", 513, 255, 1, 0, 1));
+        AssertRefused("step 1.0 of the stack", () => desk.SetUniverses(1));
+        desk.DeleteStackStep(step);
+
+        desk.SetStage(new StagePlan(16, 10, [new StageLight(1, "Wash", 1000, "RGB", null, 0, 0, 0)]));
+        AssertRefused("the light \"Wash\" of the stage", () => desk.SetUniverses(1));
+        desk.SetStage(new StagePlan(16, 10, []));
+
+        desk.SetIndependent(4, 700);
+        AssertRefused("channel key 4 of the independents", () => desk.SetUniverses(1));
+        desk.SetIndependent(4, 4);
+
+        desk.SetUniverses(1);
+        Assert.Equal(1, desk.Universes);
+    }
+
+    [Fact]
+    public void StepOrLightBeyondTheUniversesOfTheProjectIsRefused()
+    {
+        var desk = new Desk();
+
+        AssertRefused(
+            "Channel 88 (U2) is not in the project, which has 1 universe. Add universes in Settings first.",
+            () => desk.SetSequence(1, loop: true, [new Step("channel", 600, 255, 1, 0, 1)]));
+        AssertRefused(
+            "Channel 1 (U2) is not in the project, which has 1 universe. Add universes in Settings first.",
+            () => desk.AddStackStep(new Step("channel", 513, 255, 1, 0, 1)));
+        AssertRefused(
+            "The light \"Wash\" ends on channel 490 (U2), and the project has 1 universe. Add universes in Settings first.",
+            () => desk.SetStage(new StagePlan(16, 10, [new StageLight(1, "Wash", 1000, "RGB", null, 0, 0, 0)])));
+    }
+
     // Stores a look in a memory and leaves every fader down again.
     private static void Store(Desk desk, int memory, params (int Channel, int Level)[] look)
     {
@@ -889,6 +979,12 @@ public sealed class DeskTests
     {
         var error = Assert.Throws<ArgumentOutOfRangeException>(action);
         Assert.Contains(expectedRange, error.Message);
+    }
+
+    private static void AssertRefused(string expectedInMessage, Action action)
+    {
+        var error = Assert.Throws<DeskException>(action);
+        Assert.Contains(expectedInMessage, error.Message);
     }
 
     private static void AssertMovesOutputCounter(Desk desk, Action change)

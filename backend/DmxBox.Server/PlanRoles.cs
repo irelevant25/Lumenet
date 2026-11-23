@@ -55,7 +55,7 @@ internal sealed class PlanRoles
     }
 
     /// <summary>For each channel (channel 1 at index 0): true for an attribute of a light, false for a channel that gives light.</summary>
-    public bool[] Attribute { get; } = new bool[Desk.ChannelCount];
+    public bool[] Attribute { get; } = new bool[Desk.MaxChannels];
 
     /// <summary>The lights that have attributes.</summary>
     public AttributeLight[] AttributeLights { get; }

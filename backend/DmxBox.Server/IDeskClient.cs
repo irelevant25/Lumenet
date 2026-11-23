@@ -60,9 +60,12 @@ public interface IDeskClient
     /// <param name="desk">The desk after the change.</param>
     Task DeskChanged(DeskState desk);
 
-    /// <summary>The box was found or lost.</summary>
-    /// <param name="box">The new state of the connection.</param>
-    Task BoxChanged(BoxStatus box);
+    /// <summary>
+    /// A box was found or lost, or what the boxes play changed: another number of universes, or
+    /// another list of boxes in the project.
+    /// </summary>
+    /// <param name="boxes">All boxes as the Boxes window shows them, see <see cref="BoxNetwork.Boxes"/>.</param>
+    Task BoxesChanged(BoxView[] boxes);
 
     /// <summary>The project's name, file or "unsaved" mark changed.</summary>
     /// <param name="project">The project after the change.</param>

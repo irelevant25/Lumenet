@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { DeskStore } from '../desk/desk-store';
 import { LightGroup, MAX_GROUPS } from '../desk/desk-types';
 import { intensityOf, swatchOf, typeOf } from '../desk/fixtures';
+import { channelNumber, universeOf } from '../desk/universes';
 import { FixtureChoice, FixturePanel } from '../fixture-panel/fixture-panel';
 import { FixtureStrip } from '../fixture-strip/fixture-strip';
 import { LampButton } from '../lamp-button/lamp-button';
@@ -28,15 +29,20 @@ export class FixturesView {
   /** The fixture or group the panel shows; null for none. */
   protected readonly choice = signal<FixtureChoice | null>(null);
 
-  /** The fixtures, by their address, with their intensity and color now. */
+  /**
+   * The fixtures, by their address, with their intensity and color now. A key prints the address
+   * in its universe, with the universe under it in a project of several.
+   */
   protected readonly fixtures = computed(() => {
     const plan = this.store.stage();
     const shown = this.store.shownChannels();
     const choice = this.choice();
+    const several = this.store.universes() > 1;
     return [...plan.lights]
       .sort((a, b) => a.address - b.address || a.id - b.id)
       .map((light) => ({
         light,
+        key: several ? `${channelNumber(light.address)} U${universeOf(light.address)}` : String(light.address),
         level: intensityOf(light, shown),
         color: swatchOf(light, typeOf(plan, light), shown),
         chosen: choice?.kind === 'light' && choice.id === light.id,

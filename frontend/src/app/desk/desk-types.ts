@@ -1,5 +1,11 @@
-/** Sizes of the desk. */
-export const CHANNEL_COUNT = 512;
+/**
+ * Sizes of the desk. A universe is the 512 channels one DMX cable carries; a project has 1 to 8
+ * of them (Settings). Inside, its channels are numbered on through all of them: universe 2 starts
+ * at channel 513. The page writes every channel 1 to 512 in its universe, "113 (U2)" (universes.ts).
+ */
+export const UNIVERSE_SIZE = 512;
+export const MAX_UNIVERSES = 8;
+export const MAX_CHANNELS = UNIVERSE_SIZE * MAX_UNIVERSES;
 export const MEMORY_COUNT = 128;
 export const MAX_LEVEL = 255;
 /**
@@ -48,6 +54,8 @@ export function pageStart(number: number, perPage: number): number {
 
 /** Everything the desk holds, as the backend sends it. Lists start at 0: index = number - 1. */
 export interface DeskState {
+  /** How many universes the project has, 1 to 8: the lists of the channels hold 512 for each. Missing from an older desk program: 1. */
+  universes?: number;
   /** Level of each channel fader, 0 to 255. */
   channels: number[];
   /** Level of each memory fader, 0 to 255. */
@@ -115,7 +123,7 @@ export interface StageLight {
   /** Its number while the plan is edited; no other light of the plan has it. */
   id: number;
   name: string;
-  /** Its first channel, 1-512. */
+  /** Its first channel, 1 to 4096; all its channels are in one universe. */
   address: number;
   /** One letter per channel, like "DRGB" or "RGBRGBRGBRGB" (four cells). */
   channels: string;
@@ -241,8 +249,12 @@ export type MemoryLooks = Readonly<Record<number, readonly number[]>>;
 /** A fader of the desk: of a channel or of a memory (solo keys, the independents). */
 export type StepTarget = 'channel' | 'memory';
 
-/** What a step of a sequence or of the stack stands for: a fader, or a fixture or a group of fixtures of the stage plan. */
-export type StepKind = StepTarget | 'fixture' | 'group';
+/**
+ * What a step of a sequence or of the stack stands for: a fader, or a fixture or a group of
+ * fixtures of the stage plan. In the stack also "release": a step that takes another step of the
+ * stack down (its number is that step's id).
+ */
+export type StepKind = StepTarget | 'fixture' | 'group' | 'release';
 
 /** The longest time a step can have, in seconds. */
 export const MAX_STEP_SECONDS = 999.9;
@@ -256,15 +268,23 @@ export const MAX_SEQUENCE_STEPS = 99;
  */
 export interface TimedStep {
   target: StepKind;
-  /** The channel (1 to 512) or the memory (1 to 128); a fixture or a group by its id in the stage plan. */
+  /**
+   * The channel (1 to 512 for each universe) or the memory (1 to 128); a fixture or a group by its
+   * id in the stage plan; for a release the id of the step of the stack it takes down, 0 for none.
+   */
   number: number;
-  /** 0 to 255: for a fixture or a group, the intensity of its lights. */
+  /** 0 to 255: for a fixture or a group, the intensity of its lights. A release has none. */
   value: number;
   up: number;
   wait: number;
   down: number;
   /** For a fixture or a group: the color its lights shine in, like "#ff2000"; missing or null for white. */
   color?: string | null;
+  /**
+   * Only in the stack: true for a step that comes up on top of what is on and takes nothing down.
+   * Missing means false, as for every step of a sequence.
+   */
+  add?: boolean;
 }
 
 /** A sequence, stored in a memory: its steps run one after the other while the memory's fader is up. */
@@ -320,6 +340,25 @@ export interface StackPlayback {
    * from a desk program that knows no live switch.
    */
   live?: boolean;
+  /**
+   * The ids of the steps that are on, in the order they came: the current one and the steps
+   * it came on top of (Add). Missing from a desk program that knows no Add.
+   */
+  on?: number[];
+}
+
+/**
+ * While the stack goes from one look to the next, the faders that take part give their light
+ * through its crossfade, channel by channel, instead of the higher one winning: so a channel
+ * that both looks hold goes straight from the one level to the other, without a dip.
+ */
+export interface StackCrossfade {
+  /** The channel faders that take part. */
+  channels: number[];
+  /** The memory faders that take part. */
+  memories: number[];
+  /** What the crossfade gives every channel right now; channel 1 at index 0. */
+  levels: number[];
 }
 
 /** What changes with time, as the backend reports it several times a second while something runs. */
@@ -329,6 +368,8 @@ export interface Playback {
   /** For each memory whose sequence is running: the number of the step it is on, counted from 1. */
   sequenceSteps: Record<number, number>;
   stack: StackPlayback;
+  /** The stack's crossfade while one runs; missing while none does. */
+  crossfade?: StackCrossfade | null;
 }
 
 /** The first step of a new list, and the pattern for the next ones. */
@@ -348,9 +389,13 @@ export function recordedStep(target: StepKind, number: number, color: string | n
 /**
  * The step that "Add step" puts in after `last`: the same kind, value, color and times, on the
  * next channel or memory, or the next fixture (by address) or group of `plan`. That is what
- * building a run of lights needs most often.
+ * building a run of lights needs most often. `channels` is how many the project has.
  */
-export function stepAfter(last: TimedStep, plan: Pick<StagePlan, 'lights' | 'groups'> = EMPTY_STAGE): TimedStep {
+export function stepAfter(
+  last: TimedStep,
+  plan: Pick<StagePlan, 'lights' | 'groups'> = EMPTY_STAGE,
+  channels = UNIVERSE_SIZE,
+): TimedStep {
   const nextOf = (ids: readonly number[]) => {
     const at = ids.indexOf(last.number);
     return at >= 0 && at + 1 < ids.length ? ids[at + 1] : last.number;
@@ -358,7 +403,7 @@ export function stepAfter(last: TimedStep, plan: Pick<StagePlan, 'lights' | 'gro
   const number =
     last.target === 'fixture' ? nextOf([...plan.lights].sort((a, b) => a.address - b.address).map((light) => light.id))
     : last.target === 'group' ? nextOf(plan.groups.map((group) => group.id))
-    : Math.min(last.number + 1, last.target === 'channel' ? CHANNEL_COUNT : MEMORY_COUNT);
+    : Math.min(last.number + 1, last.target === 'channel' ? channels : MEMORY_COUNT);
   const { target, value, up, wait, down, color } = last;
   return color === undefined ? { target, number, value, up, wait, down } : { target, number, value, up, wait, down, color };
 }
@@ -407,12 +452,38 @@ export interface HistoryState {
 /** Nothing to undo, nothing to redo. */
 export const NO_HISTORY: HistoryState = { undo: null, redo: null };
 
-/** Whether the backend reaches the dmxbox. */
-export interface BoxStatus {
+/**
+ * A box as the Boxes window shows it. A box has an output for each universe it sends (a DMX
+ * socket), and each output plays one universe of the project, or none.
+ */
+export interface BoxView {
+  /** Where it answers: "10.1.3.1" for the box with the number 3 on its switch, "192.168.7.1" for the box with the Pico. */
+  address: string;
   connected: boolean;
-  host: string;
+  /** Its firmware version while it answers; null otherwise. */
   firmware: string | null;
+  /** How many outputs it has: as it said, or as the project plans them while it does not answer. */
+  outputs: number;
+  /** For each output, output 1 first: the universe it plays, 1 to 8, or 0 for none. */
+  universes: number[];
+  /**
+   * "automatic" while the project lists no boxes: every box that answers plays universes in the
+   * order of the boxes. "listed": a box of the project's list. "new": a box that answers but is
+   * not on the list, and so plays nothing.
+   */
+  kind: 'automatic' | 'listed' | 'new';
 }
+
+/** A box of the project's list and what its outputs play, as SetBoxes takes it. */
+export interface BoxPlan {
+  address: string;
+  /** For each output: the universe it plays, 1 to 8, or 0 for none. */
+  universes: number[];
+}
+
+/** The most outputs a box can have, and the most boxes a project can list. */
+export const MAX_BOX_OUTPUTS = 8;
+export const MAX_BOXES = 64;
 
 /** The project that is open. `path` is null until it has been saved to a file. */
 export interface ProjectInfo {
@@ -440,7 +511,8 @@ export const IMPORT_LIMIT_BYTES = 8 * 1024 * 1024;
 export interface Welcome {
   version: string;
   desk: DeskState;
-  box: BoxStatus;
+  /** The boxes, which of them answer, and what they play. Missing from an older desk program. */
+  boxes?: BoxView[];
   project: ProjectInfo;
 }
 

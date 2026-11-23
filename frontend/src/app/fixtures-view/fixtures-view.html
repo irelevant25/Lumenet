@@ -24,8 +24,8 @@
       <div class="row">
         @for (item of fixtures(); track item.light.id) {
           <lm-fixture-strip
-            [name]="item.light.name || 'Light ' + item.light.address"
-            [keyText]="'' + item.light.address"
+            [name]="item.light.name || 'Light ' + item.key"
+            [keyText]="item.key"
             [level]="item.level"
             [color]="item.color"
             [chosen]="item.chosen"

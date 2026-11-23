@@ -1,4 +1,4 @@
-import { CHANNEL_COUNT, MEMORY_COUNT, pageStart } from './desk-types';
+import { UNIVERSE_SIZE, MEMORY_COUNT, pageStart } from './desk-types';
 import { channelLamp, channelPageLamp, memoryLamp, memoryPageLamp } from './lamps';
 
 function levels(count: number, raised: Record<number, number> = {}): number[] {
@@ -28,7 +28,7 @@ describe('lamps', () => {
   });
 
   it('the channel page that is shown is full; another page is half when a channel on it is up', () => {
-    const channels = levels(CHANNEL_COUNT, { 64: 1, 449: 200 });
+    const channels = levels(UNIVERSE_SIZE, { 64: 1, 449: 200 });
     expect(channelPageLamp(channels, 65, 64, true)).toBe(3); // shown, although nothing is up on it
     expect(channelPageLamp(channels, 1, 64, false)).toBe(2); // 1 to 64: channel 64 is up
     expect(channelPageLamp(channels, 65, 64, false)).toBe(1); // 65 to 128: nothing

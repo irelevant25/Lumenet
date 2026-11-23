@@ -13,7 +13,7 @@ public class UsittAsciiTests
         var text = new StringBuilder();
         for (int cue = 1; cue <= 200_000; cue++)
             text.Append("Cue ").Append(cue).Append("\nChan 1 50\n");
-        for (int dimmer = 1; dimmer <= 1000; dimmer++)
+        for (int dimmer = 1; dimmer <= 5000; dimmer++)
             text.Append("Patch 1 1<").Append(dimmer).Append("@100\n");
 
         var clock = Stopwatch.StartNew();
@@ -24,8 +24,8 @@ public class UsittAsciiTests
         Assert.True(clock.Elapsed < TimeSpan.FromSeconds(10), $"Reading took {clock.Elapsed}.");
         Assert.Equal(UsittAscii.MaxKept, show.Cues.Count);
         Assert.Equal(200_000 - UsittAscii.MaxKept, show.Skipped);
-        Assert.Equal(512, show.Patch.Count);       // dimmers 1 to 512
-        Assert.Equal(488, show.DimmersAbove);      // the rest are only counted
+        Assert.Equal(4096, show.Patch.Count);      // dimmers 1 to 4096: eight universes
+        Assert.Equal(904, show.DimmersAbove);      // the rest are only counted
         Assert.Empty(show.UnreadLines);
     }
 

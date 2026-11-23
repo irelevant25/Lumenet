@@ -33,7 +33,10 @@ internal sealed class RealBox : IBox
     /// <inheritdoc />
     public void SetLevels(byte[] levels)
     {
-        Client().Set(1, levels);
+        // One request for each output of 512: a packet of all of them could be too big for the
+        // network and come in pieces, which a box's small network stack may not put together.
+        for (int start = 0; start < levels.Length; start += Desk.UniverseSize)
+            Client().Set(start + 1, levels.AsSpan(start, Math.Min(Desk.UniverseSize, levels.Length - start)));
     }
 
     /// <inheritdoc />

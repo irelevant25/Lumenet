@@ -60,6 +60,74 @@ internal static class SequenceTimeline
         return fractions;
     }
 
+    /// <summary>
+    /// The steps that make what a sequence gives at a moment, for a crossfade without a dip (see
+    /// Desk.Sequences.cs): first the step that is on, with how far up it is; then the steps played
+    /// before it, the latest first, each with how far it still is up on its way down. The step
+    /// played right before the one that is on is always there (its levels are where the rising
+    /// channels start from), the older ones only while they are still on their way down. Empty
+    /// if the sequence has no steps; only the step that is on for the first step of a run.
+    /// </summary>
+    /// <param name="sequence">The sequence.</param>
+    /// <param name="elapsed">Seconds since the sequence started.</param>
+    /// <param name="seed">Chooses the orders of a sequence played at random.</param>
+    public static List<Play> Recent(Sequence sequence, double elapsed, int seed = 0)
+    {
+        Step[] steps = sequence.Steps;
+        var plays = new List<Play>();
+        if (steps.Length == 0)
+            return plays;
+
+        double longestDown = steps.Max(step => step.Down);
+        if (!sequence.Loops)
+        {
+            double[] starts = StartsOf(steps, InTurn(steps.Length));
+            int current = CurrentStep(sequence, elapsed);
+            plays.Add(new Play(current, OneRun(steps[current], elapsed - starts[current], stays: current == steps.Length - 1)));
+            for (int index = current - 1; index >= 0; index--)
+            {
+                double end = starts[index + 1];
+                if (!Before(plays, steps[index], index, elapsed - end, longestDown))
+                    break;
+            }
+
+            return plays;
+        }
+
+        (long round, double inRound, double length) = Where(steps, elapsed);
+        int[] order = OrderOf(sequence, seed, round);
+        double[] inThisRound = StartsOf(steps, order);
+        int place = 0;
+        for (int at = 1; at < order.Length && inThisRound[order[at]] <= inRound; at++)
+            place = at;
+
+        double start = round * length + inThisRound[order[place]];
+        plays.Add(new Play(order[place], OneRun(steps[order[place]], elapsed - start, stays: false)));
+
+        // Back through the steps played before it, into the rounds before as far as needed. A step
+        // went down from the moment the step after it started.
+        for (int guard = 0; guard < 4 * steps.Length + 64; guard++)
+        {
+            if (--place < 0)
+            {
+                if (--round < 0)
+                    break;
+
+                order = OrderOf(sequence, seed, round);
+                inThisRound = StartsOf(steps, order);
+                place = order.Length - 1;
+            }
+
+            int index = order[place];
+            double end = start;
+            start = round * length + inThisRound[index];
+            if (!Before(plays, steps[index], index, elapsed - end, longestDown))
+                break;
+        }
+
+        return plays;
+    }
+
     /// <summary>The step that is on its way up or staying, counted from 0; -1 if the sequence has no steps.</summary>
     /// <param name="sequence">The sequence.</param>
     /// <param name="elapsed">Seconds since the sequence started.</param>
@@ -189,6 +257,24 @@ internal static class SequenceTimeline
             int other = (int)(mixed % (ulong)(index + 1));
             (order[index], order[other]) = (order[other], order[index]);
         }
+    }
+
+    /// <summary>A step as it was played once.</summary>
+    /// <param name="Step">The step's place in the list of the sequence.</param>
+    /// <param name="Fraction">How far up it is: from 0 to 1 on its way up, from 1 to 0 on its way down.</param>
+    public readonly record struct Play(int Step, double Fraction);
+
+    // Adds a step played before the one that is on, "since" seconds after it began its way down:
+    // the one right before the step that is on always, an older one only while it is not all the
+    // way down. False once even the longest down time is over: the steps played before this one
+    // are down for sure.
+    private static bool Before(List<Play> plays, Step step, int index, double since, double longestDown)
+    {
+        double left = step.Down > 0 ? Math.Clamp(1 - since / step.Down, 0, 1) : 0;
+        if (plays.Count == 1 || left > 0)
+            plays.Add(new Play(index, left));
+
+        return since <= longestDown;
     }
 
     // From the start of a step to the start of the next one.

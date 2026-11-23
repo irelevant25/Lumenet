@@ -216,7 +216,7 @@ public sealed class DmxBoxClient : IDisposable
 
     /// <summary>Reads the look stored in a preset slot.</summary>
     /// <param name="slot">Preset slot, 0-15.</param>
-    /// <returns>The 512 stored levels; channel 1 is at index 0.</returns>
+    /// <returns>The stored levels of all the box's channels, 512 for each output; channel 1 is at index 0.</returns>
     public byte[] GetPreset(int slot)
     {
         return Request(MessageType.GetPreset, [ToByte(slot, nameof(slot))]);

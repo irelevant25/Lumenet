@@ -1,6 +1,7 @@
 {
   "format": "lumenet-project",
-  "version": 4,
+  "version": 5,
+  "universes": 1,
   "notes": "<div><font size=\"5\"><b>Theatre show</b></font></div><div>A whole show of a small theatre: fourteen lights with a drawn stage under them, twenty-one memories with looks and sequences, and a stack of fourteen cues from the house lights to the bows.</div><div><b><font color=\"#ffb020\">What is in it</font></b></div><ul><li>Channels 1 to 17: fire pots, front, back blue, a spot, an LED bar (red, green, blue, white), a hazer, a mirror ball and the house light. The notes under the faders name them.</li><li>Memories 1 to 10: looks, like warm wash, blue night, sunset and full stage.</li><li>Memories 11 to 21: sequences: fire flicker, a chase of the back, a breathing blue, a strobe, a storm, colors, an intro and a finale that run once.</li><li>The stack: cue 1 is the house light; 3.5 and 4.1 were put in between later; 4.1 and 6.0 go on by themselves after their wait.</li><li>The keys of the independents: the house light, haze, the mirror ball and some memories at hand.</li></ul><div><b><font color=\"#ffb020\">Try it</font></b></div><ol><li>Press <b>Stack</b>, then <b>Play</b> for each cue. Watch <b>Stage</b>: the lights shine in their colors over the drawing of the stage.</li><li><b>Solo up</b> and a key under a fader: only that light, at full, while the key is held.</li><li>The memory keys of the independents switch the fire, the chase or the haze on top of any cue.</li><li>Stop the show with <b>Stack</b>, change a cue on the <b>Stack</b> view, and play it again.</li></ol>",
   "memories": [
     {

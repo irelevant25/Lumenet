@@ -26,7 +26,7 @@ internal sealed class DeskHub : Hub<IDeskClient>
 
     private readonly Desk _desk;
     private readonly ProjectStore _projects;
-    private readonly BoxLink _boxLink;
+    private readonly BoxNetwork _boxes;
     private readonly LanAccess _lan;
     private readonly UndoHistory _history;
     private readonly Autosave _autosave;
@@ -34,15 +34,15 @@ internal sealed class DeskHub : Hub<IDeskClient>
     /// <summary>SignalR makes a hub for every call and fills in the parts of the server.</summary>
     /// <param name="desk">The desk.</param>
     /// <param name="projects">The projects folder and the open project.</param>
-    /// <param name="boxLink">The link to the box, for its state.</param>
+    /// <param name="boxes">The boxes, for their state and what they play.</param>
     /// <param name="lan">Whether other devices in the network may use the desk.</param>
     /// <param name="history">Undo and redo for what the project holds.</param>
     /// <param name="autosave">Keeps the work that is not saved yet.</param>
-    public DeskHub(Desk desk, ProjectStore projects, BoxLink boxLink, LanAccess lan, UndoHistory history, Autosave autosave)
+    public DeskHub(Desk desk, ProjectStore projects, BoxNetwork boxes, LanAccess lan, UndoHistory history, Autosave autosave)
     {
         _desk = desk;
         _projects = projects;
-        _boxLink = boxLink;
+        _boxes = boxes;
         _lan = lan;
         _history = history;
         _autosave = autosave;
@@ -98,7 +98,7 @@ internal sealed class DeskHub : Hub<IDeskClient>
     /// <summary>The first call of a UI: everything it needs to draw itself.</summary>
     public HelloAnswer Hello()
     {
-        return new HelloAnswer(AppInfo.Version, _desk.GetState(), _boxLink.Status, _projects.Current);
+        return new HelloAnswer(AppInfo.Version, _desk.GetState(), _boxes.Boxes, _projects.Current);
     }
 
     /// <summary>Moves one channel fader.</summary>
@@ -133,7 +133,7 @@ internal sealed class DeskHub : Hub<IDeskClient>
     public async Task SetChannelNote(int channel, string text)
     {
         string note;
-        using (_history.Change($"the note of channel {channel}"))
+        using (_history.Change($"the note of channel {Desk.ChannelLabel(channel)}"))
             note = _desk.SetChannelNote(channel, text);
 
         await Clients.Others.ChannelNoteChanged(channel, note);
@@ -335,6 +335,23 @@ internal sealed class DeskHub : Hub<IDeskClient>
         return id;
     }
 
+    /// <summary>
+    /// Puts a new step right after another step of the stack; it gets a number that fits there.
+    /// One change in the history, however many steps give way.
+    /// </summary>
+    /// <param name="afterId">The step it goes behind.</param>
+    /// <param name="step">The step.</param>
+    /// <returns>The name of the new step.</returns>
+    public async Task<int> AddStackStepAfter(int afterId, Step step)
+    {
+        int id;
+        using (_history.Change($"a new step after step {CueOf(afterId)} of the stack"))
+            id = _desk.AddStackStep(step, afterId);
+
+        await TellStackAsync();
+        return id;
+    }
+
     /// <summary>Changes what a step of the stack stands for, its value or its times.</summary>
     /// <param name="id">The name of the step.</param>
     /// <param name="step">The step as it is to be.</param>
@@ -392,6 +409,43 @@ internal sealed class DeskHub : Hub<IDeskClient>
         // way the UIs take the whole desk and its sequences again.
         await Clients.All.DeskChanged(_desk.GetState());
         await TellPlaybackAsync();
+    }
+
+    /// <summary>
+    /// Changes how many universes the project has, 1 to 8 (see <see cref="Desk.SetUniverses"/>).
+    /// Every UI gets the whole desk again: it has more channels, or fewer.
+    /// </summary>
+    /// <param name="universes">1 to 8.</param>
+    public async Task SetUniverses(int universes)
+    {
+        using (_history.Change("the universes"))
+            _desk.SetUniverses(universes);
+
+        await TellDeskAsync();
+    }
+
+    /// <summary>The boxes as the Boxes window shows them, see <see cref="BoxNetwork.Boxes"/>.</summary>
+    public BoxView[] GetBoxes()
+    {
+        return _boxes.Boxes;
+    }
+
+    /// <summary>
+    /// Takes the project's list of boxes as the Boxes window changed it (see <see cref="Desk.SetBoxes"/>):
+    /// a box added by hand, an output given another universe, a box taken out, or an empty list for
+    /// automatic. The desk starts looking for a box that was added; every UI gets the boxes.
+    /// </summary>
+    /// <param name="boxes">The whole list as it is to be.</param>
+    public async Task SetBoxes(BoxPlan[] boxes)
+    {
+        bool changed;
+        using (_history.Change("the boxes"))
+            changed = _desk.SetBoxes(boxes);
+
+        if (changed)
+            _boxes.Refresh();
+
+        await TellProjectAsync();
     }
 
     /// <summary>The stage plan of the project: the size of the stage and the lights of the rig on it.</summary>
@@ -770,9 +824,12 @@ internal sealed class DeskHub : Hub<IDeskClient>
     }
 
     // After a change that is more than one fader or one note: every UI gets the whole desk
-    // again, also the UI that asked. A changed memory changes the project too.
+    // again, also the UI that asked. A changed memory changes the project too. The project may
+    // have other universes or other boxes now (undo, load, import): the boxes follow, and the
+    // UIs hear of it if that changes what they play.
     private async Task TellDeskAsync()
     {
+        _boxes.Refresh();
         await Clients.All.DeskChanged(_desk.GetState());
         await TellProjectAsync();
     }

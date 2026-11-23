@@ -3,8 +3,8 @@ import { DeskConnection } from './desk-connection';
 import { DeskSettings } from './desk-settings';
 import {
   AutosaveOptions,
-  BoxStatus,
-  CHANNEL_COUNT,
+  BoxPlan,
+  BoxView,
   CHANNEL_INDEPENDENT_COUNT,
   DEFAULT_LOOP,
   DeskState,
@@ -40,6 +40,7 @@ import {
   StagePlan,
   StepTarget,
   TimedStep,
+  UNIVERSE_SIZE,
   Welcome,
   firstStep,
   pageStart,
@@ -77,6 +78,7 @@ import {
   typeOf,
 } from './fixtures';
 import { noteInOneLine } from './notes';
+import { channelLabel, universeOf, universeStart } from './universes';
 
 /**
  * While a sequence is recorded: for every channel, memory, fixture and group it uses, the
@@ -127,7 +129,11 @@ export class DeskStore {
   private readonly connection = inject(DeskConnection);
 
   // ---- what the backend holds
-  readonly channels = signal<readonly number[]>(zeros(CHANNEL_COUNT));
+  /** How many universes the project has, 1 to 8 (Settings). */
+  readonly universes = signal(1);
+  /** How many channels the project has: 512 for each universe. The lists of the channels are that long. */
+  readonly channelCount = computed(() => this.universes() * UNIVERSE_SIZE);
+  readonly channels = signal<readonly number[]>(zeros(UNIVERSE_SIZE));
   readonly memoryLevels = signal<readonly number[]>(zeros(MEMORY_COUNT));
   readonly memoryStored = signal<readonly boolean[]>(allFalse(MEMORY_COUNT));
   /** What every stored memory holds. Fetched again whenever the backend sends the whole desk. */
@@ -145,7 +151,7 @@ export class DeskStore {
   /** False while the desk program is one from before sequences and the stack. */
   readonly playbackKnown = signal(false);
   /** The notes under the faders, like tape labels on a desk. An empty text means no note. */
-  readonly channelNotes = signal<readonly string[]>(noNotes(CHANNEL_COUNT));
+  readonly channelNotes = signal<readonly string[]>(noNotes(UNIVERSE_SIZE));
   readonly memoryNotes = signal<readonly string[]>(noNotes(MEMORY_COUNT));
   /** The channel each of the 10 channel keys of the independents switches: 1 to 10 until the owner changes them. */
   readonly independents = signal<readonly number[]>(oneToCount(CHANNEL_INDEPENDENT_COUNT));
@@ -153,7 +159,11 @@ export class DeskStore {
   readonly memoryIndependents = signal<readonly number[]>(oneToCount(MEMORY_INDEPENDENT_COUNT));
   readonly master = signal(MAX_LEVEL);
   readonly blackout = signal(false);
-  readonly box = signal<BoxStatus>({ connected: false, host: '', firmware: null });
+  /**
+   * The boxes, as the Boxes window shows them: which answer, and the universe each of their
+   * outputs plays. Empty while none answers and the project lists none.
+   */
+  readonly boxes = signal<readonly BoxView[]>([]);
   readonly project = signal<ProjectInfo>({ name: NEW_PROJECT_NAME, path: null, unsaved: false });
   readonly version = signal('');
   /**
@@ -168,23 +178,33 @@ export class DeskStore {
   /**
    * What each channel fader shows: its own level, or what the memories whose faders are up
    * give the channel, whichever is higher. A look gives a fixed level; a running sequence
-   * gives what the backend reports from moment to moment. The backend works out the output
-   * the same way, before the master. An attribute of a light (a pan, a tilt) shows what the
-   * fader that took it last gives it, as stored (see attributesTaken).
+   * gives what the backend reports from moment to moment. While the stack goes from one look
+   * to the next, the faders taking part give their light through its crossfade instead, as the
+   * backend reports it: so a channel both looks hold shows no dip. The backend works out the
+   * output the same way, before the master. An attribute of a light (a pan, a tilt) shows what
+   * the fader that took it last gives it, as stored (see attributesTaken).
    */
   readonly shownChannels = computed<readonly number[]>(() => {
-    const own = this.channels();
+    const cross = this.crossfade();
+    const own = cross ? withoutChannels(this.channels(), cross.channels) : this.channels();
     const levels = this.memoryLevels();
     let shown: number[] | null = null;
     for (const [memory, look] of Object.entries(this.memoryLooks())) {
       const level = levels[Number(memory) - 1];
-      if (!level) continue;
+      if (!level || cross?.memories.includes(Number(memory))) continue;
 
       shown ??= own.slice();
       for (let index = 0; index < look.length; index++) {
         const part = Math.floor((look[index] * level + 127) / MAX_LEVEL); // rounded like the backend does
         if (part > shown[index]) shown[index] = part;
       }
+    }
+
+    if (cross) {
+      shown ??= own.slice();
+      cross.levels.forEach((level, index) => {
+        if (shown && index < shown.length && level > shown[index]) shown[index] = level;
+      });
     }
 
     const running = this.playback().levels;
@@ -200,6 +220,20 @@ export class DeskStore {
     this.attributesTaken(shown);
     return shown;
   });
+
+  /**
+   * The stack's crossfade as the desk program counts it: none while a key held with SOLO DOWN is
+   * on one of its faders (then every fader gives its light on its own again).
+   */
+  private readonly crossfade = computed(() => {
+    const cross = this.playback().crossfade;
+    if (!cross) return null;
+    const held = this.solo().down.some((key) => (key.target === 'channel' ? cross.channels : cross.memories).includes(key.number));
+    return held ? null : cross;
+  });
+
+  /** The ids of the steps of the stack that are on: the current one and those it came on top of (Add). */
+  readonly stackOn = computed<ReadonlySet<number>>(() => new Set(this.playback().stack.on ?? []));
 
   /**
    * Latest takes precedence, as in the desk program: each attribute of a light comes from the
@@ -249,7 +283,7 @@ export class DeskStore {
     const levels = this.soloLevels().slice();
     applyLimits(levels, roles.limits);
     const master = this.blackout() ? 0 : this.master();
-    for (let index = 0; index < CHANNEL_COUNT; index++) {
+    for (let index = 0; index < levels.length; index++) {
       levels[index] = roles.attribute[index] ? shown[index] : Math.floor((levels[index] * master + 127) / MAX_LEVEL);
     }
     return levels;
@@ -264,7 +298,7 @@ export class DeskStore {
     const solo = this.solo();
     const shown = this.shownChannels();
     if (solo.up.length > 0) {
-      const levels = zeros(CHANNEL_COUNT);
+      const levels = zeros(shown.length);
       const raise = (index: number, level: number) => (levels[index] = Math.max(levels[index], level));
       for (const key of solo.up) {
         if (key.target === 'channel') {
@@ -303,7 +337,7 @@ export class DeskStore {
     return this.channelNotes().map((note, index) => (note.trim() !== '' ? note : labels[index]));
   });
   /** When each channel fader and each memory fader last took what it gives an attribute (a count that grows). */
-  readonly channelClaims = signal<readonly number[]>(zeros(CHANNEL_COUNT));
+  readonly channelClaims = signal<readonly number[]>(zeros(UNIVERSE_SIZE));
   readonly memoryClaims = signal<readonly number[]>(zeros(MEMORY_COUNT));
   private claimCount = 0;
   // The color each fixture that mixes its color had last: brought up from dark, it comes back in it.
@@ -373,8 +407,12 @@ export class DeskStore {
   /** A channel and a memory that must be on the pages shown. The pages follow the window size. */
   private readonly wantedChannel = signal(1);
   private readonly wantedMemory = signal(1);
-  /** The first channel of the page that is shown. */
-  readonly firstChannel = computed(() => pageStart(this.wantedChannel(), this.channelsPerPage()));
+  /** The first channel of the page that is shown; in the last universe when the project has fewer than it had. */
+  readonly firstChannel = computed(() =>
+    pageStart(Math.min(this.wantedChannel(), this.channelCount()), this.channelsPerPage()),
+  );
+  /** The universe whose channels the channel faders show: its U key is lit, and its pages are offered. */
+  readonly shownUniverse = computed(() => universeOf(this.firstChannel()));
   /** The first memory of the page that is shown on the main view. */
   readonly firstMemory = computed(() => pageStart(this.wantedMemory(), this.memoriesPerPage()));
   /** The first memory of the page that is shown on the Memories and Sequences views. */
@@ -388,6 +426,7 @@ export class DeskStore {
 
     const used = { channel: new Map<number, number[]>(), memory: new Map<number, number[]>(), fixture: new Map<number, number[]>(), group: new Map<number, number[]>() };
     (this.sequences()[mode.memory]?.steps ?? []).forEach((step, index) => {
+      if (step.target === 'release') return; // only the stack has releases
       const users = used[step.target];
       const numbers = users.get(step.number);
       if (numbers) numbers.push(index + 1);
@@ -464,7 +503,7 @@ export class DeskStore {
     connection.on<[number]>('MasterChanged', (level) => this.master.set(level));
     connection.on<[boolean]>('BlackoutChanged', (on) => this.blackout.set(on));
     connection.on<[DeskState]>('DeskChanged', (desk) => this.takeDesk(desk));
-    connection.on<[BoxStatus]>('BoxChanged', (box) => this.box.set(box));
+    connection.on<[BoxView[]]>('BoxesChanged', (boxes) => this.boxes.set(boxes));
     connection.on<[ProjectInfo]>('ProjectChanged', (project) => this.project.set(project));
     connection.on<[StackState]>('StackChanged', (stack) => this.stack.set(stack));
     connection.on<[Playback]>('PlaybackChanged', (playback) => this.takePlayback(playback));
@@ -493,6 +532,11 @@ export class DeskStore {
   /** Shows the page of channels that starts at `first`. */
   showChannelPage(first: number): void {
     this.wantedChannel.set(first);
+  }
+
+  /** Shows the first page of a universe's channels (its U key). */
+  showUniverse(universe: number): void {
+    if (universe >= 1 && universe <= this.universes()) this.wantedChannel.set(universeStart(universe));
   }
 
   /** Shows the page of memories that starts at `first`. */
@@ -601,9 +645,17 @@ export class DeskStore {
     return Math.max(0, ...items.map((item) => item.id), ...used) + 1;
   }
 
-  /** What a step stands for, in words: "Channel 5", "Memory 2", "Fixture Spot 1", "Group Back". */
+  /**
+   * What a step stands for, in words: "Channel 5 (U1)", "Memory 2", "Fixture Spot 1", "Group Back",
+   * "Release of step 2.0".
+   */
   stepName(step: TimedStep): string {
-    if (step.target === 'channel' || step.target === 'memory') return `${step.target === 'channel' ? 'Channel' : 'Memory'} ${step.number}`;
+    if (step.target === 'channel') return `Channel ${channelLabel(step.number)}`;
+    if (step.target === 'memory') return `Memory ${step.number}`;
+    if (step.target === 'release') {
+      const released = this.releasedBy(step);
+      return released ? `Release of step ${released.cue}` : 'Release of no step';
+    }
     const plan = this.stage();
     const found =
       step.target === 'fixture'
@@ -612,7 +664,10 @@ export class DeskStore {
     return `${step.target === 'fixture' ? 'Fixture' : 'Group'} ${found ?? '(gone)'}`;
   }
 
-  /** The note of a step in one line: under the fader of its channel or memory; the name of its fixture or group. */
+  /**
+   * The note of a step in one line: under the fader of its channel or memory; the name of its
+   * fixture or group; for a release, what the step it takes down stands for, "Memory 2 (Wash)".
+   */
   stepNote(step: TimedStep): string {
     switch (step.target) {
       case 'channel':
@@ -623,7 +678,24 @@ export class DeskStore {
         return this.stage().lights.find((light) => light.id === step.number)?.name ?? 'A light that is gone';
       case 'group':
         return this.stage().groups.find((group) => group.id === step.number)?.name ?? 'A group that is gone';
+      case 'release': {
+        const released = this.releasedBy(step);
+        return released ? this.stepWithNote(released) : 'No step to take down: choose one';
+      }
     }
+  }
+
+  /** A step in words with its note, "Channel 5 (U1) (PAR 1 red)", "Fixture Spot 1"; a fixture or a group is named enough. */
+  stepWithNote(step: TimedStep): string {
+    const name = this.stepName(step);
+    if (step.target === 'fixture' || step.target === 'group' || step.target === 'release') return name;
+    const note = this.stepNote(step);
+    return note ? `${name} (${note})` : name;
+  }
+
+  /** The step of the stack a release takes down; undefined for a release of none, and for any other step. */
+  releasedBy(step: TimedStep): StackStep | undefined {
+    return step.target === 'release' ? this.stack().steps.find((other) => other.id === step.number) : undefined;
   }
 
   /**
@@ -842,13 +914,6 @@ export class DeskStore {
     });
   }
 
-  /** Clear of the Stage view: every channel of every light on the plan to zero. Memories and other channels stay. */
-  clearStageLights(): void {
-    for (const light of this.stage().lights) {
-      for (let offset = 0; offset < light.channels.length; offset++) this.setChannel(light.address + offset, 0);
-    }
-  }
-
   /**
    * Puts a picture under the plan (a data URL of a JPEG, PNG or WebP image), or takes it away
    * (null). Shown at once; the desk program answers every page with the plan, which names it.
@@ -860,6 +925,28 @@ export class DeskStore {
       this.stagePictureId = null; // fetched again with the plan
       void this.fetchStage();
     });
+  }
+
+  // ---------------------------------------------------------------- universes and boxes
+
+  /**
+   * How many universes the project has, 1 to 8. The desk program refuses fewer while a step, a
+   * light of the plan or an independent key uses a channel of a universe that would go; the page
+   * then says why. The whole desk comes back with the new number of channels.
+   */
+  setUniverses(universes: number): void {
+    if (this.live() || universes === this.universes()) return;
+    this.run('SetUniverses', universes);
+  }
+
+  /**
+   * The project's list of boxes as the Boxes window changed it: a box added by hand, an output
+   * given another universe, a box taken out; an empty list for automatic. The desk program
+   * answers every page with the boxes as they are then. Rejects with its message when it refuses
+   * the list (an address that is none, a box listed twice, the stack live).
+   */
+  async setBoxes(boxes: readonly BoxPlan[]): Promise<void> {
+    await this.connection.invoke<void>('SetBoxes', boxes);
   }
 
   // ---------------------------------------------------------------- autosave
@@ -928,7 +1015,7 @@ export class DeskStore {
   clear(): void {
     this.mode.set(IDLE);
     this.dropOutbox(); // fader moves that are still waiting must not arrive after the clear
-    this.channels.set(zeros(CHANNEL_COUNT));
+    this.channels.set(zeros(this.channelCount()));
     this.memoryLevels.set(zeros(MEMORY_COUNT));
     this.run('Clear');
   }
@@ -1026,17 +1113,37 @@ export class DeskStore {
 
   /**
    * Puts a step at the end of the stack: the first one, or one like the last on the next
-   * channel or memory. A new first step waits for Play, as a step of the stack mostly does.
+   * channel or memory (a release is passed over: the step before it is the pattern). A new first
+   * step waits for Play, as a step of the stack mostly does. A new step never adds.
    */
   addStackStepAtEnd(): void {
     if (this.live()) return; // a live stack keeps its steps
-    const last = this.stack().steps.at(-1);
-    this.addStackStep(last ? stepAfter(last, this.stage()) : firstStep(0));
+    this.addStackStep(this.stepFollowing(this.stack().steps));
   }
 
+  /**
+   * Puts a new step right after `row`: the one Add step would make after it (the same kind and
+   * times on the next channel or memory; after a release, after the step above it). The desk
+   * gives it a number that fits between `row` and the step behind it: after 2.0, with 3.0
+   * behind it, 2.1.
+   */
+  addStackStepAfter(row: StackStep): void {
+    if (this.live()) return; // a live stack keeps its steps
+    const steps = this.stack().steps;
+    const at = steps.findIndex((step) => step.id === row.id);
+    this.run('AddStackStepAfter', row.id, this.stepFollowing(steps.slice(0, at + 1)));
+  }
+
+  /** The step that comes after the last of `steps` that is no release, or the first step of all. */
+  private stepFollowing(steps: readonly StackStep[]): TimedStep {
+    const pattern = steps.filter((step) => step.target !== 'release').at(-1);
+    return pattern ? stepAfter(pattern, this.stage(), this.channelCount()) : firstStep(0);
+  }
+
+  /** Changes a step of the stack. A step without `add` adds no more: the desk sends it only when it is true. */
   updateStackStep(id: number, step: TimedStep): void {
     this.stack.update((stack) => ({
-      steps: stack.steps.map((old) => (old.id === id ? { ...old, ...step } : old)),
+      steps: stack.steps.map((old) => (old.id === id ? { ...old, ...step, add: step.add } : old)),
     }));
     this.run('UpdateStackStep', id, step);
   }
@@ -1272,7 +1379,7 @@ export class DeskStore {
       const welcome = await this.connection.invoke<Welcome>('Hello');
       this.version.set(welcome.version);
       this.takeDesk(welcome.desk);
-      this.box.set(welcome.box);
+      this.boxes.set(welcome.boxes ?? []);
       this.project.set(welcome.project);
       this.loaded.set(true);
       void this.fetchLan();
@@ -1359,6 +1466,7 @@ export class DeskStore {
   }
 
   private takeDesk(desk: DeskState): void {
+    this.universes.set(desk.universes ?? 1);
     this.channels.set(desk.channels);
     this.memoryLevels.set(desk.memoryLevels);
     this.memoryStored.set(desk.memoryStored);
@@ -1375,7 +1483,7 @@ export class DeskStore {
     this.rateOn.set(desk.rateOn ?? false);
     this.solo.set(desk.solo ?? NO_SOLO);
     // The order in which faders took the attributes of the lights; the page counts on from there.
-    const channelClaims = desk.channelClaims ?? zeros(CHANNEL_COUNT);
+    const channelClaims = desk.channelClaims ?? zeros(desk.channels.length);
     const memoryClaims = desk.memoryClaims ?? zeros(MEMORY_COUNT);
     this.channelClaims.set(channelClaims);
     this.memoryClaims.set(memoryClaims);
@@ -1477,6 +1585,13 @@ export class DeskStore {
 
 function zeros(count: number): number[] {
   return new Array<number>(count).fill(0);
+}
+
+/** The levels of the channel faders with those of `faders` (numbers from 1) at 0: they give their light through the crossfade. */
+function withoutChannels(levels: readonly number[], faders: readonly number[]): number[] {
+  const copy = levels.slice();
+  for (const fader of faders) if (fader >= 1 && fader <= copy.length) copy[fader - 1] = 0;
+  return copy;
 }
 
 /** The channels a look holds up, as indexes from 0; none for a memory without a look. */

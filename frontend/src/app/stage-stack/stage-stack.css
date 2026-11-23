@@ -1,0 +1,68 @@
+/* The keys at the top, the three cards under them, and the steps in the room that is left,
+   scrolling when there are more than fit. The rows look like those of the Stack view
+   (styles.css, "tables of steps"), with lettering instead of fields. */
+:host {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 12px;
+  width: min-content; /* as wide as the row of keys: the cards and the notes cut their lettering */
+  min-height: 0;
+}
+
+.table-box {
+  position: relative; /* for the caption that only screen readers read */
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+td {
+  height: 28px;
+}
+
+/* the note of the step's channel or memory: cut off where the row ends */
+.note {
+  max-width: 0; /* a cell that may not grow with its text shares the table's width instead */
+  padding-left: 8px;
+  overflow: hidden;
+  color: var(--legend);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.time {
+  width: 1%;
+  padding: 0 10px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Add: a tick where the step comes on top of what is on */
+.adds {
+  width: 1%;
+  padding: 0 6px;
+  color: var(--key-play);
+  text-align: center;
+}
+
+/* for screen readers only */
+.for-readers {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- mobile: under the plan, as high as its steps */
+:host-context(.mobile) {
+  grid-template-rows: none;
+  width: auto;
+  order: 1;
+}
+
+:host-context(.mobile) .table-box {
+  overflow: visible;
+}

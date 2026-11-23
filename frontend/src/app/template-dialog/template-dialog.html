@@ -39,6 +39,14 @@
             }
           </select>
         } @else {
+          @if (universeChoice()) {
+            <!-- channels numbered 1 to 512 in every universe: the numbers are of this one -->
+            <select aria-label="The universe of the channels" (change)="onUniverse($event)">
+              @for (item of universeChoices(); track item) {
+                <option [value]="item" [selected]="item === universe()">U{{ item }}</option>
+              }
+            </select>
+          }
           <input
             type="text"
             autocomplete="off"

@@ -1,0 +1,32 @@
+/* Stack at the left, then the four keys that go through the stack, in one row. */
+:host {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 16px;
+}
+
+.transport {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--strip-gap) * 2);
+}
+
+/* The keys a show is run with stand out from every other key of the desk: Prev, Pause and Next
+   one and a half times as big, Play twice as high and well over twice as wide. */
+.transport [lmLamp] {
+  width: calc(var(--key-w) * 1.5);
+  height: calc(var(--key-h) * 1.5);
+  font-size: calc(var(--key-word) * 1.3);
+}
+
+.transport .play {
+  width: calc(var(--key-w) * 2.4);
+  height: calc(var(--key-h) * 2);
+  font-size: calc(var(--key-word) * 1.8);
+}
+
+/* ---- mobile: the keys may go onto a second line */
+:host-context(.mobile) {
+  flex-wrap: wrap;
+}

@@ -64,41 +64,19 @@ h1 {
   line-height: 1;
 }
 
-/* the version, the box light and the LAN line: small and dim */
+/* the version and the LAN line: small and dim (the boxes under the name look the same, see boxes-button) */
 .version,
-.box,
 .lan {
   color: var(--legend-dim);
   font-size: calc(13px * var(--font-scale));
 }
 
-.box {
-  display: inline-flex;
-  grid-column: 1;
-  align-items: center;
-  gap: 7px;
-}
-
-/* the lights of the box and of LAN: little round lamps */
+/* the light of LAN: a little round lamp */
 .light {
   box-sizing: border-box;
   width: 9px;
   height: 9px;
   border-radius: 50%;
-}
-
-.box .light {
-  border: 1px solid var(--legend-dim);
-}
-
-.box.connected {
-  color: var(--legend);
-}
-
-.box.connected .light {
-  border-color: var(--channel);
-  background: var(--channel);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--channel) 60%, transparent);
 }
 
 /* While LAN is lit: the address for a phone and the password, under the box light, with an

@@ -29,8 +29,8 @@ public sealed record StagePlan(int Width, int Depth, StageLight[] Lights)
     /// <summary>The biggest a stage can be, across and from back to front, in squares.</summary>
     public const int MaxSize = 64;
 
-    /// <summary>The most lights a plan can have: one for every channel.</summary>
-    public const int MaxLights = Desk.ChannelCount;
+    /// <summary>The most lights a plan can have: one for every channel of the most universes.</summary>
+    public const int MaxLights = Desk.MaxChannels;
 
     /// <summary>The most kinds of lights from the fixture library a plan can have.</summary>
     public const int MaxTypes = 64;
@@ -426,8 +426,8 @@ public sealed record StageLight(int Id, string Name, int Address, string Channel
     /// <summary>The longest name a light can have: about what fits under it on the plan.</summary>
     public const int MaxNameLength = 24;
 
-    /// <summary>The most channels a light can have: a pixel bar from the library can have hundreds.</summary>
-    public const int MaxChannels = Desk.ChannelCount;
+    /// <summary>The most channels a light can have: a pixel bar from the library can have hundreds, but all in one universe.</summary>
+    public const int MaxChannels = Desk.UniverseSize;
 
     /// <summary>A light without a limit: it can go to full.</summary>
     public const int NoLimit = 100;
@@ -485,10 +485,19 @@ public sealed record StageLight(int Id, string Name, int Address, string Channel
             throw new DeskException($"{where} is of a kind of light the plan does not have, or its channels do not match it.");
         if (Limit < 1 || Limit > NoLimit)
             throw new DeskException($"{where} can be limited to 1 to {NoLimit} per cent, not {Limit}.");
-        if (Address < 1 || Address + channels.Length - 1 > Desk.ChannelCount)
+        if (Address < 1 || Address > Desk.MaxChannels)
         {
-            string count = channels.Length == 1 ? "1 channel" : $"{channels.Length} channels";
-            throw new DeskException($"{where} at address {Address} with {count} does not fit into the channels 1 to {Desk.ChannelCount}.");
+            throw new DeskException(
+                $"{where} cannot have the address {Address}: the desk has {Desk.MaxUniverses} universes of {Desk.UniverseSize} channels at most.");
+        }
+
+        // A light is on one cable: all its channels in one universe.
+        if ((Address - 1) / Desk.UniverseSize != (Address + channels.Length - 2) / Desk.UniverseSize)
+        {
+            int universeEnd = ((Address - 1) / Desk.UniverseSize + 1) * Desk.UniverseSize;
+            throw new DeskException(
+                $"{where} at address {Desk.ChannelLabel(Address)} with {channels.Length} channels reaches past channel " +
+                $"{Desk.ChannelLabel(universeEnd)}, the end of its universe: all channels of a light must be in one universe.");
         }
 
         string? color = string.IsNullOrEmpty(Color) ? null : Color.ToLowerInvariant();

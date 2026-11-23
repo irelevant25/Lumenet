@@ -6,10 +6,8 @@
         <span class="version">v{{ store.version() }}</span>
       }
     </div>
-    <span class="box" [class.connected]="store.box().connected" [attr.title]="boxHint()">
-      <span class="light" aria-hidden="true"></span>
-      {{ store.box().connected ? 'Box connected' : 'No box' }}
-    </span>
+    <!-- how many boxes answer; a press opens their window: which box plays which universe -->
+    <lm-boxes-button (open)="boxesDialog().open()" />
     @if (lanLine(); as line) {
       <!-- Only while LAN is lit, and only on the PC: what to open on a phone, and the password. -->
       <span class="lan" [attr.title]="line.hint">
@@ -155,3 +153,4 @@
 <lm-project-dialog />
 <lm-import-dialog />
 <lm-export-dialog />
+<lm-boxes-dialog />

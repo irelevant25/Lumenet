@@ -1,9 +1,9 @@
 namespace DmxBox.Server;
 
 /// <summary>
-/// The fader desk: 512 channel faders, 128 memories with a fader each, a master fader, a
-/// blackout switch, a note under every fader, and 20 independent keys (10 for channels, 10 for
-/// memories). It holds this state
+/// The fader desk: a channel fader for every channel of its universes (512 each, 1 to 8
+/// universes), 128 memories with a fader each, a master fader, a blackout switch, a note under
+/// every fader, and the independent keys. It holds this state
 /// and computes the DMX output from it. It knows nothing about the box, the project files or
 /// the UI.
 /// </summary>
@@ -12,6 +12,12 @@ namespace DmxBox.Server;
 /// Channels and memories are numbered from 1, as on the UI; levels go from 0 to 255. A number
 /// outside its range ends in an <see cref="ArgumentOutOfRangeException"/>, anything else that
 /// cannot be done in a <see cref="DeskException"/>. Both carry a message for the user.
+/// </para>
+/// <para>
+/// The channels of all universes are counted on: universe 1 has the channels 1 to 512, universe 2
+/// the channels 513 to 1024, and so on (the UI writes them as "1 (U2)" if it likes). How many
+/// universes there are is the project's (<see cref="Universes"/>); the desk keeps room for the
+/// most there can be, so that a change of the number moves nothing.
 /// </para>
 /// <para>Thread-safe: the hub and the box link use the same desk from different threads.</para>
 /// <para>
@@ -29,8 +35,21 @@ namespace DmxBox.Server;
 /// </remarks>
 internal sealed partial class Desk
 {
-    /// <summary>Number of DMX channels, each with a fader.</summary>
-    public const int ChannelCount = 512;
+    /// <summary>The channels of one DMX universe: one cable, one output of a box.</summary>
+    public const int UniverseSize = 512;
+
+    /// <summary>The most universes a project can have.</summary>
+    public const int MaxUniverses = 8;
+
+    /// <summary>The most channels the desk can have: all channels of the most universes.</summary>
+    public const int MaxChannels = UniverseSize * MaxUniverses;
+
+    /// <summary>
+    /// A channel as the user reads it: its number 1 to 512 in its universe, and the universe.
+    /// Channel 625 is "113 (U2)". Inside, channels are numbered on through the universes.
+    /// </summary>
+    public static string ChannelLabel(int channel) =>
+        $"{(channel - 1) % UniverseSize + 1} (U{(channel - 1) / UniverseSize + 1})";
 
     /// <summary>Number of memories, each with a fader.</summary>
     public const int MemoryCount = 128;
@@ -52,14 +71,18 @@ internal sealed partial class Desk
     public const int MemoryIndependentCount = 32;
 
     private readonly Lock _lock = new();
-    private readonly byte[] _channels = new byte[ChannelCount];
-    private readonly byte[] _memoryLevels = new byte[MemoryCount];
 
-    // The look stored in each memory, one level per channel. Null while the memory is empty.
+    // The channel arrays have room for every channel there can be (MaxChannels); only the first
+    // Channels of them are in use. Those of universes the project does not have stay at 0 or empty.
+    private readonly byte[] _channels = new byte[MaxChannels];
+    private readonly byte[] _memoryLevels = new byte[MemoryCount];
+    private int _universes = 1;
+
+    // The look stored in each memory, one level per channel (MaxChannels of them). Null while the memory is empty.
     private readonly byte[]?[] _memories = new byte[]?[MemoryCount];
 
     // The note under each fader. An empty text where there is none.
-    private readonly string[] _channelNotes = NoNotes(ChannelCount);
+    private readonly string[] _channelNotes = NoNotes(MaxChannels);
     private readonly string[] _memoryNotes = NoNotes(MemoryCount);
 
     // The channel each channel key and the memory each memory key of the independents is bound to.
@@ -90,6 +113,33 @@ internal sealed partial class Desk
 
     // Seconds since the desk was made. Sequences and the stack count in these.
     private double Now => _time.GetElapsedTime(_born).TotalSeconds;
+
+    // The channels in use now. Call with the lock held.
+    private int Channels => _universes * UniverseSize;
+
+    /// <summary>How many universes the project has, 1 to <see cref="MaxUniverses"/>.</summary>
+    public int Universes
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _universes;
+            }
+        }
+    }
+
+    /// <summary>How many channels there are now: 512 for every universe of the project.</summary>
+    public int ChannelCount
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return Channels;
+            }
+        }
+    }
 
     /// <summary>
     /// True while blackout is on: <see cref="GetOutput"/> gives every channel that gives light 0,
@@ -158,7 +208,7 @@ internal sealed partial class Desk
     /// Moves one channel fader by hand. If the stack was moving that fader, the hand wins: the
     /// stack leaves it alone from here on.
     /// </summary>
-    /// <param name="channel">Channel number, 1-512.</param>
+    /// <param name="channel">Channel number, 1 to <see cref="ChannelCount"/>.</param>
     /// <param name="level">The fader's new level, 0-255.</param>
     public void SetChannel(int channel, int level)
     {
@@ -168,6 +218,7 @@ internal sealed partial class Desk
         lock (_lock)
         {
             _moves.Remove(new Fader(Memory: false, channel));
+            LeaveCrossfade(new Fader(Memory: false, channel));
             _channels[channel - 1] = (byte)level;
             ClaimChannel(channel);
             _outputChanges++;
@@ -189,6 +240,7 @@ internal sealed partial class Desk
         lock (_lock)
         {
             _moves.Remove(new Fader(Memory: true, memory));
+            LeaveCrossfade(new Fader(Memory: true, memory));
             MoveMemoryFader(memory, (byte)level);
             _outputChanges++;
         }
@@ -225,7 +277,7 @@ internal sealed partial class Desk
     /// Writes the note under a channel fader. Notes are like tape labels: they stay whatever
     /// else happens on the desk, also through Clear and the memory functions.
     /// </summary>
-    /// <param name="channel">Channel number, 1-512.</param>
+    /// <param name="channel">Channel number, 1 to <see cref="ChannelCount"/>.</param>
     /// <param name="text">The text as typed. An empty one takes the note away.</param>
     /// <returns>The note as it is stored: the text without the spaces at its ends.</returns>
     /// <exception cref="DeskException">
@@ -268,7 +320,7 @@ internal sealed partial class Desk
 
     /// <summary>Binds a channel key of the independents to a channel.</summary>
     /// <param name="independent">Number of the key, 1-10.</param>
-    /// <param name="channel">The channel the key switches from now on, 1-512.</param>
+    /// <param name="channel">The channel the key switches from now on, 1 to <see cref="ChannelCount"/>.</param>
     /// <exception cref="DeskException">The stack is live.</exception>
     public void SetIndependent(int independent, int channel)
     {
@@ -491,15 +543,18 @@ internal sealed partial class Desk
     {
         lock (_lock)
         {
+            // The looks as long as the project's channels go.
             byte[]?[] looks = new byte[]?[MemoryCount];
             for (int index = 0; index < MemoryCount; index++)
-                looks[index] = _memories[index] is { } look ? Copy(look) : null;
+                looks[index] = _memories[index] is { } look ? look[..Channels] : null;
 
-            var content = new ProjectContent(looks, Copy(_channelNotes), Copy(_memoryNotes), Copy(_independents))
+            var content = new ProjectContent(looks, _channelNotes[..Channels], Copy(_memoryNotes), Copy(_independents))
             {
+                Universes = _universes,
+                Boxes = _boxes,
                 MemoryIndependents = Copy(_memoryIndependents),
                 Sequences = Copy(_sequences),
-                Stack = _stack.Select(entry => new ProjectStep(entry.Cue, entry.Step)).ToArray(),
+                Stack = _stack.Select(entry => new ProjectStep(entry.Cue, entry.Step) { Releases = ReleasedCue(entry.Step) }).ToArray(),
                 Stage = _stage,
                 StagePicture = _stagePicture,
                 Notes = _notes,
@@ -521,13 +576,14 @@ internal sealed partial class Desk
                 stored[index] = sequence[index] || _memories[index] is not null;
             }
 
+            int channels = Channels;
             return new DeskState(
-                Channels: Array.ConvertAll(_channels, level => (int)level),
+                Channels: Array.ConvertAll(_channels[..channels], level => (int)level),
                 MemoryLevels: Array.ConvertAll(_memoryLevels, level => (int)level),
                 MemoryStored: stored,
                 Master: _master,
                 Blackout: _blackout,
-                ChannelNotes: Copy(_channelNotes),
+                ChannelNotes: _channelNotes[..channels],
                 MemoryNotes: Copy(_memoryNotes),
                 Independents: Copy(_independents),
                 MemorySequence: sequence,
@@ -535,8 +591,11 @@ internal sealed partial class Desk
                 Rate: _rate,
                 RateOn: _rateOn,
                 Solo: SoloNow(),
-                ChannelClaims: Copy(_channelClaims),
-                MemoryClaims: Copy(_memoryClaims));
+                ChannelClaims: _channelClaims[..channels],
+                MemoryClaims: Copy(_memoryClaims))
+            {
+                Universes = _universes,
+            };
         }
     }
 
@@ -544,7 +603,7 @@ internal sealed partial class Desk
     /// Copies the looks of all memories that hold one, for the UI: it shows what a memory
     /// holds, and which channels a memory fader raises.
     /// </summary>
-    /// <returns>For each stored memory, by its number (1-128): 512 levels, channel 1 at index 0.</returns>
+    /// <returns>For each stored memory, by its number (1-128): a level for every channel, channel 1 at index 0.</returns>
     public Dictionary<int, int[]> GetMemoryLooks()
     {
         lock (_lock)
@@ -553,7 +612,7 @@ internal sealed partial class Desk
             for (int index = 0; index < MemoryCount; index++)
             {
                 if (_memories[index] is { } look)
-                    looks[index + 1] = Array.ConvertAll(look, level => (int)level);
+                    looks[index + 1] = Array.ConvertAll(look[..Channels], level => (int)level);
             }
 
             return looks;
@@ -563,14 +622,16 @@ internal sealed partial class Desk
     /// <summary>
     /// Computes the levels the box has to send at this moment. For every channel that gives
     /// light the highest wins: its own fader, or a memory that holds the channel, scaled by that
-    /// memory's fader. A memory with a sequence gives what its sequence gives right now. A solo
+    /// memory's fader. While the stack goes from one step to the next, the faders of the two
+    /// steps give their light through its crossfade instead (Desk.Stack.cs), which is the highest
+    /// of the rest too. A memory with a sequence gives what its sequence gives right now. A solo
     /// changes that (see Desk.Solo.cs): with keys held with SOLO UP only their faders count, at
     /// full; with keys held with SOLO DOWN their faders give nothing. Then each light is held to
     /// its limit, the master scales the result, and blackout makes it dark. The attributes of the
     /// lights (a pan, a tilt) come from the fader that took them last, untouched by all of
     /// that, see Desk.Attributes.cs.
     /// </summary>
-    /// <returns>512 levels; channel 1 is at index 0.</returns>
+    /// <returns>A level for every channel of the project's universes; channel 1 is at index 0.</returns>
     public byte[] GetOutput()
     {
         lock (_lock)
@@ -584,13 +645,27 @@ internal sealed partial class Desk
             }
             else
             {
-                output = Copy(_channels);
+                // While the stack crossfades, the faders taking part give their light through the
+                // crossfade (Desk.Stack.cs), not each on its own. A key held with SOLO DOWN on one of
+                // them stops that: then every fader counts on its own again.
+                Crossfade? cross = _crossfade is { } running && !running.Faders.Keys.Any(down.Contains) ? running : null;
+                output = _channels[..Channels];
+                foreach (Fader fader in cross?.Faders.Keys.Where(fader => !fader.Memory && fader.Number - 1 < Channels) ?? [])
+                    output[fader.Number - 1] = 0;
+
                 for (int index = 0; index < MemoryCount; index++)
                 {
                     // A memory whose fader is down adds nothing, like an empty one.
-                    if (_memories[index] is { } look && _memoryLevels[index] > 0 && !down.Contains(new Fader(true, index + 1)))
+                    var fader = new Fader(true, index + 1);
+                    if (_memories[index] is { } look && _memoryLevels[index] > 0 && !down.Contains(fader)
+                        && cross?.Faders.ContainsKey(fader) != true)
+                    {
                         RaiseTo(output, look, _memoryLevels[index]);
+                    }
                 }
+
+                for (int channel = 0; cross is not null && channel < output.Length && channel < cross.From.Length; channel++)
+                    output[channel] = Math.Max(output[channel], cross.ValueAt(channel));
 
                 AddSequences(output, now, stepsOn: null, leftOut: down);
 
@@ -607,10 +682,10 @@ internal sealed partial class Desk
         }
     }
 
-    // Highest takes precedence: a memory can raise a channel, never lower it.
+    // Highest takes precedence: a memory can raise a channel, never lower it. As far as the output goes.
     private static void RaiseTo(byte[] output, byte[] look, byte memoryLevel)
     {
-        for (int channel = 0; channel < ChannelCount; channel++)
+        for (int channel = 0; channel < output.Length; channel++)
             output[channel] = Math.Max(output[channel], Scale(look[channel], memoryLevel));
     }
 
@@ -665,21 +740,142 @@ internal sealed partial class Desk
     // was. The plan is never changed in place.
     private void PutProject(ProjectContent project)
     {
+        _universes = project.Universes;
+        _boxes = project.Boxes;
         PutStage(project.Stage ?? StagePlan.Empty);
         _stagePicture = project.Stage is null ? null : project.StagePicture;
         _notes = project.Notes;
 
         for (int index = 0; index < MemoryCount; index++)
         {
-            _memories[index] = project.Looks[index] is { } look ? Copy(look) : null;
+            _memories[index] = project.Looks[index] is { } look ? Widened(look) : null;
             _sequences[index] = project.Sequences[index];
         }
 
         ReplaceStack(project.Stack);
+        Array.Fill(_channelNotes, "");
         project.ChannelNotes.CopyTo(_channelNotes, 0);
         project.MemoryNotes.CopyTo(_memoryNotes, 0);
         project.Independents.CopyTo(_independents, 0);
         project.MemoryIndependents.CopyTo(_memoryIndependents, 0);
+        ClearAbove(Channels);
+    }
+
+    // A look of the project's channels, with room for all there can be.
+    private static byte[] Widened(byte[] look)
+    {
+        byte[] wide = new byte[MaxChannels];
+        look.CopyTo(wide, 0);
+        return wide;
+    }
+
+    // Call with the lock held. The faders, claims and notes of channels that the project does not
+    // have go back to nothing, so that they do not come back when universes are added again.
+    private void ClearAbove(int channels)
+    {
+        Array.Clear(_channels, channels, MaxChannels - channels);
+        Array.Clear(_channelClaims, channels, MaxChannels - channels);
+        Array.Fill(_channelNotes, "", channels, MaxChannels - channels);
+        foreach (byte[]? look in _memories)
+        {
+            if (look is not null)
+                Array.Clear(look, channels, MaxChannels - channels);
+        }
+    }
+
+    /// <summary>
+    /// Changes how many universes the project has. More universes add channels, at 0 and without
+    /// notes. Fewer take the channels of the universes that go away, with the levels the memories
+    /// hold there and the notes of those channels (Undo brings them back); refused while a step,
+    /// a light of the stage plan or a channel key of the independents is on such a channel.
+    /// </summary>
+    /// <param name="universes">1 to <see cref="MaxUniverses"/>.</param>
+    /// <returns><see cref="ProjectChanges"/> right after the change.</returns>
+    /// <exception cref="DeskException">Something is on a channel that would go, or the stack is live.</exception>
+    public long SetUniverses(int universes)
+    {
+        RequireRange("number of universes", universes, 1, MaxUniverses);
+
+        lock (_lock)
+        {
+            RequireUnlocked();
+            if (universes == _universes)
+                return _projectChanges;
+
+            int channels = universes * UniverseSize;
+            if (universes < _universes)
+            {
+                string? use = UseAbove(
+                    channels, _sequences, _stack.Select(entry => (entry.Cue, entry.Step)), _stage, _independents);
+                if (use is not null)
+                {
+                    string going = universes + 1 == _universes
+                        ? $"Universe {_universes} is"
+                        : $"Universes {universes + 1} to {_universes} are";
+                    throw new DeskException($"{going} still in use: {use}. Take it out of there first.");
+                }
+
+                ClearAbove(channels);
+            }
+
+            _universes = universes;
+            CountLookChange();
+            return _projectChanges;
+        }
+    }
+
+    // The first thing of a project that is on a channel above the given number, said for the
+    // user: "step 2 of the stack is on channel 7 (U2)"; null if nothing is. Looks and notes do
+    // not count: they simply end there.
+    internal static string? UseAbove(
+        int channels, Sequence?[] sequences, IEnumerable<(CueNumber Cue, Step Step)> stack, StagePlan stage, int[] independents)
+    {
+        for (int memory = 0; memory < sequences.Length; memory++)
+        {
+            Step[] steps = sequences[memory]?.Steps ?? [];
+            for (int index = 0; index < steps.Length; index++)
+            {
+                if (steps[index].Target == Step.Channel && steps[index].Number > channels)
+                    return $"step {index + 1} of the sequence of memory {memory + 1} is on channel {ChannelLabel(steps[index].Number)}";
+            }
+        }
+
+        foreach ((CueNumber cue, Step step) in stack)
+        {
+            if (step.Target == Step.Channel && step.Number > channels)
+                return $"step {cue} of the stack is on channel {ChannelLabel(step.Number)}";
+        }
+
+        foreach (StageLight light in stage.Lights)
+        {
+            if (light.Address + light.Channels.Length - 1 > channels)
+            {
+                string which = light.Name.Length > 0 ? $"the light \"{light.Name}\"" : "a light";
+                return $"{which} of the stage is at address {ChannelLabel(light.Address)}";
+            }
+        }
+
+        for (int key = 0; key < independents.Length; key++)
+        {
+            if (independents[key] > channels)
+                return $"channel key {key + 1} of the independents is on channel {ChannelLabel(independents[key])}";
+        }
+
+        return null;
+    }
+
+    // "1 universe", "2 universes".
+    internal static string UniversesSaid(int universes) => universes == 1 ? "1 universe" : $"{universes} universes";
+
+    // Call with the lock held: a channel step must be on a channel of the project's universes.
+    private void RequireStepFits(Step step)
+    {
+        if (step.Target == Step.Channel && step.Number > Channels)
+        {
+            throw new DeskException(
+                $"Channel {ChannelLabel(step.Number)} is not in the project, which has {UniversesSaid(_universes)}. " +
+                "Add universes in Settings first.");
+        }
     }
 
     // Call with the lock held. Every channel fader and memory fader goes to 0. The UIs are sent
@@ -690,6 +886,7 @@ internal sealed partial class Desk
         Array.Clear(_channels);
         Array.Clear(_memoryLevels);
         _moved.Clear();
+        _crossfade = null;
     }
 
     // Call with the lock held. Binding a key to what it has already is no change for the project.
@@ -715,12 +912,21 @@ internal sealed partial class Desk
     // the reader of project files always hands over an entry for every memory and fader.
     private static void RequireWhole(ProjectContent project)
     {
+        if (project.Universes < 1 || project.Universes > MaxUniverses)
+            throw new ArgumentException($"A project has 1 to {MaxUniverses} universes, not {project.Universes}.", nameof(project));
+
+        int channels = project.Universes * UniverseSize;
         if (project.Looks.Length != MemoryCount)
             throw new ArgumentException($"There must be {MemoryCount} looks, one per memory.", nameof(project));
-        if (project.Looks.Any(look => look is not null && look.Length != ChannelCount))
-            throw new ArgumentException($"Every look must have {ChannelCount} levels.", nameof(project));
-        if (project.ChannelNotes.Length != ChannelCount || project.MemoryNotes.Length != MemoryCount)
+        if (project.Looks.Any(look => look is not null && look.Length != channels))
+            throw new ArgumentException($"Every look must have {channels} levels.", nameof(project));
+        if (project.ChannelNotes.Length != channels || project.MemoryNotes.Length != MemoryCount)
             throw new ArgumentException("There must be a note, or an empty text, for every fader.", nameof(project));
+        if (UseAbove(channels, project.Sequences, project.Stack.Select(step => (step.Cue, step.Step)), project.Stage ?? StagePlan.Empty, project.Independents)
+            is { } use)
+        {
+            throw new ArgumentException($"In a project of {UniversesSaid(project.Universes)}, {use}.", nameof(project));
+        }
         if (project.Independents.Length != ChannelIndependentCount)
             throw new ArgumentException($"There must be {ChannelIndependentCount} channel independents.", nameof(project));
         if (project.MemoryIndependents.Length != MemoryIndependentCount)
@@ -734,9 +940,10 @@ internal sealed partial class Desk
         }
     }
 
-    private static void RequireChannel(int channel)
+    // Against the channels of the project's universes; read without the lock, as an int is read whole.
+    private void RequireChannel(int channel)
     {
-        RequireRange("channel", channel, 1, ChannelCount);
+        RequireRange("channel", channel, 1, Volatile.Read(ref _universes) * UniverseSize);
     }
 
     private static void RequireMemory(int memory)

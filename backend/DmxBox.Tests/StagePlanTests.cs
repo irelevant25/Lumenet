@@ -25,8 +25,10 @@ public sealed class StagePlanTests
     [InlineData(16, 65, "D", 1, 1, 1, "The stage can be 4 to 64 squares wide and deep, not 16 by 65.")]
     [InlineData(16, 10, "", 1, 1, 1, "Light 1 of the plan needs 1 to 512 letters for its channels, like RGB.")]
     [InlineData(16, 10, "R1B", 1, 1, 1, "Light 1 of the plan needs 1 to 512 letters for its channels, like RGB.")]
-    [InlineData(16, 10, "D", 0, 1, 1, "Light 1 of the plan at address 0 with 1 channel does not fit into the channels 1 to 512.")]
-    [InlineData(16, 10, "RGBW", 510, 1, 1, "Light 1 of the plan at address 510 with 4 channels does not fit into the channels 1 to 512.")]
+    [InlineData(16, 10, "D", 0, 1, 1, "Light 1 of the plan cannot have the address 0: the desk has 8 universes of 512 channels at most.")]
+    [InlineData(16, 10, "D", 4097, 1, 1, "Light 1 of the plan cannot have the address 4097: the desk has 8 universes of 512 channels at most.")]
+    [InlineData(16, 10, "RGBW", 510, 1, 1, "Light 1 of the plan at address 510 (U1) with 4 channels reaches past channel 512 (U1), the end of its universe: all channels of a light must be in one universe.")]
+    [InlineData(16, 10, "RGBW", 1534, 1, 1, "Light 1 of the plan at address 510 (U3) with 4 channels reaches past channel 512 (U3), the end of its universe: all channels of a light must be in one universe.")]
     [InlineData(16, 10, "D", 1, -2.5, 1, "Light 1 of the plan is not on the plan.")]
     [InlineData(16, 10, "D", 1, 18.5, 1, "Light 1 of the plan is not on the plan.")]
     [InlineData(16, 10, "D", 1, 1, 14.5, "Light 1 of the plan is not on the plan.")]
@@ -246,8 +248,12 @@ public sealed class StagePlanTests
         Assert.Equal("Light 1 of the stage plan in the file needs an address and its channels.", missing.Message);
         var beyond = Assert.Throws<InvalidDataException>(() => Read(start + """, "stage": { "lights": [ { "address": 512, "channels": "RGB" } ] } }"""));
         Assert.Equal(
-            "The stage plan in the file cannot be used. Light 1 of the plan at address 512 with 3 channels does not fit into the channels 1 to 512.",
+            "The stage plan in the file cannot be used. Light 1 of the plan at address 512 (U1) with 3 channels reaches past channel 512 (U1), the end of its universe: all channels of a light must be in one universe.",
             beyond.Message);
+        var aboveTheUniverses = Assert.Throws<InvalidDataException>(() => Read(start + """, "stage": { "lights": [ { "address": 513, "channels": "RGB" } ] } }"""));
+        Assert.Equal(
+            "The project has 1 universe, but a light of the stage is at address 1 (U2).",
+            aboveTheUniverses.Message);
     }
 
     private static string Write(ProjectContent project)

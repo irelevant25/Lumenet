@@ -1,6 +1,14 @@
 import type { DeskStore } from './desk-store';
-import { CHANNEL_COUNT, CHANNEL_INDEPENDENT_COUNT, MEMORY_COUNT, MEMORY_INDEPENDENT_COUNT } from './desk-types';
+import {
+  CHANNEL_INDEPENDENT_COUNT,
+  MAX_CHANNELS,
+  MAX_UNIVERSES,
+  MEMORY_COUNT,
+  MEMORY_INDEPENDENT_COUNT,
+  UNIVERSE_SIZE,
+} from './desk-types';
 import type { FunctionName } from './function-mode';
+import { universeStart } from './universes';
 
 /** What an action needs when its key is not on the view that is shown. */
 export interface ActionContext {
@@ -48,8 +56,11 @@ export const ACTION_GROUPS = [
 
 export type ActionGroup = (typeof ACTION_GROUPS)[number];
 
-/** The most page keys there can be: with 8 channels on a page, 64 pages of channels and 32 of memories. */
-export const MAX_CHANNEL_PAGES = CHANNEL_COUNT / 8;
+/**
+ * The most page keys there can be: with 8 channels on a page, 64 pages of channels in a universe
+ * (the page keys are those of the universe shown), and 32 of memories.
+ */
+export const MAX_CHANNEL_PAGES = UNIVERSE_SIZE / 8;
 export const MAX_MEMORY_PAGES = MEMORY_COUNT / 4;
 
 const RECORD_KEYS: readonly { function: FunctionName; label: string }[] = [
@@ -85,6 +96,7 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
     label: 'LAN',
     run: ({ store }) => store.setLan(!store.lan()?.on),
   },
+  { id: 'boxes', group: 'Project and LAN', label: 'Boxes (the window of the boxes)', run: null },
 
   // Clear, Solo and Rate stood in the master section once: their names say so, and the shortcuts
   // that projects keep under these names go on working.
@@ -126,7 +138,7 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
 
   { id: 'stage.edit', group: 'Stage view', label: 'Edit (stage plan)', run: null },
   { id: 'stage.add', group: 'Stage view', label: 'Add light', run: null },
-  { id: 'stage.clear', group: 'Stage view', label: 'Clear (the lights of the stage plan)', run: ({ store }) => store.clearStageLights() },
+  // (The Stage view's Clear is the Clear of General: master.clear.)
   { id: 'fixtures.group', group: 'Stage view', label: 'New group (Fixtures view)', run: null },
 
   { id: 'notes.edit', group: 'Notes view', label: 'Edit (notes)', run: null },
@@ -147,13 +159,20 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
     hold: ({ store }, down) => store.holdIndependent('memory', key, down),
   })),
 
+  // The U keys above the channel faders, of a project with more than one universe.
+  ...numbered(MAX_UNIVERSES, (universe) => ({
+    id: `universe.${universe}`,
+    group: 'Channel pages',
+    label: `Universe ${universe} (U${universe})`,
+    run: ({ store }) => store.showUniverse(universe),
+  })),
   ...numbered(MAX_CHANNEL_PAGES, (page) => ({
     id: `page.channel.${page}`,
     group: 'Channel pages',
     label: `Channel page ${page}`,
     run: ({ store }) => {
-      const first = (page - 1) * store.channelsPerPage() + 1;
-      if (first <= CHANNEL_COUNT) store.showChannelPage(first);
+      const offset = (page - 1) * store.channelsPerPage();
+      if (offset < UNIVERSE_SIZE) store.showChannelPage(universeStart(store.shownUniverse()) + offset);
     },
   })),
   ...numbered(MAX_MEMORY_PAGES, (page) => ({
@@ -166,12 +185,18 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
     },
   })),
 
-  ...numbered(CHANNEL_COUNT, (channel) => ({
+  // All 4096; the Keyboard view lists those of the project's universes, and a key of a universe
+  // the project does not have does nothing.
+  ...numbered(MAX_CHANNELS, (channel) => ({
     id: `channel.${channel}`,
     group: 'Channel keys',
     label: `Channel key ${channel}`,
-    run: ({ store }) => store.pressChannel(channel),
-    hold: ({ store }, down) => store.holdKey('channel', channel, down),
+    run: ({ store }) => {
+      if (channel <= store.channelCount()) store.pressChannel(channel);
+    },
+    hold: ({ store }, down) => {
+      if (channel <= store.channelCount()) store.holdKey('channel', channel, down);
+    },
   })),
   ...numbered(MEMORY_COUNT, (memory) => ({
     id: `memory.${memory}`,

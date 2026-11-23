@@ -10,7 +10,7 @@ internal interface IBox : IDisposable
     PingInfo Ping();
 
     /// <summary>Sets all channels of the box at once.</summary>
-    /// <param name="levels">512 levels; channel 1 is at index 0.</param>
+    /// <param name="levels">512 levels for each output of the box, output 1 first; channel 1 is at index 0.</param>
     void SetLevels(byte[] levels);
 
     /// <summary>Sets the box's own master, which scales every channel once more.</summary>

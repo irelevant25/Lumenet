@@ -39,6 +39,29 @@ public sealed class RealBoxTests
     }
 
     [Fact]
+    public void BoxWithTwoOutputsPlaysTheSecondUniverseOnItsSecondOutput()
+    {
+        // The simulator of the PIC32 box: the same code as its firmware, with 1024 channels.
+        using var sim = Simulator.Start(outputs: 2);
+        using var box = new RealBox(Loopback, sim.ControlPort);
+        using DmxBoxClient observer = sim.CreateClient();
+        var link = new BoxLink(_desk, box, _clients, Loopback, NullLogger<BoxLink>.Instance);
+        _desk.SetUniverses(2);
+        _desk.SetChannel(1, 10);
+        _desk.SetChannel(513, 200);    // channel 1 (U2)
+        _desk.SetChannel(1024, 7);     // channel 512 (U2)
+
+        link.Step(TimeSpan.Zero);
+
+        Assert.True(link.Status.Connected);
+        Assert.Equal(2, link.Status.Outputs);
+        Assert.Equal([10], observer.GetOutput(1, 1));
+        Assert.Equal([200], observer.GetOutput(513, 1));
+        Assert.Equal([7], observer.GetOutput(1024, 1));
+        Assert.Equal(new byte[510], observer.GetOutput(514, 510));
+    }
+
+    [Fact]
     public void BlackoutTravelsBothWaysOnTheSimulator()
     {
         using var sim = Simulator.Start();
@@ -102,13 +125,14 @@ public sealed class RealBoxTests
         // Making the client fails here, before anything is sent. That must not stop the
         // server from starting: the link has to treat it like a box that is not there.
         using var box = new RealBox(host: "", port: 7000);
-        var link = new BoxLink(_desk, box, _clients, "nowhere", NullLogger<BoxLink>.Instance);
+        int reports = 0;
+        var link = new BoxLink(_desk, box, _clients, "nowhere", NullLogger<BoxLink>.Instance, changed: () => reports++);
 
         link.Step(TimeSpan.Zero);
         link.Step(TimeSpan.FromSeconds(1));
 
         Assert.False(link.Status.Connected);
-        Assert.Empty(_clients.BoxChanges);
+        Assert.Equal(0, reports);
     }
 
     // A UDP port of this PC that is free right now.

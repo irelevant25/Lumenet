@@ -2,7 +2,7 @@
 // output into the console this script was started from. Used by run.cmd.
 //
 //   node run.mjs                          the dmxbox on its USB cable (192.168.7.1)
-//   node run.mjs --Box:Host=127.0.0.1     another address, for example the simulator in sim/
+//   node run.mjs --Box:Host=127.0.0.1     another address, for example the simulator in firmware/sim/
 //
 // Everything after the script name is handed to the backend as a setting.
 // Ctrl+C stops both. If one of them exits on its own, the other one is stopped too.

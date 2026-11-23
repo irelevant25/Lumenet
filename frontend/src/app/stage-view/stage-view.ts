@@ -1,6 +1,6 @@
 import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { DeskStore } from '../desk/desk-store';
-import { CHANNEL_COUNT, MAX_LEVEL, STAGE_BACK_ROOM, STAGE_FRONT_ROOM, STAGE_SIDE_ROOM, StageLight } from '../desk/desk-types';
+import { MAX_LEVEL, STAGE_BACK_ROOM, STAGE_FRONT_ROOM, STAGE_SIDE_ROOM, StageLight } from '../desk/desk-types';
 import {
   LightZone,
   SNAP,
@@ -20,6 +20,7 @@ import {
 import { shownFlashes, shutterClosed, strobeOf, typeOf, wheelColorOf } from '../desk/fixtures';
 import { LampButton } from '../lamp-button/lamp-button';
 import { StagePanel } from '../stage-panel/stage-panel';
+import { StageStack } from '../stage-stack/stage-stack';
 
 /** A round light is a little smaller than its squares, a square one a hair, so that the grid shows between lights. */
 const ROUND_INSET = 0.1;
@@ -85,7 +86,7 @@ interface Dragged {
  */
 @Component({
   host: { '[class.editing]': 'editing()' },
-  imports: [LampButton, StagePanel],
+  imports: [LampButton, StagePanel, StageStack],
   selector: 'lm-stage-view',
   styleUrl: './stage-view.css',
   templateUrl: './stage-view.html',
@@ -99,8 +100,8 @@ export class StageView {
   protected readonly editing = computed(() => this.editMode() && !this.store.live());
   /** True when the plan can be edited now. */
   protected readonly canEdit = computed(() => this.store.stageKnown() && !this.store.live());
-  /** True when every channel has a light: there is no room for another. */
-  protected readonly full = computed(() => this.store.stage().lights.length >= CHANNEL_COUNT);
+  /** True when every channel of the project has a light: there is no room for another. */
+  protected readonly full = computed(() => this.store.stage().lights.length >= this.store.channelCount());
 
   /** The number of the light that is chosen; null for none. */
   protected readonly selectedId = signal<number | null>(null);
@@ -214,7 +215,7 @@ export class StageView {
     const plan = this.store.stage();
     if (!this.editing() || this.full()) return;
 
-    const address = nextAddress(plan.lights);
+    const address = nextAddress(plan.lights, 1, this.store.channelCount());
     const id = this.store.nextLightId();
     const note = this.store.channelNotes()[address - 1] ?? '';
     const light: StageLight = {

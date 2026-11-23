@@ -3,24 +3,24 @@ using DmxBox.Server;
 namespace DmxBox.Tests;
 
 /// <summary>
-/// Stands in for "all connected UIs" in the tests of the box link, and remembers the two
-/// messages the link sends them.
+/// Stands in for "all connected UIs" in the tests of the box links and the box network, and
+/// remembers the two messages they send them.
 /// </summary>
-/// <remarks>Thread-safe: in one test the box link's own thread sends while the test looks.</remarks>
+/// <remarks>Thread-safe: the links' own threads send while the test looks.</remarks>
 internal sealed class RecordingClient : IDeskClient
 {
     private readonly Lock _lock = new();
-    private readonly List<BoxStatus> _boxChanges = [];
+    private readonly List<BoxView[]> _boxesChanges = [];
     private readonly List<bool> _blackoutChanges = [];
 
-    /// <summary>Every "BoxChanged" message so far, in order.</summary>
-    public IReadOnlyList<BoxStatus> BoxChanges
+    /// <summary>Every "BoxesChanged" message so far, in order.</summary>
+    public IReadOnlyList<BoxView[]> BoxesChanges
     {
         get
         {
             lock (_lock)
             {
-                return _boxChanges.ToArray();
+                return _boxesChanges.ToArray();
             }
         }
     }
@@ -38,11 +38,11 @@ internal sealed class RecordingClient : IDeskClient
     }
 
     /// <inheritdoc />
-    public Task BoxChanged(BoxStatus box)
+    public Task BoxesChanged(BoxView[] boxes)
     {
         lock (_lock)
         {
-            _boxChanges.Add(box);
+            _boxesChanges.Add(boxes);
         }
 
         return Task.CompletedTask;
@@ -59,7 +59,7 @@ internal sealed class RecordingClient : IDeskClient
         return Task.CompletedTask;
     }
 
-    // The box link has no business with the messages below: a test that gets one has found a fault.
+    // The boxes have no business with the messages below: a test that gets one has found a fault.
 
     /// <inheritdoc />
     public Task ChannelChanged(int channel, int value) => throw new NotSupportedException();

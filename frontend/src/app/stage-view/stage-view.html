@@ -2,17 +2,15 @@
   <h2>Stage</h2>
   <p class="summary">{{ summary() }}</p>
   <div class="keys">
-    <!-- the faders of every light on the plan to zero -->
+    <!-- Clear of the main view, the same key: every channel fader and memory fader to zero -->
     <button
       lmLamp
       type="button"
       tone="stage-clear"
-      aria-label="Clear the lights of the plan"
-      data-action="stage.clear"
-      title="The faders of every light on the plan to zero"
+      data-action="master.clear"
+      title="Every channel fader and memory fader to zero, as Clear on Main"
       [level]="3"
-      [disabled]="store.stage().lights.length === 0"
-      (click)="store.clearStageLights()"
+      (click)="store.clear()"
     >
       Clear
     </button>
@@ -43,6 +41,9 @@
     </button>
   </div>
 </header>
+
+<!-- At the left: the stack, to run a show while the plan shows its lights (nothing changes there). -->
+<lm-stage-stack />
 
 <!-- The plan keeps the shape of the stage and the room around it, as big as the window allows. -->
 <div class="room">

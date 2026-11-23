@@ -88,6 +88,8 @@ describe('the settings this browser keeps', () => {
         shortcuts: { 'master.clear': 'Ctrl+KeyC', 'stack.play': 5, 'stack.next': '' },
         // a known key and a color as #rrggbb, kept in small letters
         colors: { pause: '#FFAA00', play: 'green', nothing: '#000000', channel: '#00ff00' },
+        // a setting there was for a day: the channels are always numbered 1 to 512 in their universe
+        addresses: 'continuous',
       }),
     );
     expect(kept).toEqual({

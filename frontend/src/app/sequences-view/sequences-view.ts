@@ -13,7 +13,7 @@ import { LampLevel } from '../desk/lamps';
 import { storedMemoryPages } from '../desk/memory-pages';
 import { noteInOneLine } from '../desk/notes';
 import { SPEED_KEY_STEP, SPEED_POSITIONS, speedAt, speedPosition, speedText } from '../desk/speed';
-import { StepChoices, lightChoices, stepChoices } from '../desk/step-choices';
+import { StepChoices, channelChoices, lightChoices, stepChoices } from '../desk/step-choices';
 import { Fader } from '../fader/fader';
 import { LampButton, LampTone } from '../lamp-button/lamp-button';
 import { NoteLines } from '../note-lines/note-lines';
@@ -116,7 +116,7 @@ export class SequencesView {
    * because a sequence cannot play another one; neither is an empty memory.
    */
   protected readonly choices = computed<StepChoices>(() => ({
-    channel: stepChoices(this.store.channelNames()),
+    channel: channelChoices(this.store.channelNames()),
     memory: stepChoices(
       this.store.memoryNotes(),
       (memory) => this.store.memoryContent(memory) === 'look',
@@ -193,7 +193,7 @@ export class SequencesView {
   protected addStep(): void {
     const steps = this.steps();
     const last = steps.at(-1);
-    this.save([...steps, last ? stepAfter(last, this.store.stage()) : firstStep(1)]);
+    this.save([...steps, last ? stepAfter(last, this.store.stage(), this.store.channelCount()) : firstStep(1)]);
   }
 
   protected changeStep(index: number, step: TimedStep): void {

@@ -1,15 +1,15 @@
 <ng-content select="[before]" />
 
 <td class="kind">
+  <!-- a channel of each universe ("Channel (U2)"), then memory, fixture, group, and in the stack release -->
   <select
     [disabled]="locked()"
-    [attr.aria-label]="label() + ', channel, memory, fixture or group'"
+    [attr.aria-label]="kindLabel()"
     (change)="onTarget($event)"
   >
-    <option value="channel" [selected]="step().target === 'channel'">Channel</option>
-    <option value="memory" [selected]="step().target === 'memory'">Memory</option>
-    <option value="fixture" [selected]="step().target === 'fixture'">Fixture</option>
-    <option value="group" [selected]="step().target === 'group'">Group</option>
+    @for (choice of kinds(); track choice.value) {
+      <option [value]="choice.value" [selected]="choice.value === kind()">{{ choice.text }}</option>
+    }
   </select>
 </td>
 <td class="number">
@@ -17,7 +17,7 @@
        once the field is left, it holds only the number it shows. -->
   <select
     [disabled]="locked()"
-    [attr.aria-label]="label() + ', number of the ' + step().target"
+    [attr.aria-label]="numberLabel()"
     (pointerdown)="fillList()"
     (focus)="fillList()"
     (blur)="dropList()"
@@ -48,32 +48,42 @@
   }
   {{ note() }}
 </td>
-<td>
-  <input
-    type="text"
-    inputmode="numeric"
-    maxlength="3"
-    autocomplete="off"
-    [disabled]="locked()"
-    [value]="step().value"
-    [attr.aria-label]="label() + ', value, 0 to 255'"
-    (change)="onValue($event)"
-    (keydown.enter)="finish($event)"
-  />
-</td>
-<td>
-  <input
-    type="text"
-    inputmode="decimal"
-    maxlength="5"
-    autocomplete="off"
-    [disabled]="locked()"
-    [value]="seconds(step().up)"
-    [attr.aria-label]="label() + ', up time in seconds'"
-    (change)="onTime('up', $event)"
-    (keydown.enter)="finish($event)"
-  />
-</td>
+@if (release()) {
+  <!-- a release has no value and no way up: it takes its step down in its own down time -->
+  <td class="unused" title="A release has no value">
+    <span aria-hidden="true">—</span><span class="for-readers">{{ label() }} has no value</span>
+  </td>
+  <td class="unused" title="A release has no up time: it takes its step down in its down time">
+    <span aria-hidden="true">—</span><span class="for-readers">{{ label() }} has no up time</span>
+  </td>
+} @else {
+  <td>
+    <input
+      type="text"
+      inputmode="numeric"
+      maxlength="3"
+      autocomplete="off"
+      [disabled]="locked()"
+      [value]="step().value"
+      [attr.aria-label]="label() + ', value, 0 to 255'"
+      (change)="onValue($event)"
+      (keydown.enter)="finish($event)"
+    />
+  </td>
+  <td>
+    <input
+      type="text"
+      inputmode="decimal"
+      maxlength="5"
+      autocomplete="off"
+      [disabled]="locked()"
+      [value]="seconds(step().up)"
+      [attr.aria-label]="label() + ', up time in seconds'"
+      (change)="onTime('up', $event)"
+      (keydown.enter)="finish($event)"
+    />
+  </td>
+}
 <td>
   <input
     type="text"

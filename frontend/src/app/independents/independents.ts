@@ -1,9 +1,10 @@
 import { Component, computed, inject, linkedSignal } from '@angular/core';
 import { DeskSettings } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
-import { CHANNEL_COUNT, MEMORY_COUNT, StepTarget } from '../desk/desk-types';
+import { MEMORY_COUNT, StepTarget } from '../desk/desk-types';
 import { KeyColumns } from '../desk/key-columns';
 import { memoryLamp } from '../desk/lamps';
+import { channelField, channelFromText, channelLabel, channelNumber, universeOf } from '../desk/universes';
 import { LampButton, LampTone } from '../lamp-button/lamp-button';
 
 /**
@@ -35,15 +36,24 @@ export class Independents {
     computation: () => false,
   });
 
-  /** The channel keys that are shown: which channel each one switches, and whether that channel is up. */
+  /**
+   * The channel keys that are shown: which channel each one switches, and whether that channel is
+   * up. A key prints the channel's number in its universe, and in a project of several universes
+   * the universe under it.
+   */
   protected readonly channelKeys = computed(() => {
     const levels = this.store.channels();
+    const universes = this.store.universes();
     return this.store
       .independents()
       .slice(0, this.settings.channelKeys())
       .map((channel, index) => ({
         number: index + 1,
         channel,
+        caption: channelNumber(channel),
+        universe: universes > 1 ? `U${universeOf(channel)}` : null,
+        label: channelLabel(channel),
+        field: channelField(channel, universes),
         on: levels[channel - 1] > 0,
       }));
   });
@@ -90,13 +100,13 @@ export class Independents {
     if ((event.key === ' ' || event.key === 'Enter') && !event.repeat) this.store.holdIndependent(kind, key, down);
   }
 
-  /** A new channel number was typed onto a channel key. */
+  /** A new channel was typed onto a channel key: "113 U2", or "113" in the universe of its channel (see universes.ts). */
   protected onChannelTyped(key: number, event: Event): void {
     const field = event.target as HTMLInputElement;
-    const channel = wholeNumber(field.value, CHANNEL_COUNT);
+    const channel = channelFromText(field.value, this.store.channelCount(), universeOf(this.store.independents()[key - 1]));
     if (channel !== null) this.store.setIndependent(key, channel);
     // Whatever was typed: show the channel the key switches now.
-    field.value = String(this.store.independents()[key - 1]);
+    field.value = channelField(this.store.independents()[key - 1], this.store.universes());
   }
 
   /** A new memory number was typed onto a memory key. */
@@ -113,7 +123,7 @@ export class Independents {
   }
 }
 
-/** A whole number from 1 to `highest`, or null for any other text. */
+/** A whole number from 1 to `highest` (a memory), or null for any other text. */
 function wholeNumber(text: string, highest: number): number | null {
   const number = Number(text.trim());
   return Number.isInteger(number) && number >= 1 && number <= highest ? number : null;

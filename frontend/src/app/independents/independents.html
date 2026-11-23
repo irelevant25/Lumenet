@@ -19,13 +19,14 @@
   <!-- the green keys for channels -->
   @for (item of channelKeys(); track item.number) {
     @if (editing()) {
+      <!-- "113 U2" in a project of several universes: letters as well as digits -->
       <input
         class="field channel"
         type="text"
-        inputmode="numeric"
-        maxlength="3"
+        maxlength="9"
         autocomplete="off"
-        [value]="item.channel"
+        [attr.inputmode]="item.universe ? 'text' : 'numeric'"
+        [value]="item.field"
         [attr.aria-label]="'Channel of independent key ' + item.number"
         (change)="onChannelTyped(item.number, $event)"
         (keydown.enter)="leaveField($event)"
@@ -38,7 +39,7 @@
         tone="channel"
         [level]="item.on ? 3 : 1"
         [attr.aria-pressed]="item.on"
-        [attr.aria-label]="'Independent ' + item.number + ', channel ' + item.channel"
+        [attr.aria-label]="'Independent ' + item.number + ', channel ' + item.label"
         [attr.data-action]="'ind.channel.' + item.number"
         (click)="store.toggleIndependent(item.number)"
         (pointerdown)="hold('channel', item.number, $event)"
@@ -48,7 +49,10 @@
         (keydown)="holdByKey('channel', item.number, $event, true)"
         (keyup)="holdByKey('channel', item.number, $event, false)"
       >
-        {{ item.channel }}
+        {{ item.caption }}
+        @if (item.universe) {
+          <small class="universe" aria-hidden="true">{{ item.universe }}</small>
+        }
       </button>
     }
   }

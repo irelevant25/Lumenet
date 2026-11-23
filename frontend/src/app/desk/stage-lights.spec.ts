@@ -1,4 +1,4 @@
-import { CHANNEL_COUNT, EMPTY_STAGE, StageLight } from './desk-types';
+import { UNIVERSE_SIZE, EMPTY_STAGE, StageLight } from './desk-types';
 import {
   cursorOf,
   formOf,
@@ -23,7 +23,7 @@ function light(channels: string, color: string | null = null): StageLight {
 
 /** The levels that go out: these from channel 1 on, the rest at 0. */
 function output(...levels: number[]): number[] {
-  return [...levels, ...new Array<number>(CHANNEL_COUNT - levels.length).fill(0)];
+  return [...levels, ...new Array<number>(UNIVERSE_SIZE - levels.length).fill(0)];
 }
 
 describe('the lights of the stage plan', () => {

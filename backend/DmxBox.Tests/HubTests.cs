@@ -20,18 +20,18 @@ public sealed class HubTests
     private static readonly string[] DeskProperties =
     [
         "channels", "memoryLevels", "memoryStored", "master", "blackout", "channelNotes", "memoryNotes", "independents",
-        "memorySequence", "memoryIndependents", "rate", "rateOn", "solo", "channelClaims", "memoryClaims",
+        "memorySequence", "memoryIndependents", "rate", "rateOn", "solo", "channelClaims", "memoryClaims", "universes",
     ];
 
     [Fact]
-    public async Task HelloDescribesTheDeskTheBoxAndTheProject()
+    public async Task HelloDescribesTheDeskTheBoxesAndTheProject()
     {
         await using TestServer server = await TestServer.StartAsync();
         await using HubClient ui = await server.ConnectAsync();
 
         JsonElement hello = await ui.InvokeAsync("Hello");
 
-        Assert.Equal(["version", "desk", "box", "project"], NamesIn(hello));
+        Assert.Equal(["version", "desk", "boxes", "project"], NamesIn(hello));
         Assert.Equal(TestServer.Version, hello.GetProperty("version").GetString());
 
         JsonElement desk = hello.GetProperty("desk");
@@ -45,10 +45,10 @@ public sealed class HubTests
         Assert.Equal(Enumerable.Repeat("", 128), Texts(desk.GetProperty("memoryNotes")));
         Assert.Equal(Enumerable.Range(1, 32), Numbers(desk.GetProperty("independents")));
         Assert.Equal(Enumerable.Range(1, 32), Numbers(desk.GetProperty("memoryIndependents")));
+        Assert.Equal(1, desk.GetProperty("universes").GetInt32());
 
-        Assert.Equal(
-            """{"connected":false,"host":"pretend-box","firmware":null}""",
-            hello.GetProperty("box").GetRawText());
+        // The pretend box does not answer, and the project lists no boxes: there are none to show.
+        Assert.Equal("[]", hello.GetProperty("boxes").GetRawText());
         Assert.Equal(
             """{"name":"Untitled","path":null,"unsaved":false}""",
             hello.GetProperty("project").GetRawText());
@@ -614,14 +614,68 @@ public sealed class HubTests
     {
         await using TestServer server = await TestServer.StartAsync();
         await using HubClient ui = await server.ConnectAsync();
-        string connected = """{"connected":true,"host":"pretend-box","firmware":"1.0"}""";
+        string connected = """[{"address":"pretend-box","connected":true,"firmware":"1.0","outputs":1,"universes":[1],"kind":"automatic"}]""";
+        Assert.Equal("[]", (await ui.InvokeAsync("Hello")).GetProperty("boxes").GetRawText());
 
         server.Box.PlugIn();
-        await AssertNextAsync(ui, "BoxChanged", $"[{connected}]");
-        Assert.Equal(connected, (await ui.InvokeAsync("Hello")).GetProperty("box").GetRawText());
+        await AssertNextAsync(ui, "BoxesChanged", $"[{connected}]");
+        Assert.Equal(connected, (await ui.InvokeAsync("Hello")).GetProperty("boxes").GetRawText());
+        Assert.Equal(connected, (await ui.InvokeAsync("GetBoxes")).GetRawText());
 
+        // While the project lists no boxes, only the boxes that answer are shown.
         server.Box.Unplug();
-        await AssertNextAsync(ui, "BoxChanged", """[{"connected":false,"host":"pretend-box","firmware":null}]""");
+        await AssertNextAsync(ui, "BoxesChanged", "[[]]");
+    }
+
+    [Fact]
+    public async Task BoxesOfTheProjectPlayAsItSaysAndAreShownAlsoWhenTheyDoNotAnswer()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await ui.InvokeAsync("SetUniverses", 2);
+        await ui.InvokeAsync("SetChannel", 1, 255);
+        server.Box.PlugIn();
+        await Wait.UntilAsync(() => server.Box.Levels[0] == 255, "The box did not play U1 by itself.");
+
+        // A box added by hand, which does not answer (nothing listens on that port).
+        await ui.InvokeAsync("SetBoxes", (object)new[] { new { address = "127.0.0.1:9", universes = new[] { 2, 1 } } });
+
+        string planned = """{"address":"127.0.0.1:9","connected":false,"firmware":null,"outputs":2,"universes":[2,1],"kind":"listed"}""";
+        string unlisted = """{"address":"pretend-box","connected":true,"firmware":"1.0","outputs":1,"universes":[0],"kind":"new"}""";
+        Assert.Equal($"[{planned},{unlisted}]", (await ui.InvokeAsync("GetBoxes")).GetRawText());
+        await Wait.UntilAsync(() => server.Box.Levels[0] == 0, "A box that the project does not list still plays.");
+        Assert.Contains("\"127.0.0.1:9\"", (await ui.InvokeAsync("ExportProject")).GetString(), StringComparison.Ordinal);
+
+        // Undo brings the automatic wiring back.
+        Assert.Equal("the boxes", (await ui.InvokeAsync("Undo")).GetString());
+        await Wait.UntilAsync(() => server.Box.Levels[0] == 255, "The box did not play U1 again after Undo.");
+        Assert.Equal(
+            """[{"address":"pretend-box","connected":true,"firmware":"1.0","outputs":1,"universes":[1],"kind":"automatic"}]""",
+            (await ui.InvokeAsync("GetBoxes")).GetRawText());
+    }
+
+    [Fact]
+    public async Task ListOfBoxesThatCannotBeUsedIsRefused()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+
+        await AssertRefusedAsync(
+            "Box 1: \"10.1\" is no address like 10.1.3.1 (or 10.1.3.1:7001).",
+            ui,
+            "SetBoxes",
+            (object)new[] { new { address = "10.1", universes = new[] { 1 } } });
+        await AssertRefusedAsync(
+            "Box 2: an output plays universe 1 to 8, or none (0), not 9.",
+            ui,
+            "SetBoxes",
+            (object)new[] { new { address = "10.1.1.1", universes = new[] { 1 } }, new { address = "10.1.2.1", universes = new[] { 9 } } });
+        await AssertRefusedAsync(
+            "The box at 10.1.1.1 is in the list twice.",
+            ui,
+            "SetBoxes",
+            (object)new[] { new { address = "10.1.1.1", universes = new[] { 1 } }, new { address = " 10.1.1.1:7000 ", universes = new[] { 2 } } });
+        Assert.Equal("[]", (await ui.InvokeAsync("GetBoxes")).GetRawText());
     }
 
     [Fact]
@@ -630,7 +684,7 @@ public sealed class HubTests
         await using TestServer server = await TestServer.StartAsync();
         await using HubClient ui = await server.ConnectAsync();
         server.Box.PlugIn();
-        await NextAsync(ui, "BoxChanged");
+        await NextAsync(ui, "BoxesChanged");
 
         await ui.InvokeAsync("SetChannel", 1, 255);
         await ui.InvokeAsync("SetMaster", 128);
@@ -648,7 +702,7 @@ public sealed class HubTests
         await using TestServer server = await TestServer.StartAsync();
         await using HubClient ui = await server.ConnectAsync();
         server.Box.PlugIn();
-        await NextAsync(ui, "BoxChanged");
+        await NextAsync(ui, "BoxesChanged");
 
         server.Box.PressBlackoutButton();
 
@@ -860,10 +914,15 @@ public sealed class HubTests
         await AssertNextAsync(other, "HistoryChanged", """[{"undo":"the stage plan","redo":null}]""");
 
         await AssertRefusedAsync(
-            "Light 1 of the plan at address 510 with 6 channels does not fit into the channels 1 to 512.",
+            "Light 1 of the plan at address 510 (U1) with 6 channels reaches past channel 512 (U1), the end of its universe: all channels of a light must be in one universe.",
             ui,
             "SetStage",
             new { width = 20, depth = 12, lights = new[] { new { id = 1, name = "", address = 510, channels = "RGBRGB", x = 0.0, y = 0.0, angle = 0 } } });
+        await AssertRefusedAsync(
+            "The light \"Wash\" ends on channel 3 (U2), and the project has 1 universe. Add universes in Settings first.",
+            ui,
+            "SetStage",
+            new { width = 20, depth = 12, lights = new[] { new { id = 1, name = "Wash", address = 513, channels = "RGB", x = 0.0, y = 0.0, angle = 0 } } });
 
         // Undo takes it back, redo brings it again.
         Assert.Equal("the stage plan", (await ui.InvokeAsync("Undo")).GetString());

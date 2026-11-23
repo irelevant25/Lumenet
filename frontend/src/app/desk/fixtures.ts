@@ -1,4 +1,4 @@
-import { CHANNEL_COUNT, FixtureRange, FixtureType, MAX_LEVEL, NO_LIMIT, StageLight, StagePlan } from './desk-types';
+import { FixtureRange, FixtureType, MAX_CHANNELS, MAX_LEVEL, NO_LIMIT, StageLight, StagePlan } from './desk-types';
 import { NOTE_LINE_SEPARATOR } from './notes';
 import { partsOf } from './stage-lights';
 
@@ -48,13 +48,13 @@ export function isDevice(letters: string): boolean {
 
 /** Works out the roles of the channels of a plan's lights. */
 export function rolesOf(plan: StagePlan): PlanRoles {
-  const attribute = new Array<boolean>(CHANNEL_COUNT).fill(false);
+  const attribute = new Array<boolean>(MAX_CHANNELS).fill(false);
   const attributeLights: AttributeLight[] = [];
   const limits: LimitRule[] = [];
   for (const light of plan.lights) {
     const first = light.address - 1;
     const letters = light.channels;
-    const channels = [...letters].map((_, offset) => first + offset).filter((channel) => channel < CHANNEL_COUNT);
+    const channels = [...letters].map((_, offset) => first + offset).filter((channel) => channel < MAX_CHANNELS);
     const device = isDevice(letters);
     const attributes = device ? [] : channels.filter((channel) => !LIGHT_LETTERS.includes(letters[channel - first]));
     if (attributes.length > 0) {
@@ -155,12 +155,12 @@ export function channelName(light: StageLight, offset: number, type: FixtureType
  * owner wrote no note of their own.
  */
 export function fixtureLabels(plan: StagePlan): string[] {
-  const labels = new Array<string>(CHANNEL_COUNT).fill('');
+  const labels = new Array<string>(MAX_CHANNELS).fill('');
   for (const light of plan.lights) {
     const type = typeOf(plan, light);
     for (let offset = 0; offset < light.channels.length; offset++) {
       const index = light.address - 1 + offset;
-      if (index < CHANNEL_COUNT && labels[index] === '') {
+      if (index < MAX_CHANNELS && labels[index] === '') {
         labels[index] = `${light.name || 'Light'}${NOTE_LINE_SEPARATOR}${channelName(light, offset, type)}`;
       }
     }

@@ -1,4 +1,25 @@
-<h2>Channels</h2>
+<div class="head">
+  <h2>Channels</h2>
+  @if (universeKeys().length > 0) {
+    <!-- a project of several universes: a key for each, the one shown lit -->
+    <nav class="universes" aria-label="Universes">
+      @for (item of universeKeys(); track item.universe) {
+        <button
+          lmLamp
+          type="button"
+          tone="channel"
+          [level]="item.lamp"
+          [attr.aria-pressed]="item.shown"
+          [attr.aria-label]="'Universe ' + item.universe"
+          [attr.data-action]="'universe.' + item.universe"
+          (click)="store.showUniverse(item.universe)"
+        >
+          U{{ item.universe }}
+        </button>
+      }
+    </nav>
+  }
+</div>
 
 <div class="body">
   <div class="rows big-scrollbar">
@@ -10,6 +31,8 @@
             [blink]="armed()"
             [steps]="steps(channel)"
             [number]="channel"
+            [caption]="caption(channel)"
+            [called]="called(channel)"
             [value]="store.shownChannels()[channel - 1]"
             [ownLevel]="store.channels()[channel - 1]"
             [lampLevel]="lamp(channel)"
@@ -35,11 +58,11 @@
         tone="channel"
         [level]="item.lamp"
         [attr.aria-pressed]="item.shown"
-        [attr.aria-label]="'Channels ' + item.first + ' to ' + item.last"
+        [attr.aria-label]="item.name"
         [attr.data-action]="'page.channel.' + ($index + 1)"
         (click)="store.showChannelPage(item.first)"
       >
-        {{ item.first }}-<wbr />{{ item.last }}
+        {{ item.from }}-<wbr />{{ item.to }}
       </button>
     }
   </nav>

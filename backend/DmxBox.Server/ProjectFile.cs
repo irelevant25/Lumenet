@@ -16,6 +16,19 @@ internal sealed class ProjectFile
     public int? Version { get; set; }
 
     /// <summary>
+    /// How many universes the project has, 1 to 8: its channels are 512 for each. Files before
+    /// version 5 do not have the property: they have one universe.
+    /// </summary>
+    public int? Universes { get; set; }
+
+    /// <summary>
+    /// The boxes the project wants and the universe each of their outputs plays. Written only for
+    /// a project that lists boxes; without them every box that answers plays universes by itself.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<ProjectFileBox?>? Boxes { get; set; }
+
+    /// <summary>
     /// The notes of the project, instructions for the show, see <see cref="ProjectNotes"/>.
     /// Written only for a project that has some; files from before there were such notes do not
     /// have the property, nor do imported shows.
@@ -27,8 +40,9 @@ internal sealed class ProjectFile
     public List<ProjectFileMemory?>? Memories { get; set; }
 
     /// <summary>
-    /// The notes under the channel faders: channel number (1-512) and text. Only faders that
-    /// have a note are listed. Files from before there were notes do not have the property.
+    /// The notes under the channel faders: channel number (counted on through the universes:
+    /// universe 2 starts at 513) and text. Only faders that have a note are listed. Files from
+    /// before there were notes do not have the property.
     /// </summary>
     public SortedDictionary<int, string?>? ChannelNotes { get; set; }
 
@@ -63,6 +77,16 @@ internal sealed class ProjectFile
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ProjectFileStage? Stage { get; set; }
+}
+
+/// <summary>A box the project wants, as it stands in a project file, see <see cref="BoxPlan"/>.</summary>
+internal sealed class ProjectFileBox
+{
+    /// <summary>Where the box answers: "10.1.3.1", with ":port" when the port is not 7000.</summary>
+    public string? Address { get; set; }
+
+    /// <summary>For each output, output 1 first: the universe it plays, 1 to 8, or 0 for none.</summary>
+    public List<int>? Universes { get; set; }
 }
 
 /// <summary>The stage plan, as it stands in a project file.</summary>
@@ -229,14 +253,26 @@ internal sealed class ProjectFileStep
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Cue { get; set; }
 
-    /// <summary>"channel", "memory", "fixture" or "group".</summary>
+    /// <summary>"channel", "memory", "fixture" or "group"; in the stack also "release".</summary>
     public string? Target { get; set; }
 
     /// <summary>
     /// The channel (1-512) or the memory (1-128); a fixture or a group by its place in the file's
-    /// list of lights or groups, counted from 1 (0 for one that is gone).
+    /// list of lights or groups, counted from 1 (0 for one that is gone). 0 for a release, which
+    /// names its step with <see cref="Releases"/>.
     /// </summary>
     public int? Number { get; set; }
+
+    /// <summary>Only for a step of the stack that comes up on top of what is on: true. Written only then.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? Add { get; set; }
+
+    /// <summary>
+    /// Only for a release: the number of the step of the stack it takes down, like "2.1". Written
+    /// only for a release of a step; a release whose step was taken out has none.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Releases { get; set; }
 
     /// <summary>For a step of a fixture or a group: the color of its lights, like "#ff2000". Written only when it has one.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

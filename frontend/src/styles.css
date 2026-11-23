@@ -353,6 +353,13 @@ table.steps tr.previous > * {
   background: color-mix(in srgb, var(--previous) 12%, var(--well));
 }
 
+/* A step that is on as well: it came up with Add, or the current step came on top of it. A
+   paler green than the current step's; where it is also the next step, the amber edge wins. */
+table.steps tr.on > * {
+  border-color: color-mix(in srgb, var(--key-play) 55%, var(--edge));
+  background: color-mix(in srgb, var(--key-play) 9%, var(--well));
+}
+
 table.steps tr.current > * {
   border-color: var(--key-play);
   background: color-mix(in srgb, var(--key-play) 20%, var(--well));
@@ -419,7 +426,7 @@ table.steps select:disabled {
   appearance: none; /* no arrow: there is nothing to open */
 }
 
-/* the small keys at the end of a row: up, down, take out */
+/* the small keys at the end of a row: up, down, (in the stack) a new step after this one, take out */
 table.steps .row-keys {
   width: 1%;
   white-space: nowrap;

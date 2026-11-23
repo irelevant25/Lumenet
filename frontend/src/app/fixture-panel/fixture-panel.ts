@@ -44,7 +44,10 @@ export class FixturePanel {
   /** The fixture or group chosen; null for none. */
   readonly choice = model<FixtureChoice | null>(null);
 
-  protected readonly channelRange = channelRange;
+  /** The channels of a light: "30 to 41 (U1)". */
+  protected range(light: StageLight): string {
+    return channelRange(light);
+  }
   /** A choice of a list with its values: "Open (32 to 63)". */
   protected readonly rangeText = rangeText;
   protected readonly nameLength = GROUP_NAME_LENGTH;
@@ -72,7 +75,7 @@ export class FixturePanel {
     const type = this.type();
     if (!light) return '';
     const kind = type ? `${type.maker} ${type.model}, ${type.mode}` : `Channels ${light.channels}`;
-    return `${kind}; ${light.channels.length === 1 ? 'channel' : 'channels'} ${channelRange(light)}`;
+    return `${kind}; ${light.channels.length === 1 ? 'channel' : 'channels'} ${this.range(light)}`;
   });
 
   protected readonly mixes = computed(() => {

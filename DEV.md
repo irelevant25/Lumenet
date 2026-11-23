@@ -21,12 +21,19 @@ at **192.168.7.1**. So the box is controlled over UDP like a network device, but
              Pico core 1: fade engine ──► PIO + DMA ──► 6N137 ──► SN75176 ──► XLR-3
 ```
 
+A second box, **dmxbox 2**, is drawn and its firmware builds, but it has not been built yet: a PIC32
+microcontroller in a DIP socket instead of the Pico, a USB-C socket, **two DMX outputs** ready for RDM, and a
+switch that gives each box its own number and address (10.1.n.1), so that several boxes can work on one
+computer. See [dmxbox 2: the PIC32 box](#dmxbox-2-the-pic32-box).
+
 ## What is where
 
 | Folder / file | Contents |
 |---|---|
-| `firmware/` | Pico SDK project (C). Builds `dmxbox.uf2`; `flash.cmd` puts it onto the Pico. `firmware/test/` tests the network code on a PC. |
-| `sim/` | The **same** engine and protocol C code as the firmware, running on a PC over normal sockets. Use it to develop software before the hardware exists. |
+| `firmware/common/` | The C code both boxes share: the network stack, the address server, Art-Net, the DX protocol, the fade engine, the presets and the USB network adapter. |
+| `firmware/pico/` | The box with the Pico: a Pico SDK project (C). Builds `dmxbox.uf2`; `flash.cmd` puts it onto the Pico. `test/` tests the network code on a PC. |
+| `firmware/pic32/` | The PIC32 box with two outputs (dmxbox 2): its own C code (board, DMX outputs, flash) and `build.cmd`, which builds `dmxbox2.hex` with Microchip's XC32. |
+| `firmware/sim/` | The **same** engine and protocol C code as the firmware, running on a PC over normal sockets: `dmxbox_sim.exe` with one output like the Pico box, `dmxbox_sim2.exe` with two like the PIC32 box. Use them to develop software before the hardware exists. |
 | `backend/` | .NET: the `DmxBox` library, the `dmxbox` command-line tool, the server of the Lumenet desk, `Lumenet.exe` (`backend/Lumenet`), and the tests. |
 | `frontend/` | Angular: the page of the Lumenet fader desk. |
 | `run.cmd` | Starts the Lumenet desk: backend and frontend together. |
@@ -34,10 +41,11 @@ at **192.168.7.1**. So the box is controlled over UDP like a network device, but
 | `.github/` | The workflow that makes `Lumenet.exe` after every push to `main` and puts it on the Releases page. |
 | `examples/` | The example projects of the desk, which its Load window lists, and an example show file of a theatre console, to import. |
 | `docs/` | The screenshots of the README. |
-| `schematic/` | The schematic, the breadboard plan and the perfboard plan (SVG, PNG, PDF for printing), and the scripts that draw them. |
-| `3d/` | Blender model, renders, and a drawing of the board's tracks. |
-| [BOM.md](BOM.md) | Parts list for ordering. |
-| `archive/` | Earlier designs with an Ethernet port. Not needed for this box. |
+| `hardware/pico/` | The box with the Pico: `schematic-1-universe/` (the schematic, the breadboard plan and the perfboard plan in SVG, PNG and PDF for printing, and the scripts that draw them), `3d/` (Blender model, renders, and a drawing of the board's tracks) and [BOM.md](hardware/pico/BOM.md), the parts list for ordering. |
+| `hardware/pic32/` | The PIC32 box (dmxbox 2): `schematic-2-universes/` and `schematic-1-universe/` (for two outputs and for one: the net list, the schematic, the breadboard plan, the perfboard plan, the EAGLE files, and the scripts that draw and check them), `3d/` (Blender model of the finished box and its pictures) and [BOM.md](hardware/pic32/BOM.md). |
+| `hardware/eagle.py` | Writes EAGLE schematics and boards; the scripts of both boxes use it. |
+| `hardware/datasheets/` | Datasheets of parts of the box. |
+| `hardware/archive/` | Earlier designs with an Ethernet port. Not needed for this box. |
 
 Where things stand: [Verification status](#verification-status), at the end.
 
@@ -45,18 +53,18 @@ Where things stand: [Verification status](#verification-status), at the end.
 
 ## 1. Hardware
 
-Parts: see [BOM.md](BOM.md). Pictures: [top](3d/dmxbox_usb_top.png), [solder side](3d/dmxbox_usb_bottom.png),
-[USB end](3d/dmxbox_usb_usb_side.png), [DMX end](3d/dmxbox_usb_dmx_side.png), [closed box](3d/dmxbox_usb_closed.png).
+Parts: see [BOM.md](hardware/pico/BOM.md). Pictures: [top](hardware/pico/3d/dmxbox_usb_top.png), [solder side](hardware/pico/3d/dmxbox_usb_bottom.png),
+[USB end](hardware/pico/3d/dmxbox_usb_usb_side.png), [DMX end](hardware/pico/3d/dmxbox_usb_dmx_side.png), [closed box](hardware/pico/3d/dmxbox_usb_closed.png).
 
-Schematic: [drawing](schematic/dmxbox_schematic.png). To try the circuit on a breadboard first:
-[breadboard plan](schematic/dmxbox_breadboard.png). Both are in [one PDF](schematic/dmxbox_drawings.pdf) for printing.
+Schematic: [drawing](hardware/pico/schematic-1-universe/dmxbox_schematic.png). To try the circuit on a breadboard first:
+[breadboard plan](hardware/pico/schematic-1-universe/dmxbox_breadboard.png). Both are in [one PDF](hardware/pico/schematic-1-universe/dmxbox_drawings.pdf) for printing.
 To solder it on a perfboard: [perfboard plan](#building-it-on-a-perfboard).
 
 Tracks: the board is 100 × 66 mm and has every track on the solder side
-([drawing](3d/dmxbox_usb_routing.png), [SVG](3d/dmxbox_usb_routing.svg)).
+([drawing](hardware/pico/3d/dmxbox_usb_routing.png), [SVG](hardware/pico/3d/dmxbox_usb_routing.svg)).
 
 Everything with many pins sits in a socket (Pico, 6N137, RS-485 transceiver, DC-DC converter), so it can be
-replaced. U5 can be an SN75176BP or a MAX485: same pins, same socket (see [BOM.md](BOM.md)).
+replaced. U5 can be an SN75176BP or a MAX485: same pins, same socket (see [BOM.md](hardware/pico/BOM.md)).
 
 The Pico sits at the left end of the board, with its micro-USB socket at the wall of the box. The cable plugs
 straight into the Pico through an opening in the wall.
@@ -74,11 +82,11 @@ straight into the Pico through an opening in the wall.
 | 21, 22 | GP16, GP17 | Serial log (TX, RX, 115200 baud). No track; connect a serial adapter only if you want to read the log. |
 | 40 | VBUS | Not connected |
 
-All pins can be changed in `firmware/src/config.h`.
+All pins can be changed in `firmware/pico/src/config.h`.
 
 ### Schematic (signal level)
 
-![Schematic of the USB version](schematic/dmxbox_schematic.png)
+![Schematic of the USB version](hardware/pico/schematic-1-universe/dmxbox_schematic.png)
 
 The same in text:
 
@@ -115,7 +123,7 @@ Rules that matter:
 
 ### Building it on a breadboard
 
-![Breadboard plan](schematic/dmxbox_breadboard.png)
+![Breadboard plan](hardware/pico/schematic-1-universe/dmxbox_breadboard.png)
 
 The picture lists every part and every wire with its holes. It is drawn for one full-size breadboard
 (830 holes, rows 1 to 63). The circuit does not fit on a half-size board (400 holes).
@@ -150,21 +158,21 @@ A safe order:
      reach U5. First press the Pico firmly into the board: one pin without contact is enough.
 5. If the firmware is not on the Pico yet, [flash](#flash) it. Then go on with [Check that it works](#check-that-it-works).
 
-The plan is checked by the script that draws it (`schematic/draw.py`): every leg and wire end has a hole of
+The plan is checked by the script that draws it (`hardware/pico/schematic-1-universe/draw.py`): every leg and wire end has a hole of
 its own, and the holes joined by the board and the wires give exactly the connections of the schematic.
 
 ### Building it on a perfboard
 
-![Perfboard plan, parts side](schematic/dmxbox_perfboard.png)
+![Perfboard plan, parts side](hardware/pico/schematic-1-universe/dmxbox_perfboard.png)
 
 The soldered version, on a 70 × 90 mm perfboard with 26 × 31 holes (lettered A to Z, numbered 1 to 31), the
 kind where every hole has a solder pad of its own. If the pads of your board are joined in strips or in
 groups, this plan does not fit it.
 
-* [The solder side](schematic/dmxbox_perfboard_solder.png) shows the tracks, as you see them with the board
+* [The solder side](hardware/pico/schematic-1-universe/dmxbox_perfboard_solder.png) shows the tracks, as you see them with the board
   turned over.
-* [The lists](schematic/dmxbox_perfboard.md) give the holes of every part and every track from hole to hole.
-* [One PDF](schematic/dmxbox_perfboard.pdf) has both drawings for printing.
+* [The lists](hardware/pico/schematic-1-universe/dmxbox_perfboard.md) give the holes of every part and every track from hole to hole.
+* [One PDF](hardware/pico/schematic-1-universe/dmxbox_perfboard.pdf) has both drawings for printing.
 
 The 50 × 70 mm board (18 × 24 holes) is not used: the Pico alone takes 8 of its 18 columns and 20 of its 24
 rows, which leaves too little room for the isolated side behind a gap.
@@ -198,7 +206,7 @@ A safe order:
 5. Unplug, put in U3 and U5 (pin 1 at the notch), wire J1 to the XLR jack, and go on with step 4 of the
    breadboard list above: the measurement between XLR pin 3 and pin 2.
 
-How the plan is made: the places of the parts are chosen by hand, and `schematic/perfboard.py` finds the
+How the plan is made: the places of the parts are chosen by hand, and `hardware/pico/schematic-1-universe/perfboard.py` finds the
 tracks. A separate check in the same script then confirms that the joined pads give exactly the connections
 of the schematic (whichever way the buttons are joined inside), that every leg has a hole of its own, that
 nothing reaches across the gap, and that no two parts stand in each other's way. Run with `--selftest`, the
@@ -227,6 +235,177 @@ turned round, a solder bridge, a track across the gap, and others) and confirms 
 * One of the four board screws is under the Pico, between its pin rows. Put it in before you plug the Pico in.
 * The two buttons are on the board, inside the box. The lid in the model has no openings for them.
 
+### dmxbox 2: the PIC32 box
+
+![dmxbox 2 in its box, the lid off](hardware/pic32/3d/dmxbox2_angle.png)
+
+**Not built yet.** Everything here is drawn and checked by scripts, and the firmware compiles; none of it has
+run on a real board. It comes in two versions with the same board design:
+
+* **Two outputs** (two universes): `hardware/pic32/schematic-2-universes/`, files `dmxbox2_*`.
+* **One output** (one universe): `hardware/pic32/schematic-1-universe/`, files `dmxbox2_1_universe_*`. The same
+  box with output 2 left out (U8 to U11, R15 to R23, C15 to C17, D4, D5, J4): U1 pins 16, 17 and 18 stay free,
+  and the firmware is built with `build.cmd 1`.
+
+The box with the Pico has its drawings in `hardware/pico/schematic-1-universe/`: each folder's name says how
+many universes the box plays.
+
+* **Chip:** a Microchip PIC32MX270F256B in a 28-pin DIP socket: 256 KB flash, 64 KB RAM, full-speed USB and
+  two UARTs. It runs at 40 MHz from an 8 MHz crystal; USB gets its own 48 MHz from the same crystal.
+* **Power:** from the USB-C socket, which sits on a small breakout board, about 0.25 A. U2 (MCP1700) makes the
+  3.3 V of the chip; U3, the same Recom RKK-0505S/H as on the Pico box, the isolated 5 V of both outputs.
+* **Two outputs**, each with its own XLR jack: box n plays Art-Net universes 2n and 2n + 1, and the desk
+  gives its two outputs two universes.
+* **Ready for RDM**, which the firmware does not speak yet: each output can also listen to the line, through
+  a second optocoupler, and the chip switches the line driver between sending and listening.
+* **The box number:** switches 1 to 6 of SW1 give the box its number n and its address 10.1.n.1
+  ([BOM.md](hardware/pic32/BOM.md#the-box-number)). The desk looks for the boxes by itself. SW1 is a piano
+  DIP switch with long keys (ONPOW DPL08RGT) at the left edge of the board, which is cut off right beside
+  it: its keys reach into the box's left wall and end level with the floor of a pocket in it, so the number
+  is set from outside, with a fingernail or a pen ([picture](hardware/pic32/3d/dmxbox2_box_number.png)).
+* **Buttons and LED** as on the Pico box: SW2 blackout, SW3 preset 1, D1 the state. The two buttons share
+  the chip's programming pins: do not press them while a programmer writes the firmware.
+* **J2** is the programming header: a new PIC32 takes its first firmware only through a programmer (see
+  [flashing it](#the-pic32-box-flashing)).
+
+In each folder the drawings are made from one net list, `circuit.py`, and each script checks its drawing
+against it before writing it. The files of the box with two outputs (the other folder has the same ones):
+
+| What | Files in `hardware/pic32/schematic-2-universes/` | Made by |
+|---|---|---|
+| Schematic | [PNG](hardware/pic32/schematic-2-universes/dmxbox2_schematic.png), [PDF](hardware/pic32/schematic-2-universes/dmxbox2_schematic.pdf) | `draw.py` |
+| Breadboard plan | [parts](hardware/pic32/schematic-2-universes/dmxbox2_breadboard.png), [wires](hardware/pic32/schematic-2-universes/dmxbox2_breadboard_wires.png), [lists](hardware/pic32/schematic-2-universes/dmxbox2_breadboard.md), [PDF](hardware/pic32/schematic-2-universes/dmxbox2_breadboard.pdf) | `breadboard.py` |
+| Perfboard plan | [parts side](hardware/pic32/schematic-2-universes/dmxbox2_perfboard.png), [solder side](hardware/pic32/schematic-2-universes/dmxbox2_perfboard_solder.png), [lists](hardware/pic32/schematic-2-universes/dmxbox2_perfboard.md), [PDF](hardware/pic32/schematic-2-universes/dmxbox2_perfboard.pdf) | `perfboard.py` |
+| EAGLE files: schematic and a printed board with tracks on both sides | `dmxbox2.sch`, `dmxbox2.brd` | `eagle_export.py` |
+
+The box with one output: [schematic](hardware/pic32/schematic-1-universe/dmxbox2_1_universe_schematic.png),
+[breadboard plan](hardware/pic32/schematic-1-universe/dmxbox2_1_universe_breadboard.png),
+[perfboard plan](hardware/pic32/schematic-1-universe/dmxbox2_1_universe_perfboard.png), and
+`dmxbox2_1_universe.sch` / `.brd`.
+
+The finished box with two outputs, the printed board in it: [Blender file](hardware/pic32/3d/dmxbox2.blend),
+[from above](hardware/pic32/3d/dmxbox2_top.png), [the board from below](hardware/pic32/3d/dmxbox2_bottom.png),
+[the USB end](hardware/pic32/3d/dmxbox2_usb_side.png), [the DMX end](hardware/pic32/3d/dmxbox2_dmx_side.png),
+[the box number side](hardware/pic32/3d/dmxbox2_box_number.png), [closed](hardware/pic32/3d/dmxbox2_closed.png).
+The parts are KiCad's 3D models (SW1 is KiCad's piano DIP switch with its keys made as long as a DPL's); the
+box is 123 × 163 × 44 mm. Its left wall stands 0.3 mm from the cut edge of the board; around the window for
+SW1's keys it has a pocket 1.4 mm deep, and the lid comes down over the keys through a notch that a tab of
+the base fills below the window.
+The parts list for both versions is [BOM.md](hardware/pic32/BOM.md).
+
+Run a script with `uv run --no-project --python 3.13 --with resvg-py --with pillow python
+hardware/pic32/schematic-2-universes/<script>`. `perfboard.py` and `eagle_export.py` take a minute, because they
+look for the tracks; `perfboard.py --selftest` plants mistakes and confirms that its check notices each of them.
+
+**EAGLE files.** `.sch` and `.brd` are EAGLE's own format (XML), which EAGLE, Fusion Electronics and KiCad
+(File, Import) open; the box with the Pico has them too (`hardware/pico/schematic-1-universe/dmxbox.sch` and
+`.brd`, its carrier board from the 3D model, written by `eagle_export.py` there from `dmxbox_board.json`).
+The schematic is a working one: every part a box with its pins, joined by the names of the nets. The board of
+dmxbox 2 has the parts where the perfboard plan has them, 87.6 × 150 mm (the perfboard with its left edge cut
+off as the plan cuts it, the screw holes where the plan drills them), with plated holes and tracks on both
+sides (the router of the perfboard plan with the top side as copper); the script checks it as it checks the
+perfboard, and reads both files back and compares them with the net list. They are not fabrication data yet:
+no design rule check of a board maker, no ground plane, and they have not been opened in EAGLE here.
+
+#### Pin map of dmxbox 2
+
+| PIC pin | Port | Connects to |
+|---|---|---|
+| 26 | RB15 (UART 1 send) | output 1: U4 pin 3, the send optocoupler |
+| 25 | RB14 | output 1: direction, through R10 to U6 pin 1 |
+| 24 | RB13 (UART 1 receive) | output 1: U5 pin 6, the receive optocoupler |
+| 18 | RB9 (UART 2 send) | output 2: U8 pin 3 |
+| 16 | RB7 | output 2: direction, through R19 to U10 pin 1 |
+| 17 | RB8 (UART 2 receive) | output 2: U9 pin 6 |
+| 2, 3, 6, 7, 11, 12 | RA0, RA1, RB2, RB3, RB4, RA4 | SW1, switches 1 to 6 (the chip's own pull-ups) |
+| 4 | RB0 (PGED1) | SW2 blackout, and J2 pin 4 |
+| 5 | RB1 (PGEC1) | SW3 preset 1, and J2 pin 5 |
+| 14 | RB5 | through R5 to the LED D1 |
+| 1 | MCLR | R3 and R4 (C9 behind R4), J2 pin 1 |
+| 9, 10 | OSC1, OSC2 | the crystal Y1 with C7 and C8 |
+| 21, 22 | D+, D− | the USB-C breakout |
+| 15 | VBUS | 5 V from USB: the chip sees the cable |
+| 13, 28, 23 | VDD, AVDD, VUSB3V3 | 3.3 V, each with a 100 nF capacitor |
+| 20 | VCAP | C6, 10 µF ceramic: the chip's own core supply |
+| 8, 19, 27 | VSS, AVSS | ground |
+
+The send and receive pins are fixed by which pins the chip can give its UARTs; the others are set in
+`firmware/pic32/src/board.c`.
+
+#### One output
+
+```
+ PIC send pin ──► 6N137 (send) ──────► MAX485 DI      MAX485 A ──► XLR pin 3 (Data +)
+ PIC receive  ◄── 6N137 (receive) ◄─── MAX485 RO      MAX485 B ──► XLR pin 2 (Data −)
+ PIC direction ─► PC817 ─────────────► MAX485 DE, /RE    GND2 ──► XLR pin 1
+```
+
+* **Direction:** low sends, high listens (the PC817 lit pulls DE and /RE down). While the chip starts, its
+  pins are not driven: the PC817 stays dark, R11 keeps the driver on and the dark send optocoupler keeps the
+  line at rest. So the line is quiet from power-up on.
+* **Bias and termination:** 560 Ω from A up to the isolated 5 V, 560 Ω from B down to GND2 and 130 Ω between
+  A and B. A line that nobody drives rests at about +0.26 V with the terminator at its far end, above the
+  0.2 V that RS-485 needs, so that the box can listen for RDM answers. The last fixture still gets its 120 Ω
+  terminator.
+* **TVS diodes** (P6KE6.8CA) from A and from B to GND2, at the jack's side.
+* The rules of the Pico box hold: A = Data + = XLR pin 3, B = Data − = XLR pin 2; GND2 never meets GND; only
+  U3 and the optocouplers cross the gap.
+
+#### dmxbox 2 on a perfboard
+
+![Perfboard plan of dmxbox 2, parts side](hardware/pic32/schematic-2-universes/dmxbox2_perfboard.png)
+
+The board is 90 × 150 mm with 33 × 57 holes, every hole with a pad of its own: columns A to Z and AA to AG,
+rows 1 to 57. Read the plan as the one of the Pico box (a hole is written with a dash, AB-12; tracks are
+joined pads on the solder side), with these differences:
+
+* **Columns S and T stay empty from top to bottom:** the gap. The logic side (USB, chip, switch, buttons) is
+  at the left, the two DMX outputs at the right.
+* **Resistors with a circle** stand upright: the body over the circled hole, the other leg bent down beside it.
+  The others lie flat.
+* **Insulated wires** (W1, W2 ...) on the parts side join what the tracks cannot: where nets have to cross on a
+  single side, a wire goes over the top, laid along the holes the plan draws and soldered into the hole at each
+  end. The plan needs 38 of them (the box with one output 26); the lists give each one's way. Lay them before
+  the parts. The printed board (the EAGLE files) needs none.
+* **J3 and J4**, the screw terminals of the XLR wires: from the top XLR pin 1, pin 3 (+), pin 2 (−); the wires
+  enter from the right edge.
+* **U3's socket strip** has seven contacts, the converter four pins: pull contacts 3 and 4 out of the strip
+  before soldering it, they would stand in the gap (S-24 and T-24).
+* **J2**, the programming header, at the top left: pin 1 (MCLR) at B-3.
+* **SW1**, the box number, at the left edge in the columns A and D: its keys towards the edge, switch 1 at the
+  top (row 11).
+* **The left edge is cut off** along the red line, 2 mm from the middle of column A's holes (the board is then
+  about 87.6 mm wide), so that SW1's keys reach the wall of the box. Its left corners go with it: **B-1 and
+  B-57 are drilled out to 3.2 mm** for the two screws at the left; the right corners keep their own holes.
+  The holes around each screw stay empty.
+* **The USB-C breakout** stands on its own six pins in row 55, straight below the PIC, its socket over the
+  bottom edge of the board: D+ and D− run straight down to it.
+
+A safe order:
+
+1. Cut the left edge off and drill B-1 and B-57, before anything is soldered (a saw or a sharp knife and a
+   file; the cut runs 1 mm beside the pads of column A). Then solder the insulated wires, then the resistors,
+   diodes and the crystal, then the sockets (without the chips),
+   the capacitors, SW1, the buttons, the terminals, J2, U2 and the USB-C breakout. Mind the notches (towards
+   row 1, or towards the bottom for U5 and U9 as the plan shows them) and the flat side of U2.
+2. Join the pads track by track after the solder-side drawing and tick each one off in the lists.
+3. Before anything is plugged in, test with a multimeter set to continuity: every track conducts from end to
+   end, tracks of different colors do not conduct to each other, and **nothing left of the gap conducts to
+   anything right of it**.
+4. Plug in the USB-C cable, still without chips and without U3. Between the socket contacts of U1 pin 13 (H-24)
+   and pin 8 (H-19) there should be 3.3 V (3.2 to 3.4 V).
+5. Unplug, put in U3 and plug in again: between the socket contacts of U7 pin 8 (AB-12) and pin 5 (AB-15)
+   about 5 V (4.6 to 5.5 V).
+6. Unplug, put in the chips (pin 1 at the notch), and [flash the firmware](#the-pic32-box-flashing).
+
+The plan is made like the Pico box's: the places of the parts by hand, the tracks found by the script, then a
+separate check of the result. The script lays the tracks on two layers, the solder side and the wires over
+the top; a wire's two ends cost it as much as a long track, so it uses as few as it can. When the nets cannot
+agree where to go, it starts again with them in another order. The check also looks at the parts themselves:
+every leg in a hole of its own, the legs of each resistor, capacitor, diode and the crystal as far apart as the
+part allows, no part standing on another (a socket covers all the holes between its pins, a screw terminal the
+two columns behind its pins), no wire over a leg or under a socket, and nothing where a screw goes.
+
 ---
 
 ## 2. Firmware
@@ -236,7 +415,7 @@ turned round, a solder bridge, a track across the gap, and others) and confirms 
 You need the Pico SDK (2.1.0 or newer, with its TinyUSB submodule), an ARM toolchain (`gcc-arm-none-eabi`),
 CMake, and Ninja or Make. It is built and tried with Pico SDK 2.3.1 and Arm GNU Toolchain 14.2.Rel1.
 
-**Windows:** `firmware\build.cmd` does it in one step. It expects the tools in the folder `.pico-sdk` in your
+**Windows:** `firmware\pico\build.cmd` does it in one step. It expects the tools in the folder `.pico-sdk` in your
 user folder, laid out the way the VS Code "Raspberry Pi Pico" extension lays them out:
 
 | Folder in `.pico-sdk` | What it holds |
@@ -257,7 +436,7 @@ PICO_SDK_PATH=/path/to/pico-sdk cmake ..
 make -j
 ```
 
-Both produce `build/dmxbox.uf2`; `build.cmd` also puts a copy into `firmware/`, next to `flash.cmd`. For a
+Both produce `build/dmxbox.uf2`; `build.cmd` also puts a copy into `firmware/pico/`, next to `flash.cmd`. For a
 Pico W or Pico 2 add `-DPICO_BOARD=pico_w` or `-DPICO_BOARD=pico2` after `build.cmd` or to the `cmake` line,
 and start with an empty `build` folder. On a Pico W the LED stays dark.
 
@@ -265,7 +444,7 @@ and start with an empty `build` folder. On a Pico W the LED stays dark.
 
 Flashing replaces whatever was on the Pico before, for example MicroPython and the scripts stored with it.
 
-**Windows:** `firmware\flash.cmd` does it. It takes the `dmxbox.uf2` in its own folder, so the two files can
+**Windows:** `firmware\pico\flash.cmd` does it. It takes the `dmxbox.uf2` in its own folder, so the two files can
 also be copied together to another computer. Start it, then unplug the box, hold **BOOTSEL** on the Pico and
 plug the USB cable in again. It finds the Pico's drive by itself (if there are several, it asks which one),
 writes the file, waits until the Pico has restarted and then until the box answers at 192.168.7.1, showing
@@ -277,7 +456,7 @@ few seconds and copy the file again.
 
 ### Configure
 
-Edit `firmware/src/config.h`:
+Edit `firmware/pico/src/config.h`:
 
 * The address of the box (default **192.168.7.1**) and the address it gives the computer (192.168.7.2)
 * Art-Net universe (default 0)
@@ -339,9 +518,57 @@ There is no USB serial port any more. The log goes to the serial pins GP16 / GP1
 
 ### Testing the network code on a PC
 
-`firmware\test\build.cmd` (Visual Studio C compiler) builds and runs a test program. It runs the real
+`firmware\pico\test\build.cmd` (Visual Studio C compiler) builds and runs a test program. It runs the real
 network stack, the address server, the USB glue and the firmware's main program on pretend hardware, and
 checks ARP, ping, UDP, DHCP, Art-Net and the control protocol, including damaged packets (198 checks). On Linux or macOS use the `cc` line at the top of `test_net.c`.
+
+### The PIC32 box: building the firmware
+
+`firmware\pic32\build.cmd` builds `firmware\pic32\build\dmxbox2.hex` and puts a copy next to itself. It needs
+three things, all free:
+
+| What | Where `build.cmd` looks for it | Tried with |
+|---|---|---|
+| MPLAB XC32, Microchip's C compiler | `C:\Program Files\Microchip\xc32\v...`, or the variable `XC32` set to the folder of one version | v6.00 |
+| The PIC32MX device pack (PIC32MX_DFP) | `%USERPROFILE%\.mchp_packs\Microchip\PIC32MX_DFP\...`, where MPLAB X puts its packs, or `DFP` | 1.7.380 |
+| TinyUSB, the USB library | the copy in the Pico SDK of the Pico box (`%USERPROFILE%\.pico-sdk\sdk\2.3.1\lib\tinyusb`), or `TINYUSB` | 0.18 |
+
+It compiles the shared code of `firmware/common` with the box's own files in `firmware/pic32/src`:
+
+* `config.h`: the numbers (addresses, Art-Net universes, two outputs of 512 channels, 8 presets, USB names).
+* `board.c`: the configuration bits (the crystal, 40 MHz, the USB clock, JTAG off because its pins are pins of
+  the board), the pins, the switch, the buttons, the LED, a 1 ms timer and the USB interrupt.
+* `dmx_out.c`: each output on a UART of its own, driven by interrupts, both at the same time. The break is a 0
+  sent at 50,000 baud: its nine low bits are the 180 µs break, its stop bits the 40 µs mark after it. Then the
+  start code and the 512 levels at 250,000 baud with two stop bits: about 44 frames a second.
+* `storage_flash.c`: the 8 presets, 1024 levels each, in the chip's own flash.
+* `main.c`: puts it together like the Pico's main program. The box number from the switch gives the
+  addresses, the Ethernet addresses and the USB serial number ("box-07").
+
+The firmware takes about 40 KB of the 256 KB flash and 48 KB of the 64 KB RAM (both outputs' levels and fades,
+and the USB network buffers). It builds without warnings; TinyUSB's own files get two warnings switched off.
+`build.cmd 1` builds the firmware of the box with one output, `dmxbox2-1-universe.hex` (36 KB flash, 32 KB
+RAM): it drives UART 1 only, leaves U1 pins 16 to 18 alone and tells the desk 512 channels.
+TinyUSB has a driver for the USB port of the PIC32MX, but its authors list it as untested.
+
+The simulator plays this box too: `firmware\sim\dmxbox_sim2.exe` has two outputs (`--show` prints both).
+
+### The PIC32 box: flashing
+
+A new PIC32 has no USB drive to copy the firmware to, as the Pico has. The first firmware goes on with a
+programmer, a Microchip MPLAB Snap (PG164100), PICkit 4 or PICkit 5, and MPLAB IPE, the programming tool that
+comes with the free MPLAB X IDE.
+
+1. Put the chips into their sockets and plug the box into USB: the programmer does not power it.
+2. Plug the programmer onto J2, its pin 1 (the arrow) on J2 pin 1 (MCLR, at B-3, the top of J2).
+3. In MPLAB IPE choose the device PIC32MX270F256B and Apply, then the tool and Connect. Browse to
+   `firmware\pic32\dmxbox2.hex` (the box with one output: `dmxbox2-1-universe.hex`) and press Program. Do not
+   press the box's buttons meanwhile.
+4. Unplug the programmer. The box starts: the computer finds a new network adapter, which gets 10.1.n.2 from
+   the box (n is the number on its switch).
+
+Then `dmxbox -H 10.1.0.1 ping` (for box 0) shows the firmware version and 1024 channels, and the desk finds the
+box by itself. There is no boot loader yet, so every new firmware needs the programmer.
 
 ---
 
@@ -420,8 +647,8 @@ itself cannot be connected to a router.
 ### Simulator and tests
 
 ```powershell
-sim\build.cmd                                  # builds sim\dmxbox_sim.exe (Visual Studio C compiler)
-sim\dmxbox_sim.exe --show 12                   # prints channel values as they change
+firmware\sim\build.cmd                                  # builds dmxbox_sim.exe (one output) and dmxbox_sim2.exe (two)
+firmware\sim\dmxbox_sim.exe --show 12                   # prints channel values as they change
 # another terminal:
 dmxbox -H 127.0.0.1 fade 1 255 128 0 -t 2
 
@@ -429,7 +656,9 @@ dotnet test backend/DmxBox.sln                 # the client against the simulato
 ```
 
 `dmxbox_sim.exe --drop 0.3` loses 30 % of control packets in each direction. Use it to test the reliability
-layer; the test suite does exactly this. On Linux or macOS build the simulator with `make -C sim`.
+layer; the test suite does exactly this. `dmxbox_sim2.exe` is the box with two outputs, channels 1 to 1024
+(1 to 512 on output 1, 513 to 1024 on output 2); the tests run it too. Both are built with the Visual Studio C
+compiler; on Linux or macOS use `make -C firmware/sim`.
 
 ---
 
@@ -441,16 +670,30 @@ From the sources the desk needs the .NET 10 SDK and Node.js 22:
 run.cmd            # starts the backend and the frontend; then open http://localhost:4200
 ```
 
-Ctrl+C stops both. The desk also works without the box: it shows "No box" and sends the whole state as
-soon as a box answers.
+Ctrl+C stops both. The desk also works without a box: it shows "Boxes connected: 0" and sends the whole
+state as soon as a box answers.
 
 * `backend/DmxBox.Server` is the desk itself. It holds the state (levels, memories, sequences, the stack,
-  notes, the project), works out the output and sends it to the box through the `DmxBox` library. A small
+  notes, the project), works out the output and sends it to the boxes through the `DmxBox` library. A small
   clock in it lets time pass about 30 times a second, for the sequences and the stack. Its settings are in
-  `appsettings.json`: the address of the box (`Box:Host`), the projects folder (`Projects:Folder`), the
-  folder of the examples (`Projects:Examples`, at first `examples` beside the program), the built page it
-  hands out (`Ui:Folder`), the file with the LAN password (`Lan:PasswordFile`) and the autosave file
-  (`Autosave:File`; the autosave's own settings go beside it).
+  `appsettings.json`: the address of the box with the Pico (`Box:Host`, at first 192.168.7.1), whether it
+  looks for the boxes on the PC's network adapters (`Box:Discover`, at first true), the projects folder
+  (`Projects:Folder`), the folder of the examples (`Projects:Examples`, at first `examples` beside the
+  program), the built page it hands out (`Ui:Folder`), the file with the LAN password (`Lan:PasswordFile`)
+  and the autosave file (`Autosave:File`; the autosave's own settings go beside it).
+* **Universes:** a project has 1 to 8 (`Desk.Universes`, project file version 5: `universes`); the channels
+  are numbered on through them inside, 1 to 4096, and the arrays are made for 4096 once. The user never
+  sees that number: the page and the desk's messages write a channel 1 to 512 in its universe, "113 (U2)"
+  for channel 625 (`frontend/src/app/desk/universes.ts`, `Desk.ChannelLabel`).
+* **Boxes:** `BoxNetwork` keeps a `BoxLink` (a thread of its own, 40 rounds a second) for every box it looks
+  for: the one of `Box:Host`, the ones the project lists (`boxes` in the project file), and 10.1.n.1 for
+  every adapter of the PC with an address 10.1.n.x, where a box with the number n on its switch gives the PC
+  10.1.n.2. A box says its outputs in its ping (channels / 512). `BoxWiring` says what each output plays:
+  while the project lists none, the boxes that answer in their order (192.168.7.1, then by address), each
+  output the next universe; else as the list says, and a box that is not on it plays zeros. A link sends one
+  SET of 512 per output, so that no packet is split on the way. The pages get all boxes at once
+  (`BoxesChanged`), and `SetBoxes` changes the list (undoable). A test desk beside the real one gets
+  `--Box:Discover=false`, so it never finds the real boxes.
 * `frontend/` is an Angular app. It only shows the desk and passes on what you do, over SignalR (`/hub/desk`).
   Because the state lives in the backend, reloading the page loses nothing.
 * The backend listens on every network card (`Urls` is `http://*:5080`), but serves another device only while
@@ -476,7 +719,7 @@ publish.cmd        # builds the page, then publish\Lumenet.exe
 * The version is 0.1 and the number of commits (`backend/Version.props` has the 0.1); the page shows it in
   the top bar.
 * `.github/workflows/release.yml` runs after every push to `main`: the tests of the page, the box simulator
-  built with `sim\build.cmd` (GitHub's Windows machines have Visual Studio's C compiler) and the tests of the
+  built with `firmware\sim\build.cmd` (GitHub's Windows machines have Visual Studio's C compiler) and the tests of the
   desk program, then `publish.mjs`, then a release on the [Releases](../../releases) page with `Lumenet.exe` as its
   only file, named `v0.1.<number of commits>`, whose notes are the messages of the commits since the release
   before (`.github/release-notes.mjs`; the first release, those since the workflow came). When a test fails,
@@ -484,11 +727,12 @@ publish.cmd        # builds the page, then publish\Lumenet.exe
 
 ### Tests
 
-`dotnet test backend/DmxBox.sln` (475 tests: the client, the desk, solo, sequences and the stack with a
-clock the tests set by hand, the rate, undo and the autosave, the stage plan and its picture, fixtures, their
-attributes and their steps, the notes, project files with Export and Import,
-the examples, the import of show files, the link to the box, the hub, LAN with a pretend PC and a
-pretend phone), and in `frontend/`: `npm test -- --watch=false` (198 tests of the page).
+`dotnet test backend/DmxBox.sln` (543 tests: the client, also against the simulator with two outputs, the
+desk, solo, sequences and the stack with a clock the tests set by hand, the rate, undo and the autosave, the
+stage plan and its picture, fixtures, their attributes and their steps, the notes, the universes, project
+files with Export and Import, the examples, the import of show files, the links to the boxes and their wiring,
+the hub, LAN with a pretend PC and a pretend phone, the crossfades of sequences and the stack, steps of the
+stack that add and releases), and in `frontend/`: `npm test -- --watch=false` (218 tests of the page).
 
 ---
 
@@ -522,7 +766,7 @@ request's session and seq, and its payload is `status u8` followed by data.
 | 0x32 | RELEASE_ARTNET | none | none |
 | 0x33 | MERGE_MODE | 0 = HTP, 1 = override | none |
 | 0x40 | GET_OUTPUT | start u16, count u16 | values[count] |
-| 0x41 | GET_PRESET | slot u8 | values[512] |
+| 0x41 | GET_PRESET | slot u8 | values[channels]: 512 from the Pico box, 1024 from dmxbox 2 |
 
 The PING flags byte: bit 0 = Art-Net live, bit 1 = blackout, bit 2 = override mode, bit 3 = Art-Net layer holding data.
 
@@ -547,7 +791,10 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
 * **Wi-Fi:** a Pico W has the same size and pins and has Wi-Fi on board. With a Wi-Fi part in the firmware the
   box could join a wireless network itself, and USB would only supply power.
 * **sACN / E1.31** (UDP 5568, multicast) alongside Art-Net.
-* **A second universe:** a second PIO state machine plus a second transceiver; the code is ready for more SMs.
+* **More universes from one box:** the desk plays up to 8 universes on several boxes; the box with the Pico
+  sends one, [dmxbox 2](#dmxbox-2-the-pic32-box) two. Its board is ready for **RDM**: with RDM in the firmware
+  and the desk, the desk could find the fixtures on a line and set their addresses.
+* **A boot loader for dmxbox 2,** so that a new firmware goes on over USB without the programmer.
 * **Pushed state:** a "subscribe" message, so the box sends live output to your UI.
 * **Fabrication files for the carrier board**, so it can be ordered instead of hand-wired.
 * **A sturdier USB socket:** a USB-B socket in the panel with a short cable to the Pico inside the box.
@@ -561,7 +808,7 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
   Pico's eight ground pins have a track. It is a drawing, not a manufacturing dataset, and no board has been built.
 * **USB socket and box:** the socket's position comes from KiCad's 3D model of the Pico. The fit of a real
   plug in a real box has not been tried.
-* **Network stack, address server and main program:** pass 198 checks on a PC (`firmware/test`), built with
+* **Network stack, address server and main program:** pass 198 checks on a PC (`firmware/pico/test`), built with
   the PC compiler against stand-ins for the Pico and the USB library.
 * **Engine, Art-Net and DX protocol:** pass 14 end-to-end tests of the .NET client against the simulator,
   including a run with 30 % packet loss in both directions.
@@ -813,10 +1060,50 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
   without Co-Authored-By. The workflow's version and test steps ran in Git's bash (198 and 475 tests). Its
   first two runs on GitHub passed the 198 tests of the page and 458 of the desk program, and failed the 17
   that drive the box simulator, which is built on a PC and is no part of the repository: the workflow now
-  builds it first with `sim\build.cmd`, and a first release lists the commits since the workflow came. The
+  builds it first with `firmware\sim\build.cmd`, and a first release lists the commits since the workflow came. The
   third run passed every step in four minutes and made release v0.1.28, the latest, with `Lumenet.exe`
   (61 MB) as its only file and the three commits since the workflow came as its notes. Lumenet started a
   second time (it then only opens the page) was not tried.
+* **Universes and several boxes (2026-11-23):** the backend passes 513 tests and the page 212. In the tests:
+  a box with two outputs gets U1 and U2, an output beyond the project's universes and a new box send zeros,
+  a change of the wiring sends the output again, boxes found on the PC's adapters in the 10.1.n.x network,
+  a project of version 5 with its universes and boxes written and read back, fewer universes refused while a
+  step, a light or an independent key uses them, a show file with address 600 imported as two universes.
+  On a test copy with discovery off and two box simulators (ports 7000 and 7001), in Chrome: the first box
+  played U1 by itself, the second was added by hand in the Boxes window as 127.0.0.1:7001 and got U2, the
+  top bar said "Boxes connected: 2 of 2", U2 above the faders showed channels 1 to 16 of the second universe,
+  and channel 1 (U2) at full was 255 on channel 1 of the second simulator and 0 on the first (read with
+  `dmxbox get`). The page had no error, also at 390 pixels. Not yet
+  tried with a real box.
+* **A "+" in the stack and fades without a dip (2026-11-23):** the backend passes 526 tests and the page 215.
+  In the tests: a sequence and the stack go from step to step without a dip, a channel that both steps light
+  stays up through the whole fade (also in a loop and in random order), a channel step and a memory step that
+  share a channel crossfade too, a hand on a fader takes it out of the fade, Pause holds the fade where it is,
+  Next in the middle of a fade goes on from where the light is, and "+" adds a step right after its row through
+  the hub. Not yet tried in Chrome or with a light.
+* **Add and Release in the stack, and the crossfade on the page (2026-11-23):** the backend passes 543 tests
+  and the page 218. In the tests, with the owner's numbers: a channel at 120 in one step and 150 in the next
+  never goes below 120 and is at 150 when the new step's up time is over, in the stack and in a sequence; from
+  150 to 120 it goes down in the old step's down time and stays. A step with Add comes up on top and takes
+  nothing down; the next step without it takes every step that is on down, each in its own down time; a
+  release takes only its step down, in its own down time, then waits; Prev from a step that adds takes that
+  one down and leaves the rest; round from the last step the first starts afresh; of two steps with the same
+  fader the later counts, and the earlier again when it goes. Project files keep Add and what a release
+  releases through renumbering, moving, saving, loading and undo; a file without them stays version 5. The
+  page shows during a stack crossfade what the desk sends (before, it showed a dip the light did not have).
+  On a test copy without a box, in Chrome: a project with a scene, a special light with Add, a release of it
+  and a last step; live, the scene stayed marked on under the special light, the release counted its two
+  seconds down ("Taking its step down") and left the scene on; the Stage view ticked the step that adds. No
+  sideways scrolling at 1920 × 1080, 1366 × 768 and on a phone of 390 pixels, and no error on the page. Not
+  yet tried with a light.
+* **dmxbox 2 on paper (2026-11-23):** both versions (two outputs and one) are drawn from their `circuit.py`,
+  and each drawing passed its check against it: the schematic, the breadboard plan, the perfboard plan (38 and
+  26 insulated wires, with SW1 at the cut left edge and the holes around the four screws kept empty;
+  `--selftest` noticed all ten planted mistakes in both) and the EAGLE files, which were read back and compared
+  with the net list (those of the Pico box too); none of them has been opened in EAGLE or KiCad. The firmware
+  builds with XC32 v6.00 without a warning in both versions. The 3D box was rendered from the EAGLE board; in
+  it the ends of SW1's keys lie level with the floor of the pocket in the left wall. SW1's sizes are APEM's
+  DPL-08 (ONPOW's own drawing was not to be had). Nothing of dmxbox 2 has been built or run on hardware.
 * **Show files of a real console (2026-11-19):** 30 show files that ETC SmartFades wrote (software 3.0.1 and
   3.0.2) went through the import. The first version read them wrongly: their "FOLLOWON 0" (no wait) as a
   follow at once, their patch the wrong way round, and it lost their labels. With the SmartFade's dialect

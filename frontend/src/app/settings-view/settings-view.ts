@@ -12,10 +12,11 @@ import {
 } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
 import {
-  CHANNEL_COUNT,
   CHANNEL_INDEPENDENT_COUNT,
+  MAX_UNIVERSES,
   MEMORY_COUNT,
   MEMORY_INDEPENDENT_COUNT,
+  UNIVERSE_SIZE,
   lanAddressInUse,
 } from '../desk/desk-types';
 import { ALWAYS_SHOWN, DEFAULT_VIEW_ORDER, ViewName, viewNamed } from '../desk/views';
@@ -25,21 +26,23 @@ import { KeyColorsPanel } from '../key-colors-panel/key-colors-panel';
 const AUTOSAVE_INTERVALS: readonly number[] = [5, 30, 60, 300];
 
 /**
- * Settings: what this browser shows of the main view and how, the size of all lettering, the
- * autosave and the LAN of the desk program, and the colors of the keys. (The keyboard shortcuts
- * have a view of their own.)
+ * Settings: what this browser shows of the main view and how, the universes, the size of all
+ * lettering, the autosave and the LAN of the desk program, and the colors of the keys. (The
+ * keyboard shortcuts have a view of their own.)
  *
  * - The main view: how many channels a page holds (chosen by the window, or fixed), in one or two
  *   rows of faders, and one or two rows of memory faders; rows wider than the window scroll
  *   sideways. How many steps the stack wheel shows, and how many keys of each kind the
  *   independents show (0 to 32; none of either: no independents at all).
+ * - The universes of the project (1 to 8; the project keeps the number).
  * - The size of all lettering.
  * - The autosave: on or off, and how often. On the PC only.
  * - While LAN is on: the address of this PC that phones use, and the password. On the PC only.
  * - Which views have a link in the top bar, and in which order: all but Settings can be left out.
  * - The colors of the keys (key-colors-panel).
  *
- * The autosave and LAN belong to the desk program; the rest is kept as desk-settings.ts says.
+ * The universes belong to the project, the autosave and LAN to the desk program; the rest is kept
+ * as desk-settings.ts says.
  */
 @Component({
   imports: [KeyColorsPanel],
@@ -106,8 +109,9 @@ export class SettingsView {
     const perRow = this.store.stripsPerRow();
     const channels = this.store.channelsPerPage();
     const memories = this.store.memoriesPerPage();
+    const each = this.store.universes() > 1 ? ' in each universe' : '';
     const layout =
-      `${rows(this.settings.channelRows(), perRow)}, ${CHANNEL_COUNT / channels} pages; ` +
+      `${rows(this.settings.channelRows(), perRow)}, ${UNIVERSE_SIZE / channels} pages${each}; ` +
       `memories: ${rows(this.settings.memoryRows(), perRow)}, ${MEMORY_COUNT / memories} pages`;
     return this.settings.channelSize() === 'auto'
       ? `This window shows ${channels} channels on a page now: ${layout}.`
@@ -152,6 +156,23 @@ export class SettingsView {
   }
 
   protected readonly fontScaleSaid = computed(() => `×${this.settings.fontScale().toFixed(1)}`);
+
+  // ---------------------------------------------------------------- universes
+
+  protected readonly universeCounts = Array.from({ length: MAX_UNIVERSES }, (_, index) => index + 1);
+  protected readonly universeSize = UNIVERSE_SIZE;
+
+  /**
+   * Another number of universes for the project. The list shows the number the project has until
+   * the desk program has taken the new one: it refuses fewer while something uses a channel of a
+   * universe that would go, and the top bar says why.
+   */
+  protected onUniverses(event: Event): void {
+    const field = event.target as HTMLSelectElement;
+    const universes = Number(field.value);
+    field.value = String(this.store.universes());
+    this.store.setUniverses(universes);
+  }
 
   // ---------------------------------------------------------------- autosave
 

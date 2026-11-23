@@ -30,7 +30,7 @@
     <!-- the steps of the sequence being recorded that use this key -->
     <span class="steps" aria-hidden="true">{{ steps().join(',') }}</span>
   }
-  {{ number() }}
+  {{ caption() ?? number() }}
 </button>
 
 <div class="note" [attr.title]="noteTitle()">

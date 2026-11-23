@@ -10,7 +10,8 @@ is and how to get it; [DEV.md](DEV.md) is for building the box and changing the 
 * **From the sources** (the .NET 10 SDK and Node.js 22): `run.cmd` starts the desk program and the page; then
   open http://localhost:4200. Ctrl+C stops both.
 
-The desk also works without the box: it shows "No box" and sends the whole state as soon as a box answers.
+The desk also works without a box: it shows "Boxes connected: 0" and sends the whole state as soon as a box
+answers.
 
 ## Lumenet.exe
 
@@ -45,8 +46,9 @@ The top bar has nine links: **Main**, **Memories**, **Sequences**, **Stack**, **
 **Notes**, **Settings** and **Keyboard** (in this order until Settings gives them another). Main is the desk itself. Memories only shows what is stored. Sequences and Stack
 are for the two things that run by themselves (see below), Stage shows the lights of the rig in their colors,
 Fixtures plays them as fixtures, Notes holds the instructions for the show, Settings is
-for how this device shows the desk (see [Settings](#settings)), Keyboard for its shortcuts. Beside the name
-stand **LAN**, **Undo** and **Redo**, at the right the keys of the project. At the right of Main stand three
+for how this device shows the desk (see [Settings](#settings)), Keyboard for its shortcuts. Under the name the
+top bar says how many boxes answer (a click opens their window, see [Universes and boxes](#universes-and-boxes));
+beside it stand **LAN**, **Undo** and **Redo**, at the right the keys of the project. At the right of Main stand three
 columns: the **Master** section (Black out and the master fader with its level) over **Record**; the
 **General** section (Clear, Solo up, Solo down, Rate and the rate fader with the rate on top) over the **Stack**; and at
 the right edge, over the whole height, the **Independents** (unless Settings shows none of their keys). On a
@@ -55,8 +57,9 @@ phone the master section, the general section and the stack lie across the top, 
 ![The Main view on a PC: channel and memory faders, the master, general, record and stack sections, and the independents](docs/screenshots/main.png)
 
 * **Channels:** two rows of faders (or one, as Settings says). The keys at the right choose which of the 512
-  channels they show. When they do not fit into one column, they get flatter, and then they go on in another
-  column beside it.
+  channels of a universe they show. When they do not fit into one column, they get flatter, and then they go
+  on in another column beside it. In a project of several universes a key for each, U1, U2 and on, stands
+  above the faders and chooses the universe (see [Universes and boxes](#universes-and-boxes)).
 * **Memories:** one row of faders (or two), with page keys for the 128 memories. A memory holds a look:
   the levels the channel faders were set to at the moment it was saved. Its fader plays that look at the
   fader's level. For every channel the highest value wins, whether it comes from the channel fader or from
@@ -140,7 +143,8 @@ phone the master section, the general section and the stack lie across the top, 
   the column is left out). A green key switches
   its channel between zero and full, and that channel's fader follows; a red key does the same with the fader
   of its memory. The keys start on channels 1, 2, 3 ... and memories 1, 2, 3 ... Press Edit there, type
-  other numbers onto the keys, and press Edit again. A green key is lit when its channel's own fader is up (a
+  other numbers onto the keys (a channel of another universe as 113 U2), and press Edit again. In a
+  project of several universes a green key shows its channel's universe under the number. A green key is lit when its channel's own fader is up (a
   memory that holds the channel does not light it); a red key is lit like the key under its memory's fader,
   and runs from red to yellow for a sequence. Keys that do not fit into the column go on in another one.
 
@@ -148,12 +152,13 @@ phone the master section, the general section and the stack lie across the top, 
 
 * **The Memories view** is for looking only; nothing there changes the desk. The memory keys along the top
   choose a memory, each with the two lines of its note under it, and the table under them shows the level
-  that memory holds for each of the 512 channels, with each channel's note under its level, in rows of 32
-  (16 in a narrower window). All cells have the same size: when channels have notes, every cell keeps room
-  for two lines of one. The page keys at the right choose which memories the keys show. This view and
+  that memory holds for each of the 512 channels of a universe, with each channel's note under its level, in
+  rows of 32 (16 in a narrower window); in a project of several universes, U keys beside the title choose
+  the universe (half lit where the memory gives a channel a level). All cells have the same size: when
+  channels have notes, every cell keeps room for two lines of one. The page keys at the right choose which memories the keys show. This view and
   the Sequences view go by the window only: what Settings says about Main does not change them.
 
-![The Stage view: the rig of the example concert in its live colors, the LED bar chosen and its faders in the panel](docs/screenshots/stage.png)
+![The Stage view: the stack of the example concert at the left, live on step 5.0, the rig in its live colors, the LED bar chosen and its faders in the panel](docs/screenshots/stage.png)
 
 * **The Stage view** is a plan of the stage seen from above, for programming without the rig: a grid of
   squares (16 by 10 at first), the audience below it, and the lights of the rig on it, each in the color
@@ -161,6 +166,10 @@ phone the master section, the general section and the stack lie across the top, 
   the master, and dark during blackout. A light glows around itself, and where lights meet their light adds
   up. Every window shows the same desk, so the plan can stay open in a second window, on a second screen or
   on a tablet over LAN while you program on Main.
+  * **The stack** stands at the left of the plan (under it on a phone), to run a show while the plan shows
+    its lights: the keys of the Stack view (Stack, Prev, Play, Pause, Next), its cards Previous, Current and
+    Next one under the other, and its steps with their notes and times, the current one green and the next
+    one with an amber edge. Nothing about the steps can be changed there: the Stack view does that.
   * **Shutter and strobe:** a light whose shutter is closed is dark. A light that strobes flashes, as its
     strobe channel (S) says: a strobe flashes, a pulse swells and fades, a ramp rises or falls, and a random
     strobe flashes at uneven moments. A light of a library says in which range of its strobe channel it
@@ -178,8 +187,9 @@ phone the master section, the general section and the stack lie across the top, 
     go, and the panel says again what a click does. Its fields stand one in a row, the label at the left.
   * **A double click on a light** puts its faders to full, and the next one back to zero: those of its
     dimmer and its colors, not a strobe or a mode (of a device that gives no light: all its channels).
-    **Clear** (top right) puts the faders of every light on the plan to zero; a memory, a sequence or the
-    stack that holds a light up still holds it, as on Main.
+    **Clear** (top right) is the Clear of Main, with the same shortcut: it cancels an unfinished function,
+    brings every channel fader and memory fader to zero and takes the stack off its step (a live stack stays
+    live, and Play starts it at its first step again).
   * **Edit** (top right) places the lights: **Add light** puts one on the plan, on the channel after the
     last light, named after the note of that channel. Drag a light by its middle to move it (in half
     squares; the arrow keys move it too, with Shift by two squares; Delete takes it away), and by an edge
@@ -345,9 +355,11 @@ phone the master section, the general section and the stack lie across the top, 
     to the first goes round, as the stack does; other links are left out.
   * **Submasters and groups** become memories too, after the cues, as long as memories are left. There are 128
     in all: what does not fit is left out, and the window says so.
-  * **Patch:** the levels go through the file's patch onto the DMX addresses 1 to 512, which are Lumenet's
-    channels; a file without a patch has channel 1 on address 1. The note under a channel names the console
-    channel on that address ("Ch 7"; under it the share, if the patch gives less than 100 %).
+  * **Patch:** the levels go through the file's patch onto the DMX addresses, which are Lumenet's channels;
+    a file without a patch has channel 1 on address 1. The project gets as many universes as the highest
+    address needs (address 600 is in the second), up to 8: addresses above 4096 are left out, and the window
+    says so. The note under a channel names the console channel on that address ("Ch 7"; under it the share,
+    if the patch gives less than 100 %).
   * **Notes under the memories:** the cue, submaster or group and the start of its label, like "Cue 4.5" over
     "Spot on the".
   * **Not taken over:** lines that only one maker's consoles understand (they begin with `$`: moving lights,
@@ -355,9 +367,9 @@ phone the master section, the general section and the stack lie across the top, 
     after the dot, or above 999.9): those steps get the next free number, and the note keeps the cue's own.
     Of cues, groups, submasters, sequence steps and labels the import keeps at most 10,000 of each kind, far
     more than a show has; a file with more is still read in well under a second.
-  * **One difference in the fades:** a console fades every light straight from its old level to its new one.
-    The stack fades the old memory down while the new one comes up, and the higher of the two wins, so a light
-    that stays on from one cue to the next dips to about half in the middle of the fade.
+  * **The fades:** as on the console, every light fades straight from its level in one cue to its level in
+    the next: up in the up time of the cue, down in its down time. A light that stays on from one cue to the
+    next does not dip.
   * **ETC SmartFade:** its files have a dialect of their own, and its show keeps its shape. Its memories become
     memories, in the order of their numbers, with a note like "Mem 25" over the memory's label. The steps of
     its stack bring those memories up, so a memory that several steps play is there once; only a step with
@@ -373,6 +385,56 @@ phone the master section, the general section and the stack lie across the top, 
     with .ASC checked.
 * **LAN** (top left, beside the name) lets a phone or a tablet in the same network use the desk; see below.
 
+## Universes and boxes
+
+A universe is the 512 channels one DMX cable carries. A project has 1 to 8 of them (Settings, Universes; the
+project keeps the number, and a project from before has one). The channels of every universe are numbered 1
+to 512, as on the cable.
+
+![The channel faders of the second universe, with U1 and U2 above them, and two boxes connected](docs/screenshots/universes.png)
+
+* **U keys:** in a project of several universes, a key for each stands above the channel faders: U2 shows the
+  channels of the second universe, and the page keys are then its pages. The key of the universe shown is
+  lit; another is half lit while a channel of it is above zero. The Memories view has U keys of its own.
+* **Channel numbers:** every channel says its universe, "113 (U2)": in the lists of steps, on the Stage and
+  Fixtures views, in the Memories view, in the messages of the desk and in what screen readers hear. The
+  keys under the faders and the page keys print the number alone; the lit U key above them says the
+  universe.
+* **Typing a channel** (on a key of the independents, the address of a light): its number with the universe
+  beside it, 113 U2, 113 (U2) or U2 113. A number alone stays in the universe the key or the light is in, so
+  in a project of one universe the number alone is enough. The Template window has a list of the universes
+  beside the channel numbers.
+* **Fewer universes** are refused while a step of a sequence or of the stack, a light of the stage plan or a
+  key of the independents uses a channel of a universe that would go; the top bar says which. The levels the
+  memories hold there and the notes of those channels go with them; Undo brings them back.
+* A light of the stage plan has all its channels in one universe: an address that would take it past the
+  end of its universe moves it down until it ends there.
+
+**The boxes.** A box has an output, a DMX socket, for each universe it sends, and says how many when the desk
+finds it. The box with the Pico has one, at 192.168.7.1. A box with a number switch answers at 10.1.n.1 for
+the number n on its switch, and the desk finds it by itself on the PC's network adapters.
+
+* The top left says how many boxes answer: "Boxes connected: 2", or "Boxes connected: 2 of 3" when the
+  project lists three. Its light is green while they answer, amber while a box of the list does not. The
+  pointer on it says what each box plays. A click opens the **Boxes window**.
+
+![The Boxes window with two simulated boxes, each output with the universe it plays](docs/screenshots/boxes.png)
+
+* **Automatic:** while the project lists no boxes, every box that answers plays by itself: the box with the
+  Pico first, then the others in the order of the numbers on their switches, each output the next universe
+  (U1, U2 and on). Outputs beyond the project's universes play none.
+* **The project's list:** the first change in the window (another universe on an output, a box added or
+  taken off) makes the boxes that answer the project's list, with what they play then and the change on top.
+  From then on the project keeps which box plays which universe, also on another PC. Each output has a list:
+  U1 to the project's last universe, or Off. Two outputs may play the same universe, as a splitter would.
+* **Add a box** by its address (10.1.2.1) and its number of outputs, also before it is there: it shows as not
+  connected until it answers. A box that answers but is not on the list is **new**: it plays nothing (its
+  outputs send zeros) until **Add** puts it on the list. ✕ takes a box off the list. **Auto** empties the
+  list: the boxes play by themselves again.
+* The window says when a universe of the project reaches no cable (no box that answers plays it), and when a
+  universe is on more than one output.
+* The list is part of the project and its changes go into Undo. While the stack is live it cannot be changed.
+
 ## Sequences and the stack
 
 ### Steps
@@ -380,7 +442,15 @@ phone the master section, the general section and the stack lie across the top, 
 A sequence and the stack are both made of steps. A step stands for a channel, a memory, a
 **fixture** or a **group** of fixtures (see the Fixtures view), has the value it brings that to (0 to 255),
 and three times in seconds: **up** (from zero to the value), **wait** (how long it stays) and **down** (back
-to zero when the next step takes over). The old step goes down while the new one goes up.
+to zero when the next step takes over). The old step goes down while the new one goes up, and every light
+moves straight from its level in the old step to its level in the new one: a light that both steps give at
+the same level stays where it is, without a dip; one that rises follows the up time of the new step, one that
+falls the down time of the old step (down to zero if the new step does not give it). A light at 120 in the old
+step and 150 in the new one never goes below 120: it rises to 150 in the new step's up time. At 150 and then
+120 it goes down to 120 in the old step's down time and stays there. The views show it the same way. A step played earlier
+that is still on its way down, because its down time is longer than the steps after it, keeps its lights up
+the same way, from where the newer steps have them. In the stack, a fader that both steps use moves straight
+from the one value to the other in the new step's up time.
 
 A step of a fixture or a group has a **color** too: the box before its name in the Notes column. A press on
 it opens a window with the colors of the Fixtures view, the field of every hue, and White (no color): a press
@@ -392,11 +462,15 @@ with the memories, which hold whole looks: a memory step does that. In the stack
 group moves the channel faders of its lights. A step follows its fixture when the fixture gets another
 address; a fixture that is taken off the plan leaves its steps doing nothing ("Gone").
 
-In both tables the **number** of a step is chosen from a list. Each line of the list reads like
-`5: Front left`: the number, then the note that stands under that fader in the main view (its two lines with
-a space between them); a fader without a note shows its number alone. For a channel the list has all 512
-channels; for a memory only the memories that hold something; for a fixture every light of the stage plan,
-by its address (`18: Spot 1`, the closed field showing the address), for a group every group (`G1: Back`).
+In both tables the **kind** of a step says what it stands for: **Channel (U1)**, **Channel (U2)** and so on, one
+for each universe of the project, then Memory, Fixture and Group; in the stack also **Release** (see the Stack
+view). A channel step that is switched to another
+universe keeps its number there (113 of U1 becomes 113 of U2). The **number** of a step is chosen from a list.
+Each line of the list reads like `5: Front left`: the number, then the note that stands under that fader in
+the main view (its two lines with a space between them); a fader without a note shows its number alone. For a
+channel the list has the 512 channels of its universe; for a memory only the memories that hold something; for
+a fixture every light of the stage plan, by its address (`18 (U1): Spot 1`, the closed field showing the
+address), for a group every group (`G1: Back`).
 The **Notes** column beside the number shows the note of the channel or memory the step uses, or the name
 of the fixture or group. It is read there, not written: a note is changed under its fader. **Add step**
 puts in a step like the last one, on the next channel, memory, fixture (by address) or group.
@@ -464,15 +538,35 @@ back to zero. A memory that holds a sequence starts running, because its fader g
   on by itself. Prev from the first step goes to the last.
 * A wait of 0 means the stack stays on the step until Play. With a wait above 0 it goes on by itself that
   many seconds after the step is up.
-* The view shows all steps, the **current** one in green, the **next** one with an amber edge and the
-  **previous** one (the step before the current one, where Prev goes) in blue, and for the current one
-  how far it is. Prev, Play, Pause and Next are bigger than the other keys of the desk, Play the biggest.
+* The view shows all steps, the **current** one in green, the **next** one with an amber edge, the
+  **previous** one (the step before the current one, where Prev goes) in blue and every other step that is
+  **on** (see Add) in a paler green, and for the current one how far it is. Prev, Play, Pause and Next are
+  bigger than the other keys of the desk, Play the biggest.
+* **Add** (the box after the step number): a step with Add comes up on top of what is on and takes nothing
+  down. A step without Add takes down everything that is on and that it does not give itself, each in its own
+  down time: the step before it and every step that added since. A light that both give stays where it is.
+  For example: step 1.0 is the scene; step 2.0 is a special light, with Add: it comes up and the scene stays.
+  Step 3.0 is the scene again, without Add: the special light goes down in its own down time, and the scene
+  does not move.
+* **Release** is a kind of step of the stack: it takes one step that is on down, in the release's own down
+  time, and leaves everything else as it is. Its number is the step it takes down, chosen from the other
+  steps of the stack (`2.0: Memory 5 (Special)`); it has no value and no up time, its wait counts as usual.
+  In the example, a release of 2.0 as step 3.0 takes the special light down and leaves the scene, even when
+  the special light is a sequence. A release of a step that is not on does nothing, and when the step it
+  names is taken out of the stack, it names none. Where two steps that are on use the same fader, the later
+  one's value counts; when it goes, the earlier one's counts again.
+* **Prev** sets up the steps that are on as if the stack had come to that step from the top: from the last
+  step before it without Add, through the steps that add. Round from the last step, the first one starts
+  afresh, with nothing on under it.
 * A fader the stack is moving and that you move by hand is yours from then on. Clear brings every fader down
   and takes the stack off its step; it stays live, and Play starts with the first step again.
 * **Step numbers** look like 1.0, 2.0, 2.1. A new step gets the next whole number. Drag a step by its grip
   (or use the arrows at the end of its row): it gets the number of the step it now follows with the digit
   after the dot one higher, and the others keep theirs. Moved between 2.0 and 3.0, a step becomes 2.1.
   Type a number to change it: if another step has it, that one gives way (3.0 becomes 4.0, 3.1 becomes 4.1).
+* **+** at the end of a row puts a new step right after that one: the step Add step would make after it
+  (the next channel, memory, fixture or group, with the same times), numbered to fit there. After 2.0, with
+  3.0 behind it, it becomes 2.1; if 2.1 is there already, that one gives way to 2.2.
 
 ## Screens, phones and tablets
 
@@ -499,7 +593,7 @@ than 1300 pixels the top bar takes two lines, the links to the views under the r
 
 The desk can be used from another device in the same network as the PC.
 
-* Press **LAN** in the page on the PC. It is lit, and under the box light a line appears with the address and
+* Press **LAN** in the page on the PC. It is lit, and under the boxes a line appears with the address and
   the password, for example `LAN 192.168.1.20:5080 Password K7M2Q`.
 * On the phone, open that address in the browser (`http://192.168.1.20:5080`). The page asks for the
   password once; the phone remembers it. Small letters and spaces do not matter.
@@ -537,7 +631,8 @@ page cannot move a light. In the small-screen layout the mouse wheel scrolls the
 
 The settings belong to the device, as the shortcuts of the Keyboard view do: its browser keeps them, every
 project shows them, and a project that is loaded leaves them as they are. **Export** takes them to another
-device, and **Import** brings them from one (see above). The autosave and LAN belong to the desk program.
+device, and **Import** brings them from one (see above). The number of universes belongs to the project, the
+autosave and LAN to the desk program.
 
 ![The Settings view](docs/screenshots/settings.png)
 
@@ -551,6 +646,9 @@ device, and **Import** brings them from one (see above). The autosave and LAN be
 * **Steps the stack wheel shows** (Main): 1, 3, 5, 7 or 9; at first 3.
 * **Keys of the independents:** how many green keys and how many red keys the column shows, 0 to 32 of each;
   with 0 of both, Main has no independents.
+* **Universes of the project:** 1 to 8, of 512 channels each (see [Universes and boxes](#universes-and-boxes)).
+  The project keeps it, and the list shows the project's number until the desk program has taken a new one.
+  Locked while the stack is live.
 * **Lettering:** the minus and plus keys make all lettering of the page smaller or bigger, from ×0.7 to ×1.5
   in steps of 0.1, numbers on keys too. The keys keep their size, so words on them grow by 15 % at most; a
   word too long for its key goes on in a second line, and so does a page range, after its dash (flat page
@@ -581,9 +679,10 @@ in the Keyboard view, are red.
 ## Keyboard
 
 The Keyboard view gives a shortcut to any key of the desk: the view links, New, Save, Load, Import, Export,
-LAN, Clear, Solo up, Solo down, Black out, Rate, the keys of the stack and of Record, those of the Sequences
-view and of the Stage view, Edit of the Notes view, Edit and every key of the independents, every page key, the
-key under every channel and memory fader, Undo and Redo. The shortcuts belong to this device, as the settings
+LAN, the boxes, Clear, Solo up, Solo down, Black out, Rate, the keys of the stack and of Record, those of the Sequences
+view and of the Stage view, Edit of the Notes view, Edit and every key of the independents, every page key and
+U key, the key under every channel and memory fader, Undo and Redo. The tabs list the channel keys and U keys
+of the project's universes; the shortcuts of the others are kept for a project that has them. The shortcuts belong to this device, as the settings
 do. Undo and Redo have Ctrl + Z and Ctrl + Y until they get others (or none: then they stay without).
 
 ![The Keyboard view: the keys of the project and LAN, Undo and Redo with their shortcuts](docs/screenshots/keyboard.png)

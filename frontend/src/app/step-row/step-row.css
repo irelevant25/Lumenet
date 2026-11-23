@@ -6,10 +6,10 @@ td {
   min-width: 64px;
 }
 
-/* channel or memory: wide enough for the longer word */
+/* the kind: wide enough for "Channel (U8)" */
 .kind {
-  width: 112px;
-  min-width: 104px;
+  width: 136px;
+  min-width: 128px;
 }
 
 /* the number: three digits and the arrow of the dropdown */
@@ -48,4 +48,20 @@ td {
 
 .swatch:disabled {
   cursor: default;
+}
+
+/* the value and the up time of a release: not used */
+.unused {
+  color: var(--legend-dim);
+  text-align: center;
+}
+
+/* for screen readers only */
+.for-readers {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

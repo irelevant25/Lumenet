@@ -39,6 +39,12 @@ h2 {
   height: auto;
 }
 
+/* in a project of several universes: the universe of a key's channel, small under its number */
+.universe {
+  font-size: 0.6em;
+  line-height: 1;
+}
+
 /* While editing, a key becomes a field for its number, framed in the color of its key. */
 .field {
   box-sizing: border-box;

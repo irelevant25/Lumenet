@@ -1,0 +1,48 @@
+/* In the first column of the top bar's left part, under the name: as small and dim as the version. */
+:host {
+  grid-column: 1;
+  justify-self: start;
+}
+
+/* a button that looks like a line of text */
+button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--legend-dim);
+  font-family: inherit;
+  font-size: calc(13px * var(--font-scale));
+  cursor: pointer;
+}
+
+button:hover {
+  text-decoration: underline;
+}
+
+button:hover,
+.connected,
+.missing {
+  color: var(--legend);
+}
+
+/* a little round lamp: green while the boxes answer, amber while a box of the list does not */
+.light {
+  box-sizing: border-box;
+  width: 9px;
+  height: 9px;
+  border: 1px solid var(--light, var(--legend-dim));
+  border-radius: 50%;
+  background: var(--light, none);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--light, transparent) 60%, transparent);
+}
+
+.connected .light {
+  --light: var(--channel);
+}
+
+.missing .light {
+  --light: var(--system);
+}

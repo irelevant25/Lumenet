@@ -37,16 +37,16 @@ internal sealed class AsciiShow
     public List<AsciiLook> Groups { get; } = [];
 
     /// <summary>
-    /// The soft patch: for every dimmer from 1 to 512 the file patches, the channel it belongs
+    /// The soft patch: for every dimmer from 1 to 4096 (8 universes) the file patches, the channel it belongs
     /// to. A dimmer is a DMX address. Empty when the file has no patch: then channel 1 is dimmer
     /// 1, and so on.
     /// </summary>
     public SortedDictionary<int, AsciiPatch> Patch { get; } = [];
 
-    /// <summary>How often the patch gives a dimmer above 512, an address that one universe of DMX does not have.</summary>
+    /// <summary>How often the patch gives a dimmer above 4096, beyond the eighth universe, which the desk does not have.</summary>
     public int DimmersAbove { get; set; }
 
-    /// <summary>The names of dimmers from 1 to 512, from Strand's $$DIMMERNAMES: dimmer and name.</summary>
+    /// <summary>The names of dimmers from 1 to 4096, from Strand's $$DIMMERNAMES: dimmer and name.</summary>
     public SortedDictionary<int, string> DimmerNames { get; } = [];
 
     /// <summary>

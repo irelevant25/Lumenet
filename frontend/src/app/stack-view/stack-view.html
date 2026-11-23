@@ -4,73 +4,8 @@
 </header>
 
 <div class="top">
-  <!-- The switch of the stack. Lit: the stack is live, and everything that is stored is locked. -->
-  <button
-    lmLamp
-    type="button"
-    tone="stack"
-    aria-label="Stack live"
-    data-action="stack.live"
-    [level]="live() ? 3 : 1"
-    [disabled]="!live() && steps().length === 0"
-    [attr.aria-pressed]="live()"
-    (click)="store.setStackLive(!live())"
-  >
-    Stack
-  </button>
-
-  <!-- The keys a show is run with: bigger than the other keys, Play the biggest. -->
-  <div class="transport" role="group" aria-label="Going through the stack">
-    <button
-      lmLamp
-      type="button"
-      tone="prev"
-      aria-label="Previous step"
-      data-action="stack.previous"
-      [disabled]="!live()"
-      (click)="store.stackPrevious()"
-    >
-      Prev
-    </button>
-    <button
-      lmLamp
-      type="button"
-      class="play"
-      tone="play"
-      aria-label="Play"
-      data-action="stack.play"
-      [level]="running() ? 3 : 1"
-      [disabled]="!live()"
-      (click)="store.stackPlay()"
-    >
-      Play
-    </button>
-    <button
-      lmLamp
-      type="button"
-      tone="pause"
-      aria-label="Pause"
-      data-action="stack.pause"
-      [level]="paused() ? 3 : 1"
-      [blink]="paused()"
-      [disabled]="!live()"
-      [attr.aria-pressed]="paused()"
-      (click)="store.stackPause()"
-    >
-      Pause
-    </button>
-    <button
-      lmLamp
-      type="button"
-      tone="next"
-      aria-label="Next step"
-      data-action="stack.next"
-      [disabled]="!live()"
-      (click)="store.stackNext()"
-    >
-      Next
-    </button>
-  </div>
+  <!-- Stack, Prev, Play, Pause, Next: the Stage view has the same keys -->
+  <lm-stack-keys />
 
   <button
     lmLamp
@@ -85,43 +20,7 @@
   </button>
 
   <!-- where the stack stands: the step before the one that is on, that one, and the one Play goes to -->
-  <div class="card previous" [class.on]="previous()">
-    <h3>Previous</h3>
-    @if (previous(); as step) {
-      <p class="what">
-        <strong>{{ step.cue }}</strong> {{ describe(step) }}
-      </p>
-      <p class="how">Prev goes back to it.</p>
-    } @else {
-      <p class="what">Nothing.</p>
-      <p class="how"></p>
-    }
-  </div>
-
-  <div class="card current" [class.on]="current()">
-    <h3>Current</h3>
-    @if (current(); as step) {
-      <p class="what">
-        <strong>{{ step.cue }}</strong> {{ describe(step) }}
-      </p>
-    } @else {
-      <p class="what">No step is on.</p>
-    }
-    <p class="how">{{ progress() }}</p>
-  </div>
-
-  <div class="card next">
-    <h3>Next</h3>
-    @if (next(); as step) {
-      <p class="what">
-        <strong>{{ step.cue }}</strong> {{ describe(step) }}
-      </p>
-      <p class="how">{{ times(step) }}</p>
-    } @else {
-      <p class="what">{{ steps().length ? 'Nothing: the stack has no other step.' : 'Nothing yet.' }}</p>
-      <p class="how"></p>
-    }
-  </div>
+  <lm-stack-cards />
 </div>
 
 <div class="table-box">
@@ -133,6 +32,7 @@
       <tr>
         <th scope="col"><span class="for-readers">Drag to move</span></th>
         <th scope="col">Step</th>
+        <th scope="col" title="On top of what is on, taking nothing down">Add</th>
         <th scope="col">Kind</th>
         <th scope="col">Number</th>
         <th scope="col">Notes</th>
@@ -140,7 +40,7 @@
         <th scope="col">Up (s)</th>
         <th scope="col">Wait (s)</th>
         <th scope="col">Down (s)</th>
-        <th scope="col"><span class="for-readers">Move or take out</span></th>
+        <th scope="col"><span class="for-readers">Move, add a step after, or take out</span></th>
       </tr>
     </thead>
     <tbody>
@@ -150,10 +50,12 @@
           [step]="step"
           [label]="'Step ' + step.cue"
           [choices]="choices()"
+          [self]="step.id"
           [note]="noteOf(step)"
           [locked]="live()"
           [class.previous]="step.id === previous()?.id"
           [class.current]="step.id === current()?.id"
+          [class.on]="on().has(step.id)"
           [class.next]="step.id === next()?.id"
           [class.drop-before]="dropMark()?.id === step.id && !dropMark()?.after"
           [class.drop-after]="dropMark()?.id === step.id && dropMark()?.after"
@@ -187,6 +89,18 @@
               (keydown.enter)="finish($event)"
             />
           </td>
+          <!-- Add: on top of what is on. A release has none: it takes down only the step it names. -->
+          <td before class="adds">
+            @if (step.target !== 'release') {
+              <input
+                type="checkbox"
+                [checked]="step.add === true"
+                [disabled]="live()"
+                [attr.aria-label]="'Step ' + step.cue + ' adds on top of what is on'"
+                (change)="setAdd(step, $event)"
+              />
+            }
+          </td>
           <td after class="row-keys">
             <button
               type="button"
@@ -206,6 +120,15 @@
             </button>
             <button
               type="button"
+              class="add"
+              [attr.aria-label]="'Add a step after step ' + step.cue"
+              [disabled]="live()"
+              (click)="store.addStackStepAfter(step)"
+            >
+              +
+            </button>
+            <button
+              type="button"
               class="delete"
               [attr.aria-label]="'Take step ' + step.cue + ' out'"
               [disabled]="live()"
@@ -217,7 +140,7 @@
         </tr>
       } @empty {
         <tr>
-          <td class="empty" colspan="10">No steps yet. Add step puts in the first one.</td>
+          <td class="empty" colspan="11">No steps yet. Add step puts in the first one.</td>
         </tr>
       }
     </tbody>
@@ -227,8 +150,13 @@
     Stack takes the stack live: every fader goes to zero and the first step starts. Up: seconds
     the fader takes to its value. Wait: with 0 the stack stays on the step until Play; with more
     it goes on by itself after that many seconds. Down: seconds the fader takes back to zero when
-    the stack leaves the step. After the last step comes the first. A step keeps its number when
-    another is moved; type a number to change it.
+    the stack leaves the step. A light that both steps give at the same level stays up; the others
+    rise with the new step's up time and fall with the old step's down time. Add: the step comes
+    up on top of what is on and takes nothing down; the next step without Add takes everything
+    down that it does not give itself. Release takes one step that is on down, in its own down
+    time, and leaves the rest. The steps that are on are marked green. After the last step comes
+    the first. A step keeps its number when another is moved; type a number to change it. + puts
+    a new step right after its row.
   </p>
 </div>
 

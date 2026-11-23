@@ -9,7 +9,9 @@ import { DeskSettings, SETTINGS_STORAGE_KEY } from './desk/desk-settings';
 import { DeskStore } from './desk/desk-store';
 import {
   AutosaveOptions,
-  CHANNEL_COUNT,
+  BoxView,
+  DeskState,
+  UNIVERSE_SIZE,
   EMPTY_STAGE,
   ImportAnswer,
   LanAccess,
@@ -48,17 +50,17 @@ class FakeConnection {
   readonly welcome: Welcome = {
     version: '0.1.0',
     desk: {
-      channels: new Array<number>(CHANNEL_COUNT).fill(0),
+      channels: new Array<number>(UNIVERSE_SIZE).fill(0),
       memoryLevels: new Array<number>(MEMORY_COUNT).fill(0),
       memoryStored: new Array<boolean>(MEMORY_COUNT).fill(false),
-      channelNotes: new Array<string>(CHANNEL_COUNT).fill(''),
+      channelNotes: new Array<string>(UNIVERSE_SIZE).fill(''),
       memoryNotes: new Array<string>(MEMORY_COUNT).fill(''),
       independents: Array.from({ length: 10 }, (_, index) => index + 1),
       memoryIndependents: Array.from({ length: 10 }, (_, index) => index + 1),
       master: 255,
       blackout: false,
     },
-    box: { connected: false, host: '192.168.7.1', firmware: null },
+    boxes: [],
     project: { name: 'Untitled', path: null, unsaved: false },
   };
 
@@ -218,7 +220,7 @@ describe('the desk page', () => {
 
     connection = new FakeConnection();
     connection.welcome.desk.memoryStored[1] = true; // memory 2 holds a look: channel 5 at 200, channel 70 full
-    const look = new Array<number>(CHANNEL_COUNT).fill(0);
+    const look = new Array<number>(UNIVERSE_SIZE).fill(0);
     look[4] = 200;
     look[69] = 255;
     connection.looks[2] = look;
@@ -278,7 +280,7 @@ describe('the desk page', () => {
 
   /** The key under a channel fader, if its channel is on the page that is shown. */
   function channelKey(channel: number): HTMLButtonElement | null {
-    return page.querySelector<HTMLButtonElement>(`button[aria-label^="Channel ${channel} key"]`);
+    return page.querySelector<HTMLButtonElement>(`button[aria-label^="Channel ${channel} (U1) key"]`);
   }
 
   async function press(element: HTMLElement | null): Promise<void> {
@@ -338,12 +340,12 @@ describe('the desk page', () => {
     expect(page.querySelectorAll('lm-memory-section lm-fader-strip').length).toBe(32);
     expect(page.querySelectorAll('nav[aria-label="Channel pages"] button').length).toBe(8);
     expect(page.querySelectorAll('nav[aria-label="Memory pages"] button').length).toBe(4);
-    expect(button('Channels 1 to 64')).toBeTruthy();
+    expect(button('Channels 1 to 64 (U1)')).toBeTruthy();
     expect(button('Memories 97 to 128')).toBeTruthy();
   });
 
   it('moving a fader changes the level at once and tells the backend', async () => {
-    const fader = page.querySelector<HTMLElement>('lm-fader[aria-label="Channel 3"]');
+    const fader = page.querySelector<HTMLElement>('lm-fader[aria-label="Channel 3 (U1)"]');
     fader?.dispatchEvent(new KeyboardEvent('keydown', { key: 'End' }));
     await fixture.whenStable();
 
@@ -355,7 +357,7 @@ describe('the desk page', () => {
   });
 
   it('quick steps on a fader all count, also before the page has drawn the first one', async () => {
-    const fader = page.querySelector<HTMLElement>('lm-fader[aria-label="Channel 4"]');
+    const fader = page.querySelector<HTMLElement>('lm-fader[aria-label="Channel 4 (U1)"]');
     for (let step = 0; step < 3; step++) {
       fader?.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageUp' })); // 16 each, no waiting between
     }
@@ -367,9 +369,9 @@ describe('the desk page', () => {
   });
 
   it('switching the channel page shows the next 64 channels', async () => {
-    await press(button('Channels 65 to 128'));
-    expect(page.querySelector('lm-fader[aria-label="Channel 65"]')).toBeTruthy();
-    expect(page.querySelector('lm-fader[aria-label="Channel 1"]')).toBeNull();
+    await press(button('Channels 65 to 128 (U1)'));
+    expect(page.querySelector('lm-fader[aria-label="Channel 65 (U1)"]')).toBeTruthy();
+    expect(page.querySelector('lm-fader[aria-label="Channel 1 (U1)"]')).toBeNull();
   });
 
   it('a key under a fader puts the fader to full, and back to zero when it is at full', async () => {
@@ -509,7 +511,7 @@ describe('the desk page', () => {
 
     // the keys carry the numbers of the steps they are in
     expect(channelKey(7)?.querySelector('.steps')?.textContent).toBe('1,3');
-    expect(channelKey(7)?.getAttribute('aria-label')).toBe('Channel 7 key, in steps 1, 3');
+    expect(channelKey(7)?.getAttribute('aria-label')).toBe('Channel 7 (U1) key, in steps 1, 3');
     expect(memoryKey(2).querySelector('.steps')?.textContent).toBe('2');
     expect(memoryKey(2).getAttribute('aria-label')).toBe('Memory 2 key, in step 2');
     expect(channelKey(8)?.querySelector('.steps')).toBeNull();
@@ -554,7 +556,7 @@ describe('the desk page', () => {
   });
 
   it('a note typed under a key is kept and sent to the backend', async () => {
-    const field = page.querySelector<HTMLInputElement>('input[aria-label="Note for Channel 5"]');
+    const field = page.querySelector<HTMLInputElement>('input[aria-label="Note for Channel 5 (U1)"]');
     if (!field) throw new Error('no note field for channel 5');
     expect(field.value).toBe('');
 
@@ -575,7 +577,7 @@ describe('the desk page', () => {
 
     // the second line is a field of its own; the two lines travel as one text
     const second = page.querySelector<HTMLInputElement>(
-      'input[aria-label="Note for Channel 5, second line"]',
+      'input[aria-label="Note for Channel 5 (U1), second line"]',
     );
     if (!second) throw new Error('no second note line for channel 5');
     second.value = 'PAR';
@@ -594,23 +596,23 @@ describe('the desk page', () => {
     expect(page.querySelectorAll('nav[aria-label="Channel pages"] button').length).toBe(16);
     expect(page.querySelectorAll('nav[aria-label="Memory pages"] button').length).toBe(8);
 
-    await press(button('Channels 33 to 64'));
-    expect(page.querySelector('lm-fader[aria-label="Channel 33"]')).toBeTruthy();
-    expect(page.querySelector('lm-fader[aria-label="Channel 1"]')).toBeNull();
+    await press(button('Channels 33 to 64 (U1)'));
+    expect(page.querySelector('lm-fader[aria-label="Channel 33 (U1)"]')).toBeTruthy();
+    expect(page.querySelector('lm-fader[aria-label="Channel 1 (U1)"]')).toBeNull();
 
     // wide again: the page that holds channel 33 is the one from 1 to 64
     store.windowStripsPerRow.set(32);
     await fixture.whenStable();
-    expect(page.querySelector('lm-fader[aria-label="Channel 1"]')).toBeTruthy();
-    expect(page.querySelector('lm-fader[aria-label="Channel 64"]')).toBeTruthy();
+    expect(page.querySelector('lm-fader[aria-label="Channel 1 (U1)"]')).toBeTruthy();
+    expect(page.querySelector('lm-fader[aria-label="Channel 64 (U1)"]')).toBeTruthy();
   });
 
   it('an independent key switches its channel between zero and full', async () => {
-    await press(button('Independent 3, channel 3'));
+    await press(button('Independent 3, channel 3 (U1)'));
     expect(store.channels()[2]).toBe(255);
-    expect(button('Independent 3, channel 3').getAttribute('aria-pressed')).toBe('true');
+    expect(button('Independent 3, channel 3 (U1)').getAttribute('aria-pressed')).toBe('true');
 
-    await press(button('Independent 3, channel 3'));
+    await press(button('Independent 3, channel 3 (U1)'));
     expect(store.channels()[2]).toBe(0);
   });
 
@@ -638,7 +640,7 @@ describe('the desk page', () => {
     expect(button('Independent 12, memory 2').getAttribute('aria-pressed')).toBe('true');
     expect(button('Independent 12, memory 2').className).toContain('level-3');
     // the memory's look shows on the channel faders, as with its own fader
-    expect(page.querySelector('lm-fader[aria-label="Channel 5"]')?.getAttribute('aria-valuenow')).toBe('200');
+    expect(page.querySelector('lm-fader[aria-label="Channel 5 (U1)"]')?.getAttribute('aria-valuenow')).toBe('200');
 
     await press(button('Independent 12, memory 2'));
     expect(store.memoryLevels()[1]).toBe(0);
@@ -706,7 +708,7 @@ describe('the desk page', () => {
     expect(connection.calls).toContainEqual({ method: 'SetIndependent', args: [2, 40] });
 
     await press(button('Edit the channels and memories of the independent keys'));
-    await press(button('Independent 2, channel 40'));
+    await press(button('Independent 2, channel 40 (U1)'));
     expect(store.channels()[39]).toBe(255);
   });
 
@@ -719,11 +721,170 @@ describe('the desk page', () => {
     expect(button('New project')).toBeTruthy();
   });
 
-  it('LAN, Undo and Redo stand at the top left; New, Save, Load, Import and Export at the right', () => {
+  it('the boxes, LAN, Undo and Redo stand at the top left; New, Save, Load, Import and Export at the right', () => {
     const labels = (selector: string) =>
-      [...page.querySelectorAll(`lm-top-bar ${selector} button`)].map((key) => key.getAttribute('aria-label'));
-    expect(labels('.left')).toEqual(['LAN', 'Undo', 'Redo']);
+      [...page.querySelectorAll(`lm-top-bar ${selector} button`)].map((key) => key.getAttribute('aria-label') ?? key.textContent?.trim());
+    expect(labels('.left')).toEqual(['Boxes connected: 0', 'LAN', 'Undo', 'Redo']);
     expect(labels('.project')).toEqual(['New project', 'Save project', 'Load project', 'Import', 'Export']);
+  });
+
+  // ---------------------------------------------------------------- universes and boxes
+
+  /** The desk as the backend sends it for a project of two universes: 1024 channels. */
+  function twoUniverses(): DeskState {
+    return {
+      ...connection.welcome.desk,
+      universes: 2,
+      channels: new Array<number>(2 * UNIVERSE_SIZE).fill(0),
+      channelNotes: new Array<string>(2 * UNIVERSE_SIZE).fill(''),
+    };
+  }
+
+  it('a project of two universes has a U key for each above the channel faders, and numbers the channels in each', async () => {
+    expect(page.querySelector('nav[aria-label="Universes"]')).toBeNull(); // one universe: no U keys
+
+    connection.emit('DeskChanged', twoUniverses());
+    await fixture.whenStable();
+    const keys = [...page.querySelectorAll('lm-channel-section nav[aria-label="Universes"] button')];
+    expect(keys.map((key) => key.textContent?.trim())).toEqual(['U1', 'U2']);
+    expect(button('Universe 1').getAttribute('aria-pressed')).toBe('true');
+
+    // U2: its channels, numbered 1 to 512 in it, and its pages
+    await press(button('Universe 2'));
+    expect(page.querySelector('lm-fader[aria-label="Channel 1 (U2)"]')).toBeTruthy();
+    expect(page.querySelector('button[data-action="channel.513"]')?.textContent?.trim()).toBe('1');
+    expect(button('Channels 1 to 64 (U2)').getAttribute('aria-pressed')).toBe('true');
+    expect(page.querySelectorAll('nav[aria-label="Channel pages"] button').length).toBe(8);
+    await press(button('Channels 65 to 128 (U2)'));
+    expect(page.querySelector('lm-fader[aria-label="Channel 65 (U2)"]')).toBeTruthy();
+
+    // a key of the independents takes a channel of U2 as "113 U2"
+    await press(button('Edit the channels and memories of the independent keys'));
+    const field = page.querySelector<HTMLInputElement>('input[aria-label="Channel of independent key 2"]')!;
+    expect(field.value).toBe('2 U1');
+    field.value = '113 U2';
+    field.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(connection.last('SetIndependent')).toEqual([2, 625]);
+    expect(field.value).toBe('113 U2');
+    // a number alone is in the universe the key's channel is in: now U2
+    field.value = '7';
+    field.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(connection.last('SetIndependent')).toEqual([2, 519]);
+    expect(field.value).toBe('7 U2');
+    // a number past 512 names no channel: the key keeps its own
+    field.value = '625';
+    field.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(connection.calls.filter((call) => call.method === 'SetIndependent').length).toBe(2);
+    expect(field.value).toBe('7 U2');
+    await press(button('Edit the channels and memories of the independent keys'));
+
+    // back to one universe: the U keys go, and the faders show U1 again
+    connection.emit('DeskChanged', connection.welcome.desk);
+    await fixture.whenStable();
+    expect(page.querySelector('nav[aria-label="Universes"]')).toBeNull();
+    expect(page.querySelector('lm-fader[aria-label="Channel 449 (U1)"]')).toBeTruthy();
+  });
+
+  it('Settings sets the universes of the project', async () => {
+    await show('/settings');
+    const universes = page.querySelector<HTMLSelectElement>('#universes')!;
+    expect(universes.value).toBe('1');
+    universes.value = '3';
+    universes.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(connection.last('SetUniverses')).toEqual([3]);
+    expect(universes.value).toBe('1'); // until the desk program has taken it: it may refuse
+    connection.emit('DeskChanged', { ...twoUniverses(), universes: 3, channels: new Array<number>(1536).fill(0) });
+    await fixture.whenStable();
+    expect(universes.value).toBe('3');
+    expect(page.querySelector('#addresses')).toBeNull(); // the channels are always 1 to 512 in each
+  });
+
+  it('the kind of a step says the universe of its channel, and the number list holds that universe only', async () => {
+    connection.emit('DeskChanged', twoUniverses());
+    await fixture.whenStable();
+    await show('/sequences');
+    await press(button('Work on memory 3'));
+    const row = () => page.querySelectorAll('lm-sequences-view table.steps tbody tr')[0];
+    const kind = () => row().querySelector<HTMLSelectElement>('select[aria-label="Step 1, channel, memory, fixture or group"]')!;
+    const number = () => row().querySelector<HTMLSelectElement>('select[aria-label="Step 1, number of the channel"]')!;
+    expect([...kind().options].map((option) => option.text.trim())).toEqual([
+      'Channel (U1)',
+      'Channel (U2)',
+      'Memory',
+      'Fixture',
+      'Group',
+    ]);
+    expect(kind().value).toBe('channel:1');
+
+    // to U2: channel 5 stays channel 5, of the second universe
+    kind().value = 'channel:2';
+    kind().dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect((connection.last('SetSequence')?.[1] as Sequence).steps[0]).toEqual(step(517, 200));
+    expect(kind().value).toBe('channel:2');
+    expect(number().options[0].text.trim()).toBe('5');
+    number().dispatchEvent(new Event('focus'));
+    expect(number().options.length).toBe(512);
+    expect([number().options[0].value, number().options[511].value]).toEqual(['513', '1024']);
+    expect(number().options[0].text.trim()).toBe('1');
+  });
+
+  it('the top left counts the boxes, and their window says which universe each output plays', async () => {
+    const boxes: BoxView[] = [
+      { address: '192.168.7.1', connected: true, firmware: '1.0', outputs: 1, universes: [1], kind: 'automatic' },
+      { address: '10.1.3.1', connected: true, firmware: '1.0', outputs: 2, universes: [0, 0], kind: 'automatic' },
+    ];
+    connection.emit('BoxesChanged', boxes);
+    await fixture.whenStable();
+    await press(button('Boxes connected: 2'));
+    expect(page.querySelector('lm-boxes-dialog dialog')?.hasAttribute('open')).toBe(true);
+    expect(textOf('lm-boxes-dialog tbody tr:nth-child(2) th')).toContain('Switch 3, firmware 1.0');
+    expect(textOf('lm-boxes-dialog .remark')).toBeUndefined(); // U1, the only universe, is played
+
+    // The second output of the second box plays U1 as well: the boxes become the project's list.
+    const output = page.querySelector<HTMLSelectElement>('select[aria-label="Output 2 of 10.1.3.1"]')!;
+    output.value = '1';
+    output.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(connection.last('SetBoxes')).toEqual([
+      [
+        { address: '192.168.7.1', universes: [1] },
+        { address: '10.1.3.1', universes: [0, 1] },
+      ],
+    ]);
+
+    // A box added by hand, before it is there.
+    connection.emit('BoxesChanged', [
+      { ...boxes[0], kind: 'listed' },
+      { ...boxes[1], universes: [0, 1], kind: 'listed' },
+    ]);
+    await fixture.whenStable();
+    page.querySelector<HTMLInputElement>('#box-address')!.value = '10.1.4.1';
+    page.querySelector('lm-boxes-dialog form.add')!.dispatchEvent(new Event('submit'));
+    await fixture.whenStable();
+    expect(connection.last('SetBoxes')).toEqual([
+      [
+        { address: '192.168.7.1', universes: [1] },
+        { address: '10.1.3.1', universes: [0, 1] },
+        { address: '10.1.4.1', universes: [0] },
+      ],
+    ]);
+
+    // It does not answer: the top bar counts it, and its light is amber. Automatic empties the list.
+    connection.emit('BoxesChanged', [
+      { ...boxes[0], kind: 'listed' },
+      { ...boxes[1], universes: [0, 1], kind: 'listed' },
+      { address: '10.1.4.1', connected: false, firmware: null, outputs: 1, universes: [0], kind: 'listed' },
+    ]);
+    await fixture.whenStable();
+    expect(button('Boxes connected: 2 of 3').className).toContain('missing');
+    expect(textOf('lm-boxes-dialog tbody tr:nth-child(3) td')).toBe('Not connected');
+    await press(button('Automatic: the boxes play by themselves'));
+    expect(connection.last('SetBoxes')).toEqual([[]]);
   });
 
   // ---------------------------------------------------------------- undo, solo, rate, project settings, autosave, colors
@@ -1230,14 +1391,14 @@ describe('the desk page', () => {
 
     await pressLight(1);
     expect(textOf('lm-stage-panel h3')).toBe('Par');
-    expect(textOf('lm-stage-panel .facts')).toBe('RGB, dimmer first, on channels 11 to 14');
+    expect(textOf('lm-stage-panel .facts')).toBe('RGB, dimmer first, on channels 11 to 14 (U1)');
     expect(page.querySelector('#light-name')).toBeNull(); // out of Edit nothing about it can be changed...
     const faders = [...page.querySelectorAll<HTMLElement>('lm-light-faders lm-fader')];
     expect(faders.map((fader) => fader.getAttribute('aria-label'))).toEqual([
-      'Channel 11, dimmer',
-      'Channel 12, red',
-      'Channel 13, green',
-      'Channel 14, blue',
+      'Channel 11 (U1), dimmer',
+      'Channel 12 (U1), red',
+      'Channel 13 (U1), green',
+      'Channel 14 (U1), blue',
     ]);
 
     // ...but its faders work: the dimmer and the red to full, and the light is red.
@@ -1269,7 +1430,7 @@ describe('the desk page', () => {
     expect(page.querySelectorAll('lm-light-faders lm-fader').length).toBe(4);
   });
 
-  it('a double click puts the faders of a light to full and back; Clear puts every light of the plan to zero', async () => {
+  it('a double click puts the faders of a light to full and back; Clear does what Clear on Main does', async () => {
     await planWith(stageLight(1, 'Par', 11, 'DRGBS', null, 2, 8), stageLight(2, 'Spot', 5, 'D', null, 8, 5));
     await show('/stage');
     const twice = (id: number) => page.querySelector(`[data-light="${id}"]`)!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
@@ -1282,15 +1443,20 @@ describe('the desk page', () => {
     await fixture.whenStable();
     expect(store.channels().slice(10, 15)).toEqual([0, 0, 0, 0, 0]);
 
-    // Clear: every channel of every light on the plan to zero, and nothing else.
+    // Clear: the key of the main view, the same action: every channel fader and memory fader to zero.
     twice(1);
     twice(2);
     store.setChannel(30, 99);
+    store.setMemoryLevel(2, 120);
     await fixture.whenStable();
-    await press(button('Clear the lights of the plan'));
+    const clear = page.querySelector<HTMLButtonElement>('lm-stage-view [data-action="master.clear"]')!;
+    expect(clear.textContent?.trim()).toBe('Clear');
+    await press(clear);
     expect(store.channels().slice(10, 15)).toEqual([0, 0, 0, 0, 0]);
     expect(store.channels()[4]).toBe(0);
-    expect(store.channels()[29]).toBe(99);
+    expect(store.channels()[29]).toBe(0); // a channel that no light uses goes down too, as on Main
+    expect(store.memoryLevels()[1]).toBe(0);
+    expect(connection.methods()).toContain('Clear');
   });
 
   it('the Fixtures view plays the lights of the plan: a fader each, a color, and groups that move all their lights', async () => {
@@ -1366,7 +1532,7 @@ describe('the desk page', () => {
     expect(body(1).dataset['strobe']).toBe('strobe');
     expect(body(1).style.getPropertyValue('--strobe-period')).toBe('0.333s');
     expect(mark(1)).toBe('⚡ 20 Hz');
-    expect(page.querySelector('[data-light="1"]')?.getAttribute('title')).toBe('Bar: channels 1 to 4; strobe, 20 Hz');
+    expect(page.querySelector('[data-light="1"]')?.getAttribute('title')).toBe('Bar: channels 1 to 4 (U1); strobe, 20 Hz');
 
     // a light of letters says nothing of its strobe: above its first values it strobes, at a speed it does not say
     store.setChannel(11, 255);
@@ -1438,7 +1604,7 @@ describe('the desk page', () => {
 
   it('a moving head takes its place from the memory raised last; the master and blackout leave it where it is', async () => {
     await planWith(stageLight(1, 'Head', 1, 'PTD', null, 2, 2));
-    const look = (pan: number, tilt: number) => [pan, tilt, 255, ...new Array<number>(CHANNEL_COUNT - 3).fill(0)];
+    const look = (pan: number, tilt: number) => [pan, tilt, 255, ...new Array<number>(UNIVERSE_SIZE - 3).fill(0)];
     store.memoryLooks.set({ 4: look(10, 20), 5: look(200, 220) });
 
     store.setMemoryLevel(4, 128);
@@ -1459,7 +1625,7 @@ describe('the desk page', () => {
   it('the faders of the main view say what the plan has on a channel where no note was typed', async () => {
     await planWith(stageLight(1, 'Spot', 1, 'PTD', null, 2, 2));
     const fields = [
-      ...page.querySelectorAll<HTMLInputElement>('[aria-label="Note for Channel 1"], [aria-label="Note for Channel 1, second line"]'),
+      ...page.querySelectorAll<HTMLInputElement>('[aria-label="Note for Channel 1 (U1)"], [aria-label="Note for Channel 1 (U1), second line"]'),
     ];
     expect(fields.map((field) => field.placeholder)).toEqual(['Spot', 'Pan']);
     expect(fields.map((field) => field.value)).toEqual(['', '']);
@@ -1544,7 +1710,7 @@ describe('the desk page', () => {
     await show('/sequences');
     await press(button('Work on memory 3'));
     const kind = page.querySelector<HTMLSelectElement>('select[aria-label="Step 1, channel, memory, fixture or group"]')!;
-    expect([...kind.options].map((option) => option.text.trim())).toEqual(['Channel', 'Memory', 'Fixture', 'Group']);
+    expect([...kind.options].map((option) => option.text.trim())).toEqual(['Channel (U1)', 'Memory', 'Fixture', 'Group']);
 
     // a fixture: the first by its address, which the closed field shows; its name is the note
     kind.value = 'fixture';
@@ -1552,7 +1718,7 @@ describe('the desk page', () => {
     await fixture.whenStable();
     expect(connection.last('SetSequence')?.[1]).toMatchObject({ steps: [{ ...step(5, 200), target: 'fixture', number: 2, color: null }, step(6, 100, { wait: 0 })] });
     const first = page.querySelectorAll('lm-sequences-view table.steps tbody tr')[0];
-    expect(first.querySelector<HTMLSelectElement>('td.number select')!.selectedOptions[0].text.trim()).toBe('5');
+    expect(first.querySelector<HTMLSelectElement>('td.number select')!.selectedOptions[0].text.trim()).toBe('5 (U1)');
     expect(first.querySelector('td.note')?.textContent?.trim()).toBe('Front');
 
     // its color: the colors of the Fixtures page. A press only chooses, the window shows it; Use gives it to the step.
@@ -1974,9 +2140,9 @@ describe('the desk page', () => {
   });
 
   it('a note typed only into the second line stays there and leaves the first line empty', async () => {
-    const first = page.querySelector<HTMLInputElement>('input[aria-label="Note for Channel 7"]');
+    const first = page.querySelector<HTMLInputElement>('input[aria-label="Note for Channel 7 (U1)"]');
     const second = page.querySelector<HTMLInputElement>(
-      'input[aria-label="Note for Channel 7, second line"]',
+      'input[aria-label="Note for Channel 7 (U1), second line"]',
     );
     if (!first || !second) throw new Error('no note fields for channel 7');
 
@@ -2001,7 +2167,7 @@ describe('the desk page', () => {
   });
 
   it('a memory fader moves the faders of the channels the memory holds', async () => {
-    const channel5 = page.querySelector<HTMLElement>('lm-fader[aria-label="Channel 5"]');
+    const channel5 = page.querySelector<HTMLElement>('lm-fader[aria-label="Channel 5 (U1)"]');
     const memory2 = page.querySelector<HTMLElement>('lm-fader[aria-label="Memory 2"]');
     if (!channel5 || !memory2) throw new Error('faders missing');
     expect(channel5.getAttribute('aria-valuenow')).toBe('0');
@@ -2010,9 +2176,9 @@ describe('the desk page', () => {
     await fixture.whenStable();
     expect(channel5.getAttribute('aria-valuenow')).toBe('200'); // what the memory holds
     expect(store.channels()[4]).toBe(0); // the channel's own level is untouched
-    expect(page.querySelector('lm-fader[aria-label="Channel 6"]')?.getAttribute('aria-valuenow')).toBe('0');
+    expect(page.querySelector('lm-fader[aria-label="Channel 6 (U1)"]')?.getAttribute('aria-valuenow')).toBe('0');
     // channel 70 is on another page: its page key is half lit now
-    expect(button('Channels 65 to 128').className).toContain('level-2');
+    expect(button('Channels 65 to 128 (U1)').className).toContain('level-2');
 
     store.setMemoryLevel(2, 128); // half way: 200 x 128 / 255
     await fixture.whenStable();
@@ -2030,7 +2196,7 @@ describe('the desk page', () => {
   });
 
   it('a fader held up by a memory still takes the level its owner asks for', async () => {
-    const channel5 = page.querySelector<HTMLElement>('lm-fader[aria-label="Channel 5"]');
+    const channel5 = page.querySelector<HTMLElement>('lm-fader[aria-label="Channel 5 (U1)"]');
     if (!channel5) throw new Error('no fader for channel 5');
     store.setChannel(5, 40);
     store.setMemoryLevel(2, 255);
@@ -2116,7 +2282,7 @@ describe('the desk page', () => {
     expect(levelOf(5)).toBe('200');
     expect(levelOf(70)).toBe('255');
     expect(levelOf(6)).toBe('0');
-    expect(cells()[4].getAttribute('aria-label')).toBe('Channel 5: 200');
+    expect(cells()[4].getAttribute('aria-label')).toBe('Channel 5 (U1): 200');
 
     expect(connection.methods()).toEqual([]); // looking sends nothing to the desk
     expect(store.channels()[4]).toBe(0);
@@ -2131,10 +2297,10 @@ describe('the desk page', () => {
     // every cell keeps room for a note, so that all have the same size
     expect(page.querySelector('lm-memories-view table.matrix')?.classList).toContain('with-notes');
     expect(cell(5).getAttribute('data-note')).toBe('Front\nleft'); // the style sheet shows it, one line under the other
-    expect(cell(5).getAttribute('aria-label')).toMatch(/^Channel 5 \(Front left\): \d+$/);
+    expect(cell(5).getAttribute('aria-label')).toMatch(/^Channel 5 \(U1\) \(Front left\): \d+$/);
     expect(cell(6).getAttribute('data-note')).toBe('Wash');
     expect(cell(7).hasAttribute('data-note')).toBe(false);
-    expect(cell(7).getAttribute('aria-label')).toMatch(/^Channel 7: \d+$/);
+    expect(cell(7).getAttribute('aria-label')).toMatch(/^Channel 7 \(U1\): \d+$/);
   });
 
   it('a memory that holds a sequence has a key that runs from red to yellow', async () => {
@@ -2148,8 +2314,8 @@ describe('the desk page', () => {
   });
 
   it('a running sequence moves the channel faders it uses', async () => {
-    const channel5 = page.querySelector<HTMLElement>('lm-fader[aria-label="Channel 5"]');
-    const levels = new Array<number>(CHANNEL_COUNT).fill(0);
+    const channel5 = page.querySelector<HTMLElement>('lm-fader[aria-label="Channel 5 (U1)"]');
+    const levels = new Array<number>(UNIVERSE_SIZE).fill(0);
     levels[4] = 77;
     connection.emit('PlaybackChanged', { ...connection.playback, levels, sequenceSteps: { 3: 1 } });
     await fixture.whenStable();
@@ -2352,7 +2518,7 @@ describe('the desk page', () => {
     second.dispatchEvent(new Event('focus'));
     expect(second.options.length).toBe(512); // at once, before the browser opens the list
     expect(second.value).toBe('6');
-    expect(second.options[4].text).toBe('5'); // a channel without a note: its number alone
+    expect(second.options[4].text).toBe('5'); // a channel without a note: its number alone (the kind says the universe)
     expect(second.options[5].text).toBe('6: Front left'); // the note's two lines, one space between
 
     second.value = '70';
@@ -2398,7 +2564,7 @@ describe('the desk page', () => {
     expect(rows().map((row) => row.classList.contains('current'))).toEqual([true, false]);
     expect(rows().map((row) => row.classList.contains('next'))).toEqual([false, true]);
     expect(page.querySelector('.card.current .what')?.textContent).toContain('1.0');
-    expect(page.querySelector('.card.current .what')?.textContent).toContain('Channel 7 at 255');
+    expect(page.querySelector('.card.current .what')?.textContent).toContain('Channel 7 (U1) at 255');
     expect(page.querySelector('.card.current .how')?.textContent).toContain('waits for Play');
     expect(page.querySelector('.card.next .what')?.textContent).toContain('Memory 2 (Wash) at 128');
     expect(rows()[1].querySelector('td.note')?.textContent?.trim()).toBe('Wash'); // the note under that fader
@@ -2419,6 +2585,40 @@ describe('the desk page', () => {
     await stackStands({ ...LIVE, currentId: 12, nextId: 11, state: 'fading', paused: true, remaining: 0.6 });
     expect(button('Pause').getAttribute('aria-pressed')).toBe('true');
     expect(page.querySelector('.card.current .how')?.textContent).toContain('Paused');
+  });
+
+  it('the Stage view has the keys and the cards of the stack at its left, and its steps without fields', async () => {
+    await show('/stage');
+    await stackStands(LIVE);
+    const panel = page.querySelector('lm-stage-stack')!;
+    expect([...panel.querySelectorAll('lm-stack-keys button')].map((key) => key.getAttribute('aria-label'))).toEqual([
+      'Stack live',
+      'Previous step',
+      'Play',
+      'Pause',
+      'Next step',
+    ]);
+    expect([...panel.querySelectorAll('lm-stack-cards.column .card h3')].map((title) => title.textContent?.trim())).toEqual([
+      'Previous',
+      'Current',
+      'Next',
+    ]);
+    expect(panel.querySelector('.card.current .what')?.textContent).toContain('Channel 7 (U1) at 255');
+
+    // the steps: number, whether it adds, notes and times only, nothing to change, the one that is on marked
+    const headers = [...panel.querySelectorAll('table.steps thead th')].map((header) => header.textContent?.trim());
+    expect(headers).toEqual(['Step', 'Add', 'Notes', 'Up (s)', 'Wait (s)', 'Down (s)']);
+    const rows = [...panel.querySelectorAll('table.steps tbody tr')];
+    expect(rows.map((row) => row.querySelector('th')?.textContent?.trim())).toEqual(['1.0', '2.0']);
+    expect(rows.map((row) => row.classList.contains('current'))).toEqual([true, false]);
+    expect(rows.map((row) => row.classList.contains('next'))).toEqual([false, true]);
+    expect(rows[1].querySelector('td.note')?.textContent?.trim()).toBe('Wash');
+    expect([...rows[1].querySelectorAll('td.time')].map((cell) => cell.textContent?.trim())).toEqual(['1.0', '3.0', '1.0']);
+    expect(panel.querySelectorAll('table.steps input, table.steps select, table.steps button').length).toBe(0);
+
+    await press(button('Play'));
+    await press(button('Next step'));
+    expect(connection.methods()).toEqual(['StackPlay', 'StackNext']);
   });
 
   it('the Stack key takes the stack live, and a live stack locks everything that is stored', async () => {
@@ -2452,8 +2652,8 @@ describe('the desk page', () => {
         `${view} table.steps input, ${view} table.steps select, ${view} table.steps button`,
       ),
     ];
-    // per row: the number of the step, the two lists, four typed fields and three keys
-    expect(fields('lm-stack-view').length).toBe(2 * 10);
+    // per row: the number of the step, its Add box, the two lists, four typed fields and four keys (▲ ▼ + ✕)
+    expect(fields('lm-stack-view').length).toBe(2 * 12);
     expect(fields('lm-stack-view').every((field) => field.disabled)).toBe(true);
     expect(page.querySelector('lm-stack-view .grip')?.getAttribute('draggable')).toBeNull();
 
@@ -2473,12 +2673,12 @@ describe('the desk page', () => {
     ]) {
       expect(button(key).disabled).toBe(true);
     }
-    expect(page.querySelector<HTMLInputElement>('input[aria-label="Note for Channel 5"]')?.readOnly).toBe(true);
+    expect(page.querySelector<HTMLInputElement>('input[aria-label="Note for Channel 5 (U1)"]')?.readOnly).toBe(true);
     expect(page.querySelector<HTMLInputElement>('input[aria-label="Note for Memory 2"]')?.readOnly).toBe(true);
     store.pressFunction('save'); // a press that gets through anyway starts nothing
     expect(store.mode()).toEqual(IDLE);
     // what a show needs is not locked
-    for (const key of ['Save project', 'Export', 'Clear', 'Blackout', 'Independent 3, channel 3']) {
+    for (const key of ['Save project', 'Export', 'Clear', 'Blackout', 'Independent 3, channel 3 (U1)']) {
       expect(button(key).disabled).toBe(false);
     }
 
@@ -2550,6 +2750,127 @@ describe('the desk page', () => {
     connection.emit('StackChanged', { steps: [connection.stack.steps[0]] });
     await fixture.whenStable();
     expect(page.querySelectorAll('lm-stack-view table.steps tbody tr').length).toBe(1);
+  });
+
+  it('the + key of a step puts a new one right after it, and rests while the stack is live', async () => {
+    await show('/stack');
+
+    // the step Add step would make after that one: the next channel or memory, with its times
+    await press(button('Add a step after step 1.0'));
+    expect(connection.last('AddStackStepAfter')).toEqual([11, step(8, 255, { wait: 0 })]);
+    await press(button('Add a step after step 2.0'));
+    expect(connection.last('AddStackStepAfter')).toEqual([12, step(3, 128, { target: 'memory', wait: 3 })]);
+
+    await stackStands(LIVE);
+    expect(button('Add a step after step 1.0').disabled).toBe(true);
+  });
+
+  it('the Add box makes a step come up on top of what is on, and the steps that are on are marked', async () => {
+    await show('/stack');
+    const box = () => page.querySelector<HTMLInputElement>('input[aria-label="Step 2.0 adds on top of what is on"]');
+    expect(box()?.checked).toBe(false);
+
+    box()?.click();
+    await fixture.whenStable();
+    expect(connection.last('UpdateStackStep')).toEqual([12, { ...step(2, 128, { target: 'memory', wait: 3 }), add: true }]);
+
+    // the desk takes it, and goes live on that step with the first one still on under it
+    const adding = { steps: [connection.stack.steps[0], { ...connection.stack.steps[1], add: true }] };
+    connection.emit('StackChanged', adding);
+    await stackStands({ ...LIVE, currentId: 12, nextId: 11, on: [11, 12] });
+    const rows = () => [...page.querySelectorAll('lm-stack-view table.steps tbody tr')];
+    expect(rows().map((row) => row.classList.contains('on'))).toEqual([true, true]);
+    expect(rows().map((row) => row.classList.contains('current'))).toEqual([false, true]);
+    expect(box()?.checked).toBe(true);
+    expect(box()?.disabled).toBe(true); // a live stack keeps its steps
+    expect(page.querySelector('.card.current .what')?.textContent).toContain('Memory 2 (Wash) at 128, adds');
+
+    // unchecked again: the desk is told without "add"
+    await stackStands(NOT_LIVE);
+    box()?.click();
+    await fixture.whenStable();
+    expect(connection.last('UpdateStackStep')).toEqual([12, step(2, 128, { target: 'memory', wait: 3 })]);
+    expect(box()?.checked).toBe(false);
+
+    // the Stage view ticks the steps that add, and marks those that are on
+    connection.emit('StackChanged', adding);
+    await show('/stage');
+    await stackStands({ ...LIVE, currentId: 12, nextId: 11, on: [11, 12] });
+    const stageRows = [...page.querySelectorAll('lm-stage-stack table.steps tbody tr')];
+    expect(stageRows.map((row) => row.querySelector('td.adds')?.textContent?.trim())).toEqual(['', '✓adds']);
+    expect(stageRows.map((row) => row.classList.contains('on'))).toEqual([true, true]);
+  });
+
+  it('a release takes one step of the stack down, chosen from the other steps by their numbers', async () => {
+    await show('/stack');
+    const kind = page.querySelector<HTMLSelectElement>('select[aria-label="Step 2.0, channel, memory, fixture, group or release"]');
+    if (!kind) throw new Error('no field for the kind of step 2.0');
+    expect([...kind.options].map((option) => option.text)).toContain('Release');
+
+    kind.value = 'release';
+    kind.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    // at first it takes down the step right above it; it never adds
+    expect(connection.last('UpdateStackStep')).toEqual([12, { target: 'release', number: 11, value: 128, up: 1, wait: 3, down: 1 }]);
+
+    // the row: the step it takes down by its number and what that step is; no value, no up time, no Add box
+    const row = page.querySelectorAll('lm-stack-view table.steps tbody tr')[1];
+    const number = row.querySelector<HTMLSelectElement>('select[aria-label="Step 2.0, the step it takes down"]');
+    if (!number) throw new Error('no field for the step that step 2.0 takes down');
+    expect(number.options[0].text.trim()).toBe('1.0');
+    expect(row.querySelector('td.note')?.textContent?.trim()).toBe('Channel 7 (U1)');
+    expect(row.querySelectorAll('td.unused').length).toBe(2);
+    expect(row.querySelector('input[aria-label="Step 2.0, value, 0 to 255"]')).toBeNull();
+    expect(row.querySelector('input[aria-label="Step 2.0 adds on top of what is on"]')).toBeNull();
+    number.dispatchEvent(new Event('focus'));
+    await fixture.whenStable();
+    expect([...number.options].map((option) => option.text.trim())).toEqual(['1.0: Channel 7 (U1)']); // never itself
+
+    // the cards say what it does
+    await stackStands({ ...LIVE, currentId: 12, nextId: 11, state: 'fading', remaining: 0.4, on: [] });
+    expect(page.querySelector('.card.current .what')?.textContent).toContain('Release of step 1.0: Channel 7 (U1)');
+    expect(page.querySelector('.card.current .how')?.textContent).toContain('Taking its step down, 0.4 s left.');
+
+    // a sequence has no releases
+    await stackStands(NOT_LIVE);
+    await show('/sequences');
+    await press(button('Work on memory 3'));
+    const sequenceKind = page.querySelector<HTMLSelectElement>('select[aria-label="Step 1, channel, memory, fixture or group"]');
+    expect([...(sequenceKind?.options ?? [])].map((option) => option.value)).not.toContain('release');
+  });
+
+  it('while the stack crossfades, the page shows what the desk sends: a channel both looks hold does not dip', async () => {
+    // memory 2 holds channel 5 at 200 (see above); memory 5 holds it at 150
+    const look = new Array<number>(UNIVERSE_SIZE).fill(0);
+    look[4] = 150;
+    store.memoryLooks.update((looks) => ({ ...looks, 5: look }));
+    // half way through the fade: memory 2 on its way down, memory 5 on its way up
+    connection.emit('MemoryLevelChanged', 2, 128);
+    connection.emit('MemoryLevelChanged', 5, 128);
+    await fixture.whenStable();
+    expect(store.output()[4]).toBe(100); // the higher of the two alone: the dip the desk does not send
+
+    const levels = new Array<number>(UNIVERSE_SIZE).fill(0);
+    levels[4] = 175; // half way from 200 to 150
+    levels[69] = 128;
+    connection.emit('PlaybackChanged', { ...connection.playback, crossfade: { channels: [], memories: [2, 5], levels } });
+    await fixture.whenStable();
+    expect(store.output()[4]).toBe(175);
+    expect(store.shownChannels()[4]).toBe(175);
+    expect(store.output()[69]).toBe(128);
+
+    // a key held with SOLO DOWN on one of its faders: every fader counts on its own again, as in the desk program
+    store.solo.set({ up: [], down: [{ target: 'memory', number: 5 }] });
+    await fixture.whenStable();
+    expect(store.output()[4]).toBe(100);
+
+    // the fade is over: the faders give the light on their own
+    store.solo.set({ up: [], down: [] });
+    connection.emit('MemoryLevelChanged', 2, 0);
+    connection.emit('MemoryLevelChanged', 5, 255);
+    connection.emit('PlaybackChanged', { ...connection.playback });
+    await fixture.whenStable();
+    expect(store.output()[4]).toBe(150);
   });
 
   it('a step of the stack is moved by dragging its grip onto another row', async () => {
@@ -2679,8 +3000,8 @@ describe('the desk page', () => {
     expect(page.querySelectorAll('lm-memory-section lm-fader-strip').length).toBe(4); // one row
     expect(page.querySelectorAll('nav[aria-label="Channel pages"] button').length).toBe(64);
     expect(page.querySelectorAll('nav[aria-label="Memory pages"] button').length).toBe(32);
-    await press(button('Channels 9 to 16'));
-    expect(page.querySelector('lm-fader[aria-label="Channel 9"]')).toBeTruthy();
+    await press(button('Channels 9 to 16 (U1)'));
+    expect(page.querySelector('lm-fader[aria-label="Channel 9 (U1)"]')).toBeTruthy();
 
     // The Memories and Sequences views keep the row the window gives them.
     await show('/memories');
@@ -2719,7 +3040,7 @@ describe('the desk page', () => {
     expect(page.querySelectorAll('lm-channel-section lm-fader-strip').length).toBe(32);
     expect(page.querySelectorAll('lm-memory-section .row').length).toBe(2);
     expect(page.querySelectorAll('lm-memory-section lm-fader-strip').length).toBe(64);
-    expect(button('Channels 33 to 64')).toBeTruthy();
+    expect(button('Channels 33 to 64 (U1)')).toBeTruthy();
     expect(button('Memories 65 to 128')).toBeTruthy();
     const main = page.querySelector<HTMLElement>('lm-main-view')!;
     expect(main.style.getPropertyValue('--channel-share')).toBe('1fr');
@@ -2758,9 +3079,9 @@ describe('the desk page', () => {
     await show('/');
     const keys = [...page.querySelectorAll('lm-independents button.number')];
     expect(keys.map((key) => key.getAttribute('aria-label'))).toEqual([
-      'Independent 1, channel 1',
-      'Independent 2, channel 2',
-      'Independent 3, channel 3',
+      'Independent 1, channel 1 (U1)',
+      'Independent 2, channel 2 (U1)',
+      'Independent 3, channel 3 (U1)',
       'Independent 4, memory 1',
       'Independent 5, memory 2',
     ]);
@@ -2884,7 +3205,7 @@ describe('the desk page', () => {
     key('keydown', 'ControlLeft', true);
 
     // While a note is typed, the keys are the note's.
-    const note = page.querySelector<HTMLInputElement>('input[aria-label="Note for Channel 1"]')!;
+    const note = page.querySelector<HTMLInputElement>('input[aria-label="Note for Channel 1 (U1)"]')!;
     note.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyB', key: 'b', ctrlKey: true, bubbles: true }));
     await fixture.whenStable();
     expect(connection.methods().filter((method) => method === 'SetBlackout').length).toBe(1);

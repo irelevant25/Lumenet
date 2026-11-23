@@ -3,6 +3,7 @@ import { DeskStore } from '../desk/desk-store';
 import { StageLight } from '../desk/desk-types';
 import { rangeAt, rangeText, typeOf, valuesOf } from '../desk/fixtures';
 import { LETTER_COLORS, LETTER_NAMES } from '../desk/stage-lights';
+import { channelLabel, channelNumber } from '../desk/universes';
 import { Fader } from '../fader/fader';
 
 /**
@@ -42,10 +43,12 @@ export class LightFaders {
       const band = rangeAt(ranges, level);
       return {
         channel,
+        // under the fader: its number in its universe (the light says its universe above)
+        number: channelNumber(channel),
         letter,
         level,
         own: own[channel - 1] ?? 0,
-        label: `Channel ${channel}, ${name}`,
+        label: `Channel ${channelLabel(channel)}, ${name}`,
         name,
         band,
         // the pointer on the letter: what the channel is, and what it does at its values
@@ -64,7 +67,7 @@ export class LightFaders {
   protected readonly said = computed(() => {
     const fader = this.faders().find((candidate) => candidate.channel === this.touched());
     if (!fader) return null;
-    return `${fader.letter} (${fader.channel}) at ${fader.level}: ${fader.band ? rangeText(fader.band) : fader.name}`;
+    return `${fader.letter} (${fader.number}) at ${fader.level}: ${fader.band ? rangeText(fader.band) : fader.name}`;
   });
 
   protected move(channel: number, level: number): void {

@@ -44,10 +44,13 @@ public sealed class ProjectStoreTests : IDisposable
     [Fact]
     public void SaveWritesTheDocumentedFormat()
     {
-        StoreMemory(1, (Channel: 5, Level: 255), (Channel: 6, Level: 128));
+        _desk.SetUniverses(2);
+        _desk.SetBoxes([new BoxPlan("192.168.7.1", [1]), new BoxPlan("10.1.3.1", [2, 0])]);
+        StoreMemory(1, (Channel: 5, Level: 255), (Channel: 6, Level: 128), (Channel: 600, Level: 10));
         StoreMemory(3);   // a dark look: stored, but without levels
         _desk.SetChannelNote(5, "Front left");
         _desk.SetChannelNote(512, "Smoke machine");
+        _desk.SetChannelNote(513, "Hazer");
         _desk.SetMemoryNote(3, "Blue wash");
         _desk.SetIndependent(2, 300);
         _desk.SetMemoryIndependent(10, 128);
@@ -61,13 +64,30 @@ public sealed class ProjectStoreTests : IDisposable
         string expected = $$"""
             {
               "format": "lumenet-project",
-              "version": 4,
+              "version": 5,
+              "universes": 2,
+              "boxes": [
+                {
+                  "address": "192.168.7.1",
+                  "universes": [
+                    1
+                  ]
+                },
+                {
+                  "address": "10.1.3.1",
+                  "universes": [
+                    2,
+                    0
+                  ]
+                }
+              ],
               "memories": [
                 {
                   "number": 1,
                   "levels": {
                     "5": 255,
-                    "6": 128
+                    "6": 128,
+                    "600": 10
                   }
                 },
                 {
@@ -77,7 +97,8 @@ public sealed class ProjectStoreTests : IDisposable
               ],
               "channelNotes": {
                 "5": "Front left",
-                "512": "Smoke machine"
+                "512": "Smoke machine",
+                "513": "Hazer"
               },
               "memoryNotes": {
                 "3": "Blue wash"
@@ -136,7 +157,8 @@ public sealed class ProjectStoreTests : IDisposable
         string expected = $$"""
             {
               "format": "lumenet-project",
-              "version": 4,
+              "version": 5,
+              "universes": 1,
               "memories": [],
               "channelNotes": {},
               "memoryNotes": {},
@@ -478,7 +500,55 @@ public sealed class ProjectStoreTests : IDisposable
     [Fact]
     public void FileOfANewerVersionIsRefused()
     {
-        AssertRefused("version 5", """{ "format": "lumenet-project", "version": 5, "memories": [] }""");
+        AssertRefused("version 7", """{ "format": "lumenet-project", "version": 7, "memories": [] }""");
+    }
+
+    [Fact]
+    public void UniversesAndBoxesComeBackFromTheFile()
+    {
+        _desk.SetUniverses(3);
+        _desk.SetBoxes([new BoxPlan("10.1.2.1", [3, 1]), new BoxPlan("127.0.0.1:7001", [2])]);
+        StoreMemory(1, (Channel: 1100, Level: 77));
+        _desk.SetChannelNote(1536, "Last of U3");
+        _store.Save("show");
+
+        Desk loaded = LoadIntoNewDesk("show");
+
+        Assert.Equal(3, loaded.Universes);
+        Assert.Equal(1536, loaded.ChannelCount);
+        Assert.Equal(["10.1.2.1", "127.0.0.1:7001"], loaded.Boxes.Select(box => box.Address));
+        Assert.Equal([3, 1], loaded.Boxes[0].Universes);
+        Assert.Equal(1536, loaded.GetState().Channels.Length);
+        Assert.Equal("Last of U3", loaded.GetState().ChannelNotes[1535]);
+        Assert.Equal(1536, loaded.GetMemoryLooks()[1].Length);
+        Assert.Equal(77, loaded.GetMemoryLooks()[1][1099]);
+    }
+
+    [Fact]
+    public void FileOfAnEarlierVersionHasOneUniverseAndLetsTheBoxesPlayByThemselves()
+    {
+        File.WriteAllText(PathOf("old"), """{ "format": "lumenet-project", "version": 4, "memories": [ { "number": 1, "levels": { "512": 9 } } ] }""");
+
+        Desk loaded = LoadIntoNewDesk("old");
+
+        Assert.Equal(1, loaded.Universes);
+        Assert.Empty(loaded.Boxes);
+        Assert.Equal(9, loaded.GetMemoryLooks()[1][511]);
+    }
+
+    [Theory]
+    [InlineData(""" "universes": 0, "memories": [] """, "The file says 0 universes; a project has 1 to 8.")]
+    [InlineData(""" "universes": 9, "memories": [] """, "The file says 9 universes; a project has 1 to 8.")]
+    [InlineData(""" "universes": 1, "memories": [ { "number": 1, "levels": { "513": 10 } } ] """, "from 1 to 512")]
+    [InlineData(""" "universes": 2, "channelNotes": { "1025": "x" }, "memories": [] """, "from 1 to 1024")]
+    [InlineData(""" "boxes": [ { "address": "10.1", "universes": [1] } ], "memories": [] """, "is no address like 10.1.3.1")]
+    [InlineData(""" "boxes": [ { "address": "10.1.1.1", "universes": [] } ], "memories": [] """, "1 to 8 outputs")]
+    [InlineData(""" "boxes": [ { "address": "10.1.1.1", "universes": [9] } ], "memories": [] """, "universe 1 to 8, or none (0)")]
+    [InlineData(""" "boxes": [ { "address": "10.1.1.1", "universes": [1] }, { "address": "10.1.1.1:7000", "universes": [2] } ], "memories": [] """, "twice")]
+    [InlineData(""" "boxes": [ { "universes": [1] } ], "memories": [] """, "Box 1")]
+    public void FileWithUniversesOrBoxesThatCannotBeUsedIsRefused(string part, string expectedInMessage)
+    {
+        AssertRefused(expectedInMessage, $$"""{ "format": "lumenet-project", "version": 5, {{part}} }""");
     }
 
     [Fact]

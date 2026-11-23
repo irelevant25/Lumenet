@@ -10,6 +10,20 @@
   background: var(--panel-raised);
 }
 
+/* the title, and in a project of several universes their keys beside it */
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--strip-gap) 16px;
+}
+
+.universes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--strip-gap);
+}
+
 h2 {
   margin: 0;
   color: var(--legend-dim);

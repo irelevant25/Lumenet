@@ -1,6 +1,6 @@
 import {
-  CHANNEL_COUNT,
   LIGHT_MAX_SIZE,
+  MAX_CHANNELS,
   STAGE_BACK_ROOM,
   STAGE_FRONT_ROOM,
   STAGE_MAX_SIZE,
@@ -8,8 +8,10 @@ import {
   STAGE_SIDE_ROOM,
   StageLight,
   StagePlan,
+  UNIVERSE_SIZE,
 } from './desk-types';
 import { NOTE_LINE_SEPARATOR } from './notes';
+import { channelSpan, universeOf, universeStart } from './universes';
 
 /**
  * The lights of the stage plan: what their channels are, and the color they give at a moment.
@@ -240,16 +242,20 @@ export function usesOwnColor(channels: string): boolean {
 
 // ---------------------------------------------------------------- lights on the plan
 
-/** The channels of a light, as the page says them: "9", or "30 to 41". */
+/** The channels of a light, as the page says them: "9 (U1)", or "30 to 41 (U1)" (see universes.ts). */
 export function channelRange(light: Pick<StageLight, 'address' | 'channels'>): string {
-  const last = light.address + light.channels.length - 1;
-  return last === light.address ? `${light.address}` : `${light.address} to ${last}`;
+  return channelSpan(light.address, light.address + light.channels.length - 1);
 }
 
-/** The address after the last channel of any light: where a new light goes. */
-export function nextAddress(lights: readonly StageLight[]): number {
-  const after = lights.reduce((end, light) => Math.max(end, light.address + light.channels.length), 1);
-  return after > CHANNEL_COUNT ? 1 : after;
+/**
+ * The address after the last channel of any light: where a new light of this many channels goes.
+ * All its channels are in one universe: where they would run past the end of it, the light starts
+ * the next one. 1 when the `count` channels of the project have no room left after the last light.
+ */
+export function nextAddress(lights: readonly StageLight[], channels = 1, count = UNIVERSE_SIZE): number {
+  let after = lights.reduce((end, light) => Math.max(end, light.address + light.channels.length), 1);
+  if (universeOf(after) !== universeOf(after + channels - 1)) after = universeStart(universeOf(after) + 1);
+  return after + channels - 1 > count ? 1 : after;
 }
 
 /** A name for a new light at an address: the note of its channel, both lines, or "Light 5". */
@@ -287,9 +293,15 @@ export function keptOn(
   };
 }
 
-/** An address from 1 on at which a light of this many channels fits. */
-export function fittingAddress(address: number, channels: number): number {
-  return Math.min(CHANNEL_COUNT - channels + 1, Math.max(1, Math.round(address) || 1));
+/**
+ * An address from 1 on at which a light of this many channels fits: among the `count` channels of
+ * the project, and all of them in one universe. A light that would run past the end of its
+ * universe moves down until it ends there.
+ */
+export function fittingAddress(address: number, channels: number, count = MAX_CHANNELS): number {
+  const start = Math.min(count - channels + 1, Math.max(1, Math.round(address) || 1));
+  const end = universeStart(universeOf(start)) + UNIVERSE_SIZE - 1; // the last channel of its universe
+  return start + channels - 1 > end ? end - channels + 1 : start;
 }
 
 /** The plan with one light changed. */
@@ -307,14 +319,21 @@ export function withoutLight(plan: StagePlan, id: number): StagePlan {
 }
 
 /**
- * A copy of a light for the next one of the same kind: on the channels after the last light,
- * beside the light on the plan, with the next number in its name ("Spot 1" gives "Spot 2").
+ * A copy of a light for the next one of the same kind: on the channels after the last light (of
+ * the `count` channels of the project), beside the light on the plan, with the next number in its
+ * name ("Spot 1" gives "Spot 2").
  */
-export function copiedLight(plan: StagePlan, light: StageLight, id = plan.lights.reduce((highest, other) => Math.max(highest, other.id), 0) + 1): StageLight {
+export function copiedLight(
+  plan: StagePlan,
+  light: StageLight,
+  count: number,
+  id = plan.lights.reduce((highest, other) => Math.max(highest, other.id), 0) + 1,
+): StageLight {
   const numbered = /^(.*?)(\d+)$/.exec(light.name);
   const name = (numbered ? `${numbered[1]}${Number(numbered[2]) + 1}` : `${light.name || 'Light'} 2`).slice(0, 24);
   const place = keptOn(plan, light.x + Math.max(light.width, 1) + 0.5, light.y, light);
-  return { ...light, id, name, address: fittingAddress(nextAddress(plan.lights), light.channels.length), ...place };
+  const channels = light.channels.length;
+  return { ...light, id, name, address: fittingAddress(nextAddress(plan.lights, channels, count), channels, count), ...place };
 }
 
 /** The plan with a stage of another width or depth (4 to 64 squares); lights beyond its new edge come to the edge. */

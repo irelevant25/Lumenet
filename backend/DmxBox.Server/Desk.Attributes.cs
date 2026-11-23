@@ -26,7 +26,7 @@ internal sealed partial class Desk
     private PlanRoles _roles = PlanRoles.None;
 
     private long _claims;
-    private readonly long[] _channelClaims = new long[ChannelCount];
+    private readonly long[] _channelClaims = new long[MaxChannels];
     private readonly long[] _memoryClaims = new long[MemoryCount];
 
     // What the steps of fixtures and groups give, by what makes it: target, number, value and
@@ -72,7 +72,7 @@ internal sealed partial class Desk
             limit.Apply(output);
 
         bool[] attribute = _roles.Attribute;
-        for (int channel = 0; channel < ChannelCount; channel++)
+        for (int channel = 0; channel < output.Length; channel++)
         {
             if (!attribute[channel])
                 output[channel] = _blackout ? (byte)0 : Scale(output[channel], _master);

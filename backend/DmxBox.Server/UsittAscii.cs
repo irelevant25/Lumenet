@@ -370,7 +370,7 @@ internal static partial class UsittAscii
                     if (channel == 0 || dimmer == 0)
                         continue;
 
-                    if (dimmer <= Desk.ChannelCount)
+                    if (dimmer <= Desk.MaxChannels)
                         Show.Patch[dimmer] = new AsciiPatch(channel, share);
                     else
                         Show.DimmersAbove++;
@@ -766,7 +766,7 @@ internal static partial class UsittAscii
             {
                 if (!TryWhole(fields[index], out int dimmer))
                     whole = false;
-                else if (dimmer <= Desk.ChannelCount)   // a name above 512 belongs to no address of the box
+                else if (dimmer <= Desk.MaxChannels)   // a name above the eighth universe belongs to no channel of the desk
                     Show.DimmerNames[dimmer] = fields[index + 1];
             }
 

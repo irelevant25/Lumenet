@@ -5,13 +5,26 @@ namespace DmxBox.Server;
 /// notes under the faders, and the channels and memories the independent keys are bound to.
 /// </summary>
 /// <param name="Looks">
-/// One entry per memory, memory 1 first: the memory's 512 levels, or null while it holds no look.
+/// One entry per memory, memory 1 first: a level for each channel of the project's universes
+/// (512 each), or null while the memory holds no look.
 /// </param>
-/// <param name="ChannelNotes">The 512 notes under the channel faders; an empty text where there is none.</param>
+/// <param name="ChannelNotes">A note under each channel fader of the project's universes; an empty text where there is none.</param>
 /// <param name="MemoryNotes">The 128 notes under the memory faders; an empty text where there is none.</param>
-/// <param name="Independents">The channel number, 1-512, of each of the 10 channel keys of the independents; key 1 first.</param>
+/// <param name="Independents">The channel number of each channel key of the independents; key 1 first.</param>
 internal sealed record ProjectContent(byte[]?[] Looks, string[] ChannelNotes, string[] MemoryNotes, int[] Independents)
 {
+    /// <summary>
+    /// How many universes the project has, 1 to <see cref="Desk.MaxUniverses"/>; its channels are
+    /// 1 to 512 for each of them. The looks and the channel notes are that long.
+    /// </summary>
+    public int Universes { get; init; } = 1;
+
+    /// <summary>
+    /// The boxes the project wants and the universe each of their outputs plays, see <see cref="BoxPlan"/>;
+    /// empty for none, and then every box that answers plays universes by itself, in the order of the boxes.
+    /// </summary>
+    public BoxPlan[] Boxes { get; init; } = [];
+
     /// <summary>The memory number, 1-128, of each of the 10 memory keys of the independents; key 1 first.</summary>
     public int[] MemoryIndependents { get; init; } = Desk.DefaultMemoryIndependents();
 

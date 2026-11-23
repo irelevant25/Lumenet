@@ -21,6 +21,7 @@ import {
   withLight,
   withoutLight,
 } from '../desk/stage-lights';
+import { channelField, channelFromText, universeOf } from '../desk/universes';
 import { LibraryDialog } from '../library-dialog/library-dialog';
 import { LightFaders } from '../light-faders/light-faders';
 import { StagePictureForm } from '../stage-picture-form/stage-picture-form';
@@ -56,7 +57,6 @@ export class StagePanel {
   protected readonly maxCells = MAX_CELLS;
   protected readonly maxLetters = MAX_LETTERS;
   protected readonly warmWhite = WARM_WHITE;
-  protected readonly channelRange = channelRange;
   protected readonly hasCells = hasCells;
 
   protected readonly light = computed(() => this.store.stage().lights.find((light) => light.id === this.lightId()) ?? null);
@@ -64,8 +64,18 @@ export class StagePanel {
   /** What screen readers call the panel. */
   protected readonly title = computed(() => {
     const light = this.light();
-    return light ? `The light ${light.name || channelRange(light)}` : 'The stage';
+    return light ? `The light ${light.name || this.range(light)}` : 'The stage';
   });
+
+  /** The channels of a light: "30 to 41 (U1)". */
+  protected range(light: StageLight): string {
+    return channelRange(light);
+  }
+
+  /** The address as its field shows it: "113 U2" in a project of several universes, "113" in one of one. */
+  protected addressField(light: StageLight): string {
+    return channelField(light.address, this.store.universes());
+  }
 
   /** The chosen light as the form shows it. */
   protected readonly form = computed(() => {
@@ -106,11 +116,18 @@ export class StagePanel {
     this.change(light, { name: (event.target as HTMLInputElement).value.trim().slice(0, 24) });
   }
 
+  /**
+   * A typed address: "113 U2", or "113" in the universe the light is in (see universes.ts). The light moves down where its channels
+   * would run past the end of the project's channels or of its universe; a text that names no
+   * channel leaves it where it is.
+   */
   protected setAddress(light: StageLight, event: Event): void {
     const field = event.target as HTMLInputElement;
-    const address = fittingAddress(Number(field.value), light.channels.length);
-    field.value = String(address);
-    this.change(light, { address });
+    const count = this.store.channelCount();
+    const typed = channelFromText(field.value, count, universeOf(light.address));
+    const address = typed === null ? light.address : fittingAddress(typed, light.channels.length, count);
+    field.value = channelField(address, this.store.universes());
+    if (address !== light.address) this.change(light, { address });
   }
 
   protected setType(light: StageLight, event: Event): void {
@@ -140,7 +157,7 @@ export class StagePanel {
   /** A copy of the light, on the channels after the last light, and chosen. */
   protected copy(light: StageLight): void {
     const plan = this.store.stage();
-    const copy = copiedLight(plan, light, this.store.nextLightId());
+    const copy = copiedLight(plan, light, this.store.channelCount(), this.store.nextLightId());
     this.store.setStage({ ...plan, lights: [...plan.lights, copy] });
     this.lightId.set(copy.id);
   }
@@ -214,6 +231,6 @@ export class StagePanel {
   // New channels for a light: if they do not fit after its address, the address moves down. A
   // light of the library becomes one of letters.
   private setLetters(light: StageLight, channels: string): void {
-    this.change(light, { channels, type: null, address: fittingAddress(light.address, channels.length) });
+    this.change(light, { channels, type: null, address: fittingAddress(light.address, channels.length, this.store.channelCount()) });
   }
 }

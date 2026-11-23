@@ -145,3 +145,8 @@ button:hover:not(:disabled) {
   font-size: calc(13px * var(--font-scale));
   line-height: 1.35;
 }
+
+/* on a phone: under the plan and the stack (lm-stage-stack has order 1) */
+:host-context(.mobile) {
+  order: 2;
+}

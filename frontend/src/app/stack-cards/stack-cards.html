@@ -1,0 +1,38 @@
+<!-- where the stack stands: the step before the one that is on, that one, and the one Play goes to -->
+<div class="card previous" [class.on]="previous()">
+  <h3>Previous</h3>
+  @if (previous(); as step) {
+    <p class="what">
+      <strong>{{ step.cue }}</strong> {{ describe(step) }}
+    </p>
+    <p class="how">Prev goes back to it.</p>
+  } @else {
+    <p class="what">Nothing.</p>
+    <p class="how"></p>
+  }
+</div>
+
+<div class="card current" [class.on]="current()">
+  <h3>Current</h3>
+  @if (current(); as step) {
+    <p class="what">
+      <strong>{{ step.cue }}</strong> {{ describe(step) }}
+    </p>
+  } @else {
+    <p class="what">No step is on.</p>
+  }
+  <p class="how">{{ progress() }}</p>
+</div>
+
+<div class="card next">
+  <h3>Next</h3>
+  @if (next(); as step) {
+    <p class="what">
+      <strong>{{ step.cue }}</strong> {{ describe(step) }}
+    </p>
+    <p class="how">{{ times(step) }}</p>
+  } @else {
+    <p class="what">{{ steps().length ? 'Nothing: the stack has no other step.' : 'Nothing yet.' }}</p>
+    <p class="how"></p>
+  }
+</div>

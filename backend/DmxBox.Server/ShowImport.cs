@@ -174,10 +174,15 @@ internal static class ShowImport
     {
         private readonly byte[]?[] _looks = new byte[]?[Desk.MemoryCount];
         private readonly string[] _memoryNotes = Enumerable.Repeat("", Desk.MemoryCount).ToArray();
-        private readonly string[] _channelNotes = Enumerable.Repeat("", Desk.ChannelCount).ToArray();
+        private readonly string[] _channelNotes = Enumerable.Repeat("", Desk.MaxChannels).ToArray();
+
+        // The universes the show needs, from the highest address it uses, and their channels.
+        private int _universes = 1;
+        private int _channelCount = Desk.UniverseSize;
+        private int _highestAddress = 1;
 
         // For every DMX address: the console channel that drives it, and its share; null if none does.
-        private readonly AsciiPatch?[] _addresses = new AsciiPatch?[Desk.ChannelCount];
+        private readonly AsciiPatch?[] _addresses = new AsciiPatch?[Desk.MaxChannels];
         private readonly HashSet<int> _patchedChannels = [];
 
         // For the report.
@@ -221,7 +226,12 @@ internal static class ShowImport
             List<string> report = show.IsSmartFade ? SmartFade(out stack) : Usitt(out stack);
             report.Add("Nothing is saved yet: Save keeps the project.");
 
-            var content = new ProjectContent(_looks, _channelNotes, _memoryNotes, _independents) { Sequences = _sequences, Stack = stack };
+            var content = new ProjectContent(_looks, _channelNotes[.._channelCount], _memoryNotes, _independents)
+            {
+                Universes = _universes,
+                Sequences = _sequences,
+                Stack = stack,
+            };
             return new ImportedShow(ProjectName.Suggest(Path.GetFileNameWithoutExtension(fileName), FallbackName), content, report.ToArray());
         }
 
@@ -409,14 +419,21 @@ internal static class ShowImport
         {
             if (show.Patch.Count == 0)
             {
-                for (int index = 0; index < Desk.ChannelCount; index++)
+                for (int index = 0; index < Desk.MaxChannels; index++)
                     _addresses[index] = new AsciiPatch(index + 1, 1);
             }
 
             foreach ((int dimmer, AsciiPatch patch) in show.Patch)
-                _addresses[dimmer - 1] = patch;   // the reader keeps dimmers 1 to 512 only
+                _addresses[dimmer - 1] = patch;   // the reader keeps dimmers 1 to 4096 only
 
-            for (int index = 0; index < Desk.ChannelCount; index++)
+            // As many universes as the highest address needs: of the patch, or without one, of the
+            // highest channel any look of the show gives a level (channel and address are one then).
+            int highest = show.Patch.Count > 0 ? show.Patch.Keys.Max() : HighestChannel();
+            _highestAddress = Math.Min(highest, Desk.MaxChannels);
+            _universes = Math.Clamp((highest + Desk.UniverseSize - 1) / Desk.UniverseSize, 1, Desk.MaxUniverses);
+            _channelCount = _universes * Desk.UniverseSize;
+
+            for (int index = 0; index < _channelCount; index++)
             {
                 AsciiPatch? patch = _addresses[index];
                 if (patch is { } driven)
@@ -439,6 +456,16 @@ internal static class ShowImport
 
             if (show.IsSmartFade)
                 BindIndependents();
+        }
+
+        // The highest channel that a cue, a submaster or a group of the show gives a level; 1 for none.
+        private int HighestChannel()
+        {
+            IEnumerable<AsciiLook> looks = show.Cues.Cast<AsciiLook>()
+                .Concat(show.Sequences.SelectMany(sequence => sequence.Steps))
+                .Concat(show.Submasters)
+                .Concat(show.Groups);
+            return looks.SelectMany(look => look.Levels.Keys).DefaultIfEmpty(1).Max();
         }
 
         // The note under an address that a SmartFade's channel drives: the channel, where it has
@@ -470,7 +497,7 @@ internal static class ShowImport
         {
             for (int independent = 1; independent <= 2; independent++)
             {
-                int[] addresses = Enumerable.Range(1, Desk.ChannelCount)
+                int[] addresses = Enumerable.Range(1, _channelCount)
                     .Where(address => _addresses[address - 1]?.Channel == SmartFadeChannels + independent)
                     .ToArray();
                 if (addresses.Length == 0)
@@ -501,10 +528,10 @@ internal static class ShowImport
             return stored;
         }
 
-        // The 512 levels of a look, through the patch.
+        // The levels of a look on the show's channels, through the patch.
         private byte[] LookOf(AsciiLook look)
         {
-            var levels = new byte[Desk.ChannelCount];
+            var levels = new byte[_channelCount];
             for (int index = 0; index < levels.Length; index++)
             {
                 if (_addresses[index] is { } patch && look.Levels.TryGetValue(patch.Channel, out double level))
@@ -848,18 +875,25 @@ internal static class ShowImport
 
         private void TellChannels(List<string> report)
         {
+            if (_universes > 1)
+            {
+                report.Add(string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"The show uses addresses up to {_highestAddress}, so the project has {_universes} universes: address 513 of the show is channel 1 (U2), and so on."));
+            }
+
             if (_lostChannels.Count > 0)
             {
                 report.Add(string.Create(
                     CultureInfo.InvariantCulture,
-                    $"Channels without a DMX address from 1 to 512: {_lostChannels.Count} ({Named(_lostChannels, "channel")}). Their levels are left out."));
+                    $"Channels without a DMX address from 1 to {_channelCount}: {_lostChannels.Count} ({Named(_lostChannels, "channel")}). Their levels are left out."));
             }
 
             if (show.DimmersAbove > 0)
             {
                 report.Add(string.Create(
                     CultureInfo.InvariantCulture,
-                    $"Dimmers above 512 in the patch: {show.DimmersAbove}. They are left out: the box sends one universe, addresses 1 to 512."));
+                    $"Dimmers above {Desk.MaxChannels} in the patch: {show.DimmersAbove}. They are left out: the desk has {Desk.MaxUniverses} universes at most."));
             }
 
             if (show.Skipped > 0)

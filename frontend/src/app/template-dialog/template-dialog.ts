@@ -1,9 +1,10 @@
 import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { ColorPick, ColorPicker } from '../color-picker/color-picker';
 import { DeskStore } from '../desk/desk-store';
-import { CHANNEL_COUNT, MAX_LEVEL, MAX_SEQUENCE_STEPS, MEMORY_COUNT } from '../desk/desk-types';
+import { MAX_LEVEL, MAX_SEQUENCE_STEPS, MEMORY_COUNT, UNIVERSE_SIZE } from '../desk/desk-types';
 import { hexOf } from '../desk/fixtures';
 import { TEMPLATES, TemplateInfo, TemplateName, makeSequence, readNumbers, stepsNeeded } from '../desk/sequence-templates';
+import { universeStart } from '../desk/universes';
 import { LampButton } from '../lamp-button/lamp-button';
 
 /** What a template goes through: channels or memories by their numbers, or the fixtures of a group. */
@@ -13,7 +14,9 @@ type TemplateLights = 'channel' | 'memory' | 'group';
  * The window that fills the sequence of a memory from a template: fire, chase, wave, strobe or
  * storm, for the lights the owner names: channels, memories, or the fixtures of a group (in the
  * order of their addresses, in a color). The steps it makes replace those of the sequence, and
- * can be changed in the table like any others.
+ * can be changed in the table like any others. In a project of several universes numbered by
+ * universe (Settings), the channels are those of a universe chosen beside them; numbered on
+ * through the universes, they are numbers like 625.
  */
 @Component({
   imports: [ColorPicker, LampButton],
@@ -26,6 +29,15 @@ export class TemplateDialog {
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
 
   protected readonly templates = TEMPLATES;
+
+  /** True when the channels are chosen in a universe: several universes, numbered 1 to 512 in each. */
+  protected readonly universeChoice = computed(
+    () => this.target() === 'channel' && this.store.universes() > 1,
+  );
+  protected readonly universeChoices = computed(() => Array.from({ length: this.store.universes() }, (_, index) => index + 1));
+  private readonly chosenUniverse = signal(1);
+  /** The universe of the channels: the one chosen, the last there is when the project has fewer. */
+  protected readonly universe = computed(() => Math.min(this.chosenUniverse(), this.store.universes()));
 
   /** The memory whose sequence the template fills. */
   protected readonly memory = signal(1);
@@ -79,6 +91,10 @@ export class TemplateDialog {
     this.groupId.set(Number((event.target as HTMLSelectElement).value));
   }
 
+  protected onUniverse(event: Event): void {
+    this.chosenUniverse.set(Number((event.target as HTMLSelectElement).value));
+  }
+
   protected onColor(pick: ColorPick): void {
     if (pick.kind === 'mix') this.color.set(hexOf(pick.rgb));
   }
@@ -113,8 +129,13 @@ export class TemplateDialog {
       const group = this.group();
       const lights = group ? this.store.groupLights(group).sort((a, b) => a.address - b.address) : [];
       numbers = lights.length > 0 ? lights.map((light) => light.id) : 'The group has no lights: tick them on the Fixtures page.';
+    } else if (this.universeChoice()) {
+      // 1 to 512 in the universe chosen
+      const read = readNumbers(this.numbers(), UNIVERSE_SIZE);
+      const start = universeStart(this.universe());
+      numbers = typeof read === 'string' ? read : read.map((number) => start + number - 1);
     } else {
-      numbers = readNumbers(this.numbers(), this.target() === 'channel' ? CHANNEL_COUNT : MEMORY_COUNT);
+      numbers = readNumbers(this.numbers(), this.target() === 'channel' ? this.store.channelCount() : MEMORY_COUNT);
     }
     if (typeof numbers === 'string') {
       this.error.set(numbers);

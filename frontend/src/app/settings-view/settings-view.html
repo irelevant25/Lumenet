@@ -2,8 +2,8 @@
   <h2>Settings</h2>
   <p class="summary">
     The settings belong to this device, as the shortcuts of Keyboard do: every project shows them, and
-    Export takes them to another device. LAN and the autosave belong to the desk program, and only the PC
-    can change them.
+    Export takes them to another device. The number of universes belongs to the project. LAN and the
+    autosave belong to the desk program, and only the PC can change them.
   </p>
 </header>
 
@@ -80,6 +80,31 @@
     <p class="hint">
       0 to {{ maxChannelKeys }} of each; with 0 of both the main view has no independents. Keys
       that do not fit into one column go on in another.
+    </p>
+  </section>
+
+  <!-- ---------------------------------------------------------------- universes -->
+  <section class="panel" aria-labelledby="universes-title">
+    <h3 id="universes-title">Universes</h3>
+    <div class="field">
+      <label for="universes">Universes of the project</label>
+      <select id="universes" [disabled]="store.live()" (change)="onUniverses($event)">
+        @for (count of universeCounts; track count) {
+          <option [value]="count" [selected]="count === store.universes()">
+            {{ count }} ({{ count * universeSize }} channels)
+          </option>
+        }
+      </select>
+    </div>
+    <p class="hint">
+      A universe is the 512 channels of one DMX cable; a box plays one on each of its outputs, and
+      the Boxes window (Boxes at the top left) says which. The project keeps the number. Fewer is
+      refused while a step, a light of the stage or an independent key uses a channel of a universe
+      that would go.
+    </p>
+    <p class="hint">
+      The channels of every universe are numbered 1 to 512, and every channel says its universe:
+      channel 113 of the second is "113 (U2)", and it is typed as "113 U2".
     </p>
   </section>
 

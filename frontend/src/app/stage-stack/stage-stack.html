@@ -1,0 +1,45 @@
+<lm-stack-keys />
+<lm-stack-cards class="column" />
+
+<div class="table-box">
+  <table class="steps">
+    <caption>
+      The steps of the stack
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Step</th>
+        <th scope="col" title="On top of what is on, taking nothing down">Add</th>
+        <th scope="col">Notes</th>
+        <th scope="col">Up (s)</th>
+        <th scope="col">Wait (s)</th>
+        <th scope="col">Down (s)</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (step of steps(); track step.id) {
+        <tr
+          [class.previous]="step.id === previous()"
+          [class.current]="step.id === current()"
+          [class.on]="on().has(step.id)"
+          [class.next]="step.id === next()"
+        >
+          <th scope="row">{{ step.cue }}</th>
+          <td class="adds">
+            @if (step.add) {
+              <span aria-hidden="true">✓</span><span class="for-readers">adds</span>
+            }
+          </td>
+          <td class="note" [attr.title]="noteOf(step) || null">{{ noteOf(step) }}</td>
+          <td class="time">{{ step.target === 'release' ? '—' : seconds(step.up) }}</td>
+          <td class="time">{{ seconds(step.wait) }}</td>
+          <td class="time">{{ seconds(step.down) }}</td>
+        </tr>
+      } @empty {
+        <tr>
+          <td class="empty" colspan="6">No steps yet. The Stack view makes them.</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

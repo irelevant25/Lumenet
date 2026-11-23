@@ -1,5 +1,23 @@
 <header>
   <h2>Memories</h2>
+  @if (universeKeys().length > 0) {
+    <!-- a project of several universes: the table shows the channels of one, chosen here -->
+    <nav class="universes" aria-label="Universe of the table">
+      @for (item of universeKeys(); track item.universe) {
+        <button
+          lmLamp
+          type="button"
+          tone="channel"
+          [level]="item.lamp"
+          [attr.aria-pressed]="item.shown"
+          [attr.aria-label]="'Universe ' + item.universe"
+          (click)="showUniverse(item.universe)"
+        >
+          U{{ item.universe }}
+        </button>
+      }
+    </nav>
+  }
   <p class="summary" role="status">{{ summary() }}</p>
 </header>
 
@@ -30,7 +48,9 @@
          level (drawn from data-note). One element a cell, nothing more. -->
     <div class="table-box">
       <table class="matrix" [class.with-notes]="withNotes()">
-        <caption>The channels of memory {{ store.inspectedMemory() }}</caption>
+        <caption>
+          The channels of memory {{ store.inspectedMemory() }}{{ universeKeys().length > 0 ? ', universe ' + universe() : '' }}
+        </caption>
         <tbody>
           @for (row of rows(); track $index) {
             <tr>
@@ -38,7 +58,7 @@
                 <td
                   [class.up]="cell.level > 0"
                   [style.--part]="cell.level > 0 ? cell.level / 255 : null"
-                  [attr.data-channel]="cell.channel"
+                  [attr.data-channel]="cell.number"
                   [attr.data-note]="cell.note"
                   [attr.aria-label]="cell.name"
                 >

@@ -165,8 +165,8 @@ export async function libraryFixture(source: string, maker: string, fetcher: typ
 /**
  * The plan with a light made a light of the library in one of its modes: its channels are the
  * mode's, it names the kind (which the plan gets once for all lights of that model and mode),
- * its address moves down if the channels do not fit after it, and a light with a name like
- * "Light 5" takes the model's name.
+ * its address moves down if the channels do not fit after it in its universe, and a light with a
+ * name like "Light 5" takes the model's name.
  */
 export function withLibraryType(plan: StagePlan, lightId: number, fixture: LibraryFixture, mode: LibraryMode): StagePlan {
   const existing = plan.types.find((type) => type.source === fixture.source && type.mode === mode.name);

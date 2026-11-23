@@ -42,7 +42,7 @@ internal static class FixtureLooks
         foreach (StageLight light in lights)
             AddLight(parts, plan, light, step.Value, color);
 
-        return [.. parts.Where(part => part.Channel < Desk.ChannelCount)];
+        return [.. parts.Where(part => part.Channel < Desk.MaxChannels)];
     }
 
     private static void AddLight(List<Part> parts, StagePlan plan, StageLight light, int level, (double R, double G, double B)? color)

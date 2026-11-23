@@ -1,8 +1,9 @@
-/* The title with Clear, Edit and Add light, then the plan as big as the window allows, and the
-   panel at the right, always there: the plan keeps its size whatever the panel shows. */
+/* The title with Clear, Edit and Add light; under it the stack at the left (lm-stage-stack), the
+   plan as big as the window allows, and the panel at the right, always there: the plan keeps its
+   size whatever the panel shows. */
 :host {
   display: grid;
-  grid-template: auto minmax(0, 1fr) / minmax(0, 1fr) minmax(280px, 330px);
+  grid-template: auto minmax(0, 1fr) / auto minmax(0, 1fr) minmax(280px, 330px);
   gap: 12px;
   min-width: 0;
   min-height: 0;

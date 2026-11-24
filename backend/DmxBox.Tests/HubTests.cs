@@ -20,7 +20,7 @@ public sealed class HubTests
     private static readonly string[] DeskProperties =
     [
         "channels", "memoryLevels", "memoryStored", "master", "blackout", "channelNotes", "memoryNotes", "independents",
-        "memorySequence", "memoryIndependents", "rate", "rateOn", "solo", "channelClaims", "memoryClaims", "universes",
+        "memorySequence", "memoryIndependents", "bpm", "rateOn", "solo", "channelClaims", "memoryClaims", "universes",
     ];
 
     [Fact]
@@ -234,6 +234,24 @@ public sealed class HubTests
         int[] look = Numbers(looks.GetProperty("5"));
         Assert.Equal(512, look.Length);
         Assert.Equal([0, 200, 0], look[..3]);
+    }
+
+    [Fact]
+    public async Task OneLevelOfALookChangesFromTheMemoriesViewAsAStepOfTheHistory()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await using HubClient other = await server.ConnectAsync();
+
+        // An empty memory gets a look with that one channel; every UI asks for the looks again.
+        await ui.InvokeAsync("SetMemoryChannel", 5, 3, 120);
+        Assert.True((await NextDeskAsync(other)).GetProperty("memoryStored")[4].GetBoolean());
+        await AssertNextAsync(other, "ProjectChanged", """[{"name":"Untitled","path":null,"unsaved":true}]""");
+        await AssertNextAsync(other, "HistoryChanged", """[{"undo":"channel 3 (U1) of memory 5","redo":null}]""");
+        int[] look = Numbers((await ui.InvokeAsync("GetMemories")).GetProperty("5"));
+        Assert.Equal([0, 0, 120], look[..3]);
+
+        await AssertRefusedAsync("The channel must be from 1 to 512, not 513.", ui, "SetMemoryChannel", 5, 513, 1);
     }
 
     [Fact]
@@ -859,13 +877,13 @@ public sealed class HubTests
         await using HubClient other = await server.ConnectAsync();
 
         JsonElement desk = (await ui.InvokeAsync("Hello")).GetProperty("desk");
-        Assert.Equal(1, desk.GetProperty("rate").GetDouble());
+        Assert.Equal(120, desk.GetProperty("bpm").GetDouble());
         Assert.False(desk.GetProperty("rateOn").GetBoolean());
 
-        await ui.InvokeAsync("SetRate", true, 1.5);
-        await AssertNextAsync(other, "RateChanged", "[true,1.5]");
+        await ui.InvokeAsync("SetRate", true, 128);
+        await AssertNextAsync(other, "RateChanged", "[true,128]");
         Assert.Equal("""{"undo":null,"redo":null}""", (await ui.InvokeAsync("GetHistory")).GetRawText());
-        await AssertRefusedAsync("The rate must be from 0.1 to 10, not 20.", ui, "SetRate", true, 20);
+        await AssertRefusedAsync("The tempo must be from 30 to 300 beats per minute, not 20.", ui, "SetRate", true, 20);
     }
 
     [Fact]
@@ -906,8 +924,8 @@ public sealed class HubTests
         await ui.InvokeAsync("SetStage", plan);
         const string kept =
             """{"width":20,"depth":12,"lights":[""" +
-            """{"id":1,"name":"LED bar","address":30,"channels":"RGBRGB","color":null,"x":8,"y":1,"angle":90,"shape":"square","width":4,"depth":1,"type":null,"limit":100},""" +
-            """{"id":2,"name":"Back blue 1","address":6,"channels":"D","color":"#2060ff","x":2,"y":1.5,"angle":0,"shape":"round","width":1,"depth":1,"type":null,"limit":100}]""" +
+            """{"id":1,"name":"LED bar","address":30,"channels":"RGBRGB","color":null,"x":8,"y":1,"angle":90,"shape":"square","width":4,"depth":1,"type":null,"limit":100,"note":""},""" +
+            """{"id":2,"name":"Back blue 1","address":6,"channels":"D","color":"#2060ff","x":2,"y":1.5,"angle":0,"shape":"round","width":1,"depth":1,"type":null,"limit":100,"note":""}]""" +
             ""","pictureId":null,"pictureOpacity":0.6,"pictureOver":"stage","types":[],"groups":[]}""";
         await AssertNextAsync(other, "StageChanged", $"[{kept}]");
         await AssertNextAsync(other, "ProjectChanged", """[{"name":"Untitled","path":null,"unsaved":true}]""");

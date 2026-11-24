@@ -727,12 +727,13 @@ publish.cmd        # builds the page, then publish\Lumenet.exe
 
 ### Tests
 
-`dotnet test backend/DmxBox.sln` (543 tests: the client, also against the simulator with two outputs, the
-desk, solo, sequences and the stack with a clock the tests set by hand, the rate, undo and the autosave, the
-stage plan and its picture, fixtures, their attributes and their steps, the notes, the universes, project
-files with Export and Import, the examples, the import of show files, the links to the boxes and their wiring,
-the hub, LAN with a pretend PC and a pretend phone, the crossfades of sequences and the stack, steps of the
-stack that add and releases), and in `frontend/`: `npm test -- --watch=false` (218 tests of the page).
+`dotnet test backend/DmxBox.sln` (547 tests: the client, also against the simulator with two outputs, the
+desk, solo, sequences and the stack with a clock the tests set by hand, the rate and its tempo, undo and the autosave, the
+stage plan and its picture, fixtures, their attributes, their steps and their notes, the notes, the
+universes, project files with Export and Import, the examples, the import of show files, the links to the
+boxes and their wiring, the hub, LAN with a pretend PC and a pretend phone, the crossfades of sequences and
+the stack, steps of the stack that add and releases, a level of a memory changed from the Memories view),
+and in `frontend/`: `npm test -- --watch=false` (225 tests of the page).
 
 ---
 
@@ -1096,6 +1097,31 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
   seconds down ("Taking its step down") and left the scene on; the Stage view ticked the step that adds. No
   sideways scrolling at 1920 × 1080, 1366 × 768 and on a phone of 390 pixels, and no error on the page. Not
   yet tried with a light.
+* **The stack across the top of Main, double clicks on Memories, notes on Fixtures (2026-11-24):** the backend
+  passes 546 tests and the page 222. In the tests: a level of a memory changed through the hub is one step of
+  Undo, an empty memory gets a look with that channel, a memory with a sequence and a live stack refuse it;
+  the notes of fixtures and groups go into the project file only where there is one; on the page, a double
+  click on a memory's note and on a cell of the Memories view (Enter keeps, Esc does not), the notes under
+  the Fixtures keys, the tabs of the Keyboard view with their three numbers, the four panels of Settings, the
+  big numbers of the stack cards and the Stack key asking for the whole screen and giving it back. On a test
+  copy without a box, in Chrome with the example "6 Concert": at 1920 × 1080 and 1600 × 900 the stack's keys
+  stand exactly over Black out, the wheel shows the notes, the Stage view's stack and panel are equally wide
+  (334 and 429 pixels) with the plan in the middle, at 1600 × 900 the list of steps scrolled by itself when
+  step 7.0 came on and kept the current and the next step in sight, the cell fields lay over their cell, and
+  the Stack key put the page on the whole screen and took it back. No sideways scrolling on a phone of 390
+  pixels or a tablet of 820, and no error on the page. Not yet tried with a light.
+* **Rate as a tempo with Tempo taps, Keyboard in Settings (2026-11-24):** the backend passes 547 tests and the
+  page 225. In the tests: while Rate is lit a sequence takes one step per beat (steps of 3 s at 60 BPM: one
+  second each), steps of 1 s and 3 s keep their proportions, a sequence's own speed counts the steps of a
+  beat and a change of the tempo or of the speed goes on from where the sequence is; the tempo goes from 30
+  to 300 BPM and is no step of Undo; taps of Tempo give the average beat of the last four, start afresh after
+  a pause of two seconds and count only while Rate is lit; the Keyboard panel opens one kind at a time, none
+  at first, a search opens the first kind with keys it finds, and the old address /keyboard opens Settings.
+  On a test copy without a box, in Chrome: the Keyboard link is gone, the wheel shows 7 steps, four clicks on
+  Tempo about 0.44 s apart (as a script clicks) gave 134 to 136 BPM, Settings showed four panels of the same
+  size with none of the kinds open, Listen came back to Settings with Blackout chosen under Master; on a
+  phone the tempo fader lies across the width under the keys. No error on the page. Not yet tried with a
+  light or with music.
 * **dmxbox 2 on paper (2026-11-23):** both versions (two outputs and one) are drawn from their `circuit.py`,
   and each drawing passed its check against it: the schematic, the breadboard plan, the perfboard plan (38 and
   26 insulated wires, with SW1 at the cut left edge and the holes around the four screws kept empty;

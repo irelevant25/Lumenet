@@ -29,14 +29,14 @@
 >
   Solo down
 </button>
-<!-- The rate, a speed master for the sequences: RATE switches it, the fader under it sets it. -->
+<!-- The rate, a tempo for the sequences: RATE switches it, the fader under it and TEMPO set it. -->
 <button
   lmLamp
   type="button"
   tone="rate"
   aria-label="Rate"
   data-action="master.rate"
-  title="While lit, every sequence plays at its own speed times the rate of the fader"
+  title="While lit, every sequence takes one step per beat of the tempo"
   [level]="store.rateOn() ? 3 : 1"
   [attr.aria-pressed]="store.rateOn()"
   (click)="store.toggleRate()"
@@ -44,19 +44,34 @@
   Rate
 </button>
 
-<!-- The rate stands above its fader, as the level does above every other fader. -->
-<span class="readout" aria-hidden="true" [class.up]="store.rateOn()">{{ rateText() }}</span>
+<!-- The tempo stands above its fader, as the level does above every other fader. -->
+<span class="readout" aria-hidden="true" [class.up]="store.rateOn()">{{ bpmText() }}</span>
 <lm-fader
   tone="system"
-  label="Rate"
-  title="Double click: back to ×1"
+  label="Tempo"
+  title="Double click: back to 120 BPM"
   style="--lamp: var(--key-rate)"
+  [style.--mark]="mark"
   [class.off]="!store.rateOn()"
   [orientation]="store.mobile() ? 'horizontal' : 'vertical'"
   [max]="positions"
-  [step]="keyStep"
   [value]="position()"
-  [valueText]="rateSaid()"
+  [valueText]="bpmSaid()"
   (valueChange)="onPosition($event)"
-  (dblclick)="store.setRate(1)"
+  (dblclick)="resetBpm()"
 />
+<!-- Tapped in time with the music: the rate takes the beat of the taps. Only while RATE is lit. -->
+<button
+  lmLamp
+  type="button"
+  class="tempo"
+  tone="tempo"
+  aria-label="Tempo"
+  data-action="master.tempo"
+  title="Tap in time with the music: the rate takes the beat of the taps"
+  [level]="1"
+  [disabled]="!store.rateOn()"
+  (click)="store.tapTempo()"
+>
+  Tempo
+</button>

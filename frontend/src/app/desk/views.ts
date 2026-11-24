@@ -12,8 +12,9 @@ export const VIEWS = [
   { name: 'fixtures', label: 'Fixtures', url: '/fixtures' },
   { name: 'notes', label: 'Notes', url: '/notes' },
   { name: 'settings', label: 'Settings', url: '/settings' },
-  { name: 'keyboard', label: 'Keyboard', url: '/keyboard' },
 ] as const;
+// (Keyboard was a view after Settings until 2026-11-24; its shortcuts are a panel of Settings now.
+// A kept order or a kept list of hidden views that names it is read without it.)
 
 export type ViewName = (typeof VIEWS)[number]['name'];
 

@@ -9,14 +9,14 @@ describe('the settings this browser keeps', () => {
       channelSize: 'auto',
       channelRows: 2,
       memoryRows: 1,
-      wheelSize: 3,
+      wheelSize: 7,
       channelKeys: 10,
       memoryKeys: 10,
       fontScale: 1,
       shortcuts: { 'project.undo': 'Ctrl+KeyZ', 'project.redo': 'Ctrl+KeyY' },
       colors: {},
       hiddenViews: [],
-      viewOrder: ['main', 'memories', 'sequences', 'stack', 'stage', 'fixtures', 'notes', 'settings', 'keyboard'],
+      viewOrder: ['main', 'memories', 'sequences', 'stack', 'stage', 'fixtures', 'notes', 'settings'],
     });
   });
 
@@ -48,11 +48,12 @@ describe('the settings this browser keeps', () => {
   });
 
   it('put every view in the top bar once: the known ones in their order, the others after the view they follow', () => {
-    const order = parseSettings(JSON.stringify({ viewOrder: ['keyboard', 'stage', 'nothing', 'keyboard', 3, 'main'] })).viewOrder;
-    expect(order).toEqual(['keyboard', 'stage', 'fixtures', 'notes', 'settings', 'main', 'memories', 'sequences', 'stack']);
+    const order = parseSettings(JSON.stringify({ viewOrder: ['notes', 'stage', 'nothing', 'notes', 3, 'main'] })).viewOrder;
+    expect(order).toEqual(['notes', 'settings', 'stage', 'fixtures', 'main', 'memories', 'sequences', 'stack']);
     expect(parseSettings(JSON.stringify({ viewOrder: 'stage' })).viewOrder).toEqual(DEFAULT_SETTINGS.viewOrder);
 
-    // An order kept before there were notes: Notes comes after Fixtures, where it usually is.
+    // An order kept before there were notes: Notes comes after Fixtures, where it usually is. One
+    // kept while Keyboard was a view (until 2026-11-24, now a panel of Settings) is read without it.
     const before = ['main', 'memories', 'sequences', 'stack', 'stage', 'fixtures', 'keyboard', 'settings'];
     expect(parseSettings(JSON.stringify({ viewOrder: before })).viewOrder).toEqual([
       'main',
@@ -62,9 +63,9 @@ describe('the settings this browser keeps', () => {
       'stage',
       'fixtures',
       'notes',
-      'keyboard',
       'settings',
     ]);
+    expect(parseSettings(JSON.stringify({ hiddenViews: ['keyboard', 'stage'] })).hiddenViews).toEqual(['stage']);
   });
 
   it('read the colors that were kept before they were called so', () => {
@@ -96,7 +97,7 @@ describe('the settings this browser keeps', () => {
       channelSize: 8,
       channelRows: 1,
       memoryRows: 1,
-      wheelSize: 3,
+      wheelSize: 7,
       channelKeys: 32,
       memoryKeys: 10,
       fontScale: 1.2,

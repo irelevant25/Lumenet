@@ -10,8 +10,9 @@ import { RecordSection } from '../record-section/record-section';
 import { StackSection } from '../stack-section/stack-section';
 
 /**
- * The main view: the channels, the memories, a column with the master section, the stack and
- * the record keys, and at the right edge the independents (none when Settings shows no keys).
+ * The main view: the channels, the memories, and at the right the stack across the top of three
+ * columns: the master section over the record keys, the general section, and at the right edge
+ * the independents (none when Settings shows no keys).
  *
  * What Settings says about the main view goes onto its element as variables, so that it holds
  * for the main view only: --line (faders side by side, for a channel size chosen in Settings;

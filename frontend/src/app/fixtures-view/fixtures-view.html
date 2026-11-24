@@ -25,6 +25,9 @@
         @for (item of fixtures(); track item.light.id) {
           <lm-fixture-strip
             [name]="item.light.name || 'Light ' + item.key"
+            [note]="item.light.note ?? ''"
+            [locked]="store.live()"
+            (noteChange)="store.setLightNote(item.light.id, $event)"
             [keyText]="item.key"
             [level]="item.level"
             [color]="item.color"
@@ -48,6 +51,9 @@
           <lm-fixture-strip
             [group]="true"
             [name]="item.group.name || 'Group ' + item.number"
+            [note]="item.group.note ?? ''"
+            [locked]="store.live()"
+            (noteChange)="store.setGroupNote(item.group.id, $event)"
             [keyText]="'G' + item.number"
             [level]="item.level"
             [color]="item.color"

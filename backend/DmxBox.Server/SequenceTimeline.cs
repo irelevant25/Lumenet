@@ -277,6 +277,16 @@ internal static class SequenceTimeline
         return since <= longestDown;
     }
 
+    /// <summary>
+    /// How long a step of the sequence lasts on average, from its start to the start of the next,
+    /// at speed 1: what one beat of the rate's tempo stands for. A sequence without steps: 1 s.
+    /// </summary>
+    public static double AverageStep(Sequence sequence)
+    {
+        Step[] steps = sequence.Steps;
+        return steps.Length == 0 ? 1 : steps.Sum(LengthOf) / steps.Length;
+    }
+
     // From the start of a step to the start of the next one.
     private static double LengthOf(Step step)
     {

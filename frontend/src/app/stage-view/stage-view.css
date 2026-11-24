@@ -1,9 +1,11 @@
 /* The title with Clear, Edit and Add light; under it the stack at the left (lm-stage-stack), the
    plan as big as the window allows, and the panel at the right, always there: the plan keeps its
-   size whatever the panel shows. */
+   size whatever the panel shows. The stack is as wide as its row of keys (stack-keys.css: 7.9
+   keys and the gaps), and the panel as wide as the stack, so that the plan stands in the middle. */
 :host {
+  --side: max(280px, var(--key-w) * 7.9 + 16px + 6 * var(--strip-gap));
   display: grid;
-  grid-template: auto minmax(0, 1fr) / auto minmax(0, 1fr) minmax(280px, 330px);
+  grid-template: auto minmax(0, 1fr) / var(--side) minmax(0, 1fr) var(--side);
   gap: 12px;
   min-width: 0;
   min-height: 0;

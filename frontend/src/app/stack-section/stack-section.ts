@@ -11,13 +11,15 @@ const EXTRA_PLACES = 1;
 const ROLL_MS = 240;
 
 /**
- * The stack on the main view: a narrow section between the master and the record keys. Stack
- * takes it live, as the key of the Stack view does; Prev, Play, Pause and Next go through it.
+ * The stack on the main view: a section across the top of the three columns at the right. Its
+ * keys stand in the first column: Stack takes the stack live, as the key of the Stack view does;
+ * Prev, Play, Pause and Next go through it.
  *
- * Under the keys stands a wheel of the stack's steps: the one that is on in the middle (green,
- * with the arrow beside it), the one before it above (blue), the one Play goes to below (yellow),
- * the others grey. Settings says how many it shows: 1, 3, 5, 7 or 9. When another step comes on,
- * the wheel rolls to it; on a low window it shows fewer, always the middle.
+ * Beside the keys, over the other two columns, stands a wheel of the stack's steps, each number
+ * with its note: the one that is on in the middle (green, with the arrow beside it), the one
+ * before it above (blue), the one Play goes to below (yellow), the others grey. Settings says how
+ * many it shows: 1, 3, 5, 7 or 9. When another step comes on, the wheel rolls to it; on a low
+ * window it shows fewer, always the middle.
  */
 @Component({
   imports: [LampButton],
@@ -79,19 +81,29 @@ export class StackSection {
     return Math.abs(place.offset) <= (this.size() - 1) / 2;
   }
 
-  /** What a screen reader says for a place; null for one that says nothing. */
+  /**
+   * The note beside a step's number: the note of its channel or memory, the name of its fixture
+   * or group, what a release takes down; for a step without one, what it is ("Channel 5 (U1)").
+   */
+  protected noteOf(place: WheelPlace): string {
+    if (!place.step) return '';
+    return this.store.stepNote(place.step) || this.store.stepName(place.step);
+  }
+
+  /** What a screen reader says for a place, and the pointer on it; null for one that says nothing. */
   protected placeName(place: WheelPlace): string | null {
     if (!this.seen(place)) return null;
     if (!place.step) return place.offset === 0 ? 'No step is on' : null;
+    const step = `${place.step.cue}, ${this.noteOf(place)}`;
     switch (place.kind) {
       case 'previous':
-        return `Previous step: ${place.step.cue}`;
+        return `Previous step: ${step}`;
       case 'current':
-        return `Current step: ${place.step.cue}`;
+        return `Current step: ${step}`;
       case 'next':
-        return `Next step: ${place.step.cue}`;
+        return `Next step: ${step}`;
       default:
-        return `Step ${place.step.cue}`;
+        return `Step ${step}`;
     }
   }
 }

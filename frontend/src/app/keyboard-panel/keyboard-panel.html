@@ -1,0 +1,119 @@
+<h3 id="keyboard-title">Keyboard</h3>
+<p class="hint">
+  A shortcut for any key of the desk. The shortcuts belong to this device; Export takes them to
+  another one.
+  {{ mapped() }} {{ mapped() === 1 ? 'key has' : 'keys have' }} a shortcut.
+</p>
+
+<div class="top">
+  <button type="button" class="listen" (click)="keyboard.listen()">Listen</button>
+  <p class="hint">
+    Listen shows the desk; the key you double-click there is not pressed but picked, and comes back
+    here. A single click works as always, so you can open another view or page first. Set, then
+    press the keys of the shortcut (Esc stops). Shortcuts rest while a note is typed or a window is
+    open.
+  </p>
+  <input
+    class="search"
+    type="search"
+    placeholder="Find a key or a shortcut"
+    aria-label="Find a key or a shortcut"
+    autocomplete="off"
+    [value]="search()"
+    (input)="onSearch($event)"
+  />
+</div>
+
+@if (keyboard.lastMove()) {
+  <p class="done" role="status">{{ keyboard.lastMove() }}</p>
+}
+
+<!-- The kinds of keys, one under the other: a press opens one and closes the others. Each says
+     its number of keys, in brackets how many have a shortcut (green), and while a search runs,
+     how many it finds (yellow): "Stack 6 (4) 2". -->
+<div class="kinds" role="group" aria-labelledby="keyboard-title">
+  @for (kind of kinds(); track kind.group; let index = $index) {
+    <section class="kind" [class.open]="kind.group === openGroup()">
+      <h4>
+        <button
+          type="button"
+          class="head"
+          [id]="'kind-' + index"
+          [attr.aria-label]="kindName(kind)"
+          [attr.aria-expanded]="kind.group === openGroup()"
+          [attr.aria-controls]="'kind-keys-' + index"
+          [class.none-found]="searching() && kind.found === 0"
+          (click)="toggle(kind.group)"
+          (keydown)="onHeadKey($event, index)"
+        >
+          <span class="chevron" aria-hidden="true"></span>
+          <span class="name">{{ kind.group }}</span>
+          <span class="count">{{ kind.total }}</span>
+          <span class="bound" [class.none]="kind.bound === 0">({{ kind.bound }})</span>
+          @if (searching()) {
+            <span class="found" [class.none]="kind.found === 0">{{ kind.found }}</span>
+          }
+        </button>
+      </h4>
+
+      @if (kind.group === openGroup()) {
+        <div
+          class="keys"
+          role="region"
+          [id]="'kind-keys-' + index"
+          [attr.aria-labelledby]="'kind-' + index"
+        >
+          @if (rows().length) {
+            <table>
+              <caption class="for-readers">
+                Shortcuts:
+                {{
+                  kind.group
+                }}
+              </caption>
+              <tbody>
+                @for (action of rows(); track action.id) {
+                  <tr
+                    [attr.data-row]="action.id"
+                    [class.picked]="keyboard.picked() === action.id"
+                    [class.recording]="keyboard.recording() === action.id"
+                  >
+                    <th scope="row">{{ label(action) }}</th>
+                    <td class="shortcut">
+                      @if (keyboard.recording() === action.id) {
+                        <span class="waiting">Press the keys… (Esc stops)</span>
+                      } @else {
+                        {{ shortcutOf(action) }}
+                      }
+                    </td>
+                    <td class="row-keys">
+                      <button
+                        type="button"
+                        class="set"
+                        [attr.aria-label]="'Set the shortcut of ' + label(action)"
+                        (click)="keyboard.record(action.id)"
+                      >
+                        Set
+                      </button>
+                      <button
+                        type="button"
+                        class="delete"
+                        [attr.aria-label]="'Take the shortcut of ' + label(action) + ' away'"
+                        [disabled]="!shortcutOf(action)"
+                        (click)="keyboard.clear(action.id)"
+                      >
+                        ✕
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else {
+            <p class="hint">No key or shortcut has these letters.</p>
+          }
+        </div>
+      }
+    </section>
+  }
+</div>

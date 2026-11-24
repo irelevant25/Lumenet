@@ -29,3 +29,23 @@ export function joinNote(first: string, second: string): string {
 export function noteInOneLine(note: string): string {
   return splitNote(note).join(' ').trim();
 }
+
+/** The most characters a line under a fader of the usual width shows whole. */
+const SHORT_LINE = 7;
+
+/**
+ * A text of one line, such as the name of a light, in the two lines of a note under a fader: one
+ * line when it is short, else broken at the space that leaves the shorter longest line ("Blinder
+ * left": "Blinder", "left"). A field cuts off what is still too long.
+ */
+export function inTwoLines(text: string): [string, string] {
+  const words = text.trim().replace(/\s+/g, ' ');
+  let best: [string, string] = [words, ''];
+  if (words.length <= SHORT_LINE) return best;
+  for (let at = words.indexOf(' '); at >= 0; at = words.indexOf(' ', at + 1)) {
+    const lines: [string, string] = [words.slice(0, at), words.slice(at + 1)];
+    if (Math.max(lines[0].length, lines[1].length) < Math.max(best[0].length, best[1].length))
+      best = lines;
+  }
+  return best;
+}

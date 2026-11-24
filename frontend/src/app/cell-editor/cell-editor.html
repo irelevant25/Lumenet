@@ -1,0 +1,31 @@
+<input
+  class="level"
+  type="number"
+  min="0"
+  step="1"
+  inputmode="numeric"
+  [max]="maxLevel"
+  [value]="level()"
+  [disabled]="levelLocked()"
+  [attr.aria-label]="'Level of ' + channelName() + ' in memory ' + memory()"
+/>
+<input
+  class="line"
+  type="text"
+  autocomplete="off"
+  spellcheck="false"
+  [attr.maxlength]="lineLength"
+  [attr.placeholder]="fixtureLines()[0] || null"
+  [value]="lines()[0]"
+  [attr.aria-label]="'Note for ' + channelName()"
+/>
+<input
+  class="line"
+  type="text"
+  autocomplete="off"
+  spellcheck="false"
+  [attr.maxlength]="lineLength"
+  [attr.placeholder]="fixtureLines()[1] || null"
+  [value]="lines()[1]"
+  [attr.aria-label]="'Note for ' + channelName() + ', second line'"
+/>

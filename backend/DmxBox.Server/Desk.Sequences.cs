@@ -17,16 +17,20 @@ internal sealed partial class Desk
     // start plays other orders.
     private readonly int[] _sequenceSeeds = new int[MemoryCount];
 
-    // The rate: a speed master for all sequences. While it is on, every sequence plays at its own
-    // speed times the rate. Like the master fader it belongs to the evening, not to the project.
-    private double _rate = 1;
+    // The rate: a tempo for all sequences, in beats per minute. While RATE is lit every sequence
+    // takes one step per beat (its own speed counts the steps of a beat); dark, every sequence
+    // plays its own times. Like the master fader it belongs to the evening, not to the project.
+    private double _bpm = DefaultBpm;
     private bool _rateOn;
 
-    /// <summary>The slowest rate: every sequence ten times slower.</summary>
-    public const double MinRate = 0.1;
+    /// <summary>The slowest tempo of the rate, in beats per minute.</summary>
+    public const double MinBpm = 30;
 
-    /// <summary>The fastest rate: every sequence ten times faster.</summary>
-    public const double MaxRate = 10;
+    /// <summary>The fastest tempo of the rate, in beats per minute.</summary>
+    public const double MaxBpm = 300;
+
+    /// <summary>The tempo of the rate on a new desk.</summary>
+    public const double DefaultBpm = 120;
 
     /// <summary>
     /// Stores a sequence in a memory that is empty or holds a sequence already, played in turn
@@ -107,36 +111,38 @@ internal sealed partial class Desk
         }
     }
 
-    /// <summary>The rate, a speed master for all sequences, and whether it is on.</summary>
-    public (bool On, double Rate) Rate
+    /// <summary>The rate: whether it is lit, and its tempo in beats per minute.</summary>
+    public (bool On, double Bpm) Rate
     {
         get
         {
             lock (_lock)
             {
-                return (_rateOn, _rate);
+                return (_rateOn, _bpm);
             }
         }
     }
 
     /// <summary>
-    /// Sets the rate, a speed master for all sequences: while it is on, every sequence plays at
-    /// its own speed times the rate; off, at its own speed. Every sequence goes on from where it
-    /// is. It is no part of the project, so it can be changed while the stack is live.
+    /// Sets the rate, a tempo for all sequences: while it is lit, every sequence takes one step
+    /// per beat, its steps keeping their proportions (on average a step and its wait last one
+    /// beat), and a sequence's own speed counts the steps of a beat (2: two steps per beat). Dark,
+    /// every sequence plays its own times. Every sequence goes on from where it is. It is no part
+    /// of the project, so it can be changed while the stack is live.
     /// </summary>
     /// <param name="on">True: the rate counts.</param>
-    /// <param name="rate">From 0.1 (ten times slower) to 10 (ten times faster); 1 changes nothing.</param>
-    /// <exception cref="DeskException">The rate is out of range.</exception>
-    public void SetRate(bool on, double rate)
+    /// <param name="bpm">The tempo, from 30 to 300 beats per minute.</param>
+    /// <exception cref="DeskException">The tempo is out of range.</exception>
+    public void SetRate(bool on, double bpm)
     {
         // "Not a number" fails both comparisons, so it is refused as well. The numbers are written
         // with a point, as on the UI, whatever the language of the PC.
-        if (!(rate >= MinRate && rate <= MaxRate))
-            throw new DeskException(FormattableString.Invariant($"The rate must be from {MinRate} to {MaxRate}, not {rate}."));
+        if (!(bpm >= MinBpm && bpm <= MaxBpm))
+            throw new DeskException(FormattableString.Invariant($"The tempo must be from {MinBpm} to {MaxBpm} beats per minute, not {bpm}."));
 
         lock (_lock)
         {
-            if (on == _rateOn && rate == _rate)
+            if (on == _rateOn && bpm == _bpm)
                 return;
 
             // Every sequence stands where it stands; from here on its time runs at the new speed.
@@ -146,7 +152,7 @@ internal sealed partial class Desk
                 elapsed[index] = SequenceTime(index, now);
 
             _rateOn = on;
-            _rate = rate;
+            _bpm = bpm;
             for (int index = 0; index < MemoryCount; index++)
                 _sequenceStarts[index] = now - elapsed[index] / SpeedOf(index);
 
@@ -223,11 +229,14 @@ internal sealed partial class Desk
         return (now - _sequenceStarts[index]) * SpeedOf(index);
     }
 
-    // Call with the lock held. The speed the sequence at "index" plays at: its own, times the
-    // rate while the rate is on.
+    // Call with the lock held. The speed the sequence at "index" plays at: its own; while the rate
+    // is lit, so fast that its average step lasts one beat of the tempo, times its own speed (the
+    // steps it takes in a beat).
     private double SpeedOf(int index)
     {
-        return (_sequences[index]?.Speed ?? 1) * (_rateOn ? _rate : 1);
+        Sequence? sequence = _sequences[index];
+        double own = sequence?.Speed ?? 1;
+        return _rateOn && sequence is not null ? own * SequenceTimeline.AverageStep(sequence) * _bpm / 60 : own;
     }
 
     // Call with the lock held. A look is not turned into a sequence unasked: its owner empties

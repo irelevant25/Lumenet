@@ -38,16 +38,23 @@
           >
             {{ memory }}
           </button>
-          <lm-note-lines [note]="store.memoryNotes()[memory - 1]" />
+          <lm-note-lines
+            [note]="store.memoryNotes()[memory - 1]"
+            [editable]="true"
+            [locked]="store.live()"
+            [label]="'Note for memory ' + memory"
+            (noteChange)="store.setMemoryNote(memory, $event)"
+          />
         </div>
       }
     </div>
 
     <!-- One cell for each channel: the level in the middle, the channel number (drawn by the
          style sheet from data-channel) small in the corner, and the channel's note under the
-         level (drawn from data-note). One element a cell, nothing more. -->
-    <div class="table-box">
-      <table class="matrix" [class.with-notes]="withNotes()">
+         level (drawn from data-note). One element a cell, nothing more. A double click on a cell
+         lays fields over it, to change the level and the note (lm-cell-editor). -->
+    <div #tableBox class="table-box">
+      <table class="matrix" [class.with-notes]="withNotes()" [class.editable]="!store.live()" (dblclick)="onTableDouble($event)">
         <caption>
           The channels of memory {{ store.inspectedMemory() }}{{ universeKeys().length > 0 ? ', universe ' + universe() : '' }}
         </caption>
@@ -69,6 +76,23 @@
           }
         </tbody>
       </table>
+
+      @if (editing(); as edit) {
+        <lm-cell-editor
+          [style.left.px]="edit.left"
+          [style.top.px]="edit.top"
+          [style.width.px]="edit.width"
+          [style.min-height.px]="edit.height"
+          [channelName]="edit.channelName"
+          [memory]="edit.memory"
+          [level]="edit.level"
+          [note]="edit.note"
+          [fixture]="edit.fixture"
+          [levelLocked]="edit.sequence"
+          [start]="edit.start"
+          (done)="finishEdit($event)"
+        />
+      }
     </div>
   </div>
 

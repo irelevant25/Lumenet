@@ -1,2 +1,27 @@
-<span class="line">{{ lines()[0] }}</span>
-<span class="line">{{ lines()[1] }}</span>
+@if (editing()) {
+  <input
+    class="line"
+    type="text"
+    autocomplete="off"
+    spellcheck="false"
+    [attr.maxlength]="lineLength"
+    [value]="lines()[0]"
+    [attr.aria-label]="label()"
+    (keydown)="onKey($event)"
+    (focusout)="onFocusOut($event)"
+  />
+  <input
+    class="line"
+    type="text"
+    autocomplete="off"
+    spellcheck="false"
+    [attr.maxlength]="lineLength"
+    [value]="lines()[1]"
+    [attr.aria-label]="label() + ', second line'"
+    (keydown)="onKey($event)"
+    (focusout)="onFocusOut($event)"
+  />
+} @else {
+  <span class="line">{{ lines()[0] }}</span>
+  <span class="line">{{ lines()[1] }}</span>
+}

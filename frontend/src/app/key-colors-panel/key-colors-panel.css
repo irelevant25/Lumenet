@@ -1,12 +1,20 @@
-/* A panel over the whole width of Settings: the groups side by side as far as there is room. */
+/* A panel of Settings like the others, as high as the room of the panels (100cqh: settings-view.css
+   makes that room a size container): the title and the sentence stay, and the colors under them,
+   one group under the other, scroll. On a phone the page scrolls instead. */
 :host {
-  display: block;
-  grid-column: 1 / -1;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  box-sizing: border-box;
+  height: 100cqh;
   min-width: 0;
   padding: 10px 14px 12px;
   border: 1px solid var(--edge);
   border-radius: 4px;
   background: var(--well);
+}
+
+:host-context(.mobile) {
+  height: auto;
 }
 
 h3,
@@ -48,8 +56,12 @@ h4 {
 
 .groups {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
-  gap: 14px 24px;
+  align-content: start;
+  gap: 14px;
+  min-height: 0;
+  padding-right: 4px; /* room between the colors and the scrollbar */
+  overflow: auto;
+  scrollbar-width: thin;
 }
 
 /* a color: the color itself (a press opens the palette), what it is for, and the key back to the usual one */

@@ -44,6 +44,7 @@ export const KEY_COLORS: readonly KeyColor[] = [
   key('solo', 'General', 'Solo up', WHITE),
   key('solo-down', 'General', 'Solo down', WHITE),
   key('rate', 'General', 'Rate (and its fader)', AMBER),
+  key('tempo', 'General', 'Tempo', AMBER),
 
   color('stack', 'Stack', 'Stack (live), and the Live mark in the top bar', '--live', '#ff5247'),
   key('prev', 'Stack', 'Prev', AMBER),

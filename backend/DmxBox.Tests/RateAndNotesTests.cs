@@ -3,8 +3,8 @@ using DmxBox.Server;
 namespace DmxBox.Tests;
 
 /// <summary>
-/// The rate (a speed master for all sequences) on the desk, and the notes of the project
-/// (instructions for the show, written on the Notes view).
+/// The rate (a tempo for all sequences: one step per beat while RATE is lit) on the desk, and
+/// the notes of the project (instructions for the show, written on the Notes view).
 /// </summary>
 public sealed class RateAndNotesTests
 {
@@ -19,28 +19,51 @@ public sealed class RateAndNotesTests
     // ---------------------------------------------------------------- the rate
 
     [Fact]
-    public void TheRateIsASpeedMasterForEverySequenceWhileItIsOn()
+    public void WhileRateIsLitEverySequenceTakesOneStepPerBeatOfItsTempo()
     {
-        // Steps of 2 s up: half way after 1 s.
+        // Steps of 2 s up and 1 s wait (3 s each): half way up after 1 s.
         _desk.SetSequence(2, loop: true, [new Step("channel", 1, 200, 2, 1, 0), new Step("channel", 2, 200, 2, 1, 0)]);
         _desk.SetMemoryLevel(2, 255);
         long changes = _desk.ProjectChanges;
 
-        _desk.SetRate(on: false, 2);                // off: it changes nothing yet
+        _desk.SetRate(on: false, 60);               // dark: it changes nothing yet
         _time.Pass(1);
-        Assert.Equal(100, _desk.GetOutput()[0]);
+        Assert.Equal((100, 0), (_desk.GetOutput()[0], _desk.GetOutput()[1]));
 
-        _desk.SetRate(on: true, 2);                 // on: twice as fast from here, where it is
+        // Lit, at 60 beats a minute: a step of 3 s lasts one beat, 1 s; it goes on from where it is.
+        _desk.SetRate(on: true, 60);
         Assert.Equal(100, _desk.GetOutput()[0]);
-        _time.Pass(0.5);
-        Assert.Equal(200, _desk.GetOutput()[0]);
-        Assert.Equal((true, 2.0), _desk.Rate);
+        _time.Pass(0.5);                            // 1.5 s of the sequence more: up, waiting
+        Assert.Equal((200, 0), (_desk.GetOutput()[0], _desk.GetOutput()[1]));
+        _time.Pass(0.5);                            // 4 s of the sequence: the second step half way up
+        Assert.Equal((0, 100), (_desk.GetOutput()[0], _desk.GetOutput()[1]));
+        Assert.Equal((true, 60.0), _desk.Rate);
 
         // No part of the project: nothing to save, and the sequence keeps its own speed.
         Assert.Equal(changes, _desk.ProjectChanges);
         Assert.Equal(1, _desk.GetSequences()[2].Speed);
-        Assert.Equal(2, _desk.GetState().Rate);
+        Assert.Equal(60, _desk.GetState().Bpm);
         Assert.True(_desk.GetState().RateOn);
+    }
+
+    [Fact]
+    public void TheStepsOfASequenceKeepTheirProportionsAndItsOwnSpeedCountsTheStepsOfABeat()
+    {
+        // A step of 1 s, and one of 2 s up and 1 s wait (3 s): 2 s on average, so at 60 beats a
+        // minute they last 0.5 s and 1.5 s.
+        _desk.SetSequence(2, loop: true, [new Step("channel", 1, 200, 1, 0, 0), new Step("channel", 2, 200, 2, 1, 0)]);
+        _desk.SetMemoryLevel(2, 255);
+        _desk.SetRate(on: true, 60);
+        _time.Pass(0.25);
+        Assert.Equal((100, 0), (_desk.GetOutput()[0], _desk.GetOutput()[1]));
+        _time.Pass(0.75);                           // 0.5 s into the second step: half way up
+        Assert.Equal((0, 100), (_desk.GetOutput()[0], _desk.GetOutput()[1]));
+
+        // Its own speed 2: two steps a beat, from where it is.
+        _desk.SetSequenceSpeed(2, 2);
+        Assert.Equal(100, _desk.GetOutput()[1]);
+        _time.Pass(0.25);                           // the other second of its up, four times as fast as its own times
+        Assert.Equal(200, _desk.GetOutput()[1]);
     }
 
     [Fact]
@@ -48,34 +71,36 @@ public sealed class RateAndNotesTests
     {
         _desk.AddStackStep(new Step("memory", 2, 255, 0, 0, 0));
         _desk.SetStackLive(true);
-        _desk.SetRate(on: true, 0.5);              // not locked: it is no part of the show
+        _desk.SetRate(on: true, 90);               // not locked: it is no part of the show
         _desk.SetStackLive(false);
         _desk.StartNewProject();
-        Assert.Equal((true, 0.5), _desk.Rate);      // like the master, it belongs to the evening
+        Assert.Equal((true, 90.0), _desk.Rate);     // like the master, it belongs to the evening
     }
 
     [Fact]
-    public void TheRateGoesFromATenthToTenTimes()
+    public void TheTempoGoesFrom30To300BeatsAMinute()
     {
-        var slow = Assert.Throws<DeskException>(() => _desk.SetRate(true, 0.05));
-        Assert.Equal("The rate must be from 0.1 to 10, not 0.05.", slow.Message);
-        Assert.Throws<DeskException>(() => _desk.SetRate(true, 11));
+        Assert.Equal((false, 120.0), _desk.Rate);   // a new desk
+        var slow = Assert.Throws<DeskException>(() => _desk.SetRate(true, 20));
+        Assert.Equal("The tempo must be from 30 to 300 beats per minute, not 20.", slow.Message);
+        Assert.Throws<DeskException>(() => _desk.SetRate(true, 301));
         Assert.Throws<DeskException>(() => _desk.SetRate(true, double.NaN));
-        Assert.Equal((false, 1.0), _desk.Rate);
+        Assert.Equal((false, 120.0), _desk.Rate);
     }
 
     [Fact]
-    public void ASequenceSpeedChangedWhileTheRateIsOnGoesOnFromWhereItIs()
+    public void ASequenceSpeedChangedWhileTheRateIsLitGoesOnFromWhereItIs()
     {
-        _desk.SetSequence(2, loop: true, [new Step("channel", 1, 200, 2, 1, 0), new Step("channel", 2, 200, 2, 1, 0)]);
+        // Steps of 2 s up and 2 s wait: at 120 beats a minute a step lasts 0.5 s, eight times as fast.
+        _desk.SetSequence(2, loop: true, [new Step("channel", 1, 200, 2, 2, 0), new Step("channel", 2, 200, 2, 2, 0)]);
         _desk.SetMemoryLevel(2, 255);
-        _desk.SetRate(on: true, 2);
-        _time.Pass(0.5);                            // 1 s of the sequence: half way up
+        _desk.SetRate(on: true, 120);
+        _time.Pass(0.125);                          // 1 s of the sequence: half way up
         Assert.Equal(100, _desk.GetOutput()[0]);
 
-        _desk.SetSequenceSpeed(2, 0.5);             // now at 0.5 x 2 = 1
+        _desk.SetSequenceSpeed(2, 0.5);             // one step every two beats now: four times its own times
         Assert.Equal(100, _desk.GetOutput()[0]);
-        _time.Pass(1);
+        _time.Pass(0.25);
         Assert.Equal(200, _desk.GetOutput()[0]);
     }
 

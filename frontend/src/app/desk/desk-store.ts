@@ -1,6 +1,8 @@
 import { Service, computed, inject, signal } from '@angular/core';
 import { DeskConnection } from './desk-connection';
 import { DeskSettings } from './desk-settings';
+import { enterFullscreen, leaveFullscreen } from './fullscreen';
+import { DEFAULT_BPM, roundedBpm, tempoOfTaps, withTap } from './tempo';
 import {
   AutosaveOptions,
   BoxPlan,
@@ -106,10 +108,6 @@ const NOTICE_MS = 5000;
 
 /** How long the notice stays that unsaved work was brought back: longer, it matters. */
 const RECOVERED_NOTICE_MS = 15000;
-
-/** The rate, a speed master for all sequences: from a tenth to ten times their own speed. */
-export const MIN_RATE = 0.1;
-export const MAX_RATE = 10;
 
 /** Nothing runs: no sequence gives anything, and no step of the stack is on. */
 const NO_PLAYBACK: Playback = {
@@ -447,9 +445,14 @@ export class DeskStore {
   readonly solo = signal<SoloState>(NO_SOLO);
   // The faders a held key holds now, by "channel 5" or "memory 3": the level each had before, and which solo holds it.
   private readonly held = new Map<string, { level: number; up: boolean }>();
-  /** The rate, a speed master for all sequences (RATE and its fader), and whether it counts. */
-  readonly rate = signal(1);
+  /**
+   * The rate (RATE, its fader and TEMPO): a tempo for all sequences, in beats per minute, and
+   * whether it counts. While it does, every sequence takes one step per beat.
+   */
+  readonly bpm = signal(DEFAULT_BPM);
   readonly rateOn = signal(false);
+  // The taps of TEMPO that count, in milliseconds of the page (see desk/tempo.ts).
+  private taps: number[] = [];
   /** The autosave of the desk program: on or off, and how often; null while it is not known. */
   readonly autosave = signal<AutosaveOptions | null>(null);
   /** The stage plan of the project: the lights of the rig and where they hang. */
@@ -509,9 +512,9 @@ export class DeskStore {
     connection.on<[Playback]>('PlaybackChanged', (playback) => this.takePlayback(playback));
     connection.on<[LanAccess]>('LanAccessChanged', (lan) => this.lan.set(lan));
     connection.on<[HistoryState]>('HistoryChanged', (history) => this.history.set(history));
-    connection.on<[boolean, number]>('RateChanged', (on, rate) => {
+    connection.on<[boolean, number]>('RateChanged', (on, bpm) => {
       this.rateOn.set(on);
-      this.rate.set(rate);
+      this.bpm.set(bpm);
     });
     connection.on<[AutosaveOptions]>('AutosaveChanged', (options) => this.autosave.set(options));
     connection.on<[StagePlan]>('StageChanged', (plan) => this.takeStage(plan));
@@ -767,6 +770,43 @@ export class DeskStore {
     this.run('SetMemoryNote', memory, note);
   }
 
+  /**
+   * The note under the key of a fixture, or of a group, on the Fixtures page. It belongs to the
+   * stage plan, which goes to the desk program whole.
+   */
+  setLightNote(lightId: number, note: string): void {
+    const plan = this.stage();
+    if ((plan.lights.find((light) => light.id === lightId)?.note ?? '') === note) return;
+    this.setStage({ ...plan, lights: plan.lights.map((light) => (light.id === lightId ? { ...light, note } : light)) });
+  }
+
+  setGroupNote(groupId: number, note: string): void {
+    const plan = this.stage();
+    if ((plan.groups.find((group) => group.id === groupId)?.note ?? '') === note) return;
+    this.setStage({ ...plan, groups: plan.groups.map((group) => (group.id === groupId ? { ...group, note } : group)) });
+  }
+
+  // ---------------------------------------------------------------- the table of the Memories view
+
+  /**
+   * Changes the level one channel has in the look of a memory, from the table of the Memories
+   * view: shown at once, and the desk program sends the whole desk, after which the looks are
+   * fetched again. An empty memory gets a look with only that channel (a 0 leaves it empty); a
+   * memory that holds a sequence is changed on the Sequences view instead.
+   */
+  setMemoryChannel(memory: number, channel: number, level: number): void {
+    if (this.live() || this.memorySequence()[memory - 1]) return;
+    const looks = this.memoryLooks();
+    const look = looks[memory];
+    if (look ? look[channel - 1] === level : level === 0) return;
+
+    const changed = (look ?? zeros(this.channelCount())).slice();
+    changed[channel - 1] = level;
+    this.memoryLooks.set({ ...looks, [memory]: changed });
+    if (!look) this.markStored(memory, 'look');
+    this.run('SetMemoryChannel', memory, channel, level);
+  }
+
   // ---------------------------------------------------------------- independent keys
 
   /**
@@ -882,21 +922,34 @@ export class DeskStore {
   // ---------------------------------------------------------------- the rate
 
   /**
-   * RATE: lit, every sequence plays at its own speed times the rate (the wheel under the key
-   * sets it); dark, at its own speed. A speed master, like the master fader: it is not saved
-   * with the project.
+   * RATE: lit, every sequence takes one step per beat of the tempo (the fader under the key and
+   * TEMPO set it); dark, every sequence plays its own times. Like the master fader it is not
+   * saved with the project.
    */
   toggleRate(): void {
     this.rateOn.update((on) => !on);
-    this.sendSoon('rate', 'SetRate', this.rateOn(), this.rate());
+    this.taps = [];
+    this.sendSoon('rate', 'SetRate', this.rateOn(), this.bpm());
   }
 
-  /** Sets the rate, from 0.1 to 10 (the wheel); it counts while RATE is lit. */
-  setRate(rate: number): void {
-    const kept = Math.min(MAX_RATE, Math.max(MIN_RATE, rate));
-    if (kept === this.rate()) return;
-    this.rate.set(kept);
+  /** Sets the tempo of the rate, 30 to 300 beats per minute (its fader); it counts while RATE is lit. */
+  setBpm(bpm: number): void {
+    const kept = roundedBpm(bpm);
+    if (kept === this.bpm()) return;
+    this.bpm.set(kept);
     this.sendSoon('rate', 'SetRate', this.rateOn(), kept);
+  }
+
+  /**
+   * A tap of TEMPO, in time with the music: from the second tap on, the tempo of the rate is the
+   * beat of the taps (the average of the last four beats; a pause of more than two seconds starts
+   * afresh). Only while RATE is lit.
+   */
+  tapTempo(now: number = performance.now()): void {
+    if (!this.rateOn()) return;
+    this.taps = withTap(this.taps, now);
+    const bpm = tempoOfTaps(this.taps);
+    if (bpm !== null) this.setBpm(bpm);
   }
 
   // ---------------------------------------------------------------- the stage plan
@@ -1100,10 +1153,15 @@ export class DeskStore {
    * Switches the stack live or off. Going live brings every fader to zero and starts the first
    * step; from then on nothing that is stored can be changed. Switching it off stops the stack
    * and leaves the faders where they are.
+   *
+   * A show runs on the whole screen: going live puts this page on it, going off takes it back.
+   * Only on this device, where the key was pressed: the browser allows it only after a press.
    */
   setStackLive(on: boolean): void {
     this.mode.set(IDLE);
     if (on) this.dropOutbox(); // fader moves that are still waiting must not arrive after the faders went down
+    if (on) enterFullscreen();
+    else leaveFullscreen();
     this.run('SetStackLive', on);
   }
 
@@ -1479,7 +1537,7 @@ export class DeskStore {
     if (desk.memoryIndependents) this.memoryIndependents.set(desk.memoryIndependents);
     this.master.set(desk.master);
     this.blackout.set(desk.blackout);
-    this.rate.set(desk.rate ?? 1);
+    this.bpm.set(desk.bpm ?? DEFAULT_BPM);
     this.rateOn.set(desk.rateOn ?? false);
     this.solo.set(desk.solo ?? NO_SOLO);
     // The order in which faders took the attributes of the lights; the page counts on from there.

@@ -4,7 +4,7 @@
   justify-self: start;
 }
 
-/* a button that looks like a line of text */
+/* a button that looks like a line of text: underlined, as a link is, and brighter under the pointer */
 button {
   display: inline-flex;
   align-items: center;
@@ -15,17 +15,18 @@ button {
   color: var(--legend-dim);
   font-family: inherit;
   font-size: calc(13px * var(--font-scale));
+  text-decoration: underline;
+  text-underline-offset: 2px;
   cursor: pointer;
 }
 
-button:hover {
-  text-decoration: underline;
-}
-
-button:hover,
 .connected,
 .missing {
   color: var(--legend);
+}
+
+button:hover {
+  color: #fff;
 }
 
 /* a little round lamp: green while the boxes answer, amber while a box of the list does not */

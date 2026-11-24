@@ -176,7 +176,12 @@ public sealed record StagePlan(int Width, int Depth, StageLight[] Lights)
                 throw new DeskException($"Two groups of the plan have the same number, {group.Id}.");
 
             int[] members = [.. (group.Lights ?? []).Where(lightIds.Contains).Distinct()];
-            kept[index] = group with { Name = PlanText.Checked(group.Name, LightGroup.MaxNameLength, where, "a name"), Lights = members };
+            kept[index] = group with
+            {
+                Name = PlanText.Checked(group.Name, LightGroup.MaxNameLength, where, "a name"),
+                Note = PlanText.CheckedNote(group.Note, where),
+                Lights = members,
+            };
         }
 
         return kept;
@@ -201,6 +206,23 @@ internal static class PlanText
             throw new DeskException($"{where}: {what} cannot contain a tab, a line break or the like.");
 
         return kept;
+    }
+
+    /// <summary>A note under a key of the Fixtures page, with the rules of the notes under the faders.</summary>
+    /// <param name="note">The note as it came; null for none.</param>
+    /// <param name="where">Names what it belongs to in the message, like "Light 3 of the plan".</param>
+    /// <exception cref="DeskException">It is too long, or has a tab, a line break or the like.</exception>
+    public static string CheckedNote(string? note, string where)
+    {
+        try
+        {
+            return Note.Clean(note);
+        }
+        catch (DeskException e)
+        {
+            // "A note can ..." goes on after the colon as "a note can ..."
+            throw new DeskException($"{where}: {char.ToLowerInvariant(e.Message[0])}{e.Message[1..]}");
+        }
     }
 
     /// <summary>True for "#" and six digits of base 16, in small letters, like "#ff2000".</summary>
@@ -356,9 +378,16 @@ public sealed record LightGroup(int Id, string Name, int[] Lights)
     /// <summary>The longest name a group can have.</summary>
     public const int MaxNameLength = 24;
 
+    /// <summary>
+    /// The note under its key on the Fixtures page, as the owner typed it there: two lines in one
+    /// text, with the rules of the notes under the faders. Empty for none: then the page shows the
+    /// name there, dimmed.
+    /// </summary>
+    public string Note { get; init; } = "";
+
     internal bool SameAs(LightGroup other)
     {
-        return Id == other.Id && Name == other.Name && Lights.SequenceEqual(other.Lights);
+        return Id == other.Id && Name == other.Name && Note == other.Note && Lights.SequenceEqual(other.Lights);
     }
 }
 
@@ -467,6 +496,13 @@ public sealed record StageLight(int Id, string Name, int Address, string Channel
     /// </summary>
     public int Limit { get; init; } = NoLimit;
 
+    /// <summary>
+    /// The note under its key on the Fixtures page, as the owner typed it there: two lines in one
+    /// text, with the rules of the notes under the faders. Empty for none: then the page shows the
+    /// name there, dimmed.
+    /// </summary>
+    public string Note { get; init; } = "";
+
     /// <summary>The light as the desk keeps it, see <see cref="StagePlan.Checked"/>.</summary>
     /// <param name="plan">The plan it is on: its stage says how far the light can be from it.</param>
     /// <param name="types">The kinds of lights of the plan, by their number.</param>
@@ -520,6 +556,7 @@ public sealed record StageLight(int Id, string Name, int Address, string Channel
         return this with
         {
             Name = name,
+            Note = PlanText.CheckedNote(Note, where),
             Channels = channels,
             Color = color,
             Shape = shape,

@@ -8,7 +8,8 @@ is and how to get it; [DEV.md](DEV.md) is for building the box and changing the 
 * **Lumenet.exe** (Windows 10 and 11, 64-bit): download it from the [Releases](../../releases) page and start
   it, see [Lumenet.exe](#lumenetexe) below.
 * **From the sources** (the .NET 10 SDK and Node.js 22): `run.cmd` starts the desk program and the page; then
-  open http://localhost:4200. Ctrl+C stops both.
+  open http://localhost:4200. Ctrl+C stops both. The top bar shows the version a release of the same commit
+  has (0.1 and the number of commits, as Lumenet.exe does); without git it shows 0.1.0.
 
 The desk also works without a box: it shows "Boxes connected: 0" and sends the whole state as soon as a box
 answers.
@@ -42,17 +43,19 @@ page and the examples are inside it, and so is .NET. Every release on the [Relea
 
 ## What is on the page
 
-The top bar has nine links: **Main**, **Memories**, **Sequences**, **Stack**, **Stage**, **Fixtures**,
-**Notes**, **Settings** and **Keyboard** (in this order until Settings gives them another). Main is the desk itself. Memories only shows what is stored. Sequences and Stack
+The top bar has eight links: **Main**, **Memories**, **Sequences**, **Stack**, **Stage**, **Fixtures**,
+**Notes** and **Settings** (in this order until Settings gives them another). Main is the desk itself. Memories shows what is stored, and changes it with a double click. Sequences and Stack
 are for the two things that run by themselves (see below), Stage shows the lights of the rig in their colors,
 Fixtures plays them as fixtures, Notes holds the instructions for the show, Settings is
-for how this device shows the desk (see [Settings](#settings)), Keyboard for its shortcuts. Under the name the
+for how this device shows the desk and for its keyboard shortcuts (see [Settings](#settings) and
+[Keyboard](#keyboard)). Under the name the
 top bar says how many boxes answer (a click opens their window, see [Universes and boxes](#universes-and-boxes));
-beside it stand **LAN**, **Undo** and **Redo**, at the right the keys of the project. At the right of Main stand three
-columns: the **Master** section (Black out and the master fader with its level) over **Record**; the
-**General** section (Clear, Solo up, Solo down, Rate and the rate fader with the rate on top) over the **Stack**; and at
-the right edge, over the whole height, the **Independents** (unless Settings shows none of their keys). On a
-phone the master section, the general section and the stack lie across the top, one line each.
+beside it stand **LAN**, **Undo** and **Redo**, at the right the keys of the project. At the right of Main the
+**Stack** lies across the top, and under it stand three columns: the **Master** section (Black out and the
+master fader with its level) over **Record**; the **General** section (Clear, Solo up, Solo down, Rate, the
+tempo fader with the tempo on top, and Tempo under it); and at the right edge the **Independents** (unless Settings shows none of
+their keys). On a phone the master section, the general section and the stack lie across the top, one line
+each.
 
 ![The Main view on a PC: channel and memory faders, the master, general, record and stack sections, and the independents](docs/screenshots/main.png)
 
@@ -114,14 +117,18 @@ phone the master section, the general section and the stack lie across the top, 
     key waits for a memory, the memory keys are for that, and while a sequence is recorded the channel keys
     put in steps, as always. Both dark again: the keys switch on and off as before. A solo is for the light:
     the key of an attribute of a fixture (a pan) does nothing while one is lit.
-* **Rate** (in General, under Solo down) is a speed master for the sequences. Dark, every sequence plays at its own
-  speed; lit, at its own speed times the rate of the fader under the key, which stands on top of the fader
-  (×1.00). The fader goes from ×0.1 at the bottom to ×10 at the top, with ×1 in the middle (a line marks it),
-  as the speed fader of a sequence does: the lower half from ×0.1 to ×1, the upper half from ×1 to ×10, in
-  steps of 0.05; the arrow keys go 0.05 below ×1 and 0.5 above. A double click puts it back to ×1.00. While
-  Rate is dark the fader is dim; it can still be set, for the next time. A sequence goes on from where it is
-  when the rate changes. Like the master fader, the rate is not saved with the project, and the other pages
-  see it at once.
+* **Rate** (in General, under Solo down) is a tempo for the sequences, in beats per minute (BPM). Dark,
+  every sequence plays its own times; lit, every sequence takes one step per beat of the tempo. The steps
+  of a sequence keep their proportions (on average a step, its fade and its wait, lasts one beat), and its
+  own speed counts the steps of a beat: ×2 takes two steps per beat, ×0.5 one every two beats. The fader
+  under the key sets the tempo, from 30 BPM at the bottom to 300 at the top in whole beats, with a line at
+  120; the tempo stands on top of the fader (120 BPM), and a double click puts it back to 120. While Rate is
+  dark the fader is dim; it can still be set, for the next time. A sequence goes on from where it is when
+  the tempo changes. Like the master fader, the tempo is not saved with the project, and the other pages see
+  it at once.
+* **Tempo** (under the rate fader, only while Rate is lit) is tapped in time with the music: from the second
+  tap on, the tempo is the beat of the taps, the average of the last four beats, and the fader moves to it.
+  A pause of more than two seconds starts the count afresh. Its shortcut taps as well.
 * **Undo** and **Redo** (top left) take back the last change of what the project holds, and make it again:
   storing, copying and emptying memories, sequences and their speed, the steps of the stack, notes and the
   channels and memories of the independent keys. Their tooltip says what they would do, for example "Undo
@@ -129,16 +136,23 @@ phone the master section, the general section and the stack lie across the top, 
   no steps; changes of one kind in quick succession (the moves of a speed fader) are one.
   Up to 100 steps are kept, for the whole desk, whichever device made a change. Loading a project, a new
   one and an import start afresh, and while the stack is live they are locked. Ctrl + Z and Ctrl + Y are
-  their shortcuts until the Keyboard view gives them others.
-* **Stack** (under the general section) is the stack at hand on Main: Stack takes it live, Prev, Play, Pause
-  and Next go through it, as on the Stack view. Under the keys stands a wheel of the stack's steps: the one
-  that is on in the middle (green, with an arrow beside it), the step before it above (blue), the one Play
-  goes to below (yellow), the others grey, their numbers about half as high as a key is wide (15 to 22
-  pixels, times the lettering of Settings). It shows 3 steps, or 1, 5, 7 or 9 as Settings says, and rolls
-  on when another step comes on. The stack goes round, and so does the wheel, but a step stands in it once
-  only. While no step is on, the middle is empty and the step Play goes to stands under it. On a low window
-  the wheel shows fewer steps (3 at least) and the keys of the column get flatter.
-* **Independents:** keys in a column at the right edge, over the whole height: green ones for channels and
+  their shortcuts until the Keyboard panel of Settings gives them others.
+* **Stack** (across the top of the three columns at the right) is the stack at hand on Main: its keys stand
+  in a column at the left, over the master section. Stack takes it live, Prev, Play, Pause and Next go
+  through it, as on the Stack view. Beside the keys, over the other two columns, stands a wheel of the
+  stack's steps, each number with its note beside it (the note under the fader of its channel or memory, the
+  name of its fixture or group, or for a step without one what it is, "Channel 5 (U1)"): the one that is on
+  in the middle (green, with an arrow beside it, at the height of Play), the step before it above (blue),
+  the one Play goes to below (yellow), the others grey, their numbers about half as high as a key is wide
+  (15 to 22 pixels, times the lettering of Settings). It shows 3 steps, or 1, 5, 7 or 9 as Settings says,
+  and rolls on when another step comes on. The stack goes round, and so does the wheel, but a step stands in
+  it once only. While no step is on, the middle is empty and the step Play goes to stands under it. On a low
+  window the keys of the column get flatter and the wheel shows fewer steps, always the one that is on.
+* **The whole screen:** Stack, pressed to take the stack live, puts the page on the whole screen of this
+  device, and pressed again to switch it off, takes it back (also on the Stack and Stage views, and with its
+  shortcut). Esc leaves the whole screen at any time; the stack stays live. A stack switched on or off on
+  another device leaves this screen as it is.
+* **Independents:** keys in a column at the right edge, under the stack: green ones for channels and
   red ones for memories, ten of each unless Settings says otherwise (0 to 32 of each; with none of either
   the column is left out). A green key switches
   its channel between zero and full, and that channel's fader follows; a red key does the same with the fader
@@ -150,13 +164,21 @@ phone the master section, the general section and the stack lie across the top, 
 
 ![The Memories view: the levels of memory 3 for every channel](docs/screenshots/memories.png)
 
-* **The Memories view** is for looking only; nothing there changes the desk. The memory keys along the top
-  choose a memory, each with the two lines of its note under it, and the table under them shows the level
-  that memory holds for each of the 512 channels of a universe, with each channel's note under its level, in
-  rows of 32 (16 in a narrower window); in a project of several universes, U keys beside the title choose
-  the universe (half lit where the memory gives a channel a level). All cells have the same size: when
-  channels have notes, every cell keeps room for two lines of one. The page keys at the right choose which memories the keys show. This view and
-  the Sequences view go by the window only: what Settings says about Main does not change them.
+* **The Memories view** shows what is stored. The memory keys along the top choose a memory, each with the
+  two lines of its note under it, and the table under them shows the level that memory holds for each of
+  the 512 channels of a universe (the channel's number small in the corner of its cell), with each channel's
+  note under its level, in rows of 32 (16 in a narrower window); in a project of several universes, U keys
+  beside the title choose the universe (half lit where the memory gives a channel a level). All cells have
+  the same size: when channels have notes, every cell keeps room for two lines of one. The page keys at the
+  right choose which memories the keys show. This view and the Sequences view go by the window only: what
+  Settings says about Main does not change them. Choosing a memory changes nothing.
+  * **A double click changes it.** On the note under a memory key: two lines to type into, as under a fader
+    on Main (here and on the Sequences view). On a cell of the table: fields over the cell for the level
+    the memory gives that channel (0 to 255) and, under it, the two lines of the channel's note; the one
+    double-clicked has the cursor. Enter, or a click anywhere else, keeps what was typed; Esc changes
+    nothing. An empty memory gets a look with that one channel; the level of a memory that holds a sequence
+    is changed on the Sequences view, so only the note can change here. Each change is a step of Undo, and
+    while the stack is live nothing changes.
 
 ![The Stage view: the stack of the example concert at the left, live on step 5.0, the rig in its live colors, the LED bar chosen and its faders in the panel](docs/screenshots/stage.png)
 
@@ -168,8 +190,12 @@ phone the master section, the general section and the stack lie across the top, 
   on a tablet over LAN while you program on Main.
   * **The stack** stands at the left of the plan (under it on a phone), to run a show while the plan shows
     its lights: the keys of the Stack view (Stack, Prev, Play, Pause, Next), its cards Previous, Current and
-    Next one under the other, and its steps with their notes and times, the current one green and the next
-    one with an amber edge. Nothing about the steps can be changed there: the Stack view does that.
+    Next one under the other, each with the number of its step big at the right, and its steps with their
+    notes and times, the current one green and the next one with an amber edge. When the list is longer
+    than its room, it follows the stack: when the step that comes on or the next one is out of sight, the
+    list scrolls so that the step before it stands at the top. Nothing about the steps can be changed there:
+    the Stack view does that. The panel at the right is as wide as the stack, so the plan stands in the
+    middle.
   * **Shutter and strobe:** a light whose shutter is closed is dark. A light that strobes flashes, as its
     strobe channel (S) says: a strobe flashes, a pulse swells and fades, a ramp rises or falls, and a random
     strobe flashes at uneven moments. A light of a library says in which range of its strobe channel it
@@ -226,7 +252,10 @@ phone the master section, the general section and the stack lie across the top, 
 
 * **The Fixtures view** plays the lights of the stage plan as fixtures instead of loose channels. Each light
   has a strip, in the order of their addresses: its color on top, its intensity as a number and a fader,
-  its key (to full, and to zero) and its name. The fader moves its dimmer; a light without one, such as an
+  its key (to full, and to zero) and its note. The note is as the one under a channel fader on Main: two
+  lines to type into, in white as typed; where nothing was typed, the name from the stage stands there,
+  dimmed. The note belongs to the fixture (a group has its own too) and is saved with the stage plan; the
+  name on the Stage view stays as it is. The fader moves its dimmer; a light without one, such as an
   RGB bar, keeps the mix of its colors, and comes up from dark in the color it had last (white at first); a
   moving head opens its shutter when it comes up. **Groups** stand under the fixtures, each with a fader that
   moves all its lights to its level, each in its own color; **New group** makes one of the fixture chosen,
@@ -495,7 +524,8 @@ it gives in red.
   slower), to the right up to 10× (ten times faster), in steps of 0.05. It divides every time of the
   sequence, so 2× plays it twice as fast. A running sequence goes on from where it is; it does not start
   again. The 1× key puts it back. The arrow keys move it by 0.05 left of the middle and by 0.5 right of it.
-  The speed is kept with the sequence in the project.
+  The speed is kept with the sequence in the project. While Rate is lit (Main, General), the sequence takes
+  one step per beat of the tempo instead, and its speed counts the steps of a beat: 2× is two a beat.
 * **Template** fills the sequence from a pattern, for the lights you name (channels like `1, 2` or `1-4`,
   memories, or the fixtures of a group, in the order of their addresses and in a color you choose). The
   steps it makes replace the old ones and can be changed in the table like any others.
@@ -540,8 +570,10 @@ back to zero. A memory that holds a sequence starts running, because its fader g
   many seconds after the step is up.
 * The view shows all steps, the **current** one in green, the **next** one with an amber edge, the
   **previous** one (the step before the current one, where Prev goes) in blue and every other step that is
-  **on** (see Add) in a paler green, and for the current one how far it is. Prev, Play, Pause and Next are
-  bigger than the other keys of the desk, Play the biggest.
+  **on** (see Add) in a paler green, and for the current one how far it is. Over the table three cards say
+  what the previous, the current and the next step are, each with the number of its step big at its right,
+  in the card's color. Prev, Play, Pause and Next are bigger than the other keys of the desk, Play the
+  biggest. Stack also puts the page on the whole screen (see Main).
 * **Add** (the box after the step number): a step with Add comes up on top of what is on and takes nothing
   down. A step without Add takes down everything that is on and that it does not give itself, each in its own
   down time: the step before it and every step that added since. A light that both give stays where it is.
@@ -629,12 +661,17 @@ page cannot move a light. In the small-screen layout the mouse wheel scrolls the
 
 ## Settings
 
-The settings belong to the device, as the shortcuts of the Keyboard view do: its browser keeps them, every
-project shows them, and a project that is loaded leaves them as they are. **Export** takes them to another
-device, and **Import** brings them from one (see above). The number of universes belongs to the project, the
-autosave and LAN to the desk program.
+The settings and the keyboard shortcuts belong to the device: its browser keeps them, every project shows
+them, and a project that is loaded leaves them as they are. **Export** takes them to another device, and
+**Import** brings them from one (see above). The number of universes belongs to the project, the autosave and
+LAN to the desk program.
 
 ![The Settings view](docs/screenshots/settings.png)
+
+Settings has four panels side by side, as many as the window has room for, each as high as the window
+lets it be and scrolling where it holds more: **Main view** (with the universes, the lettering, the
+autosave and the network under it), **Views in the top bar**, **Colors of the keys** (one under the other)
+and **Keyboard** (see [Keyboard](#keyboard)).
 
 * **Channels on a page** (Main): Auto (a row of 32 or 16 by the window, as above), or 8, 16, 32, 64 or 128.
 * **Rows of channel faders** and **rows of memory faders** (Main): 1 or 2 of each, at first 2 and 1. A
@@ -643,7 +680,8 @@ autosave and LAN to the desk program.
   sections share the height in the proportion of their rows. The faders keep the width the window gives
   them; when the rows are then wider than the window, they scroll sideways, the channels and the memories
   each on their own, with a big scrollbar. The Memories and Sequences views keep the rows of the window.
-* **Steps the stack wheel shows** (Main): 1, 3, 5, 7 or 9; at first 3.
+* **Steps the stack wheel shows** (Main): 1, 3, 5, 7 or 9; at first 7. (A browser that kept its settings
+  before 7 was the first keeps the 3 it had; choose 7 here once.)
 * **Keys of the independents:** how many green keys and how many red keys the column shows, 0 to 32 of each;
   with 0 of both, Main has no independents.
 * **Universes of the project:** 1 to 8, of 512 channels each (see [Universes and boxes](#universes-and-boxes)).
@@ -665,7 +703,7 @@ autosave and LAN to the desk program.
   after the view it follows in the usual order.
 * **Colors of the keys:** a color for each kind (channels, memories, and the color a memory with a
   sequence runs into), which is that of all its keys, page keys and faders, and one for each other key, group
-  by group: Black out; Clear, Solo up, Solo down and Rate (with its fader); Stack, Prev, Play, Pause, Next and Add step (Play also colors the
+  by group: Black out; Clear, Solo up, Solo down, Rate (with its fader) and Tempo; Stack, Prev, Play, Pause, Next and Add step (Play also colors the
   step that is on, Next the step Play goes to); the keys of Record, of the top bar, Edit of the independents,
   the keys of the Sequences view, of the Stage view and of the Notes view. A press on a color opens the colors the keys have at
   first (green, red, yellow, amber, white and blue, the one it has ringed) to take one of them, and Other for
@@ -674,25 +712,30 @@ autosave and LAN to the desk program.
   and Pause are white, Black out blue, Play green, Stack red and the others amber.
 
 The keys that take something out, ✕ at the end of a step in the Sequences and Stack views and of a shortcut
-in the Keyboard view, are red.
+in the Keyboard panel, are red.
 
 ## Keyboard
 
-The Keyboard view gives a shortcut to any key of the desk: the view links, New, Save, Load, Import, Export,
-LAN, the boxes, Clear, Solo up, Solo down, Black out, Rate, the keys of the stack and of Record, those of the Sequences
-view and of the Stage view, Edit of the Notes view, Edit and every key of the independents, every page key and
-U key, the key under every channel and memory fader, Undo and Redo. The tabs list the channel keys and U keys
-of the project's universes; the shortcuts of the others are kept for a project that has them. The shortcuts belong to this device, as the settings
-do. Undo and Redo have Ctrl + Z and Ctrl + Y until they get others (or none: then they stay without).
+The Keyboard panel of Settings gives a shortcut to any key of the desk: the view links, New, Save, Load,
+Import, Export, LAN, the boxes, Clear, Solo up, Solo down, Black out, Rate, Tempo, the keys of the stack and of
+Record, those of the Sequences view and of the Stage view, Edit of the Notes view, Edit and every key of the
+independents, every page key and U key, the key under every channel and memory fader, Undo and Redo. It lists
+the channel keys and U keys of the project's universes; the shortcuts of the others are kept for a project
+that has them. The shortcuts belong to this device, as the settings do. Undo and Redo have Ctrl + Z and
+Ctrl + Y until they get others (or none: then they stay without). (Until 2026-11-24 the shortcuts had a view of
+their own, Keyboard, with tabs; its address now opens Settings.)
 
-![The Keyboard view: the keys of the project and LAN, Undo and Redo with their shortcuts](docs/screenshots/keyboard.png)
+![The Keyboard panel of Settings: the keys of the project and LAN open, Undo and Redo with their shortcuts](docs/screenshots/keyboard.png)
 
-* The kinds of keys are tabs side by side (Views, Project and LAN, Master, General, Stack, Record, Sequences
-  view, Stage view, Notes view, Independents, Channel pages, Memory pages, Channel keys, Memory keys), each with the number of its keys; the
-  arrow keys go from tab to tab. The search field searches all of them: then each tab shows how many of its
-  keys it finds beside the number of its keys (1/4), and when the tab that is open finds none, the first tab
-  that finds some opens.
-* The list under the tabs has the keys at the left and their shortcuts at the right. **Set**, then press the
+* The kinds of keys stand one under the other (Views, Project and LAN, Master, General, Stack, Record,
+  Sequences view, Stage view, Notes view, Independents, Channel pages, Memory pages, Channel keys, Memory
+  keys), each with the number of its keys and, in brackets, how many of them have a shortcut, in green:
+  Stack 6 (4). A press on a kind opens its keys under it and closes any other: one is open at a time, and
+  none at first; pressed again, it closes. The arrow keys up and down, Home and End go from kind to kind.
+  The search field searches all of them: then each kind also shows how many of its keys it finds, in yellow,
+  Stack 6 (4) 2; when the kind that is open finds none, the first kind that finds some opens, and when the
+  search is emptied, the kind open before it opens again.
+* The keys of a kind are listed at the left, their shortcuts at the right. **Set**, then press the
   keys of the shortcut (with Ctrl, Alt or Shift as wanted; Esc stops, Tab and Esc cannot be shortcuts). A
   shortcut that another key had moves over, and the page says so.
 * Set tells the left Ctrl and Alt from the right ones ("Right Ctrl + B", "Left Alt + C"), and such a shortcut
@@ -703,8 +746,9 @@ do. Undo and Redo have Ctrl + Z and Ctrl + Y until they get others (or none: the
   before the sides were told apart shows Ctrl + Alt and still answers to it. Shift has no side, and a Ctrl
   or Alt that was already down when the page got the keyboard has none either: the page did not see which
   one went down.
-* **Listen** shows the desk; the key you double-click there is not pressed but picked, and the Keyboard view
-  comes back with its tab open and the key chosen in the list and scrolled into sight (Esc stops listening).
+* **Listen** shows the desk; the key you double-click there is not pressed but picked, and Settings comes
+  back with its kind open in the Keyboard panel and the key chosen and scrolled into sight (Esc stops
+  listening).
   A single click works as always, a moment later: it opens another view or page of faders, or presses the
   key, so the key to pick can be found first. Enter on a key picks it at once.
 * A shortcut is the physical key, whatever letter the keyboard's language puts on it. It presses its key on

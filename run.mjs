@@ -12,7 +12,7 @@
 // this PC uses the development server, which shows every change at once.
 
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
@@ -75,6 +75,24 @@ function newestChange(path) {
   if (!info.isDirectory()) return info.mtimeMs;
   return readdirSync(path).reduce((newest, name) => Math.max(newest, newestChange(join(path, name))), info.mtimeMs);
 }
+
+// ---- the version: the one the releases on GitHub get for the same commit ----
+
+// The first two numbers from backend\Version.props, the number of commits as the third, as
+// publish.mjs gives them; nothing (the props file's own 0.1.0) without git or the file.
+function versionToShow() {
+  try {
+    const props = readFileSync(join(root, 'backend', 'Version.props'), 'utf8');
+    const match = /<Version>(\d+)\.(\d+)\.\d+<\/Version>/.exec(props);
+    const count = spawnSync('git', ['rev-list', '--count', 'HEAD'], { cwd: root, encoding: 'utf8' });
+    if (!match || count.status !== 0) return null;
+    return `${match[1]}.${match[2]}.${count.stdout.trim()}`;
+  } catch {
+    return null;
+  }
+}
+
+const version = versionToShow();
 
 // ---- the two processes ----
 
@@ -159,7 +177,8 @@ process.on('SIGTERM', () => {
 
 log('run', 'Backend http://localhost:5080, frontend http://localhost:4200');
 
-run('backend', 'dotnet', ['run', '-c', 'Release', '--project', backendProject, '--', ...backendSettings], {
+const versionProperty = version ? [`--property:Version=${version}`] : [];
+run('backend', 'dotnet', ['run', '-c', 'Release', ...versionProperty, '--project', backendProject, '--', ...backendSettings], {
   cwd: root,
   env: {
     ...process.env,

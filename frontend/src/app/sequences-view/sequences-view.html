@@ -20,7 +20,13 @@
           >
             {{ number }}
           </button>
-          <lm-note-lines [note]="store.memoryNotes()[number - 1]" />
+          <lm-note-lines
+            [note]="store.memoryNotes()[number - 1]"
+            [editable]="true"
+            [locked]="store.live()"
+            [label]="'Note for memory ' + number"
+            (noteChange)="store.setMemoryNote(number, $event)"
+          />
         </div>
       }
     </div>

@@ -1,5 +1,6 @@
 /* The same measures as the two note fields under a fader (fader-strip.css): a line of 16px,
-   13px lettering, narrow, in the middle. */
+   13px lettering, narrow, in the middle. While the note is changed, the lines are fields of the
+   same size, so nothing around them moves. */
 :host {
   display: grid;
   width: 100%;
@@ -17,4 +18,25 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* a note that a double click changes: the line under the pointer shows it, as under a fader */
+:host(.editable) span.line:hover {
+  box-shadow: inset 0 -1px var(--legend-dim);
+}
+
+input.line {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-radius: 2px;
+  background: var(--well);
+  color: var(--legend);
+  font: inherit;
+  text-align: center;
+  user-select: text;
+}
+
+input.line:focus {
+  outline-offset: 0;
 }

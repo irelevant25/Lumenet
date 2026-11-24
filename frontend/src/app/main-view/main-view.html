@@ -1,13 +1,15 @@
 <lm-channel-section />
 <lm-memory-section />
-<div class="side first">
-  <lm-master-section />
-  <lm-record-section />
-</div>
-<div class="side second">
-  <lm-general-section />
+<!-- At the right: the stack across the top, and under it the master over the record keys, the
+     general section and the independents, each in a column of its own. -->
+<div class="side">
   <lm-stack-section />
+  <div class="first">
+    <lm-master-section />
+    <lm-record-section />
+  </div>
+  <lm-general-section />
+  @if (independents()) {
+    <lm-independents />
+  }
 </div>
-@if (independents()) {
-  <lm-independents />
-}

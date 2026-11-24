@@ -235,6 +235,31 @@ public sealed class StagePlanTests
     }
 
     [Fact]
+    public void AFixtureAndAGroupKeepTheNoteOfTheFixturesPageInTheProjectFile()
+    {
+        // two lines in one text, as the notes under the faders
+        string twoLines = "Front" + (char)0x2028 + "left";
+        _desk.SetStage(new StagePlan(16, 10, [Light(1, 1, "D") with { Note = twoLines }, Light(2, 2, "D")])
+        {
+            Groups = [new LightGroup(1, "Pars", [1, 2]) { Note = " Wash " }],
+        });
+        Assert.Equal((twoLines, "Wash"), (_desk.Stage.Lights[0].Note, _desk.Stage.Groups[0].Note));
+
+        string file = Write(_desk.GetProject().Content);
+        StagePlan back = Read(file).Stage!;
+        Assert.Equal([twoLines, ""], back.Lights.Select(light => light.Note));
+        Assert.Equal("Wash", back.Groups[0].Note);
+        Assert.Equal(2, file.Split("\"note\"").Length - 1);   // only those that have one write it
+
+        Assert.Equal(
+            "Light 1 of the plan: a note can have at most 24 characters.",
+            Assert.Throws<DeskException>(() => new StagePlan(16, 10, [Light(1, 1, "D") with { Note = new string('x', 25) }]).Checked()).Message);
+        Assert.Equal(
+            "Group 1 of the plan: a note cannot contain a tab, a line break or the like.",
+            Assert.Throws<DeskException>(() => new StagePlan(16, 10, []) { Groups = [new LightGroup(1, "A", []) { Note = "a\tb" }] }.Checked()).Message);
+    }
+
+    [Fact]
     public void AFileWithoutAPlanHasNoneAndOneWithADamagedPlanIsRefused()
     {
         const string start = """{ "format": "lumenet-project", "version": 4, "memories": [] """;

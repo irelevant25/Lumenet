@@ -1,31 +1,51 @@
-import { Component, ElementRef, Injector, afterNextRender, computed, effect, inject, signal } from '@angular/core';
-import { ACTION_GROUPS, ActionGroup, DESK_ACTIONS, DeskAction, actionWithId, shortcutName } from '../desk/desk-actions';
+import {
+  Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
+import {
+  ACTION_GROUPS,
+  ActionGroup,
+  DESK_ACTIONS,
+  DeskAction,
+  actionWithId,
+  shortcutName,
+} from '../desk/desk-actions';
 import { DeskSettings } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
 import { MEMORY_COUNT, UNIVERSE_SIZE } from '../desk/desk-types';
 import { Keyboard } from '../desk/keyboard';
 import { channelLabel } from '../desk/universes';
 
-/** One tab of the list: a kind of keys, how many there are, and how many the search finds. */
-interface Tab {
+/** One kind of keys: how many there are, how many have a shortcut, and how many the search finds. */
+interface Kind {
   readonly group: ActionGroup;
   readonly total: number;
+  readonly bound: number;
   readonly found: number;
 }
 
 /**
- * Keyboard: a shortcut for every key of the desk. The kinds of keys are tabs side by side, each
- * with the number of its keys (and, while a search runs, how many of them it finds); the list
- * under them has the keys of one tab at the left and their shortcuts at the right. Set records
- * one, and Listen finds a key by a double click on it on the desk. The shortcuts belong to this
- * device, see desk-settings.ts; keyboard.ts does the listening and the pressing.
+ * The keyboard shortcuts, a panel of Settings: a shortcut for every key of the desk. The kinds of
+ * keys stand one under the other, each with the number of its keys, how many of them have a
+ * shortcut and, while a search runs, how many it finds ("Stack 6 (4) 2"). A press on a kind opens
+ * its keys, at the left, with their shortcuts at the right, and closes any other: one is open at a
+ * time, none at first. A search opens the first kind where it finds keys, unless the one that is
+ * open has some. Set records a shortcut, and Listen finds a key by a double click on it on the
+ * desk. The shortcuts belong to this device, see desk-settings.ts; keyboard.ts does the listening
+ * and the pressing.
  */
 @Component({
-  selector: 'lm-keyboard-view',
-  styleUrl: './keyboard-view.css',
-  templateUrl: './keyboard-view.html',
+  selector: 'lm-keyboard-panel',
+  styleUrl: './keyboard-panel.css',
+  templateUrl: './keyboard-panel.html',
 })
-export class KeyboardView {
+export class KeyboardPanel {
   protected readonly settings = inject(DeskSettings);
   protected readonly store = inject(DeskStore);
   protected readonly keyboard = inject(Keyboard);
@@ -33,8 +53,10 @@ export class KeyboardView {
   private readonly injector = inject(Injector);
 
   protected readonly search = signal('');
-  /** The tab chosen last. */
-  private readonly chosenGroup = signal<ActionGroup>(ACTION_GROUPS[0]);
+  /** The kind of keys that is open; null while all are closed. */
+  protected readonly openGroup = signal<ActionGroup | null>(null);
+  // The kind that was open when a search began: open again when it ends.
+  private openBeforeSearch: ActionGroup | null = null;
 
   /** True while a search runs. */
   protected readonly searching = computed(() => this.search().trim() !== '');
@@ -62,32 +84,35 @@ export class KeyboardView {
     return new Map(
       ACTION_GROUPS.map((group) => {
         const all = actions.filter((action) => action.group === group);
-        return [group, words === '' ? all : all.filter((action) => this.matches(action, words, shortcuts[action.id]))];
+        return [
+          group,
+          words === ''
+            ? all
+            : all.filter((action) => this.matches(action, words, shortcuts[action.id])),
+        ];
       }),
     );
   });
 
-  /** The tabs, one for each kind of keys. */
-  protected readonly tabs = computed<readonly Tab[]>(() =>
-    ACTION_GROUPS.map((group) => ({
-      group,
-      total: this.actions().filter((action) => action.group === group).length,
-      found: this.found().get(group)?.length ?? 0,
-    })),
-  );
-
-  /**
-   * The tab that is shown: the one chosen, unless a search finds nothing there; then the first
-   * tab where it finds something.
-   */
-  protected readonly shownGroup = computed<ActionGroup>(() => {
-    const chosen = this.chosenGroup();
-    if (!this.searching() || (this.found().get(chosen)?.length ?? 0) > 0) return chosen;
-    return this.tabs().find((tab) => tab.found > 0)?.group ?? chosen;
+  /** The kinds of keys, one under the other. */
+  protected readonly kinds = computed<readonly Kind[]>(() => {
+    const shortcuts = this.settings.shortcuts();
+    return ACTION_GROUPS.map((group) => {
+      const keys = this.actions().filter((action) => action.group === group);
+      return {
+        group,
+        total: keys.length,
+        bound: keys.filter((action) => !!shortcuts[action.id]).length,
+        found: this.found().get(group)?.length ?? 0,
+      };
+    });
   });
 
-  /** The keys of the tab that is shown, as the search finds them. */
-  protected readonly rows = computed(() => this.found().get(this.shownGroup()) ?? []);
+  /** The keys of the kind that is open, as the search finds them. */
+  protected readonly rows = computed(() => {
+    const open = this.openGroup();
+    return open ? (this.found().get(open) ?? []) : [];
+  });
 
   /** How many keys have a shortcut. (An empty one is a usual shortcut that was taken away.) */
   protected readonly mapped = computed(
@@ -95,19 +120,20 @@ export class KeyboardView {
   );
 
   constructor() {
-    // A key picked by listening, or chosen to record: its tab is shown, and its row comes into
-    // the middle of the list.
+    // A key picked by listening, or chosen to record: its kind opens, and its row comes into the
+    // middle of the list, with the panel in sight.
     effect(() => {
       const picked = this.keyboard.picked();
       const action = picked ? actionWithId(picked) : undefined;
       if (!action) return;
 
-      this.chosenGroup.set(action.group);
+      this.openGroup.set(action.group);
       this.search.set('');
       afterNextRender(
         () => {
           const row = this.host.querySelector<HTMLElement>(`[data-row="${CSS.escape(action.id)}"]`);
           if (!row) return;
+          bringToMiddle(this.host);
           bringToMiddle(row);
           row.querySelector<HTMLButtonElement>('button.set')?.focus({ preventScroll: true });
         },
@@ -116,25 +142,53 @@ export class KeyboardView {
     });
   }
 
-  protected choose(group: ActionGroup): void {
-    this.chosenGroup.set(group);
+  /** A press on a kind opens it and closes the others; on the kind that is open, closes it. */
+  protected toggle(group: ActionGroup): void {
+    this.openGroup.update((open) => (open === group ? null : group));
   }
 
-  /** The arrow keys go from tab to tab, as in every row of tabs. */
-  protected onTabKey(event: KeyboardEvent): void {
-    const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
-    if (step === 0) return;
+  /** The arrow keys, Home and End go from kind to kind, as in every accordion. */
+  protected onHeadKey(event: KeyboardEvent, index: number): void {
+    const count = ACTION_GROUPS.length;
+    const to =
+      event.key === 'ArrowDown'
+        ? (index + 1) % count
+        : event.key === 'ArrowUp'
+          ? (index - 1 + count) % count
+          : event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+              ? count - 1
+              : -1;
+    if (to < 0) return;
     event.preventDefault();
-    const tabs = ACTION_GROUPS;
-    const next = tabs[(tabs.indexOf(this.shownGroup()) + step + tabs.length) % tabs.length];
-    this.chosenGroup.set(next);
-    afterNextRender(() => this.host.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus(), {
-      injector: this.injector,
-    });
+    this.host.querySelector<HTMLElement>(`#kind-${to}`)?.focus();
   }
 
+  /**
+   * The search: the kind that is open stays open while it has keys the search finds; otherwise
+   * the first kind that has some opens. When the search is emptied, the kind open before it opens
+   * again.
+   */
   protected onSearch(event: Event): void {
-    this.search.set((event.target as HTMLInputElement).value);
+    const text = (event.target as HTMLInputElement).value;
+    if (!this.searching() && text.trim() !== '') this.openBeforeSearch = this.openGroup();
+    this.search.set(text);
+
+    if (!this.searching()) {
+      this.openGroup.set(this.openBeforeSearch);
+      return;
+    }
+    const open = this.openGroup();
+    if (open === null || (this.found().get(open)?.length ?? 0) === 0) {
+      this.openGroup.set(this.kinds().find((kind) => kind.found > 0)?.group ?? null);
+    }
+  }
+
+  /** What a screen reader says for a kind: "Stack: 6 keys, 4 with a shortcut, 2 found". */
+  protected kindName(kind: Kind): string {
+    const keys = `${kind.total} ${kind.total === 1 ? 'key' : 'keys'}, ${kind.bound} with a shortcut`;
+    return `${kind.group}: ${keys}${this.searching() ? `, ${kind.found} found` : ''}`;
   }
 
   /**
@@ -147,10 +201,12 @@ export class KeyboardView {
     const page = /^page\.(channel|memory)\.(\d+)$/.exec(action.id);
     if (!page) return action.label;
 
-    const perPage = page[1] === 'channel' ? this.store.channelsPerPage() : this.store.memoriesPerPage();
+    const perPage =
+      page[1] === 'channel' ? this.store.channelsPerPage() : this.store.memoriesPerPage();
     const count = page[1] === 'channel' ? UNIVERSE_SIZE : MEMORY_COUNT;
     const first = (Number(page[2]) - 1) * perPage + 1;
-    const where = page[1] === 'channel' && this.store.universes() > 1 ? ' of the universe shown' : '';
+    const where =
+      page[1] === 'channel' && this.store.universes() > 1 ? ' of the universe shown' : '';
     return first > count
       ? `${action.label} (not there with this channel size)`
       : `${action.label} (${first}-${first + perPage - 1}${where})`;
@@ -186,13 +242,14 @@ function bringToMiddle(element: HTMLElement): void {
 }
 
 /**
- * The nearest box around the element that the owner can scroll: the list, or on a small screen
- * the page. Null when nothing can be scrolled by hand.
+ * The nearest box around the element that the owner can scroll: the list of keys, the panels of
+ * Settings, or on a small screen the page. Null when nothing can be scrolled by hand.
  */
 function scrollingBox(element: HTMLElement): Element | null {
   for (let box = element.parentElement; box && box !== document.body; box = box.parentElement) {
     const overflow = getComputedStyle(box).overflowY;
-    if ((overflow === 'auto' || overflow === 'scroll') && box.scrollHeight > box.clientHeight) return box;
+    if ((overflow === 'auto' || overflow === 'scroll') && box.scrollHeight > box.clientHeight)
+      return box;
   }
   const pageScrolls = getComputedStyle(document.body).overflowY !== 'hidden';
   return pageScrolls ? document.scrollingElement : null;

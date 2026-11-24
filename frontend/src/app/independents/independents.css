@@ -1,5 +1,5 @@
-/* A narrow section at the right edge, over the whole height: the title, Edit, the keys for
-   channels and the keys for memories, in one column, or in more when one cannot hold them. */
+/* A narrow section at the right edge, under the stack: the title, Edit, the keys for channels and
+   the keys for memories, in one column, or in more when one cannot hold them. */
 :host {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);

@@ -401,6 +401,38 @@ public sealed class DeskTests
     }
 
     [Fact]
+    public void TheTableOfTheMemoriesViewChangesOneLevelOfALook()
+    {
+        var desk = new Desk(new ManualTime());
+        Store(desk, memory: 1, (Channel: 1, Level: 200));
+        long changes = desk.ProjectChanges;
+
+        Assert.True(desk.SetMemoryChannel(1, 2, 90));
+        Assert.False(desk.SetMemoryChannel(1, 2, 90));   // the level it has already: no change
+        Assert.Equal(changes + 1, desk.ProjectChanges);
+        Assert.Equal((200, 90), (Looks(desk)[0]![0], Looks(desk)[0]![1]));
+
+        // An empty memory gets a look with only that channel; a 0 leaves it empty.
+        Assert.False(desk.SetMemoryChannel(5, 3, 0));
+        Assert.False(desk.GetState().MemoryStored[4]);
+        Assert.True(desk.SetMemoryChannel(5, 3, 40));
+        Assert.True(desk.GetState().MemoryStored[4]);
+        Assert.Equal(40, Looks(desk)[4]![2]);
+        Assert.Equal(1, Looks(desk)[4]!.Count(level => level > 0));
+
+        // A sequence is changed on the Sequences page, and the stack being live locks every memory.
+        desk.SetSequence(7, loop: true, [new Step("channel", 1, 255, 1, 0, 1)]);
+        Assert.Equal(
+            "Memory 7 holds a sequence. Change it on the Sequences page.",
+            Assert.Throws<DeskException>(() => desk.SetMemoryChannel(7, 1, 10)).Message);
+        desk.AddStackStep(new Step("channel", 1, 255, 0, 0, 0));
+        desk.SetStackLive(true);
+        Assert.StartsWith("The stack is live", Assert.Throws<DeskException>(() => desk.SetMemoryChannel(1, 2, 10)).Message);
+        AssertOutOfRange("from 1 to 512", () => desk.SetMemoryChannel(1, 513, 10));
+        AssertOutOfRange("from 0 to 255", () => desk.SetMemoryChannel(1, 1, 256));
+    }
+
+    [Fact]
     public void DeletingAnEmptyMemoryIsNotAnError()
     {
         var desk = new Desk();

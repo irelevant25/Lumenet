@@ -65,7 +65,8 @@
   </button>
 </div>
 
-<!-- Where the stack stands: a wheel of its steps, the one that is on in the middle. -->
+<!-- Where the stack stands: a wheel of its steps, the one that is on in the middle, each step's
+     number with its note beside it. -->
 <div class="wheel">
   <span class="pointer" aria-hidden="true"></span>
   <div class="window">
@@ -78,7 +79,8 @@
           [attr.aria-label]="placeName(place)"
           [attr.title]="placeName(place)"
         >
-          {{ place.step?.cue ?? (place.offset === 0 ? '-' : '') }}
+          <span class="cue">{{ place.step?.cue ?? (place.offset === 0 ? '-' : '') }}</span>
+          <span class="note">{{ noteOf(place) }}</span>
         </li>
       }
     </ol>

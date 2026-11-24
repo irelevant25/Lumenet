@@ -1,0 +1,68 @@
+/* Laid over the cell by the view (its place and size come from there), and a little higher where
+   the cell is too low for three fields: the level, and the two lines of the note under it. */
+:host {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  box-sizing: border-box;
+  padding: 2px;
+  border: 1px solid var(--system);
+  border-radius: 3px;
+  background: var(--well);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.55);
+}
+
+input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0 2px;
+  border: 1px solid var(--edge);
+  border-radius: 2px;
+  background: var(--panel);
+  color: var(--legend);
+  font: inherit;
+  text-align: center;
+  user-select: text;
+}
+
+input:focus {
+  outline-offset: 0;
+}
+
+/* the level as in the cell; the browser's arrows would leave no room for three digits */
+.level {
+  height: calc(18px * var(--font-scale));
+  font-size: var(--readout);
+  font-stretch: 87.5%;
+  font-weight: 600;
+  appearance: textfield;
+}
+
+.level::-webkit-inner-spin-button,
+.level::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+/* a memory that holds a sequence: its level is not changed here */
+.level:disabled {
+  border-color: transparent;
+  background: none;
+  color: var(--legend-dim);
+}
+
+.line {
+  height: calc(15px * var(--font-scale));
+  font-size: calc(10px * var(--font-scale));
+  font-stretch: 75%;
+}
+
+/* what the stage plan says the channel is, where no note was typed: dimmed, as on the main view */
+.line::placeholder {
+  color: var(--legend-dim);
+  opacity: 1;
+}

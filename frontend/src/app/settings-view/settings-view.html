@@ -1,7 +1,7 @@
 <header>
   <h2>Settings</h2>
   <p class="summary">
-    The settings belong to this device, as the shortcuts of Keyboard do: every project shows them, and
+    The settings and the keyboard shortcuts belong to this device: every project shows them, and
     Export takes them to another device. The number of universes belongs to the project. LAN and the
     autosave belong to the desk program, and only the PC can change them.
   </p>
@@ -36,10 +36,6 @@
         }
       </select>
     </div>
-    <p class="hint">
-      {{ sizeSaid() }} The Memories and Sequences views keep the rows the window gives them.
-    </p>
-
     <div class="field">
       <label for="wheel-size">Steps the stack wheel shows</label>
       <select id="wheel-size" (change)="onWheelSize($event)">
@@ -48,11 +44,6 @@
         }
       </select>
     </div>
-    <p class="hint">
-      The step that is on in the middle, the one before it above, the next ones under it. On a low
-      window the wheel shows fewer.
-    </p>
-
     <div class="field">
       <label for="channel-keys">Channel keys of the independents</label>
       <input
@@ -77,15 +68,9 @@
         (change)="onMemoryKeys($event)"
       />
     </div>
-    <p class="hint">
-      0 to {{ maxChannelKeys }} of each; with 0 of both the main view has no independents. Keys
-      that do not fit into one column go on in another.
-    </p>
-  </section>
 
-  <!-- ---------------------------------------------------------------- universes -->
-  <section class="panel" aria-labelledby="universes-title">
-    <h3 id="universes-title">Universes</h3>
+    <!-- the universes belong to the project, the lettering to every view: here, as the owner wants them -->
+    <h4 id="universes-title">Universes</h4>
     <div class="field">
       <label for="universes">Universes of the project</label>
       <select id="universes" [disabled]="store.live()" (change)="onUniverses($event)">
@@ -96,21 +81,8 @@
         }
       </select>
     </div>
-    <p class="hint">
-      A universe is the 512 channels of one DMX cable; a box plays one on each of its outputs, and
-      the Boxes window (Boxes at the top left) says which. The project keeps the number. Fewer is
-      refused while a step, a light of the stage or an independent key uses a channel of a universe
-      that would go.
-    </p>
-    <p class="hint">
-      The channels of every universe are numbered 1 to 512, and every channel says its universe:
-      channel 113 of the second is "113 (U2)", and it is typed as "113 U2".
-    </p>
-  </section>
 
-  <!-- ---------------------------------------------------------------- lettering -->
-  <section class="panel" aria-labelledby="lettering-title">
-    <h3 id="lettering-title">Lettering</h3>
+    <h4 id="lettering-title">Lettering</h4>
     <div class="scale" role="group" aria-label="Size of all lettering">
       <button
         type="button"
@@ -135,16 +107,9 @@
         Reset
       </button>
     </div>
-    <p class="hint">
-      All lettering of the page, from ×{{ smallest }} to ×{{ biggest }}, numbers on keys as well.
-      The keys keep their size, so words on them grow by 15 % at most; a word too long for its key
-      goes on two lines.
-    </p>
-  </section>
 
-  <!-- ---------------------------------------------------------------- autosave -->
-  <section class="panel" aria-labelledby="autosave-title">
-    <h3 id="autosave-title">Autosave</h3>
+    <!-- the autosave and LAN belong to the desk program; only the PC changes them -->
+    <h4 id="autosave-title">Autosave</h4>
     @if (autosave(); as autosave) {
       <div class="field">
         <label for="autosave-on">Keep the work that is not saved</label>
@@ -174,11 +139,8 @@
         }
       </p>
     }
-  </section>
 
-  <!-- ---------------------------------------------------------------- LAN -->
-  <section class="panel" aria-labelledby="lan-title">
-    <h3 id="lan-title">Network (LAN)</h3>
+    <h4 id="lan-title">Network (LAN)</h4>
     @if (lan(); as lan) {
       @if (lan.on) {
         <div class="field">
@@ -311,4 +273,7 @@
 
   <!-- ---------------------------------------------------------------- colors -->
   <lm-key-colors-panel />
+
+  <!-- ---------------------------------------------------------------- the keyboard shortcuts -->
+  <lm-keyboard-panel />
 </div>

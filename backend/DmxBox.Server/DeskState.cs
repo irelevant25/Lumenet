@@ -14,8 +14,8 @@ namespace DmxBox.Server;
 /// <param name="Independents">The channel number each channel key of the independents is bound to; key 1 is at index 0.</param>
 /// <param name="MemorySequence">For each of the 128 memories, whether what it holds is a sequence.</param>
 /// <param name="MemoryIndependents">The memory number, 1-128, each of the 10 memory keys of the independents is bound to; key 1 is at index 0.</param>
-/// <param name="Rate">The rate, a speed master for all sequences: 0.1 to 10.</param>
-/// <param name="RateOn">True while the rate counts.</param>
+/// <param name="Bpm">The tempo of the rate, 30 to 300 beats per minute: while RATE is lit every sequence takes one step per beat.</param>
+/// <param name="RateOn">True while the rate counts: RATE is lit.</param>
 /// <param name="Solo">The keys held for a solo now, see <see cref="SoloState"/>.</param>
 /// <param name="ChannelClaims">
 /// For each channel fader, when it last took its channel (a number that grows with
@@ -35,7 +35,7 @@ public sealed record DeskState(
     int[] Independents,
     bool[] MemorySequence,
     int[] MemoryIndependents,
-    double Rate,
+    double Bpm,
     bool RateOn,
     SoloState Solo,
     long[] ChannelClaims,

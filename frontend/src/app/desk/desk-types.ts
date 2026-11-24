@@ -74,8 +74,11 @@ export interface DeskState {
   memoryIndependents?: number[];
   master: number;
   blackout: boolean;
-  /** The rate, a speed master for all sequences, 0.1 to 10. Missing from an older desk program. */
-  rate?: number;
+  /**
+   * The tempo of the rate, 30 to 300 beats per minute: while RATE is lit every sequence takes one
+   * step per beat. Missing from an older desk program.
+   */
+  bpm?: number;
   /** True while the rate counts (RATE lit). */
   rateOn?: boolean;
   /** The keys held for a solo now, on any page. An older desk program leaves it out. */
@@ -143,6 +146,11 @@ export interface StageLight {
   type?: number | null;
   /** The most it gives, in per cent, 1 to 100 (missing: 100), like a hazer at most 60. */
   limit?: number;
+  /**
+   * The note under its key on the Fixtures page, two lines as the notes under the faders; empty
+   * (or missing, from an older desk program) for none: then the page shows the name there, dimmed.
+   */
+  note?: string;
 }
 
 export type LightShape = 'round' | 'square';
@@ -198,6 +206,8 @@ export interface LightGroup {
   name: string;
   /** The ids of its lights. */
   lights: number[];
+  /** The note under its key on the Fixtures page, as a light has it; empty or missing for none. */
+  note?: string;
 }
 
 /** The most groups and the most kinds of lights from the library a plan can have, and the longest group name. */

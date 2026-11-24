@@ -14,38 +14,36 @@ import { DeskStore } from '../desk/desk-store';
 import {
   CHANNEL_INDEPENDENT_COUNT,
   MAX_UNIVERSES,
-  MEMORY_COUNT,
   MEMORY_INDEPENDENT_COUNT,
   UNIVERSE_SIZE,
   lanAddressInUse,
 } from '../desk/desk-types';
 import { ALWAYS_SHOWN, DEFAULT_VIEW_ORDER, ViewName, viewNamed } from '../desk/views';
 import { KeyColorsPanel } from '../key-colors-panel/key-colors-panel';
+import { KeyboardPanel } from '../keyboard-panel/keyboard-panel';
 
 /** How often the autosave can keep the work, in seconds: as the desk program offers it. */
 const AUTOSAVE_INTERVALS: readonly number[] = [5, 30, 60, 300];
 
 /**
- * Settings: what this browser shows of the main view and how, the universes, the size of all
- * lettering, the autosave and the LAN of the desk program, and the colors of the keys. (The
- * keyboard shortcuts have a view of their own.)
+ * Settings, in four panels side by side:
  *
- * - The main view: how many channels a page holds (chosen by the window, or fixed), in one or two
+ * - Main view: how many channels a page holds (chosen by the window, or fixed), in one or two
  *   rows of faders, and one or two rows of memory faders; rows wider than the window scroll
  *   sideways. How many steps the stack wheel shows, and how many keys of each kind the
- *   independents show (0 to 32; none of either: no independents at all).
- * - The universes of the project (1 to 8; the project keeps the number).
- * - The size of all lettering.
- * - The autosave: on or off, and how often. On the PC only.
- * - While LAN is on: the address of this PC that phones use, and the password. On the PC only.
+ *   independents show (0 to 32; none of either: no independents at all). Under them the
+ *   universes of the project (1 to 8; the project keeps the number), the size of all lettering,
+ *   the autosave (on or off, and how often) and, while LAN is on, the address of this PC that
+ *   phones use and the password; the autosave and LAN on the PC only.
  * - Which views have a link in the top bar, and in which order: all but Settings can be left out.
- * - The colors of the keys (key-colors-panel).
+ * - The colors of the keys (key-colors-panel), one under the other in a list that scrolls.
+ * - The keyboard shortcuts (keyboard-panel), the kinds of keys one under the other.
  *
  * The universes belong to the project, the autosave and LAN to the desk program; the rest is kept
  * as desk-settings.ts says.
  */
 @Component({
-  imports: [KeyColorsPanel],
+  imports: [KeyColorsPanel, KeyboardPanel],
   selector: 'lm-settings-view',
   styleUrl: './settings-view.css',
   templateUrl: './settings-view.html',
@@ -103,20 +101,6 @@ export class SettingsView {
       { injector: this.injector },
     );
   }
-
-  /** What the chosen channel size and rows make of the main view, in words. */
-  protected readonly sizeSaid = computed(() => {
-    const perRow = this.store.stripsPerRow();
-    const channels = this.store.channelsPerPage();
-    const memories = this.store.memoriesPerPage();
-    const each = this.store.universes() > 1 ? ' in each universe' : '';
-    const layout =
-      `${rows(this.settings.channelRows(), perRow)}, ${UNIVERSE_SIZE / channels} pages${each}; ` +
-      `memories: ${rows(this.settings.memoryRows(), perRow)}, ${MEMORY_COUNT / memories} pages`;
-    return this.settings.channelSize() === 'auto'
-      ? `This window shows ${channels} channels on a page now: ${layout}.`
-      : `${channels} channels on a page: ${layout}. Rows wider than the window scroll sideways.`;
-  });
 
   protected sizeName(size: ChannelSize): string {
     return size === 'auto' ? 'Auto (by the window)' : `${size}`;
@@ -240,11 +224,6 @@ export class SettingsView {
     this.passwordDone.set('A new password is made. Every phone and tablet has to give it now.');
     this.store.newLanPassword();
   }
-}
-
-/** "two rows of 16", "one row of 32". */
-function rows(count: number, perRow: number): string {
-  return `${count === 1 ? 'one row' : 'two rows'} of ${perRow}`;
 }
 
 /** The desk's own sentence from a refusal, without what SignalR puts before it. */

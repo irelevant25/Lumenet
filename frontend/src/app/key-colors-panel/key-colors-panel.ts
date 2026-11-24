@@ -8,7 +8,8 @@ import { KEY_COLORS, KEY_COLOR_GROUPS, KeyColor, STANDARD_KEY_COLORS } from '../
  * title takes all of them back. A press on a color opens the colors the keys have at first, to
  * take one of them, and a field for any other color; a press anywhere else, or Esc, closes them.
  * While another color is being picked the desk shows it at once; it is kept when the picker
- * closes. The colors belong to this device, like the rest of the settings.
+ * closes. The colors belong to this device, like the rest of the settings. The panel is as big as
+ * the other panels of Settings: the groups stand one under the other and scroll.
  */
 @Component({
   host: {

@@ -4,14 +4,14 @@ import { ActionContext, DESK_ACTIONS, SIDED_KEYS, actionWithId, pressOf, shortcu
 import { DEFAULT_SHORTCUTS, DeskSettings } from './desk-settings';
 import { DeskStore } from './desk-store';
 
-/** Where the Keyboard view is; listening comes back to it. */
-const KEYBOARD_URL = '/keyboard';
+/** Where the keyboard shortcuts are (the Keyboard panel of Settings); listening comes back to them. */
+const KEYBOARD_URL = '/settings';
 
 /** Two presses on the same key within this many milliseconds are a double click. */
 const DOUBLE_PRESS_MS = 250;
 
 /**
- * The keyboard: the shortcuts of the Keyboard view press the keys of the desk, a shortcut can be
+ * The keyboard: the shortcuts of the Keyboard panel of Settings press the keys of the desk, a shortcut can be
  * recorded for a key, and "listening" finds a key by a click on it.
  *
  * - A shortcut presses its key on the page, as a click would, when the key is there and not
@@ -27,7 +27,7 @@ const DOUBLE_PRESS_MS = 250;
  * - While a solo is lit, the shortcut of a key under a fader or of the independents holds that key's
  *   fader (at full or at zero) for as long as it is held.
  * - Listening: the desk is shown, and a double click on one of its keys does not press it but
- *   picks it, and the Keyboard view comes back with that key chosen in its list. A single click
+ *   picks it, and Settings comes back with that key chosen in its Keyboard panel. A single click
  *   does what it always does, a moment later (when no second click has come): it opens another
  *   view, another page of faders, or presses a key, so that the key to pick can be found first.
  *   Enter on a key picks it at once. Esc stops listening.
@@ -38,9 +38,9 @@ export class Keyboard {
   private readonly store = inject(DeskStore);
   private readonly router = inject(Router);
 
-  /** True while the next click on a key of the desk only picks that key for the Keyboard view. */
+  /** True while the next click on a key of the desk only picks that key for the Keyboard panel. */
   readonly listening = signal(false);
-  /** The key of the desk chosen in the Keyboard view: by listening, or in its list. */
+  /** The key of the desk chosen in the Keyboard panel: by listening, or in its list. */
   readonly picked = signal<string | null>(null);
   /** The key whose shortcut is being recorded; null while none is. */
   readonly recording = signal<string | null>(null);
@@ -280,7 +280,7 @@ export class Keyboard {
     this.pick(keyUnder(event));
   }
 
-  // A key is picked: the Keyboard view comes back with it chosen.
+  // A key is picked: Settings comes back with it chosen in its Keyboard panel.
   private pick(id: string | null): void {
     this.picked.set(id);
     this.listening.set(false);

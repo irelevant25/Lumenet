@@ -46,6 +46,7 @@ namespace DmxBox.Server;
 /// the kinds of lights from the fixture library with the names of their channels, and "groups"
 /// of lights; a light names its kind ("type") and a group its lights by their place in the
 /// file's lists, counted from 1, and a light with a "limit" gives at most that many per cent.
+/// A light or a group can have a "note", the one under its key on the Fixtures page.
 /// All of these are written only when they are there, so files without them stay as they were.
 /// A step of a sequence or of the stack can also stand for a "fixture" or a "group", named by its
 /// place in those lists (0 for one that is gone), with a "color".
@@ -243,6 +244,7 @@ internal static class ProjectFormat
                 Depth = light.Depth ?? 1,
                 Type = light.Type,
                 Limit = light.Limit ?? StageLight.NoLimit,
+                Note = light.Note ?? "",
             };
         }
 
@@ -256,7 +258,7 @@ internal static class ProjectFormat
                 PictureOver = stage.PictureOver ?? StagePlan.PictureOverStage,
                 Types = TypesOf(stage.Types),
                 Groups = [.. (stage.Groups ?? []).Select((group, index) =>
-                    new LightGroup(index + 1, group?.Name ?? "", [.. group?.Lights ?? []]))],
+                    new LightGroup(index + 1, group?.Name ?? "", [.. group?.Lights ?? []]) { Note = group?.Note ?? "" })],
             };
             return (plan.Checked(), picture);
         }
@@ -303,6 +305,7 @@ internal static class ProjectFormat
             Lights = stage.Lights.Select(light => new ProjectFileLight
             {
                 Name = light.Name,
+                Note = light.Note == "" ? null : light.Note,
                 Address = light.Address,
                 Channels = light.Channels,
                 Color = light.Color,
@@ -344,6 +347,7 @@ internal static class ProjectFormat
             Groups = stage.Groups.Length == 0 ? null : stage.Groups.Select(group => new ProjectFileGroup
             {
                 Name = group.Name,
+                Note = group.Note == "" ? null : group.Note,
                 Lights = [.. group.Lights.Where(lightPlaces.ContainsKey).Select(id => lightPlaces[id])],
             }).ToList<ProjectFileGroup?>(),
         };

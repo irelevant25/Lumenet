@@ -106,10 +106,10 @@ public interface IDeskClient
     /// <param name="history">What undo and redo would do now.</param>
     Task HistoryChanged(HistoryState history);
 
-    /// <summary>The rate, the speed master for all sequences, was switched or turned.</summary>
-    /// <param name="on">True while the rate counts.</param>
-    /// <param name="rate">The rate, 0.1 to 10.</param>
-    Task RateChanged(bool on, double rate);
+    /// <summary>The rate, a tempo for all sequences, was switched or set (its fader, or the taps of TEMPO).</summary>
+    /// <param name="on">True while the rate counts (RATE is lit).</param>
+    /// <param name="bpm">The tempo, 30 to 300 beats per minute.</param>
+    Task RateChanged(bool on, double bpm);
 
     /// <summary>
     /// The autosave was switched or got another interval, on the PC. Only the UIs on this PC get

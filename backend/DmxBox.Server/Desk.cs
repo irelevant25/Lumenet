@@ -461,6 +461,39 @@ internal sealed partial class Desk
     }
 
     /// <summary>
+    /// Changes the level one channel has in the look of a memory, as the table of the Memories
+    /// view does. An empty memory gets a look of its own with only that channel (a level of 0
+    /// leaves it empty); a memory that holds a sequence is refused.
+    /// </summary>
+    /// <param name="memory">Memory number, 1-128.</param>
+    /// <param name="channel">Channel number, 1 to <see cref="ChannelCount"/>.</param>
+    /// <param name="level">The level the look gives the channel, 0-255.</param>
+    /// <returns>True when the memory changed.</returns>
+    /// <exception cref="DeskException">The memory holds a sequence, or the stack is live.</exception>
+    public bool SetMemoryChannel(int memory, int channel, int level)
+    {
+        RequireMemory(memory);
+        RequireChannel(channel);
+        RequireLevel(level);
+
+        lock (_lock)
+        {
+            RequireUnlocked();
+            if (_sequences[memory - 1] is not null)
+                throw new DeskException($"Memory {memory} holds a sequence. Change it on the Sequences page.");
+
+            byte[]? look = _memories[memory - 1];
+            if (look is null ? level == 0 : look[channel - 1] == level)
+                return false; // the level it has already: the project must not count as unsaved
+
+            look ??= _memories[memory - 1] = new byte[MaxChannels];
+            look[channel - 1] = (byte)level;
+            CountLookChange();
+            return true;
+        }
+    }
+
+    /// <summary>
     /// Makes the desk clean for a new project: every channel fader and memory fader down to 0,
     /// every memory empty, an empty stack, no notes under the faders and none of the project, the
     /// independent keys back on channels 1 to 32 and memories 1 to 32. The master and blackout
@@ -588,7 +621,7 @@ internal sealed partial class Desk
                 Independents: Copy(_independents),
                 MemorySequence: sequence,
                 MemoryIndependents: Copy(_memoryIndependents),
-                Rate: _rate,
+                Bpm: _bpm,
                 RateOn: _rateOn,
                 Solo: SoloNow(),
                 ChannelClaims: _channelClaims[..channels],

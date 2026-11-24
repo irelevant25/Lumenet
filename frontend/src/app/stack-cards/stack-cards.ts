@@ -4,8 +4,9 @@ import { TimedStep } from '../desk/desk-types';
 
 /**
  * Where the stack stands, on three cards: the step before the one that is on, that one with
- * what the stack is doing with it, and the one Play goes to. The Stack view shows them side by
- * side; the Stage view, with the class "column", one under the other.
+ * what the stack is doing with it, and the one Play goes to, each with the number of its step big
+ * at the right. The Stack view shows them side by side; the Stage view, with the class "column",
+ * one under the other.
  */
 @Component({
   selector: 'lm-stack-cards',

@@ -41,7 +41,7 @@ export const DEFAULT_SHORTCUTS: Readonly<Record<string, string>> = {
 };
 
 /**
- * What the owner set in the Settings view and the Keyboard view. They belong to this device, its
+ * What the owner set in the Settings view, the keyboard shortcuts too. They belong to this device, its
  * browser keeps them, and every project shows them; Export takes them to another device, and
  * Import brings them from one (see DeskSettings.takeSettings and takeShortcuts). (The LAN
  * address and password and the autosave belong to the desk program; the Settings view changes
@@ -73,7 +73,7 @@ export const DEFAULT_SETTINGS: DeskSettingsData = {
   channelSize: 'auto',
   channelRows: 2,
   memoryRows: 1,
-  wheelSize: 3,
+  wheelSize: 7,
   channelKeys: DEFAULT_SHOWN_KEYS,
   memoryKeys: DEFAULT_SHOWN_KEYS,
   fontScale: 1,

@@ -30,4 +30,33 @@
   {{ keyText() }}
 </button>
 
-<span class="name" [title]="name()">{{ name() }}</span>
+<!-- The note under the key, as under a channel fader on the main view: two lines, each a field.
+     Where nothing was typed, the name from the stage shows there, dimmed. -->
+<div class="note" [attr.title]="noteTitle()">
+  <input
+    type="text"
+    autocomplete="off"
+    spellcheck="false"
+    [attr.maxlength]="lineLength"
+    [attr.placeholder]="nameLines()[0] || null"
+    [value]="lines()[0]"
+    [readOnly]="locked()"
+    [attr.aria-label]="'Note for ' + name()"
+    (change)="onLineChange(0, $event)"
+    (keydown.enter)="finishNote($event)"
+    (keydown.escape)="cancelNote(0, $event)"
+  />
+  <input
+    type="text"
+    autocomplete="off"
+    spellcheck="false"
+    [attr.maxlength]="lineLength"
+    [attr.placeholder]="nameLines()[1] || null"
+    [value]="lines()[1]"
+    [readOnly]="locked()"
+    [attr.aria-label]="'Note for ' + name() + ', second line'"
+    (change)="onLineChange(1, $event)"
+    (keydown.enter)="finishNote($event)"
+    (keydown.escape)="cancelNote(1, $event)"
+  />
+</div>

@@ -43,10 +43,7 @@ export const routes: Routes = [
     loadComponent: () => import('./settings-view/settings-view').then((file) => file.SettingsView),
     title: 'Lumenet: settings',
   },
-  {
-    path: 'keyboard',
-    loadComponent: () => import('./keyboard-view/keyboard-view').then((file) => file.KeyboardView),
-    title: 'Lumenet: keyboard',
-  },
+  // The keyboard shortcuts had a view of their own until 2026-11-24; they are a panel of Settings now.
+  { path: 'keyboard', redirectTo: 'settings' },
   { path: '**', redirectTo: '' },
 ];

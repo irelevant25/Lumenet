@@ -1,4 +1,5 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
+import { CellEdit, CellEditor } from '../cell-editor/cell-editor';
 import { DeskStore } from '../desk/desk-store';
 import { STRIPS_PER_LINE_PHONE, UNIVERSE_SIZE, stripNumbers } from '../desk/desk-types';
 import { LampLevel } from '../desk/lamps';
@@ -20,20 +21,48 @@ interface Cell {
   name: string;
 }
 
+/** A cell that is being changed: which, what it held, and where its fields lie over the table. */
+interface Editing {
+  readonly memory: number;
+  readonly channel: number;
+  readonly channelName: string;
+  readonly level: number;
+  readonly note: string;
+  /** What the stage plan says the channel is, shown dimmed where the note is empty. */
+  readonly fixture: string;
+  /** True for a memory that holds a sequence: only the note can be changed. */
+  readonly sequence: boolean;
+  readonly start: 'level' | 'note';
+  readonly left: number;
+  readonly top: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+/** The fields over a cell are at least this wide, for three digits and a few letters of a note. */
+const EDITOR_MIN_WIDTH = 64;
+
 /**
  * The Memories view: what one memory holds, as a table of all 512 channels of a universe (in a
- * project of several, a U key for each chooses which). It only shows; nothing here changes the
- * desk. A memory key chooses the memory to look at; under each key stands the note of its
- * memory, to read.
+ * project of several, a U key for each chooses which). A memory key chooses the memory to look
+ * at; under each key stands the note of its memory.
+ *
+ * A double click changes what it shows: on the note under a memory key, that note; on a cell,
+ * the level the memory gives the channel, or (under the level) the channel's note. Not while the
+ * stack is live, which locks everything that is stored.
  */
 @Component({
-  imports: [LampButton, NoteLines],
+  imports: [CellEditor, LampButton, NoteLines],
   selector: 'lm-memories-view',
   styleUrl: './memories-view.css',
   templateUrl: './memories-view.html',
 })
 export class MemoriesView {
   protected readonly store = inject(DeskStore);
+  private readonly tableBox = viewChild.required<ElementRef<HTMLElement>>('tableBox');
+
+  /** The cell whose fields lie over the table; null while none is changed. */
+  protected readonly editing = signal<Editing | null>(null);
 
   /** The universe chosen with the U keys; the last one there is when the project has fewer. */
   private readonly chosenUniverse = signal(1);
@@ -134,6 +163,49 @@ export class MemoriesView {
     return `${name}: ${up} of ${look.length} ${up === 1 ? 'channel is' : 'channels are'} above zero.`;
   });
 
+  /**
+   * A double click on a cell lays the fields over it: the level, and the channel's note. The one
+   * double-clicked gets the focus: the note when the click was under the level of a table that
+   * shows notes.
+   */
+  protected onTableDouble(event: MouseEvent): void {
+    const cell = (event.target as Element).closest<HTMLElement>('td[data-channel]');
+    if (!cell || this.store.live() || this.editing()) return;
+
+    const memory = this.store.inspectedMemory();
+    const channel = universeStart(this.universe()) - 1 + Number(cell.dataset['channel']);
+    const box = this.tableBox().nativeElement;
+    const frame = box.getBoundingClientRect();
+    const place = cell.getBoundingClientRect();
+    const width = Math.max(place.width, EDITOR_MIN_WIDTH);
+
+    const underLevel = this.withNotes() && event.clientY > levelBottom(cell);
+
+    this.editing.set({
+      memory,
+      channel,
+      channelName: `Channel ${channelLabel(channel)}`,
+      level: this.look()?.[channel - 1] ?? 0,
+      note: this.store.channelNotes()[channel - 1] ?? '',
+      fixture: this.store.fixtureLabels()[channel - 1] ?? '',
+      sequence: this.store.memorySequence()[memory - 1],
+      start: underLevel ? 'note' : 'level',
+      left: Math.max(0, Math.min(place.left - frame.left + box.scrollLeft, box.clientWidth - width)),
+      top: place.top - frame.top + box.scrollTop,
+      width,
+      height: place.height,
+    });
+  }
+
+  /** The fields are left: what was typed goes to the desk, the level and the note each if it changed. */
+  protected finishEdit(typed: CellEdit | null): void {
+    const edit = this.editing();
+    this.editing.set(null);
+    if (!edit || !typed) return;
+    if (!edit.sequence && typed.level !== edit.level) this.store.setMemoryChannel(edit.memory, edit.channel, typed.level);
+    if (typed.note !== edit.note) this.store.setChannelNote(edit.channel, typed.note);
+  }
+
   /** Full for the memory that is looked at, half for any other that holds something. */
   protected keyLamp(memory: number): LampLevel {
     if (memory === this.store.inspectedMemory()) return 3;
@@ -144,4 +216,14 @@ export class MemoriesView {
   protected keyTone(memory: number): LampTone {
     return this.store.memorySequence()[memory - 1] ? 'sequence' : 'memory';
   }
+}
+
+/**
+ * Where the level of a cell ends, down the window: the level is the cell's text, the note is drawn
+ * under it. A browser that cannot measure text has the whole cell for the level.
+ */
+function levelBottom(cell: HTMLElement): number {
+  const text = document.createRange();
+  text.selectNodeContents(cell);
+  return typeof text.getBoundingClientRect === 'function' ? text.getBoundingClientRect().bottom + 1 : Infinity;
 }

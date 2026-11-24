@@ -238,6 +238,24 @@ internal sealed class DeskHub : Hub<IDeskClient>
     }
 
     /// <summary>
+    /// Changes the level of one channel in the look of a memory, as the table of the Memories
+    /// view does. An empty memory gets a look with only that channel.
+    /// </summary>
+    /// <param name="memory">Memory number, 1-128. It must not hold a sequence.</param>
+    /// <param name="channel">Channel number, 1 to the channels of the project's universes.</param>
+    /// <param name="value">The level the look gives the channel, 0-255.</param>
+    public Task SetMemoryChannel(int memory, int channel, int value)
+    {
+        using (_history.Change($"channel {Desk.ChannelLabel(channel)} of memory {memory}"))
+        {
+            if (!_desk.SetMemoryChannel(memory, channel, value))
+                return Task.CompletedTask;
+        }
+
+        return TellDeskAsync();
+    }
+
+    /// <summary>
     /// What every stored memory holds. A UI asks after "Hello" and again after every
     /// <see cref="IDeskClient.DeskChanged"/>, because that is when a look may have changed.
     /// </summary>
@@ -284,16 +302,16 @@ internal sealed class DeskHub : Hub<IDeskClient>
     }
 
     /// <summary>
-    /// Sets the rate, a speed master for all sequences (see <see cref="Desk.SetRate"/>). The UI
-    /// turns its wheel this way, like a fader: the other UIs hear of it, this one does not. It is
-    /// no part of the project, so the history leaves it alone.
+    /// Sets the rate, a tempo for all sequences (see <see cref="Desk.SetRate"/>): RATE and its
+    /// fader, or the taps of TEMPO. The UI sends it like a fader: the other UIs hear of it, this
+    /// one does not. It is no part of the project, so the history leaves it alone.
     /// </summary>
-    /// <param name="on">True: the rate counts.</param>
-    /// <param name="rate">From 0.1 to 10.</param>
-    public Task SetRate(bool on, double rate)
+    /// <param name="on">True: the rate counts (RATE is lit).</param>
+    /// <param name="bpm">The tempo, from 30 to 300 beats per minute.</param>
+    public Task SetRate(bool on, double bpm)
     {
-        _desk.SetRate(on, rate);
-        return Clients.Others.RateChanged(on, rate);
+        _desk.SetRate(on, bpm);
+        return Clients.Others.RateChanged(on, bpm);
     }
 
     /// <summary>

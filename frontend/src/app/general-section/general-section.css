@@ -1,14 +1,15 @@
-/* A narrow section beside the master section, over the stack: the title, Clear, Solo up, Solo
-   down and Rate, and the rate fader with the rate above it. The fader takes the height that is
-   left; on a low window the keys get flatter too, down to --master-key-min (set by the main
-   view), and the fader keeps 50 pixels. */
+/* A narrow section beside the master section, under the stack: the title, Clear, Solo up, Solo
+   down and Rate, the tempo fader with the tempo above it, and Tempo under it. The fader takes the
+   height that is left; on a low window the keys get flatter too, down to --master-key-min (set by
+   the main view), and the fader keeps 50 pixels. */
 :host {
   display: grid;
   grid-template-rows:
     auto
     repeat(4, minmax(var(--master-key-min, var(--key-h)), var(--key-h)))
     auto
-    minmax(50px, 1fr);
+    minmax(50px, 1fr)
+    minmax(var(--master-key-min, var(--key-h)), var(--key-h));
   justify-items: center;
   gap: var(--strip-gap);
   min-height: 0;
@@ -39,11 +40,12 @@ lm-fader {
   width: var(--key-w);
 }
 
-/* the mark for x1, in the middle of the slot */
+/* the mark for 120 BPM: --mark is its place on the fader, 0 at the bottom; the cap (fader.css) travels
+   over the height less its own length */
 lm-fader::before {
   content: '';
   position: absolute;
-  top: 50%;
+  top: calc((1 - var(--mark)) * (100% - min(48px, 33%)) + min(48px, 33%) / 2);
   left: 3px;
   right: 3px;
   height: 1px;
@@ -68,11 +70,13 @@ lm-fader.off {
   color: #fff;
 }
 
-/* ---- mobile: one line. Clear, Solo and Rate, the fader over the room that is left, and the
-   rate after it. */
+/* ---- mobile: two lines. Clear, Solo, Rate and Tempo; under them the fader over the width that
+   is left, and the tempo after it. */
 :host-context(.mobile) {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  gap: 8px var(--strip-gap);
 }
 
 :host-context(.mobile) > [lmLamp] {
@@ -84,26 +88,33 @@ lm-fader.off {
   display: none; /* the keys say what this is */
 }
 
+/* so wide that it begins the second line, with the tempo beside it */
 :host-context(.mobile) lm-fader {
-  flex: 1;
+  flex: 1 0 calc(100% - 8ch - 10px);
   order: 1;
   width: auto;
   height: var(--key-h);
-  margin-left: 10px;
 }
 
 :host-context(.mobile) lm-fader::before {
   top: 3px;
   bottom: 3px;
-  left: 50%;
+  left: calc(var(--mark) * (100% - var(--cap-across, 16px)) + var(--cap-across, 16px) / 2);
   right: auto;
   width: 1px;
   height: auto;
 }
 
+/* the cap of a fader lying down is 30 pixels long for a finger (fader.css) */
+@media (pointer: coarse) {
+  :host-context(.mobile) lm-fader {
+    --cap-across: 30px;
+  }
+}
+
 :host-context(.mobile) .readout {
   order: 2;
-  min-width: 5ch;
+  min-width: 7ch;
   margin: 0 0 0 6px;
   text-align: right;
 }

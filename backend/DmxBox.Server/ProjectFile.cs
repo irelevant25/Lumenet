@@ -172,6 +172,10 @@ internal sealed class ProjectFileGroup
 {
     public string? Name { get; set; }
 
+    /// <summary>The note under its key on the Fixtures page; a file without one means none.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Note { get; set; }
+
     /// <summary>Its lights, by their place in the file's list of lights, counted from 1.</summary>
     public List<int>? Lights { get; set; }
 }
@@ -181,6 +185,10 @@ internal sealed class ProjectFileLight
 {
     /// <summary>What the owner calls it. A file that does not say means no name.</summary>
     public string? Name { get; set; }
+
+    /// <summary>The note under its key on the Fixtures page; a file without one means none.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Note { get; set; }
 
     /// <summary>Its first channel, 1-512.</summary>
     public int? Address { get; set; }

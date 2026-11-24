@@ -1,4 +1,4 @@
-/* the color, the level number, the fader (taller in a taller window), the key and the name,
+/* the color, the level number, the fader (taller in a taller window), the key and the note,
    centred above each other */
 :host {
   display: grid;
@@ -69,22 +69,51 @@ lm-fader {
   color: #fff;
 }
 
-/* the name in two lines, as a note on the main view; what does not fit is cut off */
-.name {
-  display: -webkit-box;
+/* The note under the key, as under a channel fader of the main view (fader-strip.css): two
+   lines, each a field, that look like lettering until the pointer is on them or they are typed
+   in. The name from the stage, where no note was typed, is dimmed. */
+.note {
+  display: grid;
   width: 100%;
-  min-height: 2.5em;
-  overflow: hidden;
-  color: var(--legend);
-  font-size: calc(12px * var(--font-scale));
-  font-stretch: 75%;
-  line-height: 1.25;
-  text-align: center;
-  overflow-wrap: anywhere;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 
-:host(.chosen) .name {
-  color: var(--system);
+.note input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 16px;
+  margin: 0;
+  padding: 0 1px;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 2px;
+  background: none;
+  color: var(--legend);
+  font: inherit;
+  font-size: calc(13px * var(--font-scale));
+  font-stretch: 75%;
+  line-height: 15px;
+  text-align: center;
+  text-overflow: ellipsis;
+  user-select: text;
+}
+
+.note input:hover {
+  border-bottom-color: var(--legend-dim);
+}
+
+.note input::placeholder {
+  color: var(--legend-dim);
+  opacity: 1;
+}
+
+.note input:focus {
+  outline-offset: 0;
+  background: var(--well);
+}
+
+/* while the stack is live a note cannot be changed: it is lettering only */
+.note input:read-only {
+  border-bottom-color: transparent;
+  background: none;
+  cursor: default;
 }

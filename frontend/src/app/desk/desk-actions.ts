@@ -26,7 +26,7 @@ export interface ActionContext {
 export interface DeskAction {
   readonly id: string;
   readonly group: ActionGroup;
-  /** What the list of the Keyboard view calls it, like "Play" or "Channel key 5". */
+  /** What the list of the Keyboard panel calls it, like "Play" or "Channel key 5". */
   readonly label: string;
   readonly run: ((context: ActionContext) => void) | null;
   /**
@@ -36,7 +36,7 @@ export interface DeskAction {
   readonly hold?: (context: ActionContext, down: boolean) => void;
 }
 
-/** The groups of the list of the Keyboard view, in their order. */
+/** The kinds of keys of the Keyboard panel, in their order. */
 export const ACTION_GROUPS = [
   'Views',
   'Project and LAN',
@@ -81,7 +81,6 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
   view('fixtures', 'Fixtures view', '/fixtures'),
   view('notes', 'Notes view', '/notes'),
   view('settings', 'Settings view', '/settings'),
-  view('keyboard', 'Keyboard view', '/keyboard'),
 
   { id: 'project.undo', group: 'Project and LAN', label: 'Undo', run: ({ store }) => store.undo() },
   { id: 'project.redo', group: 'Project and LAN', label: 'Redo', run: ({ store }) => store.redo() },
@@ -105,6 +104,8 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
   { id: 'master.solo', group: 'General', label: 'Solo up', run: ({ store }) => store.toggleSoloUp() },
   { id: 'master.solo-down', group: 'General', label: 'Solo down', run: ({ store }) => store.toggleSoloDown() },
   { id: 'master.rate', group: 'General', label: 'Rate', run: ({ store }) => store.toggleRate() },
+  // tapped in time with the music; only while RATE is lit (the store sees to that)
+  { id: 'master.tempo', group: 'General', label: 'Tempo (tap)', run: ({ store }) => store.tapTempo() },
 
   {
     id: 'stack.live',
@@ -185,7 +186,7 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
     },
   })),
 
-  // All 4096; the Keyboard view lists those of the project's universes, and a key of a universe
+  // All 4096; the Keyboard panel lists those of the project's universes, and a key of a universe
   // the project does not have does nothing.
   ...numbered(MAX_CHANNELS, (channel) => ({
     id: `channel.${channel}`,

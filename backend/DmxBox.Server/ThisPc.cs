@@ -30,7 +30,7 @@ internal class ThisPc : IDisposable
     protected ThisPc(bool pretend)
     {
         _ = pretend;
-        _addresses = new Addresses([], []);
+        _addresses = new Addresses([], [], []);
     }
 
     /// <summary>Raised after the addresses of this PC changed. It may come on any thread.</summary>
@@ -41,6 +41,13 @@ internal class ThisPc : IDisposable
     /// of network cards that are up, the ones that lead to a router first. Empty without a network.
     /// </summary>
     public virtual IReadOnlyList<IPAddress> LanAddresses => _addresses.Lan;
+
+    /// <summary>
+    /// The networks this PC is in, in the order of <see cref="LanAddresses"/>: for each of those
+    /// addresses, the network around it and the name of its adapter. A broadcast or a multicast
+    /// of the outputs goes out on one of these.
+    /// </summary>
+    public virtual IReadOnlyList<PcNetwork> Networks => _addresses.Networks;
 
     /// <summary>
     /// True for an address of this PC itself: a loopback address, or the address of one of
@@ -97,7 +104,7 @@ internal class ThisPc : IDisposable
     private static Addresses Read()
     {
         var own = new HashSet<IPAddress>();
-        var lan = new List<(int Rank, IPAddress Address)>();
+        var lan = new List<(int Rank, PcNetwork Network)>();
         NetworkInterface[] cards;
         try
         {
@@ -105,7 +112,7 @@ internal class ThisPc : IDisposable
         }
         catch (NetworkInformationException)
         {
-            return new Addresses([], []);   // no network information at all: only loopback is this PC
+            return new Addresses([], [], []);   // no network information at all: only loopback is this PC
         }
 
         foreach (NetworkInterface card in cards)
@@ -137,12 +144,32 @@ internal class ThisPc : IDisposable
             {
                 IPAddress address = unicast.Address;
                 if (address.AddressFamily == AddressFamily.InterNetwork && !IsLinkLocal(address))
-                    lan.Add((router ? 0 : 1, address));
+                    lan.Add((router ? 0 : 1, new PcNetwork(address, PrefixOf(unicast), card.Name, router)));
             }
         }
 
-        IPAddress[] ordered = lan.OrderBy(entry => entry.Rank).Select(entry => entry.Address).Distinct().ToArray();
-        return new Addresses(own, ordered);
+        PcNetwork[] networks = lan
+            .OrderBy(entry => entry.Rank)
+            .Select(entry => entry.Network)
+            .DistinctBy(network => network.Address)
+            .ToArray();
+        return new Addresses(own, [.. networks.Select(network => network.Address)], networks);
+    }
+
+    // The length of the network's prefix, from the mask of the address: 24 for 255.255.255.0. A
+    // system that does not say has 24, the size of nearly every home and stage network.
+    private static int PrefixOf(UnicastIPAddressInformation unicast)
+    {
+        try
+        {
+            byte[]? mask = unicast.IPv4Mask?.GetAddressBytes();
+            int prefix = mask?.Sum(part => System.Numerics.BitOperations.PopCount(part)) ?? 0;
+            return prefix is > 0 and <= 32 ? prefix : 24;
+        }
+        catch (Exception e) when (e is PlatformNotSupportedException or NotImplementedException)
+        {
+            return 24;
+        }
     }
 
     // 169.254.x.x: the address a card gives itself when nothing in its network hands one out.
@@ -153,5 +180,36 @@ internal class ThisPc : IDisposable
         return bytes[0] == 169 && bytes[1] == 254;
     }
 
-    private sealed record Addresses(HashSet<IPAddress> Own, IReadOnlyList<IPAddress> Lan);
+    private sealed record Addresses(HashSet<IPAddress> Own, IReadOnlyList<IPAddress> Lan, IReadOnlyList<PcNetwork> Networks);
+}
+
+/// <summary>A network this PC is in.</summary>
+/// <param name="Address">The PC's own IPv4 address in it.</param>
+/// <param name="Prefix">The length of the network's prefix: 24 for a mask of 255.255.255.0.</param>
+/// <param name="Adapter">The name of the adapter, as the system calls it: "Wi-Fi", "Ethernet".</param>
+/// <param name="Router">True when the adapter leads to a router: the PC's home network.</param>
+internal sealed record PcNetwork(IPAddress Address, int Prefix, string Adapter, bool Router)
+{
+    /// <summary>The network as a project keeps it, "192.168.1.0/24", see <see cref="OutputPlan.Network"/>.</summary>
+    public string Network => OutputPlan.NetworkText(Address, Prefix);
+
+    /// <summary>The address that reaches every device of the network: 192.168.1.255 for 192.168.1.0/24.</summary>
+    public IPAddress Broadcast
+    {
+        get
+        {
+            byte[] bytes = Address.GetAddressBytes();
+            uint hosts = Prefix >= 32 ? 0 : uint.MaxValue >> Prefix;
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(
+                bytes, System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(bytes) | hosts);
+            return new IPAddress(bytes);
+        }
+    }
+
+    /// <summary>True when the address is in this network.</summary>
+    /// <param name="address">An IPv4 address.</param>
+    public bool Holds(IPAddress address)
+    {
+        return OutputPlan.NetworkText(address, Prefix) == Network;
+    }
 }

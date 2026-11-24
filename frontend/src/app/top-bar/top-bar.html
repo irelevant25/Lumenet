@@ -6,8 +6,8 @@
         <span class="version">v{{ store.version() }}</span>
       }
     </div>
-    <!-- how many boxes answer; a press opens their window: which box plays which universe -->
-    <lm-boxes-button (open)="boxesDialog().open()" />
+    <!-- how many outputs play; a press opens their window: which output plays which universe -->
+    <lm-outputs-button (open)="openOutputs()" />
     @if (lanLine(); as line) {
       <!-- Only while LAN is lit, and only on the PC: what to open on a phone, and the password. -->
       <span class="lan" [attr.title]="line.hint">
@@ -153,4 +153,6 @@
 <lm-project-dialog />
 <lm-import-dialog />
 <lm-export-dialog />
-<lm-boxes-dialog />
+@defer (on idle; when outputsWanted()) {
+  <lm-outputs-dialog #outputsWindow />
+}

@@ -273,6 +273,18 @@ internal sealed partial class Desk
         }
     }
 
+    /// <summary>Switches blackout over: on when it was off, off when it was on. The blackout button of a box does this.</summary>
+    /// <returns>True when blackout is on now.</returns>
+    public bool ToggleBlackout()
+    {
+        lock (_lock)
+        {
+            _blackout = !_blackout;
+            _outputChanges++;
+            return _blackout;
+        }
+    }
+
     /// <summary>
     /// Writes the note under a channel fader. Notes are like tape labels: they stay whatever
     /// else happens on the desk, also through Clear and the memory functions.
@@ -585,6 +597,7 @@ internal sealed partial class Desk
             {
                 Universes = _universes,
                 Boxes = _boxes,
+                Outputs = _outputs,
                 MemoryIndependents = Copy(_memoryIndependents),
                 Sequences = Copy(_sequences),
                 Stack = _stack.Select(entry => new ProjectStep(entry.Cue, entry.Step) { Releases = ReleasedCue(entry.Step) }).ToArray(),
@@ -775,6 +788,7 @@ internal sealed partial class Desk
     {
         _universes = project.Universes;
         _boxes = project.Boxes;
+        _outputs = project.Outputs;
         PutStage(project.Stage ?? StagePlan.Empty);
         _stagePicture = project.Stage is null ? null : project.StagePicture;
         _notes = project.Notes;

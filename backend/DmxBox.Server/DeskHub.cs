@@ -27,6 +27,7 @@ internal sealed class DeskHub : Hub<IDeskClient>
     private readonly Desk _desk;
     private readonly ProjectStore _projects;
     private readonly BoxNetwork _boxes;
+    private readonly OutputNetwork _outputs;
     private readonly LanAccess _lan;
     private readonly UndoHistory _history;
     private readonly Autosave _autosave;
@@ -35,14 +36,17 @@ internal sealed class DeskHub : Hub<IDeskClient>
     /// <param name="desk">The desk.</param>
     /// <param name="projects">The projects folder and the open project.</param>
     /// <param name="boxes">The boxes, for their state and what they play.</param>
+    /// <param name="outputs">The outputs besides the boxes: Art-Net, sACN and DMX USB interfaces.</param>
     /// <param name="lan">Whether other devices in the network may use the desk.</param>
     /// <param name="history">Undo and redo for what the project holds.</param>
     /// <param name="autosave">Keeps the work that is not saved yet.</param>
-    public DeskHub(Desk desk, ProjectStore projects, BoxNetwork boxes, LanAccess lan, UndoHistory history, Autosave autosave)
+    public DeskHub(
+        Desk desk, ProjectStore projects, BoxNetwork boxes, OutputNetwork outputs, LanAccess lan, UndoHistory history, Autosave autosave)
     {
         _desk = desk;
         _projects = projects;
         _boxes = boxes;
+        _outputs = outputs;
         _lan = lan;
         _history = history;
         _autosave = autosave;
@@ -98,7 +102,7 @@ internal sealed class DeskHub : Hub<IDeskClient>
     /// <summary>The first call of a UI: everything it needs to draw itself.</summary>
     public HelloAnswer Hello()
     {
-        return new HelloAnswer(AppInfo.Version, _desk.GetState(), _boxes.Boxes, _projects.Current);
+        return new HelloAnswer(AppInfo.Version, _desk.GetState(), _boxes.Boxes, _projects.Current, _outputs.Outputs);
     }
 
     /// <summary>Moves one channel fader.</summary>
@@ -464,6 +468,63 @@ internal sealed class DeskHub : Hub<IDeskClient>
             _boxes.Refresh();
 
         await TellProjectAsync();
+    }
+
+    /// <summary>The outputs besides the boxes as the Outputs window shows them, see <see cref="OutputNetwork.Outputs"/>.</summary>
+    public OutputView[] GetOutputs()
+    {
+        return _outputs.Outputs;
+    }
+
+    /// <summary>
+    /// Takes the project's outputs besides the boxes as the Outputs window changed them (see
+    /// <see cref="Desk.SetOutputs"/>): an Art-Net node, sACN or a USB interface added, a port given
+    /// another universe or address, an output taken out. An Art-Net output to the address of a
+    /// dmxbox is refused: the desk plays the box with its own protocol already. Every UI gets the
+    /// outputs.
+    /// </summary>
+    /// <param name="outputs">The whole list as it is to be.</param>
+    public async Task SetOutputs(OutputPlan[] outputs)
+    {
+        foreach (OutputPlan output in outputs ?? [])
+        {
+            string target = output?.Target?.Trim() ?? "";
+            if (output?.Kind == OutputPlan.ArtNet && _boxes.IsBoxAddress(target))
+            {
+                throw new DeskException(
+                    $"{target} is a dmxbox, which the desk plays with its own protocol already. Give it its universes in the dmxbox section.");
+            }
+        }
+
+        bool changed;
+        using (_history.Change("the outputs"))
+            changed = _desk.SetOutputs(outputs);
+
+        if (changed)
+            _outputs.Refresh();
+
+        await TellProjectAsync();
+    }
+
+    /// <summary>
+    /// Asks every Art-Net node on the networks of this PC to answer, and gives those that did, for
+    /// the Outputs window to add. Takes a second and a half.
+    /// </summary>
+    public Task<FoundNode[]> FindArtNetNodes()
+    {
+        return _outputs.FindArtNetNodesAsync();
+    }
+
+    /// <summary>The serial ports of the PC, for a DMX USB interface: "COM3", "/dev/ttyUSB0".</summary>
+    public string[] GetSerialPorts()
+    {
+        return _outputs.SerialPorts();
+    }
+
+    /// <summary>The networks of the PC a broadcast or a multicast can go out on, for the Outputs window.</summary>
+    public NetworkChoice[] GetNetworks()
+    {
+        return _outputs.Networks();
     }
 
     /// <summary>The stage plan of the project: the size of the stage and the lights of the rig on it.</summary>
@@ -843,11 +904,12 @@ internal sealed class DeskHub : Hub<IDeskClient>
 
     // After a change that is more than one fader or one note: every UI gets the whole desk
     // again, also the UI that asked. A changed memory changes the project too. The project may
-    // have other universes or other boxes now (undo, load, import): the boxes follow, and the
-    // UIs hear of it if that changes what they play.
+    // have other universes, other boxes or other outputs now (undo, load, import): they follow,
+    // and the UIs hear of it if that changes what they play.
     private async Task TellDeskAsync()
     {
         _boxes.Refresh();
+        _outputs.Refresh();
         await Clients.All.DeskChanged(_desk.GetState());
         await TellProjectAsync();
     }

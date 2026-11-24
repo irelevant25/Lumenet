@@ -1,31 +1,13 @@
 import { BoxPlan, BoxView } from './desk-types';
 
 /**
- * The boxes as the Boxes window works with them. The desk program sends them as views (which box
- * answers, and what each output plays); the window sends back the project's list of boxes as
- * plans. While the project lists none, every box that answers plays by itself ("automatic"); the
- * first change in the window makes the boxes that answer the project's list, with what they play
- * now, and the change on top.
+ * The boxes as the dmxbox section of the Outputs window works with them. The desk program sends
+ * them as views (which box answers, and what each output plays); the window sends back the
+ * project's list of boxes as plans. While the project lists none, every box that answers plays by
+ * itself ("automatic"); the first change in the window makes the boxes that answer the project's
+ * list, with what they play now, and the change on top. What the top bar counts, and which
+ * universes reach no cable, comes from all outputs together: see outputs.ts.
  */
-
-/** What the top bar says about the boxes: how many answer, of how many the project lists. */
-export interface BoxesSummary {
-  readonly connected: number;
-  /** The boxes the project lists; 0 while it lists none (automatic). */
-  readonly listed: number;
-  /** Boxes of the list that do not answer. */
-  readonly missing: number;
-  /** "Boxes connected: 2", or "Boxes connected: 1 of 2" when the project lists boxes. */
-  readonly text: string;
-}
-
-export function boxesSummary(boxes: readonly BoxView[]): BoxesSummary {
-  const connected = boxes.filter((box) => box.connected).length;
-  const listed = boxes.filter((box) => box.kind === 'listed');
-  const missing = listed.filter((box) => !box.connected).length;
-  const of = listed.length > 0 ? ` of ${listed.length}` : '';
-  return { connected, listed: listed.length, missing, text: `Boxes connected: ${connected}${of}` };
-}
 
 /**
  * The project's list as it is: the boxes it lists, or, while it lists none, every box that answers
@@ -67,21 +49,6 @@ export function withBox(boxes: readonly BoxView[], address: string, outputs: num
 /** The list without a box. */
 export function withoutBox(boxes: readonly BoxView[], address: string): BoxPlan[] {
   return plansOf(boxes).filter((plan) => plan.address !== address);
-}
-
-/** The universes of the project that no output of a box that answers plays: their channels reach no cable. */
-export function unplayedUniverses(boxes: readonly BoxView[], universes: number): number[] {
-  const played = new Set(boxes.filter((box) => box.connected).flatMap((box) => box.universes));
-  return Array.from({ length: universes }, (_, index) => index + 1).filter((universe) => !played.has(universe));
-}
-
-/** The universes that more than one output plays: the same cable twice, as a splitter would give it. */
-export function sharedUniverses(boxes: readonly BoxView[]): number[] {
-  const count = new Map<number, number>();
-  for (const universe of boxes.filter((box) => box.kind !== 'new').flatMap((box) => box.universes)) {
-    if (universe > 0) count.set(universe, (count.get(universe) ?? 0) + 1);
-  }
-  return [...count].filter(([, outputs]) => outputs > 1).map(([universe]) => universe).sort((a, b) => a - b);
 }
 
 /** The number on the switch of a box at 10.1.n.1; null for any other address. */

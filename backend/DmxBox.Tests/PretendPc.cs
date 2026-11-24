@@ -30,6 +30,11 @@ internal sealed class PretendPc : ThisPc
     public override IReadOnlyList<IPAddress> LanAddresses => _lan;
 
     /// <inheritdoc />
+    /// <remarks>Every pretend network has 256 addresses; the first one leads to a router.</remarks>
+    public override IReadOnlyList<PcNetwork> Networks =>
+        [.. _lan.Select((address, index) => new PcNetwork(address, 24, $"Pretend {index + 1}", Router: index == 0))];
+
+    /// <inheritdoc />
     public override bool Owns(IPAddress address)
     {
         IPAddress plain = address.IsIPv4MappedToIPv6 ? address.MapToIPv4() : address;

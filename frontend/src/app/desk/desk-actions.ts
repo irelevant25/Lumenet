@@ -95,7 +95,7 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
     label: 'LAN',
     run: ({ store }) => store.setLan(!store.lan()?.on),
   },
-  { id: 'boxes', group: 'Project and LAN', label: 'Boxes (the window of the boxes)', run: null },
+  { id: 'boxes', group: 'Project and LAN', label: 'Outputs (the window of the boxes and other outputs)', run: null },
 
   // Clear, Solo and Rate stood in the master section once: their names say so, and the shortcuts
   // that projects keep under these names go on working.

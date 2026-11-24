@@ -29,7 +29,7 @@ button:hover {
   color: #fff;
 }
 
-/* a little round lamp: green while the boxes answer, amber while a box of the list does not */
+/* a little round lamp: green while the outputs play, amber while one of the project's does not */
 .light {
   box-sizing: border-box;
   width: 9px;

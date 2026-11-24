@@ -5,4 +5,5 @@ namespace DmxBox.Server;
 /// <param name="Desk">The desk as it is now.</param>
 /// <param name="Boxes">The boxes, which of them are connected and what they play, see <see cref="BoxNetwork.Boxes"/>.</param>
 /// <param name="Project">The project that is open.</param>
-internal sealed record HelloAnswer(string Version, DeskState Desk, BoxView[] Boxes, ProjectInfo Project);
+/// <param name="Outputs">The outputs besides the boxes, with their states, see <see cref="OutputNetwork.Outputs"/>.</param>
+internal sealed record HelloAnswer(string Version, DeskState Desk, BoxView[] Boxes, ProjectInfo Project, OutputView[] Outputs);

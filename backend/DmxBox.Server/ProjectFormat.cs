@@ -50,6 +50,11 @@ namespace DmxBox.Server;
 /// All of these are written only when they are there, so files without them stay as they were.
 /// A step of a sequence or of the stack can also stand for a "fixture" or a "group", named by its
 /// place in those lists (0 for one that is gone), with a "color".
+/// "outputs" are the outputs besides the boxes, see <see cref="OutputPlan"/>: Art-Net nodes, sACN
+/// and DMX USB interfaces, each with a "kind", a "target" and its "ports" (a "universe" of the
+/// project and an "address": the Port-Address of Art-Net, the universe of sACN), and a "network"
+/// and a "priority" where they are not automatic and 100. They are written only for a project
+/// that has some, and an older program passes over them, so they needed no new version either.
 /// The notes and the independents may be missing: then there are no notes, and the keys are
 /// on channels 1 to 32 and memories 1 to 32. That keeps the files from before these existed
 /// readable. Version 2 added the sequences and the stack; a file of version 1 has neither, and
@@ -103,6 +108,7 @@ internal static class ProjectFormat
             Boxes = project.Boxes.Length == 0
                 ? null
                 : project.Boxes.Select(box => new ProjectFileBox { Address = box.Address, Universes = [.. box.Universes] }).ToList<ProjectFileBox?>(),
+            Outputs = project.Outputs.Length == 0 ? null : project.Outputs.Select(FileOutput).ToList<ProjectFileOutput?>(),
             Notes = project.Notes.Length == 0 ? null : project.Notes,
             Memories = [],
             ChannelNotes = NotesThatAreNotEmpty(project.ChannelNotes),
@@ -170,6 +176,7 @@ internal static class ProjectFormat
         {
             Universes = universes,
             Boxes = BoxesOf(file.Boxes),
+            Outputs = OutputsOf(file.Outputs),
             MemoryIndependents = MemoryIndependentsOf(file.MemoryIndependents, version),
             Sequences = SequencesOf(file.Sequences, looks),
             Stack = StackOf(file.Stack),
@@ -433,6 +440,55 @@ internal static class ProjectFormat
         }
 
         return [.. boxes];
+    }
+
+    // An output besides the boxes as the file has it: the network and the priority only where
+    // they say something (a broadcast or multicast on a chosen network, sACN at another priority
+    // than 100), the address of a port only for Art-Net and sACN.
+    private static ProjectFileOutput FileOutput(OutputPlan output)
+    {
+        return new ProjectFileOutput
+        {
+            Kind = output.Kind,
+            Target = output.Target,
+            Network = output.Network.Length > 0 ? output.Network : null,
+            Priority = output.Priority != OutputPlan.DefaultPriority ? output.Priority : null,
+            Ports = output.Ports
+                .Select(port => new ProjectFilePort { Universe = port.Universe, Address = output.Kind == OutputPlan.Usb ? null : port.Address })
+                .ToList<ProjectFilePort?>(),
+        };
+    }
+
+    // The outputs besides the boxes; none for a file without them, as every file before them is.
+    private static OutputPlan[] OutputsOf(List<ProjectFileOutput?>? listed)
+    {
+        if (listed is null)
+            return [];
+
+        var plans = new OutputPlan?[listed.Count];
+        for (int index = 0; index < listed.Count; index++)
+        {
+            ProjectFileOutput output = listed[index] ?? throw Bad("The list of outputs in the file has an empty entry.");
+            OutputPort[] ports = (output.Ports ?? throw Bad($"Output {index + 1} of the file has no ports."))
+                .Select(port => port is null
+                    ? throw Bad($"The ports of output {index + 1} in the file have an empty entry.")
+                    : new OutputPort(port.Universe ?? 0, port.Address ?? 0))
+                .ToArray();
+            plans[index] = new OutputPlan(output.Kind ?? "", output.Target ?? "", ports)
+            {
+                Network = output.Network ?? "",
+                Priority = output.Priority ?? OutputPlan.DefaultPriority,
+            };
+        }
+
+        try
+        {
+            return Desk.CheckedOutputs(plans, number => $"Output {number} of the file");
+        }
+        catch (DeskException e)
+        {
+            throw Bad(e.Message);
+        }
     }
 
     // One entry per memory: its look, or null for a memory the file does not list.

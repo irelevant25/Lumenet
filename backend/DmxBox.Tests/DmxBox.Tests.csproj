@@ -26,6 +26,7 @@
   <ItemGroup>
     <ProjectReference Include="..\DmxBox\DmxBox.csproj" />
     <ProjectReference Include="..\DmxBox.Server\DmxBox.Server.csproj" />
+    <ProjectReference Include="..\DmxBox.Sim\DmxBox.Sim.csproj" />
   </ItemGroup>
 
 </Project>

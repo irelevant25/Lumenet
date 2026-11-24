@@ -1,7 +1,7 @@
 # Building and changing Lumenet
 
 For people who build the dmxbox or change the code: the box's hardware and firmware, the PC side, how the
-desk is built and tested, the DX protocol, and what has been tried so far. The [README](README.md) says what
+desk is built and tested, the DX protocol, Art-Net, sACN and the DMX USB Pro, and what has been tried so far. The [README](README.md) says what
 Lumenet is and how to get it; the [manual](MANUAL.md) describes the desk.
 
 ## The dmxbox in short
@@ -33,14 +33,15 @@ computer. See [dmxbox 2: the PIC32 box](#dmxbox-2-the-pic32-box).
 | `firmware/common/` | The C code both boxes share: the network stack, the address server, Art-Net, the DX protocol, the fade engine, the presets and the USB network adapter. |
 | `firmware/pico/` | The box with the Pico: a Pico SDK project (C). Builds `dmxbox.uf2`; `flash.cmd` puts it onto the Pico. `test/` tests the network code on a PC. |
 | `firmware/pic32/` | The PIC32 box with two outputs (dmxbox 2): its own C code (board, DMX outputs, flash) and `build.cmd`, which builds `dmxbox2.hex` with Microchip's XC32. |
-| `firmware/sim/` | The **same** engine and protocol C code as the firmware, running on a PC over normal sockets: `dmxbox_sim.exe` with one output like the Pico box, `dmxbox_sim2.exe` with two like the PIC32 box. Use them to develop software before the hardware exists. |
-| `backend/` | .NET: the `DmxBox` library, the `dmxbox` command-line tool, the server of the Lumenet desk, `Lumenet.exe` (`backend/Lumenet`), and the tests. |
+| `firmware/sim/` | The **same** engine and protocol C code as the firmware, running on a PC over normal sockets: the box with the Pico and dmxbox 2, each with one output and with two. Use them to develop software before the hardware exists. |
+| `backend/` | .NET: the `DmxBox` library, the `dmxbox` command-line tool, the server of the Lumenet desk, `Lumenet.exe` (`backend/Lumenet`), the simulated devices of `sim.cmd` (`backend/DmxBox.Sim`), and the tests. |
 | `frontend/` | Angular: the page of the Lumenet fader desk. |
 | `run.cmd` | Starts the Lumenet desk: backend and frontend together. |
+| `sim.cmd` | Starts a simulated DMX device, as if it were plugged in: a dmxbox, an Art-Net node, an sACN receiver or an Enttec DMX USB Pro. |
 | `publish.cmd` | Makes `Lumenet.exe`, the whole desk in one file. |
 | `.github/` | The workflow that makes `Lumenet.exe` after every push to `main` and puts it on the Releases page. |
 | `examples/` | The example projects of the desk, which its Load window lists, and an example show file of a theatre console, to import. |
-| `docs/` | The screenshots of the README. |
+| `docs/` | The screenshots of the README and the manual. |
 | `hardware/pico/` | The box with the Pico: `schematic-1-universe/` (the schematic, the breadboard plan and the perfboard plan in SVG, PNG and PDF for printing, and the scripts that draw them), `3d/` (Blender model, renders, and a drawing of the board's tracks) and [BOM.md](hardware/pico/BOM.md), the parts list for ordering. |
 | `hardware/pic32/` | The PIC32 box (dmxbox 2): `schematic-2-universes/` and `schematic-1-universe/` (for two outputs and for one: the net list, the schematic, the breadboard plan, the perfboard plan, the EAGLE files, and the scripts that draw and check them), `3d/` (Blender model of the finished box and its pictures) and [BOM.md](hardware/pic32/BOM.md). |
 | `hardware/eagle.py` | Writes EAGLE schematics and boards; the scripts of both boxes use it. |
@@ -635,6 +636,11 @@ A rejected request throws `DmxBoxException` (with the box's status, e.g. `BAD_AR
 retransmits throws `DmxBoxTimeoutException`. `backend/DmxBox.Cli/Demos.cs` has a cue demo (box-side fades) and a
 streaming rainbow demo (Art-Net).
 
+For other DMX hardware the library has `SacnSender` (sACN, E1.31: data packets with a sequence per universe,
+and the packets that end a universe) and `EnttecPro` (the messages of the Enttec DMX USB Pro, both ways).
+`ArtNetSender` also sends through a socket shared by many senders, with the Port-Address of a node's port
+(`ArtNetSender.PortAddress(net, subNet, universe)`), and `ArtNetDiscovery` gives every port a node has.
+
 ### QLC+ (or any Art-Net software)
 
 Add an Art-Net output on the network adapter with the address 192.168.7.2 (that is the box's USB link), for
@@ -647,7 +653,7 @@ itself cannot be connected to a router.
 ### Simulator and tests
 
 ```powershell
-firmware\sim\build.cmd                                  # builds dmxbox_sim.exe (one output) and dmxbox_sim2.exe (two)
+firmware\sim\build.cmd                                  # builds the four box simulators (see below)
 firmware\sim\dmxbox_sim.exe --show 12                   # prints channel values as they change
 # another terminal:
 dmxbox -H 127.0.0.1 fade 1 255 128 0 -t 2
@@ -655,10 +661,54 @@ dmxbox -H 127.0.0.1 fade 1 255 128 0 -t 2
 dotnet test backend/DmxBox.sln                 # the client against the simulator, and the desk server
 ```
 
-`dmxbox_sim.exe --drop 0.3` loses 30 % of control packets in each direction. Use it to test the reliability
-layer; the test suite does exactly this. `dmxbox_sim2.exe` is the box with two outputs, channels 1 to 1024
-(1 to 512 on output 1, 513 to 1024 on output 2); the tests run it too. Both are built with the Visual Studio C
-compiler; on Linux or macOS use `make -C firmware/sim`.
+The box simulators run the firmware's own engine and protocol code, built for a PC:
+
+| Program | Box | sim.cmd |
+|---|---|---|
+| `dmxbox_sim.exe` | the box with the Pico: one output, channels 1 to 512 | `pico-1-universe` |
+| `dmxbox_sim_pico2.exe` | a box with the Pico and two outputs (no such hardware exists yet) | `pico-2-universes` |
+| `dmxbox_sim2_1.exe` | dmxbox 2 with one output | `pic32-1-universe` |
+| `dmxbox_sim2.exe` | dmxbox 2 with two outputs: channels 1 to 1024, 513 on is output 2 | `pic32-2-universes` |
+
+`--drop 0.3` loses 30 % of control packets in each direction. Use it to test the reliability layer; the test
+suite does exactly this. `--host 127.0.0.1` binds the simulator to one address (all of them without it; on
+127.0.0.1 Windows does not ask about its firewall), and `--parent PID` ends it with that process. They are
+built with the Visual Studio C compiler; on Linux or macOS use `make -C firmware/sim`.
+
+### Simulated devices: sim.cmd
+
+`sim.cmd` at the root starts a simulated DMX device as if it were plugged into this PC: the desk (`run.cmd`
+or Lumenet.exe) finds it by itself. It needs the .NET 10 SDK; the box simulators are built the first time
+(and again when the firmware changed), with Visual Studio's C compiler.
+
+```powershell
+sim.cmd                        # the devices and the options
+sim.cmd pico-1-universe        # the box with the Pico; also pico-2-universes, pic32-1-universe, pic32-2-universes
+sim.cmd artnet --ports 2       # an Art-Net node with two ports (--at 0:0:0, --name "Sim node")
+sim.cmd sacn --universes 1-4   # an sACN receiver (--multicast takes the desk's multicast too)
+sim.cmd enttec                 # an Enttec DMX USB Pro (--serial 12345678)
+```
+
+* **Keys:** U pulls the device out and plugs it in again, Q (or Ctrl+C) ends it; a box also has B, its
+  blackout button, and P, its preset button (preset 0 fades in over 2 seconds). A script can give the keys
+  as lines on the input instead ("u", "b", "q").
+* **What each writes:** the levels of each output, port or universe when they change (`--show 16`), and
+  what happens: a box its DMX lines, the node the frames of each port and its first poll, the receiver each
+  source of a universe with its name, priority and sequence, and when it ends its stream or falls silent
+  for 2.5 seconds, the interface its frames and the questions that stop its DMX.
+* **How the desk finds them:** a simulator claims its address in `%LOCALAPPDATA%\Lumenet\simulators` (one
+  small file each, `DmxBox.SimulatorRegistry`), and says there when its device is plugged in or pulled out.
+  The desk reads that folder (`Simulators`, beside its LAN password, so a test desk with its own
+  `--Lan:PasswordFile` has its own; `sim.cmd ... --folder` points a simulator there). A simulated box is
+  looked for like a box on a USB cable; a simulated node answers Find nodes; a simulated USB interface is a
+  serial port "SIM1" in the list. A simulator that was killed is passed over once its process is gone.
+* **Where they are:** every box at 127.0.0.1 on two free ports (its DX port is its address, "127.0.0.1:52011");
+  the node and the receiver at an address of their own, 127.0.0.2, 127.0.0.3 and on, at the usual ports
+  6454 and 5568; the USB interface behind a named pipe, `lumenet-sim-SIM1` (no serial port can be made
+  without a driver; `PipeDmxPort` plays it in the desk). None of them is on the network, and Windows does not
+  ask about its firewall, except for the receiver with `--multicast`, which listens on every address.
+* The box simulator is a C program started by `backend/DmxBox.Sim` (`dmxbox-sim`); the other three are C#
+  in that program, which `SimulatorTests` runs in the test's own process.
 
 ---
 
@@ -670,7 +720,7 @@ From the sources the desk needs the .NET 10 SDK and Node.js 22:
 run.cmd            # starts the backend and the frontend; then open http://localhost:4200
 ```
 
-Ctrl+C stops both. The desk also works without a box: it shows "Boxes connected: 0" and sends the whole
+Ctrl+C stops both. The desk also works without a box: it shows "Outputs connected: 0" and sends the whole
 state as soon as a box answers.
 
 * `backend/DmxBox.Server` is the desk itself. It holds the state (levels, memories, sequences, the stack,
@@ -694,6 +744,40 @@ state as soon as a box answers.
   SET of 512 per output, so that no packet is split on the way. The pages get all boxes at once
   (`BoxesChanged`), and `SetBoxes` changes the list (undoable). A test desk beside the real one gets
   `--Box:Discover=false`, so it never finds the real boxes.
+* **The box's own master and blackout:** the desk's output already has the master, Black out (light only,
+  attributes kept), solo and the limits in it, so a link sets the box's own master to 255 and keeps its own
+  blackout (which darkens everything, attributes too) off. A link pings its box 10 times a second; a ping
+  that finds the box's blackout on means its button was pressed: the link switches the desk's blackout over
+  (`Desk.ToggleBlackout`), sends the frame, and only then switches the box's own blackout off, so the light
+  does not flash. Without a desk program the button darkens the box by itself, as the firmware has it.
+* **Outputs besides the boxes** (`OutputPlan`, `outputs` in the project file, no new version; undoable,
+  locked while the stack is live, kept by New like the boxes): Art-Net nodes, sACN and DMX USB interfaces,
+  each with ports that play a universe at an address (the 15-bit Port-Address of Art-Net, the universe of
+  sACN). `OutputNetwork` (a hosted service, beside `BoxNetwork`) plays them and keeps their states
+  (`OutputsChanged`; `GetOutputs`, `SetOutputs`, `FindArtNetNodes`, `GetSerialPorts`, `GetNetworks`); the
+  packets are in [section 6](#6-art-net-sacn-and-the-dmx-usb-pro):
+  * `NetworkOutputs`, one thread of 40 rounds a second for Art-Net and sACN: a port sends when its 512 levels
+    change, twice more in the next rounds (a lost packet is made up), and every 0.8 s while they stay the
+    same (sACN receivers give a source up after 2.5 s). A port at Off sends nothing. It polls every unicast
+    Art-Net node every 2 s (`ArtNetSocket`: one socket, bound to port 6454 with the port shared, else any
+    port, and a thread that keeps the latest ArtPollReply of each node; answered within 5 s means
+    connected). A broadcast goes to the directed broadcast of the chosen network (`ThisPc.Networks`, with
+    their masks), a multicast out of the chosen adapter (`MulticastInterface`); the networks of the boxes'
+    cables (10.1.n.x, 192.168.7.x) never count. sACN (`SacnSender` in the library) has one sequence number
+    per universe and the CID of `sacn-cid.txt` beside the LAN password, made at the first packet; a
+    universe that stops (Off, taken out, the program ending) gets three packets with Stream_Terminated.
+  * `UsbLink`, a thread for each USB interface (System.IO.Ports, which works on Windows, Linux and macOS;
+    framing in `EnttecPro` in the library): label 10 (serial number) once after the port opens, because
+    every other question but label 3 stops the interface's DMX, then label 6 frames on change and once a
+    second, label 3 (parameters) every 2 s; answered within 5 s means connected. The list of ports (each
+    second) and a failing write tell that it was pulled out; it opens again when it is back. The baud rate
+    is a dummy value to these interfaces (115200 here).
+  * **dmxbox and Art-Net:** `SetOutputs` refuses Art-Net to the address of a box (192.168.7.1, 10.1.n.1 and
+    every box the desk looks for, `BoxNetwork.IsBoxAddress`), and a node that answers as "dmxbox..." gets no
+    frames (state "conflict"), so one box never gets DX and Art-Net at once.
+  * Settings for a test desk: `--Outputs:Bind=127.0.0.1` sends from loopback only (no broadcast, no
+    multicast), `--Outputs:ArtNetPort`, `--Outputs:ArtNetReplyPort` (0: any port) and `--Outputs:SacnPort`
+    send to pretend receivers. The tests use these.
 * `frontend/` is an Angular app. It only shows the desk and passes on what you do, over SignalR (`/hub/desk`).
   Because the state lives in the backend, reloading the page loses nothing.
 * The backend listens on every network card (`Urls` is `http://*:5080`), but serves another device only while
@@ -727,13 +811,20 @@ publish.cmd        # builds the page, then publish\Lumenet.exe
 
 ### Tests
 
-`dotnet test backend/DmxBox.sln` (547 tests: the client, also against the simulator with two outputs, the
+`dotnet test backend/DmxBox.sln` (649 tests: the client, also against the simulator with two outputs, the
 desk, solo, sequences and the stack with a clock the tests set by hand, the rate and its tempo, undo and the autosave, the
 stage plan and its picture, fixtures, their attributes, their steps and their notes, the notes, the
 universes, project files with Export and Import, the examples, the import of show files, the links to the
-boxes and their wiring, the hub, LAN with a pretend PC and a pretend phone, the crossfades of sequences and
-the stack, steps of the stack that add and releases, a level of a memory changed from the Memories view),
-and in `frontend/`: `npm test -- --watch=false` (225 tests of the page).
+boxes and their wiring with the blackout button, the hub, LAN with a pretend PC and a pretend phone, the
+crossfades of sequences and the stack, steps of the stack that add and releases, a level of a memory changed
+from the Memories view, and the outputs besides the boxes: the packets of Art-Net, sACN and the DMX USB Pro
+byte by byte, and Art-Net and sACN on 127.0.0.1 with a pretend node and receiver, a pretend USB interface; the simulated devices of sim.cmd, the four box simulators among them, and the desk finding them),
+and in `frontend/`: `npm test -- --watch=false` (230 tests of the page).
+
+On Windows the first packets of a new UDP flow (a socket and a receiver) can be held back for a moment while
+the firewall looks at the flow, and what follows meanwhile is dropped. The tests of the network outputs
+therefore play their outputs for three rounds first and count only after that; the desk itself makes up for
+it with the repeats of a change.
 
 ---
 
@@ -787,11 +878,130 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
 
 ---
 
-## 6. Ideas for later
+## 6. Art-Net, sACN and the DMX USB Pro
+
+What the desk sends to DMX hardware other than the dmxbox (see "Outputs besides the boxes" in section 4).
+The packets are made in the `DmxBox` library (`ArtNetSender`, `ArtNetDiscovery`, `SacnSender`,
+`EnttecPro`), and `OutputProtocolTests` checks them byte by byte.
+
+### Art-Net 4 (UDP 6454)
+
+Every packet starts with `"Art-Net"` and a zero byte, then its OpCode, low byte first. **ArtDmx** (OpCode
+0x5000) carries one universe:
+
+| Offset | Size | Field |
+|---|---|---|
+| 0 | 8 | `"Art-Net\0"` |
+| 8 | 2 | OpCode 0x5000, low byte first |
+| 10 | 2 | protocol version 14, high byte first |
+| 12 | 1 | sequence: 1 to 255, then 1 again (0 would mean "not numbered") |
+| 13 | 1 | physical port: 0 |
+| 14 | 1 | SubUni: Sub-Net × 16 + Universe |
+| 15 | 1 | Net (0 to 127) |
+| 16 | 2 | number of channels, high byte first: even, 2 to 512 |
+| 18 | n | the levels, channel 1 first |
+
+Net, Sub-Net and Universe together are the 15-bit Port-Address of a node's port (0:0:1 is 1, 1:0:0 is 256).
+
+* **ArtPoll** (OpCode 0x2000) is 14 bytes, which every node answers: the header, the version, Flags 0 and
+  DiagPriority 0. The desk sends it to each node it plays every 2 seconds, and to the broadcast of every
+  network of the PC for Find nodes.
+* **ArtPollReply** (OpCode 0x2100): the desk reads the node's address (offset 10), firmware (16 and 17),
+  NetSwitch (18), SubSwitch (19), short name (26, 18 bytes), long name (44, 64 bytes), the number of ports
+  (173), each port's type (174 to 177; bit 7: it puts out DMX) and the low four bits of its universe (SwOut,
+  190 to 193). A node with more than four ports answers more than once; the desk puts the answers together.
+  A node that answered within 5 seconds is connected.
+* Nodes answer at port 6454, so the desk listens there, sharing the port with other Art-Net programs on the
+  PC (`SO_REUSEADDR`). Windows then hands a datagram that is sent to that port to only one of them, so an
+  Art-Net program on the same PC is no reliable node for the desk (see [Checking by hand](#checking-by-hand)).
+
+### sACN, ANSI E1.31 (UDP 5568)
+
+One data packet for each universe, 638 bytes, every number high byte first:
+
+| Offset | Size | Field |
+|---|---|---|
+| 0 | 2 | preamble size 0x0010 |
+| 2 | 2 | postamble size 0 |
+| 4 | 12 | `"ASC-E1.17"` and three zero bytes |
+| 16 | 2 | 0x7000 + the length from here to the end (622) |
+| 18 | 4 | vector 0x00000004: E1.31 data |
+| 22 | 16 | CID: the desk's UUID, from `sacn-cid.txt` |
+| 38 | 2 | 0x7000 + 600 |
+| 40 | 4 | vector 0x00000002: data packet |
+| 44 | 64 | source name "Lumenet", filled up with zeros |
+| 108 | 1 | priority 0 to 200 |
+| 109 | 2 | synchronization address: 0, none |
+| 111 | 1 | sequence number: one count for each universe, 0 to 255 and round again |
+| 112 | 1 | options: bit 6 (0x40) is Stream_Terminated |
+| 113 | 2 | universe 1 to 63999 |
+| 115 | 2 | 0x7000 + 523 |
+| 117 | 1 | vector 0x02: set property |
+| 118 | 1 | address and data type 0xa1 |
+| 119 | 2 | first property address 0 |
+| 121 | 2 | address increment 1 |
+| 123 | 2 | property count 513 |
+| 125 | 1 | start code 0 |
+| 126 | 512 | the levels, slot 1 first |
+
+* Multicast goes to 239.255.*high byte*.*low byte* of the universe (239.255.0.1 for universe 1), out of the
+  adapter of the chosen network.
+* A universe that stops gets three packets with Stream_Terminated and its last levels; a receiver lets go of
+  the source at once instead of after 2.5 seconds.
+
+### Enttec DMX USB Pro (a serial port)
+
+Every message, both ways: 0x7E, the label, the length of the data (two bytes, low byte first), the data,
+0xE7. The baud rate means nothing to these interfaces; the desk opens the port at 115200, 8N1.
+
+| Label | Name | Data |
+|---|---|---|
+| 3 | Get Widget Parameters | asked with 0, 0 (no user data); answered with the firmware (low byte, high byte), break time, mark after break and rate |
+| 6 | Output Only Send DMX Packet | start code 0 and 24 to 512 levels; fewer are filled up with zeros |
+| 10 | Get Widget Serial Number | asked with no data; answered with 4 bytes of two decimal digits each, the lowest first |
+
+The interface puts the last frame on its cable again and again. Every question but label 3 stops that until
+the next frame, so the desk asks for the serial number once, right after the port opens and before the
+first frame, and for the parameters every 2 seconds, to know that the interface is there.
+
+### Checking by hand
+
+`sim.cmd artnet`, `sim.cmd sacn` and `sim.cmd enttec` (see [Simulated devices](#simulated-devices-simcmd))
+show what the desk sends without any hardware. Free tools that do it as other programs see it:
+
+* **sACNView** (Windows, macOS, Linux) lists the sACN sources of a universe with their name, CID, priority
+  and sequence errors, and shows the 512 levels. It can run on the PC of the desk: sACN to this PC's
+  address, or by multicast, reaches it.
+* **QLC+** (Windows, macOS, Linux) takes Art-Net and sACN in: in Inputs/Outputs, choose Art-Net or E1.31 as
+  the input of a universe and tick Passthrough, and its DMX Monitor shows the levels. It answers the poll, so
+  Find nodes lists it. It also drives an Enttec DMX USB Pro, which tells whether the interface itself works.
+* **DMX-Workshop** (Artistic Licence, Windows) lists the Art-Net nodes of a network and shows the frames each
+  Port-Address gets.
+* **Wireshark** shows every packet with its fields: Art-Net, and sACN through its ACN decoder. Capturing needs
+  Npcap, whose installer asks for administrator rights.
+
+Art-Net is best checked from a second computer in the same network: on one PC the desk and the tool share
+port 6454, and a frame sent to that port reaches only one of them. sACN has no such trouble, because
+receivers listen at 5568 and the desk sends from a port of its own.
+
+---
+
+## 7. Ideas for later
 
 * **Wi-Fi:** a Pico W has the same size and pins and has Wi-Fi on board. With a Wi-Fi part in the firmware the
   box could join a wireless network itself, and USB would only supply power.
-* **sACN / E1.31** (UDP 5568, multicast) alongside Art-Net.
+* **Open DMX USB and FTDI cables without a processor:** the PC has to make the DMX frame itself (a break, a
+  mark after it, 250 kbaud 8N2). On Windows System.IO.Ports can do it through the FTDI driver's COM port
+  (`BreakState`), and FTDI's D2XX would not time it better (both go through the same bus driver; D2XX may
+  not be shipped with the program). But the end of a frame can still be in the chip when the next break
+  begins (`BytesToWrite` counts only the driver's queue), so a sender has to wait for an empty queue and
+  about 6 ms more, at 30 frames a second; QLC+ and others report flicker with such cables. On Linux
+  `BreakState` holds a break of 250 ms and cannot be used (a small `ioctl(TIOCSBRK)` class can), and on
+  macOS no driver is known to put the break on the wire. So it waits for a second step, tried on such a
+  cable with a DMX tester, rather than going in untried.
+* **The second universe of a USB interface:** the desk sends label 6, the one universe every DMX USB Pro
+  and compatible plays. A DMXking ultraDMX Pro plays it on all its outputs; its own labels 100 and 101 would
+  give its two ports a universe each. The Enttec DMX USB Pro Mk2 has a second port too, behind an API key.
 * **More universes from one box:** the desk plays up to 8 universes on several boxes; the box with the Pico
   sends one, [dmxbox 2](#dmxbox-2-the-pic32-box) two. Its board is ready for **RDM**: with RDM in the firmware
   and the desk, the desk could find the fixtures on a line and set their addresses.
@@ -1122,6 +1332,37 @@ Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 
   size with none of the kinds open, Listen came back to Settings with Blackout chosen under Master; on a
   phone the tempo fader lies across the width under the keys. No error on the page. Not yet tried with a
   light or with music.
+* **Art-Net, sACN and DMX USB interfaces, the Outputs window (2026-11-24):** the backend passes 634 tests and
+  the page 230. In the tests: ArtDmx, ArtPoll, the ArtPollReply with its ports, the E1.31 data packet and the
+  messages of the DMX USB Pro byte by byte, as the specifications have them (section 6); on 127.0.0.1 a
+  pretend node gets each port's universe at its Port-Address, a change
+  three times and an unchanged universe every 0.8 s, numbered frames, its name when it answers and "not
+  answering" when it does not, nothing when it is a dmxbox or at a box's address; a pretend receiver gets
+  sACN with the desk's name, CID and priority, a sequence per universe, three ending packets for a universe
+  taken out, set to Off or at the program's end; a pretend USB interface gets the serial-number question
+  before the first frame, a frame on change and every second, is missing when pulled out or held by another
+  program and opens again; a box, an Art-Net node, sACN and a USB interface give the same 512 levels with a
+  moving head, a limit, the master and Black out; the box's button switches the desk's Black out and the box
+  lets go of its own blackout after the frame. On a test copy sending from 127.0.0.1, with a pretend node
+  and receiver (a Node.js script), in Chrome: Find nodes found the node with its two ports, Add made it
+  connected with its name, sACN to 127.0.0.1 said Sending, Art-Net to 192.168.7.1 was refused with the
+  reason, channel 1 at full reached both as 255 and Black out as 0, Undo took sACN away and the receiver
+  got three ending packets; the window at 1600 × 1500 and on a phone of 390 pixels, without sideways
+  scrolling or an error on the page. **Not yet tried with a real node, receiver or USB interface**, nor with a
+  broadcast or a multicast on a real network (a test desk sends from 127.0.0.1 only).
+* **Simulated devices, sim.cmd (2026-11-24):** the backend passes 649 tests and the page 230. In the tests:
+  an address is one simulator's, also across kinds; a device pulled out is not there for the desk; the file
+  of a killed simulator is removed and its address free again; the box network looks for a simulated box
+  while it runs and drops it when it is pulled out; the four box simulators answer with their channels (512,
+  1024) and Art-Net names ("dmxbox", "dmxbox 2" with one output or two); the two buttons; a box pulled out
+  comes back on its port; Find nodes finds the simulated node and the desk plays on it; the simulated
+  receiver takes the desk's sACN and hears it end; the simulated USB interface at a port SIM is connected
+  with its serial number, pulled out and plugged in again. On a test copy, four simulators started at once
+  by a script, each at an address of its own: the box was found within two seconds, and its blackout button
+  switched Black out on and off; Find nodes listed the node and Add played U1 on its first port; the
+  receiver showed universe 1 from "Lumenet"; SIM1 was listed and connected; channel 1 at full reached all
+  four as 255; the box and the interface pulled out left "Outputs connected: 2 of 3", plugged in again "4 of
+  4"; Q left no file and no process behind. Not tried yet in a terminal of its own, by hand.
 * **dmxbox 2 on paper (2026-11-23):** both versions (two outputs and one) are drawn from their `circuit.py`,
   and each drawing passed its check against it: the schematic, the breadboard plan, the perfboard plan (38 and
   26 insulated wires, with SW1 at the cut left edge and the holes around the four screws kept empty;

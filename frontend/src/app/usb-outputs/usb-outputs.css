@@ -1,0 +1,6 @@
+/* The table, fields and keys come from ../outputs-dialog/output-section.css, which all sections
+   of the Outputs window share. The interfaces need nothing of their own but the width of the
+   list of ports. */
+#usb-port {
+  min-width: 9em;
+}

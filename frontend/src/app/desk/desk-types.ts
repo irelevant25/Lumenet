@@ -495,6 +495,81 @@ export interface BoxPlan {
 export const MAX_BOX_OUTPUTS = 8;
 export const MAX_BOXES = 64;
 
+/**
+ * An output of the project besides its boxes, as the desk program keeps it (OutputPlan there): an
+ * Art-Net node, sACN (E1.31), or a DMX USB interface of the kind of the Enttec DMX USB Pro. Each
+ * of its ports plays a universe of the project.
+ */
+export interface OutputPlan {
+  kind: OutputKind;
+  /**
+   * Art-Net: the node's address, or "broadcast". sACN: "multicast", or a receiver's address.
+   * USB: the serial port, "COM3" or "/dev/ttyUSB0".
+   */
+  target: string;
+  ports: OutputPort[];
+  /** For a broadcast or a multicast: the network it goes out on, "192.168.1.0/24"; empty for automatic. */
+  network: string;
+  /** For sACN: 0 to 200, 100 unless changed. */
+  priority: number;
+}
+
+export type OutputKind = 'artnet' | 'sacn' | 'usb';
+
+/** A port of an output: the universe of the project it plays (0: none), and where it goes. */
+export interface OutputPort {
+  universe: number;
+  /** Art-Net: the 15-bit Port-Address (Net, Sub-Net, Universe). sACN: the universe, 1 to 63999. USB: 0. */
+  address: number;
+}
+
+/**
+ * An output as the Outputs window shows it. "connected": it answers. "missing": it does not
+ * answer, or cannot be reached. "sending": it goes out and cannot answer (sACN, an Art-Net
+ * broadcast). "conflict": it would reach a dmxbox, so nothing goes out.
+ */
+export interface OutputView {
+  plan: OutputPlan;
+  state: 'connected' | 'missing' | 'sending' | 'conflict';
+  /** What the state means here: the node's name, or why it is missing. */
+  detail: string;
+}
+
+/** An Art-Net node that answered the search of the Outputs window. */
+export interface FoundNode {
+  ip: string;
+  shortName: string;
+  longName: string;
+  firmware: string;
+  /** The Port-Address of each port that puts out DMX. */
+  ports: number[];
+  /** True for a dmxbox, which plays in the dmxbox section and cannot be added as a node. */
+  dmxbox: boolean;
+}
+
+/** A network of the PC a broadcast or a multicast can go out on. */
+export interface NetworkChoice {
+  /** As a project keeps it: "192.168.1.0/24". */
+  network: string;
+  /** The PC's address in it. */
+  address: string;
+  /** The adapter's name: "Wi-Fi", "Ethernet". */
+  adapter: string;
+  /** True for the network that leads to a router: the automatic choice. */
+  router: boolean;
+}
+
+/** The most outputs besides the boxes, and the most ports of one. */
+export const MAX_OUTPUTS = 64;
+export const MAX_OUTPUT_PORTS = 32;
+
+/** The priority of sACN unless it is changed, and the highest. */
+export const DEFAULT_PRIORITY = 100;
+export const MAX_PRIORITY = 200;
+
+/** The highest sACN universe; the lowest is 1. */
+export const MAX_SACN_UNIVERSE = 63999;
+
 /** The project that is open. `path` is null until it has been saved to a file. */
 export interface ProjectInfo {
   name: string;
@@ -524,6 +599,8 @@ export interface Welcome {
   /** The boxes, which of them answer, and what they play. Missing from an older desk program. */
   boxes?: BoxView[];
   project: ProjectInfo;
+  /** The outputs besides the boxes, with their states. Missing from an older desk program. */
+  outputs?: OutputView[];
 }
 
 /** One project file in the projects folder. */

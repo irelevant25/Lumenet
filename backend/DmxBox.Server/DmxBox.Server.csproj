@@ -15,6 +15,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The serial ports of the DMX USB interfaces (Enttec DMX USB Pro and compatible), on
+         Windows, Linux and macOS. Lumenet.exe takes the same package. -->
+    <PackageReference Include="System.IO.Ports" Version="10.0.14" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- The tests work on the desk, the project files and the box link directly. -->
     <InternalsVisibleTo Include="DmxBox.Tests" />
   </ItemGroup>

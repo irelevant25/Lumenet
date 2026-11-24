@@ -1,0 +1,179 @@
+<section class="output-section" aria-labelledby="sacn-outputs-title">
+  <h3 id="sacn-outputs-title">sACN</h3>
+  <p class="hint">
+    Streaming ACN (E1.31) by multicast, which every receiver in the network can take, or to the
+    address of one receiver. Each port plays a universe of the project as an sACN universe; of two
+    sources of a universe, a receiver takes the one with the higher priority.
+  </p>
+
+  @if (streams().length > 0) {
+    <table>
+      <caption>
+        The sACN outputs, and the universe each port plays
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">To</th>
+          <th scope="col">State</th>
+          <th scope="col">Ports: universe, as sACN universe</th>
+          <th scope="col">Priority</th>
+          <th scope="col"><span class="hidden">Remove</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of streams(); track item.index) {
+          @let plan = item.view.plan;
+          @let name = plan.target === 'multicast' ? 'the multicast' : plan.target;
+          <tr>
+            <th scope="row">
+              <span class="address">{{
+                plan.target === 'multicast' ? 'Multicast' : plan.target
+              }}</span>
+              @if (plan.target === 'multicast') {
+                <select
+                  class="network"
+                  [disabled]="locked()"
+                  [attr.aria-label]="'Network of ' + name"
+                  (change)="onNetwork(item, $event)"
+                >
+                  <option value="" [selected]="plan.network === ''">Automatic</option>
+                  @for (choice of networks(); track choice.network) {
+                    <option [value]="choice.network" [selected]="choice.network === plan.network">
+                      {{ networkLabel(choice) }}
+                    </option>
+                  }
+                  @if (networkGone(plan)) {
+                    <option [value]="plan.network" selected>
+                      {{ plan.network }} (not on this PC)
+                    </option>
+                  }
+                </select>
+              }
+            </th>
+            <td>
+              <span class="state" [class]="item.view.state">
+                <span class="light" aria-hidden="true"></span>{{ stateOf(item.view) }}
+              </span>
+              @if (item.view.detail) {
+                <small class="detail">{{ item.view.detail }}</small>
+              }
+            </td>
+            <td>
+              <div class="port-list">
+                @for (port of plan.ports; track $index; let p = $index) {
+                  <div class="port">
+                    <select
+                      [disabled]="locked()"
+                      [attr.aria-label]="'Universe of port ' + (p + 1) + ' of ' + name"
+                      (change)="onUniverse(item, p, $event)"
+                    >
+                      <option value="0" [selected]="port.universe === 0">Off</option>
+                      @for (choice of universeChoices(); track choice) {
+                        <option [value]="choice" [selected]="choice === port.universe">
+                          U{{ choice }}
+                        </option>
+                      }
+                      @if (beyond(port.universe)) {
+                        <option [value]="port.universe" selected>
+                          U{{ port.universe }} (not in the project)
+                        </option>
+                      }
+                    </select>
+                    <span class="at" aria-hidden="true">as</span>
+                    <input
+                      class="universe"
+                      type="number"
+                      min="1"
+                      [max]="maxUniverse"
+                      [value]="port.address"
+                      [disabled]="locked()"
+                      [attr.aria-label]="'sACN universe of port ' + (p + 1) + ' of ' + name"
+                      (change)="onAddress(item, p, $event)"
+                    />
+                    @if (plan.ports.length > 1) {
+                      <button
+                        type="button"
+                        class="remove small"
+                        [disabled]="locked()"
+                        [attr.aria-label]="'Remove port ' + (p + 1) + ' of ' + name"
+                        title="Remove the port"
+                        (click)="removePort(item, p)"
+                      >
+                        ✕
+                      </button>
+                    }
+                  </div>
+                }
+                @if (plan.ports.length < maxPorts) {
+                  <button
+                    type="button"
+                    class="more"
+                    [disabled]="locked()"
+                    [attr.aria-label]="'Another port for ' + name"
+                    (click)="addPort(item)"
+                  >
+                    + Port
+                  </button>
+                }
+              </div>
+            </td>
+            <td>
+              <input
+                class="priority"
+                type="number"
+                min="0"
+                [max]="maxPriority"
+                [value]="plan.priority"
+                [disabled]="locked()"
+                [attr.aria-label]="'Priority of ' + name"
+                (change)="onPriority(item, $event)"
+              />
+            </td>
+            <td class="act">
+              <button
+                type="button"
+                class="remove"
+                [disabled]="locked()"
+                [attr.aria-label]="'Remove ' + name"
+                title="Remove from the list"
+                (click)="remove(item)"
+              >
+                ✕
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  <form class="add" (submit)="addByHand($event, address)">
+    <button
+      type="button"
+      class="more"
+      [disabled]="locked()"
+      aria-label="Add sACN by multicast"
+      (click)="addMulticast()"
+    >
+      + Multicast
+    </button>
+    <label for="sacn-address">or to a receiver</label>
+    <input
+      #address
+      id="sacn-address"
+      type="text"
+      autocomplete="off"
+      spellcheck="false"
+      maxlength="15"
+      placeholder="192.168.1.50"
+      [disabled]="locked()"
+    />
+    <button lmLamp type="submit" tone="system" aria-label="Add the receiver" [disabled]="locked()">
+      Add
+    </button>
+  </form>
+
+  @if (error()) {
+    <p class="error" role="alert">{{ error() }}</p>
+  }
+</section>

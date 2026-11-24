@@ -13,9 +13,12 @@ import {
   DeskState,
   UNIVERSE_SIZE,
   EMPTY_STAGE,
+  FoundNode,
   ImportAnswer,
   LanAccess,
   MEMORY_COUNT,
+  NetworkChoice,
+  OutputView,
   Playback,
   ProjectList,
   Sequence,
@@ -105,6 +108,11 @@ class FakeConnection {
   stagePlan: StagePlan = { ...EMPTY_STAGE };
   /** The picture under the plan, as the backend answers "GetStagePicture". */
   stagePicture: string | null = null;
+  /** The Art-Net nodes that answer the search of the Outputs window ("FindArtNetNodes"). */
+  foundNodes: FoundNode[] = [];
+  /** The serial ports and the networks of the PC, as the backend answers "GetSerialPorts" and "GetNetworks". */
+  serialPorts = ['COM3', 'COM7'];
+  networks: NetworkChoice[] = [{ network: '192.168.1.0/24', address: '192.168.1.20', adapter: 'Wi-Fi', router: true }];
 
   start(): void {
     this.online.set(true);
@@ -159,6 +167,9 @@ class FakeConnection {
       this.autosave = { on: args[0] as boolean, seconds: args[1] as number };
       return this.autosave;
     }
+    if (method === 'FindArtNetNodes') return this.foundNodes;
+    if (method === 'GetSerialPorts') return this.serialPorts;
+    if (method === 'GetNetworks') return this.networks;
     return undefined;
   }
 
@@ -196,6 +207,8 @@ const QUESTIONS = [
   'GetAutosave',
   'GetStage',
   'GetStagePicture',
+  'GetSerialPorts',
+  'GetNetworks',
 ];
 
 /** A step on a channel, with all three times at one second unless said otherwise. */
@@ -764,10 +777,10 @@ describe('the desk page', () => {
     expect(button('New project')).toBeTruthy();
   });
 
-  it('the boxes, LAN, Undo and Redo stand at the top left; New, Save, Load, Import and Export at the right', () => {
+  it('the outputs, LAN, Undo and Redo stand at the top left; New, Save, Load, Import and Export at the right', () => {
     const labels = (selector: string) =>
       [...page.querySelectorAll(`lm-top-bar ${selector} button`)].map((key) => key.getAttribute('aria-label') ?? key.textContent?.trim());
-    expect(labels('.left')).toEqual(['Boxes connected: 0', 'LAN', 'Undo', 'Redo']);
+    expect(labels('.left')).toEqual(['Outputs connected: 0', 'LAN', 'Undo', 'Redo']);
     expect(labels('.project')).toEqual(['New project', 'Save project', 'Load project', 'Import', 'Export']);
   });
 
@@ -876,17 +889,18 @@ describe('the desk page', () => {
     expect(number().options[0].text.trim()).toBe('1');
   });
 
-  it('the top left counts the boxes, and their window says which universe each output plays', async () => {
+  it('the top left counts the boxes, and the Outputs window says which universe each output of a box plays', async () => {
     const boxes: BoxView[] = [
       { address: '192.168.7.1', connected: true, firmware: '1.0', outputs: 1, universes: [1], kind: 'automatic' },
       { address: '10.1.3.1', connected: true, firmware: '1.0', outputs: 2, universes: [0, 0], kind: 'automatic' },
     ];
     connection.emit('BoxesChanged', boxes);
     await fixture.whenStable();
-    await press(button('Boxes connected: 2'));
-    expect(page.querySelector('lm-boxes-dialog dialog')?.hasAttribute('open')).toBe(true);
-    expect(textOf('lm-boxes-dialog tbody tr:nth-child(2) th')).toContain('Switch 3, firmware 1.0');
-    expect(textOf('lm-boxes-dialog .remark')).toBeUndefined(); // U1, the only universe, is played
+    await press(button('Outputs connected: 2'));
+    await fixture.whenStable();
+    expect(page.querySelector('lm-outputs-dialog dialog')?.hasAttribute('open')).toBe(true);
+    expect(textOf('lm-box-outputs tbody tr:nth-child(2) th')).toContain('Switch 3, firmware 1.0');
+    expect(textOf('lm-outputs-dialog .remark')).toBeUndefined(); // U1, the only universe, is played
 
     // The second output of the second box plays U1 as well: the boxes become the project's list.
     const output = page.querySelector<HTMLSelectElement>('select[aria-label="Output 2 of 10.1.3.1"]')!;
@@ -907,7 +921,7 @@ describe('the desk page', () => {
     ]);
     await fixture.whenStable();
     page.querySelector<HTMLInputElement>('#box-address')!.value = '10.1.4.1';
-    page.querySelector('lm-boxes-dialog form.add')!.dispatchEvent(new Event('submit'));
+    page.querySelector('lm-box-outputs form.add')!.dispatchEvent(new Event('submit'));
     await fixture.whenStable();
     expect(connection.last('SetBoxes')).toEqual([
       [
@@ -924,10 +938,75 @@ describe('the desk page', () => {
       { address: '10.1.4.1', connected: false, firmware: null, outputs: 1, universes: [0], kind: 'listed' },
     ]);
     await fixture.whenStable();
-    expect(button('Boxes connected: 2 of 3').className).toContain('missing');
-    expect(textOf('lm-boxes-dialog tbody tr:nth-child(3) td')).toBe('Not connected');
+    expect(button('Outputs connected: 2 of 3').className).toContain('missing');
+    expect(textOf('lm-box-outputs tbody tr:nth-child(3) td')).toBe('Not connected');
     await press(button('Automatic: the boxes play by themselves'));
     expect(connection.last('SetBoxes')).toEqual([[]]);
+  });
+
+  it('the Outputs window adds an Art-Net node it found, sACN and a USB interface, and the top left counts them', async () => {
+    connection.foundNodes = [
+      { ip: '10.0.0.7', shortName: 'Node 2', longName: 'A node', firmware: '1.2', ports: [0, 1], dmxbox: false },
+      { ip: '192.168.7.1', shortName: 'dmxbox', longName: 'dmxbox', firmware: '1.0', ports: [0], dmxbox: true },
+    ];
+    await press(button('Outputs connected: 0'));
+    await fixture.whenStable();
+    expect(page.querySelector('lm-outputs-dialog dialog')?.hasAttribute('open')).toBe(true);
+    expect(connection.calls.map((call) => call.method)).toContain('GetNetworks');
+
+    // Art-Net: the search lists the nodes; a dmxbox cannot be added, the other one can.
+    await press(button('Find nodes'));
+    await fixture.whenStable();
+    expect(textOf('lm-artnet-outputs .found li:nth-child(2)')).toContain('A dmxbox: it plays in the dmxbox section.');
+    await press(button('Add Node 2 at 10.0.0.7'));
+    const node = {
+      kind: 'artnet',
+      target: '10.0.0.7',
+      ports: [
+        { universe: 1, address: 0 },
+        { universe: 0, address: 1 },
+      ],
+      network: '',
+      priority: 100,
+    };
+    expect(connection.last('SetOutputs')).toEqual([[node]]);
+
+    // The desk program answers with the output and its state; the Net of the first port changes.
+    const outputs: OutputView[] = [{ plan: node as OutputView['plan'], state: 'connected', detail: 'Node 2, firmware 1.2' }];
+    connection.emit('OutputsChanged', outputs);
+    await fixture.whenStable();
+    expect(textOf('lm-artnet-outputs tbody td')).toContain('Connected');
+    const net = page.querySelector<HTMLInputElement>('input[aria-label="Net of port 1 of 10.0.0.7"]')!;
+    net.value = '1';
+    net.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect((connection.last('SetOutputs')?.[0] as { ports: unknown }[])[0].ports).toEqual([
+      { universe: 1, address: 256 },
+      { universe: 0, address: 1 },
+    ]);
+
+    // sACN by multicast, and a USB interface at the first free port.
+    await press(button('Add sACN by multicast'));
+    expect((connection.last('SetOutputs')?.[0] as unknown[])[1]).toEqual({
+      kind: 'sacn',
+      target: 'multicast',
+      ports: [{ universe: 1, address: 1 }],
+      network: '',
+      priority: 100,
+    });
+    await press(button('Add the interface at this port'));
+    expect((connection.last('SetOutputs')?.[0] as { target: string }[])[1].target).toBe('COM3');
+
+    // The top left counts the outputs that play, and a node that does not answer turns it amber.
+    connection.emit('OutputsChanged', [
+      outputs[0],
+      { plan: { kind: 'sacn', target: 'multicast', ports: [{ universe: 1, address: 1 }], network: '', priority: 100 }, state: 'sending', detail: '' },
+      { plan: { kind: 'artnet', target: '10.0.0.9', ports: [{ universe: 1, address: 0 }], network: '', priority: 100 }, state: 'missing', detail: '' },
+    ]);
+    await fixture.whenStable();
+    expect(button('Outputs connected: 2 of 3').className).toContain('missing');
+    expect(button('Outputs connected: 2 of 3').title).toContain('Art-Net 10.0.0.9: not answering (U1 at 0:0:0)');
+    expect(textOf('lm-outputs-dialog .remark')).toBe('U1 is on more than one output, as with a splitter.');
   });
 
   // ---------------------------------------------------------------- undo, solo, rate, project settings, autosave, colors

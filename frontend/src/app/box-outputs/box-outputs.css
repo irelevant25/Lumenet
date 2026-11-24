@@ -1,0 +1,8 @@
+/* The table, fields and keys come from ../outputs-dialog/output-section.css, which all sections
+   of the Outputs window share. Here only what the boxes have of their own. */
+
+/* a box that answers but is not on the list: dimmed, until it is added */
+tr.new th,
+tr.new .state {
+  color: var(--legend-dim);
+}

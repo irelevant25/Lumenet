@@ -411,6 +411,8 @@ public sealed class PlaybackHubTests
 
         public Task BoxesChanged(BoxView[] boxes) => throw new NotSupportedException();
 
+        public Task OutputsChanged(OutputView[] outputs) => throw new NotSupportedException();
+
         public Task ProjectChanged(ProjectInfo project) => throw new NotSupportedException();
 
         public Task StackChanged(StackState stack) => throw new NotSupportedException();

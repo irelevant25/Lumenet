@@ -16,10 +16,12 @@ namespace DmxBox.Server;
 /// </remarks>
 /// <remarks>
 /// The desk's blackout is part of its output: it darkens the light and leaves the attributes of
-/// the lights, such as the pan of a moving head, where they are. The box has a blackout of its
-/// own, which its button switches: that one makes everything dark. The desk follows the button
-/// (its blackout goes on and off with it), and a blackout switched off on a UI switches the
-/// box's own off too.
+/// the lights, such as the pan of a moving head, where they are, on every kind of output alike.
+/// The box has a blackout of its own, which its button switches: that one makes everything dark,
+/// the attributes too, and it is what the button does while no desk program runs. While the box
+/// is connected its own blackout stays off: a press of the button, which the link sees at the
+/// next ping (10 a second), switches the desk's blackout over, and once the box has the desk's
+/// output with it, the link takes the box's own blackout off again.
 /// </remarks>
 /// <remarks>
 /// The link has a thread of its own, because a request to a box that does not answer blocks
@@ -30,8 +32,9 @@ internal sealed class BoxLink : IDisposable
     // 40 rounds a second. The box sends about 43 DMX frames a second, so more would be wasted.
     private static readonly TimeSpan RoundInterval = TimeSpan.FromMilliseconds(25);
 
-    // How often a connected box is asked for its state.
-    private static readonly TimeSpan PingInterval = TimeSpan.FromMilliseconds(500);
+    // How often a connected box is asked for its state: 10 times a second, so that its blackout
+    // button works at once, and a box that restarted gets its look back within a moment.
+    private static readonly TimeSpan PingInterval = TimeSpan.FromMilliseconds(100);
 
     // How often a missing box is looked for.
     private static readonly TimeSpan RetryInterval = TimeSpan.FromSeconds(1);
@@ -53,14 +56,13 @@ internal sealed class BoxLink : IDisposable
     private bool _connected;
     private TimeSpan _nextPing;     // when to ping next: to find the box, or to check on it
     private TimeSpan _lastUptime;   // the box's uptime at the last ping
-    private bool _boxBlackout;      // the box's own blackout, of its button, as the link last gave it or took it
     private long _sentOutput;       // the desk's OutputChanges that belong to the last frame sent
     private string? _lastFailure;   // why the box was not reached the last time
 
     /// <summary>Prepares the link. Nothing is sent until it is run.</summary>
     /// <param name="desk">The desk whose output the box has to show.</param>
     /// <param name="box">The box. The link closes it when it is disposed.</param>
-    /// <param name="clients">All connected UIs. They are told when the box's blackout button was pressed.</param>
+    /// <param name="clients">All connected UIs. They are told when the box's blackout button switched the desk's blackout.</param>
     /// <param name="host">The address of the box, as in <see cref="BoxPlan.Address"/>, for the UI and the log.</param>
     /// <param name="logger">Gets a line when the box comes or goes.</param>
     /// <param name="universesOf">
@@ -195,9 +197,6 @@ internal sealed class BoxLink : IDisposable
 
     private void Serve(TimeSpan now)
     {
-        // The box's own blackout goes off first when the UI switched blackout off: the ping
-        // below has to find the box in the state the desk asked for.
-        ReleaseBoxBlackout();
         SendOutputIfChanged();
 
         if (now >= _nextPing)
@@ -221,10 +220,9 @@ internal sealed class BoxLink : IDisposable
             return;
         }
 
-        // The link knows what it told the box. If the box says something else, its own
-        // blackout button was pressed.
-        if (info.Blackout != _boxBlackout)
-            TakeBlackoutFromBox(info.Blackout);
+        // The link keeps the box's own blackout off. If it is on, the button was pressed.
+        if (info.Blackout)
+            TakeButtonPress();
     }
 
     // What a box needs after it was found, or after it restarted: it may hold anything, or nothing.
@@ -237,18 +235,18 @@ internal sealed class BoxLink : IDisposable
 
         // First the right look, then the light: the box's own blackout goes off after the output.
         _box.Blackout(false);
-        _boxBlackout = false;
     }
 
-    // Blackout switched off on a UI switches off the box's own blackout too, if its button had
-    // switched it on.
-    private void ReleaseBoxBlackout()
+    // The box's button was pressed: it made the box dark by itself, the attributes too. The desk's
+    // blackout switches over and the UIs hear of it. The box gets the output with the desk's
+    // blackout in it, or without, and only then lets go of its own: dark lights stay dark, and a
+    // moving head gets its pan and tilt back.
+    private void TakeButtonPress()
     {
-        if (!_boxBlackout || _desk.Blackout)
-            return;
-
+        bool on = _desk.ToggleBlackout();
+        _ = _clients.BlackoutChanged(on);   // not awaited, see Report
+        SendOutput();
         _box.Blackout(false);
-        _boxBlackout = false;
     }
 
     private void SendOutputIfChanged()
@@ -281,14 +279,6 @@ internal sealed class BoxLink : IDisposable
         }
 
         return frame;
-    }
-
-    // The box's button was pressed: the desk's blackout follows it, and the UIs hear of it.
-    private void TakeBlackoutFromBox(bool on)
-    {
-        _boxBlackout = on;
-        _desk.SetBlackout(on);
-        _ = _clients.BlackoutChanged(on);   // not awaited, see Report
     }
 
     private void Disconnect(TimeSpan now, Exception reason)

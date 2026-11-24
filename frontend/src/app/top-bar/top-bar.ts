@@ -1,7 +1,5 @@
-import { Component, computed, inject, viewChild } from '@angular/core';
+import { Component, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { BoxesButton } from '../boxes-button/boxes-button';
-import { BoxesDialog } from '../boxes-dialog/boxes-dialog';
 import { DeskSettings } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
 import { lanAddressInUse } from '../desk/desk-types';
@@ -9,10 +7,13 @@ import { viewNamed } from '../desk/views';
 import { ExportDialog } from '../export-dialog/export-dialog';
 import { ImportDialog } from '../import-dialog/import-dialog';
 import { LampButton } from '../lamp-button/lamp-button';
+import { OutputsButton } from '../outputs-button/outputs-button';
+import { OutputsDialog } from '../outputs-dialog/outputs-dialog';
+import type { OutputsDialog as OutputsWindow } from '../outputs-dialog/outputs-dialog';
 import { ProjectDialog } from '../project-dialog/project-dialog';
 
 /**
- * The strip along the top: name and version with the boxes (how many answer; a press opens their
+ * The strip along the top: name and version with the outputs (how many play; a press opens their
  * window) and the LAN key, the links to the views (those Settings does not leave out), and the
  * project with its keys New, Save, Load, Import and Export.
  */
@@ -20,7 +21,7 @@ import { ProjectDialog } from '../project-dialog/project-dialog';
   host: {
     role: 'banner',
   },
-  imports: [BoxesButton, BoxesDialog, ExportDialog, ImportDialog, LampButton, ProjectDialog, RouterLink, RouterLinkActive],
+  imports: [ExportDialog, ImportDialog, LampButton, OutputsButton, OutputsDialog, ProjectDialog, RouterLink, RouterLinkActive],
   selector: 'lm-top-bar',
   styleUrl: './top-bar.css',
   templateUrl: './top-bar.html',
@@ -31,7 +32,35 @@ export class TopBar {
   protected readonly dialog = viewChild.required(ProjectDialog);
   protected readonly importDialog = viewChild.required(ImportDialog);
   protected readonly exportDialog = viewChild.required(ExportDialog);
-  protected readonly boxesDialog = viewChild.required(BoxesDialog);
+
+  // The Outputs window is loaded once the page has settled (@defer in the template), or at the
+  // first press on the outputs line: it is big, and rarely opened. Named by its reference, so
+  // that nothing here loads it before.
+  private readonly outputsDialog = viewChild<OutputsWindow>('outputsWindow');
+  protected readonly outputsWanted = signal(false);
+  private openOutputsOnLoad = false;
+
+  constructor() {
+    // A press that came before the window was there opens it once it is.
+    effect(() => {
+      const dialog = this.outputsDialog();
+      if (dialog && this.openOutputsOnLoad) {
+        this.openOutputsOnLoad = false;
+        dialog.open();
+      }
+    });
+  }
+
+  /** Opens the Outputs window; loads it first if the page has not done so yet. */
+  protected openOutputs(): void {
+    const dialog = this.outputsDialog();
+    if (dialog) {
+      dialog.open();
+      return;
+    }
+    this.openOutputsOnLoad = true;
+    this.outputsWanted.set(true);
+  }
 
   /** The links to the views: in the order Settings gives them, all but those it leaves out. */
   protected readonly links = computed(() => {

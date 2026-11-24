@@ -70,7 +70,8 @@ internal sealed class TestServer : IAsyncDisposable
         var pc = new PretendPc();
 
         // Port 0: the system picks a free one. The projects and the LAN password stay in the
-        // test's own folder.
+        // test's own folder. The outputs send from 127.0.0.1 only, and hear the Art-Net nodes at a
+        // port of their own: nothing reaches the network, and no test listens on it.
         string[] settings =
         [
             "--urls=http://127.0.0.1:0",
@@ -78,6 +79,8 @@ internal sealed class TestServer : IAsyncDisposable
             $"--Lan:PasswordFile={Path.Combine(folder.FullName, "lan-password.txt")}",
             $"--Autosave:File={Path.Combine(folder.FullName, "autosave.json")}",
             "--Box:Host=pretend-box",
+            "--Outputs:Bind=127.0.0.1",
+            "--Outputs:ArtNetReplyPort=0",
             .. moreSettings,
         ];
         WebApplication app = Program.Build(settings, box, pc);

@@ -64,7 +64,7 @@ h1 {
   line-height: 1;
 }
 
-/* the version and the LAN line: small and dim (the boxes under the name look the same, see boxes-button) */
+/* the version and the LAN line: small and dim (the outputs under the name look the same, see outputs-button) */
 .version,
 .lan {
   color: var(--legend-dim);

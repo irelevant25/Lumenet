@@ -140,22 +140,22 @@ public sealed class BoxLinkTests
     }
 
     [Fact]
-    public void BoxIsPingedTwiceASecond()
+    public void BoxIsPingedTenTimesASecond()
     {
         Connect();
 
-        for (int milliseconds = 25; milliseconds < 500; milliseconds += 25)
+        for (int milliseconds = 25; milliseconds < 100; milliseconds += 25)
             _link.Step(At(milliseconds));
         Assert.Empty(_box.Calls);
 
-        _link.Step(At(500));
+        _link.Step(At(100));
         Assert.Equal(["ping"], _box.Calls);
 
-        _link.Step(At(525));
-        _link.Step(At(975));
+        _link.Step(At(125));
+        _link.Step(At(175));
         Assert.Equal(["ping"], _box.Calls);
 
-        _link.Step(At(1000));
+        _link.Step(At(200));
         Assert.Equal(["ping", "ping"], _box.Calls);
     }
 
@@ -187,7 +187,7 @@ public sealed class BoxLinkTests
         Connect();
 
         _desk.SetBlackout(true);
-        _link.Step(At(500));   // a round in which the ping is due as well
+        _link.Step(At(100));   // a round in which the ping is due as well
 
         Assert.Equal(["levels", "ping"], _box.Calls);
         Assert.True(_desk.Blackout);
@@ -195,56 +195,85 @@ public sealed class BoxLinkTests
     }
 
     [Fact]
-    public void BlackoutSwitchedOffOnTheUiSwitchesOffThatOfTheButtonToo()
+    public void BlackoutButtonOnTheBoxSwitchesTheDesksBlackoutForTheDeskAndTheUis()
     {
         _desk.SetChannel(1, 200);
         Connect();
+
         _box.PressBlackoutButton();
-        _link.Step(At(500));
-        _box.ForgetCalls();
+        _link.Step(At(100));
 
-        _desk.SetBlackout(false);
-        _link.Step(At(525));
+        Assert.True(_desk.Blackout);
+        Assert.Equal([true], _clients.BlackoutChanges);
 
-        Assert.Equal(["blackout off", "levels"], _box.Calls);
+        _box.PressBlackoutButton();
+        _link.Step(At(200));
+
+        Assert.False(_desk.Blackout);
+        Assert.Equal([true, false], _clients.BlackoutChanges);
+        Assert.Equal(200, _box.Levels[0]);
+    }
+
+    [Fact]
+    public void BoxLetsGoOfItsOwnBlackoutOnceItHasTheDesksOutput()
+    {
+        _desk.SetChannel(1, 200);
+        Connect();
+
+        _box.PressBlackoutButton();   // the box goes dark by itself, everything
+        _link.Step(At(100));
+
+        // First the dark look of the desk, then the box's own blackout off: the light never flashes.
+        Assert.Equal(["ping", "levels", "blackout off"], _box.Calls);
+        Assert.False(_box.BlackoutOn);
+        Assert.Equal(0, _box.Levels[0]);
+    }
+
+    [Fact]
+    public void BlackoutButtonLeavesTheHeadWhereItIsAsTheDesksBlackoutDoes()
+    {
+        _desk.SetStage(new StagePlan(16, 10, [new StageLight(1, "Spot", 1, "PTD", null, 4, 4, 0)]));
+        _desk.SetChannel(1, 100);   // pan
+        _desk.SetChannel(2, 50);    // tilt
+        _desk.SetChannel(3, 255);   // dimmer
+        Connect();
+
+        _box.PressBlackoutButton();
+        _link.Step(At(100));
+
+        Assert.False(_box.BlackoutOn);
+        Assert.Equal([100, 50, 0], _box.Levels[..3]);
+    }
+
+    [Fact]
+    public void BlackoutButtonPressedInTheDesksBlackoutEndsIt()
+    {
+        _desk.SetChannel(1, 200);
+        _desk.SetBlackout(true);   // on a UI
+        Connect();
+
+        _box.PressBlackoutButton();
+        _link.Step(At(100));
+
+        Assert.False(_desk.Blackout);
+        Assert.Equal([false], _clients.BlackoutChanges);
+        Assert.Equal(["ping", "levels", "blackout off"], _box.Calls);
         Assert.False(_box.BlackoutOn);
         Assert.Equal(200, _box.Levels[0]);
     }
 
     [Fact]
-    public void BlackoutButtonOnTheBoxReachesTheDeskAndTheUis()
+    public void BlackoutButtonPressedTwiceBetweenTwoPingsChangesNothing()
     {
         Connect();
 
         _box.PressBlackoutButton();
-        _link.Step(At(500));
-
-        Assert.True(_desk.Blackout);
-        Assert.Equal([true], _clients.BlackoutChanges);
-        Assert.Equal(["ping"], _box.Calls);   // the box has it already: nothing is sent back
-
         _box.PressBlackoutButton();
-        _link.Step(At(1000));
+        _link.Step(At(100));
 
         Assert.False(_desk.Blackout);
-        Assert.Equal([true, false], _clients.BlackoutChanges);
-    }
-
-    [Fact]
-    public void BlackoutTakenFromTheBoxIsNotSentBackToIt()
-    {
-        Connect();
-        _box.PressBlackoutButton();
-        _link.Step(At(500));
-        _box.ForgetCalls();
-
-        _link.Step(At(525));
-        _link.Step(At(1000));
-
-        // The desk's blackout goes out as a dark look; the box keeps its own blackout as it is.
-        Assert.Equal(["levels", "ping"], _box.Calls);
-        Assert.True(_box.BlackoutOn);
-        Assert.Equal([true], _clients.BlackoutChanges);
+        Assert.Empty(_clients.BlackoutChanges);
+        Assert.Equal(["ping"], _box.Calls);
     }
 
     // ---------------------------------------------------------------- a box that restarts
@@ -322,10 +351,10 @@ public sealed class BoxLinkTests
         Connect();
 
         _box.Unplug();        // and nothing changes on the desk
-        _link.Step(At(475));
+        _link.Step(At(75));
         Assert.True(_link.Status.Connected);
 
-        _link.Step(At(500));
+        _link.Step(At(100));
         Assert.False(_link.Status.Connected);
     }
 

@@ -3,8 +3,8 @@ using DmxBox.Server;
 namespace DmxBox.Tests;
 
 /// <summary>
-/// Stands in for "all connected UIs" in the tests of the box links and the box network, and
-/// remembers the two messages they send them.
+/// Stands in for "all connected UIs" in the tests of the box links, the box network and the
+/// outputs, and remembers the three messages they send them.
 /// </summary>
 /// <remarks>Thread-safe: the links' own threads send while the test looks.</remarks>
 internal sealed class RecordingClient : IDeskClient
@@ -12,6 +12,19 @@ internal sealed class RecordingClient : IDeskClient
     private readonly Lock _lock = new();
     private readonly List<BoxView[]> _boxesChanges = [];
     private readonly List<bool> _blackoutChanges = [];
+    private readonly List<OutputView[]> _outputsChanges = [];
+
+    /// <summary>Every "OutputsChanged" message so far, in order.</summary>
+    public IReadOnlyList<OutputView[]> OutputsChanges
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _outputsChanges.ToArray();
+            }
+        }
+    }
 
     /// <summary>Every "BoxesChanged" message so far, in order.</summary>
     public IReadOnlyList<BoxView[]> BoxesChanges
@@ -54,6 +67,17 @@ internal sealed class RecordingClient : IDeskClient
         lock (_lock)
         {
             _blackoutChanges.Add(on);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task OutputsChanged(OutputView[] outputs)
+    {
+        lock (_lock)
+        {
+            _outputsChanges.Add(outputs);
         }
 
         return Task.CompletedTask;

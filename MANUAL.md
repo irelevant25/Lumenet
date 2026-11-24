@@ -11,8 +11,11 @@ is and how to get it; [DEV.md](DEV.md) is for building the box and changing the 
   open http://localhost:4200. Ctrl+C stops both. The top bar shows the version a release of the same commit
   has (0.1 and the number of commits, as Lumenet.exe does); without git it shows 0.1.0.
 
-The desk also works without a box: it shows "Boxes connected: 0" and sends the whole state as soon as a box
-answers.
+The desk also works without a box: it shows "Outputs connected: 0" and sends the whole state as soon as a box
+answers. Besides the dmxbox it plays on Art-Net nodes, as sACN and on DMX USB interfaces of the kind of the
+Enttec DMX USB Pro, see [Universes and outputs](#universes-and-outputs). To try them without the hardware,
+`sim.cmd` (from the sources) starts a simulated box, Art-Net node, sACN receiver or USB interface, and the
+desk finds it as if it were plugged in: see [DEV.md](DEV.md#simulated-devices-simcmd).
 
 ## Lumenet.exe
 
@@ -49,7 +52,7 @@ are for the two things that run by themselves (see below), Stage shows the light
 Fixtures plays them as fixtures, Notes holds the instructions for the show, Settings is
 for how this device shows the desk and for its keyboard shortcuts (see [Settings](#settings) and
 [Keyboard](#keyboard)). Under the name the
-top bar says how many boxes answer (a click opens their window, see [Universes and boxes](#universes-and-boxes));
+top bar says how many outputs play (a click opens their window, see [Universes and outputs](#universes-and-outputs));
 beside it stand **LAN**, **Undo** and **Redo**, at the right the keys of the project. At the right of Main the
 **Stack** lies across the top, and under it stand three columns: the **Master** section (Black out and the
 master fader with its level) over **Record**; the **General** section (Clear, Solo up, Solo down, Rate, the
@@ -62,7 +65,7 @@ each.
 * **Channels:** two rows of faders (or one, as Settings says). The keys at the right choose which of the 512
   channels of a universe they show. When they do not fit into one column, they get flatter, and then they go
   on in another column beside it. In a project of several universes a key for each, U1, U2 and on, stands
-  above the faders and chooses the universe (see [Universes and boxes](#universes-and-boxes)).
+  above the faders and chooses the universe (see [Universes and outputs](#universes-and-outputs)).
 * **Memories:** one row of faders (or two), with page keys for the 128 memories. A memory holds a look:
   the levels the channel faders were set to at the moment it was saved. Its fader plays that look at the
   fader's level. For every channel the highest value wins, whether it comes from the channel fader or from
@@ -101,8 +104,10 @@ each.
 * **Clear** cancels an unfinished function and brings every channel fader and memory fader to zero.
 * **Black out** darkens every light but leaves the desk as it is; the key blinks while it is active. The
   attributes of the fixtures of the stage plan (a pan, a tilt, a wheel) stay as they are, so no moving head
-  moves. The blackout button on the box darkens the box itself, pan and tilt too; the desk shows it, and
-  Black out switched off on the desk switches that off as well.
+  moves. It is the same on every output: a box, an Art-Net node, sACN, a USB interface. The blackout button on
+  a box switches Black out as the key does: the box goes dark by itself at once, and within a tenth of a
+  second the desk takes over, with pan and tilt where they were. While no desk program runs, the button
+  darkens the box by itself, pan and tilt too.
 * **Master** dims the light, not the attributes of the fixtures.
 * **Solo up** and **Solo down** (white, in General under Clear) change what a key under a fader or of the
   independents does while it is held; so does its shortcut. Lighting one darkens the other.
@@ -414,13 +419,13 @@ each.
     with .ASC checked.
 * **LAN** (top left, beside the name) lets a phone or a tablet in the same network use the desk; see below.
 
-## Universes and boxes
+## Universes and outputs
 
 A universe is the 512 channels one DMX cable carries. A project has 1 to 8 of them (Settings, Universes; the
 project keeps the number, and a project from before has one). The channels of every universe are numbered 1
 to 512, as on the cable.
 
-![The channel faders of the second universe, with U1 and U2 above them, and two boxes connected](docs/screenshots/universes.png)
+![The channel faders of the second universe, with U1 and U2 above them, and two outputs playing](docs/screenshots/universes.png)
 
 * **U keys:** in a project of several universes, a key for each stands above the channel faders: U2 shows the
   channels of the second universe, and the page keys are then its pages. The key of the universe shown is
@@ -439,30 +444,82 @@ to 512, as on the cable.
 * A light of the stage plan has all its channels in one universe: an address that would take it past the
   end of its universe moves it down until it ends there.
 
-**The boxes.** A box has an output, a DMX socket, for each universe it sends, and says how many when the desk
+### The outputs
+
+Every universe goes out on one or more outputs: a dmxbox, an **Art-Net** node, **sACN** (E1.31) or a **DMX
+USB interface** of the kind of the Enttec DMX USB Pro. Every output plays a universe of the project, and two
+may play the same one, as a splitter would. Master, Black out, Solo and the limits of the lights give the
+same levels on every kind of output, and so does a box: its own master stays at full.
+
+* The top left says how many outputs play: "Outputs connected: 2", or "Outputs connected: 2 of 4" once the
+  project lists boxes or has outputs besides them. A box counts while it answers, an Art-Net node or a USB
+  interface while it answers, sACN and an Art-Net broadcast while they go out. Its light is green while they
+  play, amber while one of the project's does not. The pointer on it says what each plays. A click opens the
+  **Outputs window**, with a section for each kind, one under the other.
+
+![The Outputs window with the simulated devices of sim.cmd: a box, an Art-Net node found by Find nodes, sACN to a receiver and a USB interface at SIM1, each playing U1](docs/screenshots/outputs.png)
+
+* Over the sections the window says when a universe of the project reaches no cable (no output that answers
+  or sends plays it), when a universe is on more than one output, and when an output would reach a dmxbox.
+* The outputs are part of the project and their changes go into Undo; New keeps them, like the universes and
+  the boxes, since they belong to the rig. While the stack is live they cannot be changed. Nothing goes out on
+  the network until an output is added here.
+
+**dmxbox.** A box has an output, a DMX socket, for each universe it sends, and says how many when the desk
 finds it. The box with the Pico has one, at 192.168.7.1. A box with a number switch answers at 10.1.n.1 for
 the number n on its switch, and the desk finds it by itself on the PC's network adapters.
-
-* The top left says how many boxes answer: "Boxes connected: 2", or "Boxes connected: 2 of 3" when the
-  project lists three. Its light is green while they answer, amber while a box of the list does not. The
-  pointer on it says what each box plays. A click opens the **Boxes window**.
-
-![The Boxes window with two simulated boxes, each output with the universe it plays](docs/screenshots/boxes.png)
 
 * **Automatic:** while the project lists no boxes, every box that answers plays by itself: the box with the
   Pico first, then the others in the order of the numbers on their switches, each output the next universe
   (U1, U2 and on). Outputs beyond the project's universes play none.
-* **The project's list:** the first change in the window (another universe on an output, a box added or
+* **The project's list:** the first change in the section (another universe on an output, a box added or
   taken off) makes the boxes that answer the project's list, with what they play then and the change on top.
   From then on the project keeps which box plays which universe, also on another PC. Each output has a list:
-  U1 to the project's last universe, or Off. Two outputs may play the same universe, as a splitter would.
+  U1 to the project's last universe, or Off.
 * **Add a box** by its address (10.1.2.1) and its number of outputs, also before it is there: it shows as not
   connected until it answers. A box that answers but is not on the list is **new**: it plays nothing (its
   outputs send zeros) until **Add** puts it on the list. ✕ takes a box off the list. **Auto** empties the
   list: the boxes play by themselves again.
-* The window says when a universe of the project reaches no cable (no box that answers plays it), and when a
-  universe is on more than one output.
-* The list is part of the project and its changes go into Undo. While the stack is live it cannot be changed.
+
+**Art-Net.** Art-Net 4 to a node at its address, on UDP port 6454.
+
+* **Find nodes** asks every node on the networks of this PC to answer, and lists those that did, with their
+  ports; **Add** puts one on the list with a port for each of its own. A dmxbox answers too, but cannot be
+  added: it plays in the dmxbox section. **Add a node** takes a node by its address, also one in another
+  network that a router reaches.
+* **Ports:** each plays a universe of the project (or Off, which sends nothing) at a Port-Address: the Net
+  (0 to 127), Sub-Net (0 to 15) and Universe (0 to 15) set on the node, which most nodes show as 0:0:0 for
+  their first port. **+ Port** adds one, ✕ beside a port takes it out.
+* **+ Broadcast** sends to every node of a network instead, for older gear; its list chooses the network
+  (Automatic is the one that leads to the router). The networks of the boxes' cables are never in it.
+* **States:** a node is asked every 2 seconds whether it is there. **Connected** shows its name and
+  firmware, and says when no port of the node listens to a Port-Address it gets. **Not answering**: no answer
+  came; the frames go out anyway (a firewall on the PC may hold the answers back). A broadcast says
+  **Sending**. Art-Net to the address of a dmxbox is refused, and a node that calls itself a dmxbox gets
+  nothing (**A dmxbox**): the desk plays a box with its own protocol already, and two at once would fight.
+
+**sACN.** Streaming ACN (E1.31) on UDP port 5568, from the source "Lumenet".
+
+* **+ Multicast** sends each universe to its own multicast address (239.255.0.1 for sACN universe 1), which
+  every receiver in the network can take; its list chooses the network. **Add** with an address sends to one
+  receiver instead.
+* **Ports:** each plays a universe of the project as an sACN universe, 1 to 63999. **Priority**, 0 to 200
+  (100 unless changed): of two sources of one universe, a receiver takes the one with the higher priority.
+* A receiver cannot answer, so sACN says **Sending** while it goes out. A universe that stops (its port set to
+  Off, its output taken out, the desk program ending) is ended with the packets that say so, and its
+  receivers let go of it at once. The desk is the same source every time it runs: its CID is kept in
+  `%LOCALAPPDATA%\Lumenet\sacn-cid.txt`, next to the LAN password.
+
+**USB interfaces.** An Enttec DMX USB Pro, or an interface that speaks its protocol (DMXking ultraDMX Micro
+and others), at a serial port of this PC: each plays one universe, or Off, which keeps its cable dark.
+
+* **Add an interface at** lists the serial ports of the PC that no interface has; the list follows what is
+  plugged in while the window is open. A simulated interface of `sim.cmd` is at SIM1 (SIM2 and on).
+* **Connected** shows its serial number and firmware. An interface pulled out shows **Not answering**, and
+  plays again on its own once it is plugged back in. A port that another program holds, or a device that does
+  not answer as a DMX USB Pro does, says so.
+* The interface repeats the last frame on its cable by itself, also when the desk program ends. An Open DMX
+  USB, and other interfaces without a processor of their own, do not work here yet.
 
 ## Sequences and the stack
 
@@ -684,7 +741,7 @@ and **Keyboard** (see [Keyboard](#keyboard)).
   before 7 was the first keeps the 3 it had; choose 7 here once.)
 * **Keys of the independents:** how many green keys and how many red keys the column shows, 0 to 32 of each;
   with 0 of both, Main has no independents.
-* **Universes of the project:** 1 to 8, of 512 channels each (see [Universes and boxes](#universes-and-boxes)).
+* **Universes of the project:** 1 to 8, of 512 channels each (see [Universes and outputs](#universes-and-outputs)).
   The project keeps it, and the list shows the project's number until the desk program has taken a new one.
   Locked while the stack is live.
 * **Lettering:** the minus and plus keys make all lettering of the page smaller or bigger, from ×0.7 to ×1.5

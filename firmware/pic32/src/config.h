@@ -32,7 +32,11 @@
 // one output listens to ARTNET_UNIVERSE + n.
 #define ARTNET_UNIVERSE   0
 #define NODE_SHORT_NAME "dmxbox 2"
+#if defined(DMX_OUTPUTS) && DMX_OUTPUTS == 1
+#define NODE_LONG_NAME  "dmxbox 2 - PIC32 USB Art-Net node with one output"
+#else
 #define NODE_LONG_NAME  "dmxbox 2 - PIC32 USB Art-Net node with two outputs"
+#endif
 
 // In MERGE_ARTNET_OVERRIDE mode, Art-Net is "live" for this long after the
 // last packet. After that the box falls back to the cue layer.

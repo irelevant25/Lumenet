@@ -13,4 +13,19 @@ public sealed record ArtNetNode(
     string LongName,
     int Universe,
     string Firmware,
-    string Mac);
+    string Mac)
+{
+    /// <summary>
+    /// The universe (15-bit Port-Address) of every port that puts out DMX, in the node's order. A
+    /// node with more than four ports answers a poll more than once; <see cref="ArtNetDiscovery.Discover"/>
+    /// puts the ports of its answers together. Empty for a node that has no output.
+    /// </summary>
+    public int[] Ports { get; init; } = [];
+
+    /// <summary>Same node, same names and the same ports, which a record's own equality would not compare one by one.</summary>
+    public bool SameAs(ArtNetNode other)
+    {
+        return Ip == other.Ip && ShortName == other.ShortName && LongName == other.LongName && Universe == other.Universe
+            && Firmware == other.Firmware && Mac == other.Mac && Ports.AsSpan().SequenceEqual(other.Ports);
+    }
+}

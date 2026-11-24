@@ -1,0 +1,38 @@
+<dialog #dialog aria-labelledby="outputs-dialog-title" (close)="onClosed()">
+  <div class="body">
+    <h2 id="outputs-dialog-title">Outputs</h2>
+    <p class="hint">
+      Where the universes of the project go: to the dmxboxes, to Art-Net nodes, as sACN, and to DMX
+      USB interfaces. Every output plays a universe, and two may play the same one. Master, Black
+      out, Solo and the limits of the lights give the same levels on every kind. The project keeps
+      this list.
+    </p>
+
+    @for (remark of remarks(); track remark) {
+      <p class="remark">{{ remark }}</p>
+    }
+    @if (store.live()) {
+      <p class="hint" role="status">
+        The stack is live: the outputs cannot be changed until Stack is switched off.
+      </p>
+    }
+
+    <lm-box-outputs />
+    <lm-artnet-outputs [networks]="networks()" />
+    <lm-sacn-outputs [networks]="networks()" />
+    <lm-usb-outputs [serialPorts]="serialPorts()" />
+
+    <div class="actions">
+      <button
+        lmLamp
+        type="button"
+        tone="system"
+        [level]="3"
+        aria-label="Close the outputs window"
+        (click)="close()"
+      >
+        OK
+      </button>
+    </div>
+  </div>
+</dialog>

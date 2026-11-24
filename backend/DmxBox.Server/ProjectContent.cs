@@ -25,6 +25,12 @@ internal sealed record ProjectContent(byte[]?[] Looks, string[] ChannelNotes, st
     /// </summary>
     public BoxPlan[] Boxes { get; init; } = [];
 
+    /// <summary>
+    /// The project's outputs besides its boxes: Art-Net nodes, sACN and DMX USB interfaces, see
+    /// <see cref="OutputPlan"/>; empty for none.
+    /// </summary>
+    public OutputPlan[] Outputs { get; init; } = [];
+
     /// <summary>The memory number, 1-128, of each of the 10 memory keys of the independents; key 1 first.</summary>
     public int[] MemoryIndependents { get; init; } = Desk.DefaultMemoryIndependents();
 

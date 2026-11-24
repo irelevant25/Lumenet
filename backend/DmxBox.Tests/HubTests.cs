@@ -31,7 +31,7 @@ public sealed class HubTests
 
         JsonElement hello = await ui.InvokeAsync("Hello");
 
-        Assert.Equal(["version", "desk", "boxes", "project"], NamesIn(hello));
+        Assert.Equal(["version", "desk", "boxes", "project", "outputs"], NamesIn(hello));
         Assert.Equal(TestServer.Version, hello.GetProperty("version").GetString());
 
         JsonElement desk = hello.GetProperty("desk");
@@ -52,6 +52,7 @@ public sealed class HubTests
         Assert.Equal(
             """{"name":"Untitled","path":null,"unsaved":false}""",
             hello.GetProperty("project").GetRawText());
+        Assert.Equal("[]", hello.GetProperty("outputs").GetRawText());
     }
 
     [Fact]
@@ -726,6 +727,9 @@ public sealed class HubTests
 
         await AssertNextAsync(ui, "BlackoutChanged", "[true]");
         Assert.True((await ui.InvokeAsync("Hello")).GetProperty("desk").GetProperty("blackout").GetBoolean());
+
+        // The button switched the desk's blackout; the box lets go of its own, which darkened everything.
+        await Wait.UntilAsync(() => !server.Box.BlackoutOn, "The box kept its own blackout.");
     }
 
     // ---------------------------------------------------------------- undo, settings, the rate, autosave

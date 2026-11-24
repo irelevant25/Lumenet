@@ -47,6 +47,8 @@
   <ItemGroup>
     <Compile Include="..\DmxBox.Server\**\*.cs" Exclude="..\DmxBox.Server\bin\**;..\DmxBox.Server\obj\**" Link="DmxBox.Server\%(RecursiveDir)%(Filename)%(Extension)" />
     <ProjectReference Include="..\DmxBox\DmxBox.csproj" />
+    <!-- The package of DmxBox.Server: the serial ports of the DMX USB interfaces. -->
+    <PackageReference Include="System.IO.Ports" Version="10.0.14" />
   </ItemGroup>
 
   <ItemGroup>

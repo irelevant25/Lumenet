@@ -1,12 +1,5 @@
-import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
-import {
-  sharedUniverses,
-  switchNumber,
-  unplayedUniverses,
-  withBox,
-  withOutput,
-  withoutBox,
-} from '../desk/boxes';
+import { Component, computed, inject, signal } from '@angular/core';
+import { switchNumber, withBox, withOutput, withoutBox } from '../desk/boxes';
 import { DeskStore } from '../desk/desk-store';
 import { BoxPlan, BoxView, MAX_BOX_OUTPUTS } from '../desk/desk-types';
 import { LampButton } from '../lamp-button/lamp-button';
@@ -15,22 +8,21 @@ import { LampButton } from '../lamp-button/lamp-button';
 const PICO_BOX = '192.168.7.1';
 
 /**
- * The window of the boxes, opened from the top left: every box with its address, whether it
- * answers, and for each of its outputs the universe it plays. While the project lists no boxes,
- * every box that answers plays by itself, in the order of the boxes (see BoxWiring in the desk
- * program); the first change here makes the project's list, which the project keeps. A box can be
- * added by hand before it is there; it shows as not connected until it answers. A box that
- * answers but is not on the list is new, and plays nothing until it is added.
+ * The dmxbox section of the Outputs window: every box with its address, whether it answers, and
+ * for each of its outputs the universe it plays. While the project lists no boxes, every box that
+ * answers plays by itself, in the order of the boxes (see BoxWiring in the desk program); the
+ * first change here makes the project's list, which the project keeps, and Auto empties it again.
+ * A box can be added by hand before it is there; it shows as not connected until it answers. A
+ * box that answers but is not on the list is new, and plays nothing until it is added.
  */
 @Component({
   imports: [LampButton],
-  selector: 'lm-boxes-dialog',
-  styleUrl: './boxes-dialog.css',
-  templateUrl: './boxes-dialog.html',
+  selector: 'lm-box-outputs',
+  styleUrls: ['../outputs-dialog/output-section.css', './box-outputs.css'],
+  templateUrl: './box-outputs.html',
 })
-export class BoxesDialog {
+export class BoxOutputs {
   protected readonly store = inject(DeskStore);
-  private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
 
   protected readonly outputCounts = Array.from({ length: MAX_BOX_OUTPUTS }, (_, index) => index + 1);
   protected readonly busy = signal(false);
@@ -39,33 +31,15 @@ export class BoxesDialog {
   protected readonly newOutputs = signal(1);
 
   protected readonly boxes = computed(() => this.store.boxes());
-  /** True while the project lists boxes: then Automatic can empty the list. */
+  /** True while the project lists boxes: then Auto can empty the list. */
   protected readonly listed = computed(() => this.boxes().some((box) => box.kind === 'listed'));
   protected readonly locked = computed(() => this.store.live() || this.busy());
   /** The universes an output can play: those of the project. */
   protected readonly universeChoices = computed(() => Array.from({ length: this.store.universes() }, (_, index) => index + 1));
 
-  /** What needs saying about the wiring: universes that reach no cable, universes on two outputs. */
-  protected readonly remarks = computed(() => {
-    const remarks: string[] = [];
-    const unplayed = unplayedUniverses(this.boxes(), this.store.universes());
-    if (unplayed.length > 0) {
-      const names = unplayed.map((universe) => `U${universe}`).join(', ');
-      remarks.push(`${names} ${unplayed.length === 1 ? 'reaches' : 'reach'} no cable: no box that answers plays ${unplayed.length === 1 ? 'it' : 'them'}.`);
-    }
-    for (const universe of sharedUniverses(this.boxes())) {
-      remarks.push(`U${universe} is on more than one output, as with a splitter.`);
-    }
-    return remarks;
-  });
-
-  open(): void {
+  /** The window opens: an old message goes. */
+  reset(): void {
     this.error.set('');
-    this.dialog().nativeElement.showModal();
-  }
-
-  protected close(): void {
-    this.dialog().nativeElement.close();
   }
 
   /** What stands under a box's address: the number on its switch, or that it is the box with the Pico; its firmware. */

@@ -1,0 +1,229 @@
+<section class="output-section" aria-labelledby="artnet-outputs-title">
+  <h3 id="artnet-outputs-title">Art-Net</h3>
+  <p class="hint">
+    Art-Net 4 to a node at its address. Each port plays a universe of the project at a Port-Address:
+    the Net, Sub-Net and Universe set on the node. A broadcast reaches every node of a network, for
+    older gear.
+  </p>
+
+  @if (nodes().length > 0) {
+    <table>
+      <caption>
+        The Art-Net nodes, and the universe each port plays
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Node</th>
+          <th scope="col">State</th>
+          <th scope="col">Ports: universe, at Net, Sub-Net, Universe</th>
+          <th scope="col"><span class="hidden">Remove</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of nodes(); track item.index) {
+          @let plan = item.view.plan;
+          @let name = plan.target === 'broadcast' ? 'the broadcast' : plan.target;
+          <tr>
+            <th scope="row">
+              <span class="address">{{
+                plan.target === 'broadcast' ? 'Broadcast' : plan.target
+              }}</span>
+              @if (plan.target === 'broadcast') {
+                <select
+                  class="network"
+                  [disabled]="locked()"
+                  [attr.aria-label]="'Network of ' + name"
+                  (change)="onNetwork(item, $event)"
+                >
+                  <option value="" [selected]="plan.network === ''">Automatic</option>
+                  @for (choice of networks(); track choice.network) {
+                    <option [value]="choice.network" [selected]="choice.network === plan.network">
+                      {{ networkLabel(choice) }}
+                    </option>
+                  }
+                  @if (networkGone(plan)) {
+                    <option [value]="plan.network" selected>
+                      {{ plan.network }} (not on this PC)
+                    </option>
+                  }
+                </select>
+              }
+            </th>
+            <td>
+              <span class="state" [class]="item.view.state">
+                <span class="light" aria-hidden="true"></span>{{ stateOf(item.view) }}
+              </span>
+              @if (item.view.detail) {
+                <small class="detail">{{ item.view.detail }}</small>
+              }
+            </td>
+            <td>
+              <div class="port-list">
+                @for (port of plan.ports; track $index; let p = $index) {
+                  <div class="port">
+                    <select
+                      [disabled]="locked()"
+                      [attr.aria-label]="'Universe of port ' + (p + 1) + ' of ' + name"
+                      (change)="onUniverse(item, p, $event)"
+                    >
+                      <option value="0" [selected]="port.universe === 0">Off</option>
+                      @for (choice of universeChoices(); track choice) {
+                        <option [value]="choice" [selected]="choice === port.universe">
+                          U{{ choice }}
+                        </option>
+                      }
+                      @if (beyond(port.universe)) {
+                        <option [value]="port.universe" selected>
+                          U{{ port.universe }} (not in the project)
+                        </option>
+                      }
+                    </select>
+                    <span class="at" aria-hidden="true">at</span>
+                    <input
+                      class="part"
+                      type="number"
+                      min="0"
+                      [max]="partMax('net')"
+                      [value]="part(port.address, 'net')"
+                      [disabled]="locked()"
+                      [attr.aria-label]="'Net of port ' + (p + 1) + ' of ' + name"
+                      (change)="onPart(item, p, 'net', $event)"
+                    />
+                    <input
+                      class="part"
+                      type="number"
+                      min="0"
+                      [max]="partMax('subNet')"
+                      [value]="part(port.address, 'subNet')"
+                      [disabled]="locked()"
+                      [attr.aria-label]="'Sub-Net of port ' + (p + 1) + ' of ' + name"
+                      (change)="onPart(item, p, 'subNet', $event)"
+                    />
+                    <input
+                      class="part"
+                      type="number"
+                      min="0"
+                      [max]="partMax('universe')"
+                      [value]="part(port.address, 'universe')"
+                      [disabled]="locked()"
+                      [attr.aria-label]="
+                        'Universe of the Port-Address of port ' + (p + 1) + ' of ' + name
+                      "
+                      (change)="onPart(item, p, 'universe', $event)"
+                    />
+                    @if (plan.ports.length > 1) {
+                      <button
+                        type="button"
+                        class="remove small"
+                        [disabled]="locked()"
+                        [attr.aria-label]="'Remove port ' + (p + 1) + ' of ' + name"
+                        title="Remove the port"
+                        (click)="removePort(item, p)"
+                      >
+                        ✕
+                      </button>
+                    }
+                  </div>
+                }
+                @if (plan.ports.length < maxPorts) {
+                  <button
+                    type="button"
+                    class="more"
+                    [disabled]="locked()"
+                    [attr.aria-label]="'Another port for ' + name"
+                    (click)="addPort(item)"
+                  >
+                    + Port
+                  </button>
+                }
+              </div>
+            </td>
+            <td class="act">
+              <button
+                type="button"
+                class="remove"
+                [disabled]="locked()"
+                [attr.aria-label]="'Remove ' + name"
+                title="Remove from the list"
+                (click)="remove(item)"
+              >
+                ✕
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  <div class="add">
+    <button lmLamp type="button" tone="system" [disabled]="locked() || finding()" (click)="find()">
+      {{ finding() ? 'Looking…' : 'Find nodes' }}
+    </button>
+    <button
+      type="button"
+      class="more"
+      [disabled]="locked()"
+      aria-label="Add a broadcast to every node of a network"
+      (click)="addBroadcast()"
+    >
+      + Broadcast
+    </button>
+  </div>
+
+  @if (found(); as list) {
+    @if (list.length === 0) {
+      <p class="none" role="status">
+        No node answered. A node in another network can be added by its address.
+      </p>
+    } @else {
+      <ul class="found" aria-label="The nodes that answered">
+        @for (node of list; track node.ip) {
+          <li>
+            <span>
+              <span class="address">{{ node.shortName || node.ip }}</span>
+              <small>{{ node.ip }}, {{ portsText(node) }}, firmware {{ node.firmware }}</small>
+            </span>
+            @if (node.dmxbox) {
+              <small class="note">A dmxbox: it plays in the dmxbox section.</small>
+            } @else if (isListed(node)) {
+              <small class="note">In the list</small>
+            } @else {
+              <button
+                lmLamp
+                type="button"
+                tone="system"
+                [disabled]="locked()"
+                [attr.aria-label]="'Add ' + (node.shortName || node.ip) + ' at ' + node.ip"
+                (click)="addFound(node)"
+              >
+                Add
+              </button>
+            }
+          </li>
+        }
+      </ul>
+    }
+  }
+
+  <form class="add" (submit)="addByHand($event, address)">
+    <label for="artnet-address">Add a node</label>
+    <input
+      #address
+      id="artnet-address"
+      type="text"
+      autocomplete="off"
+      spellcheck="false"
+      maxlength="15"
+      placeholder="192.168.1.50"
+      [disabled]="locked()"
+    />
+    <button lmLamp type="submit" tone="system" aria-label="Add the node" [disabled]="locked()">
+      Add
+    </button>
+  </form>
+
+  @if (error()) {
+    <p class="error" role="alert">{{ error() }}</p>
+  }
+</section>

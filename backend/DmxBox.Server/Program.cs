@@ -80,10 +80,17 @@ internal static class Program
         AllowedHosts hosts = ReadAllowedHosts(builder.Configuration);
         ApplyDefaults(builder.Configuration);
         AllowedOrigins origins = ReadAllowedOrigins(builder.Configuration);
+        string passwordFile = Setting(builder.Configuration, "Lan:PasswordFile", DefaultPasswordFile());
+
+        // The simulated devices of sim.cmd say that they run in "simulators" beside the LAN
+        // password: %LOCALAPPDATA%\Lumenet\simulators for the desk of this PC, a folder of its own
+        // for a test desk.
+        builder.Services.AddSingleton(new Simulators(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(passwordFile)) ?? "", "simulators")));
 
         AddDesk(builder.Services, builder.Configuration, box);
+        AddOutputs(builder.Services, builder.Configuration, passwordFile);
         AddHub(builder.Services, origins);
-        AddLan(builder, pc);
+        AddLan(builder, pc, passwordFile);
 
         WebApplication app = builder.Build();
 
@@ -131,7 +138,7 @@ internal static class Program
     }
 
     // The parts that live as long as the server: the desk, the projects with their undo history
-    // and their autosave, the boxes.
+    // and their autosave, the boxes. The outputs besides the boxes follow in AddOutputs.
     private static void AddDesk(IServiceCollection services, IConfiguration settings, IBox? box)
     {
         string projectsFolder = Setting(settings, "Projects:Folder", DefaultProjectsFolder());
@@ -161,7 +168,8 @@ internal static class Program
             boxPort,
             discover,
             box,
-            provider.GetRequiredService<ILoggerFactory>()));
+            provider.GetRequiredService<ILoggerFactory>(),
+            simulators: provider.GetRequiredService<Simulators>()));
 
         // The same network as above: the host starts and stops it, the hub asks it for the boxes.
         services.AddHostedService(provider => provider.GetRequiredService<BoxNetwork>());
@@ -171,6 +179,38 @@ internal static class Program
             provider.GetRequiredService<Desk>(),
             provider.GetRequiredService<IHubContext<DeskHub, IDeskClient>>().Clients.All,
             provider.GetRequiredService<ILogger<DeskClock>>()));
+    }
+
+    // The outputs besides the boxes: Art-Net nodes, sACN and DMX USB interfaces. A test desk beside
+    // the real one sends from 127.0.0.1 only ("--Outputs:Bind=127.0.0.1"), to ports of its own.
+    // The desk's CID as an sACN source is kept next to the LAN password.
+    private static void AddOutputs(IServiceCollection services, IConfiguration settings, string passwordFile)
+    {
+        string bind = Setting(settings, "Outputs:Bind", IPAddress.Any.ToString());
+        var outputSettings = new OutputSettings
+        {
+            Bind = IPAddress.TryParse(bind, out IPAddress? address) ? address : IPAddress.Any,
+            ArtNetPort = settings.GetValue("Outputs:ArtNetPort", ArtNetSender.DefaultPort),
+            ArtNetReplyPort = settings.GetValue("Outputs:ArtNetReplyPort", ArtNetSender.DefaultPort),
+            SacnPort = settings.GetValue("Outputs:SacnPort", SacnSender.DefaultPort),
+            CidFile = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(passwordFile)) ?? "", SacnSource.FileName),
+        };
+
+        services.AddSingleton(provider =>
+        {
+            BoxNetwork boxes = provider.GetRequiredService<BoxNetwork>();
+            return new OutputNetwork(
+                provider.GetRequiredService<Desk>(),
+                provider.GetRequiredService<IHubContext<DeskHub, IDeskClient>>().Clients.All,
+                provider.GetRequiredService<ThisPc>(),
+                outputSettings,
+                boxes.IsBoxAddress,
+                provider.GetRequiredService<ILoggerFactory>(),
+                simulators: provider.GetRequiredService<Simulators>());
+        });
+
+        // The same outputs: the host starts and stops them, the hub asks them for their states.
+        services.AddHostedService(provider => provider.GetRequiredService<OutputNetwork>());
     }
 
     private static void AddHub(IServiceCollection services, AllowedOrigins origins)
@@ -203,10 +243,8 @@ internal static class Program
 
     // LAN: whether other devices in the network may use the desk. While it is off, a connection
     // from another device is closed the moment it is made, before a byte of it is read.
-    private static void AddLan(WebApplicationBuilder builder, ThisPc? pc)
+    private static void AddLan(WebApplicationBuilder builder, ThisPc? pc, string passwordFile)
     {
-        string passwordFile = Setting(builder.Configuration, "Lan:PasswordFile", DefaultPasswordFile());
-
         // A pretend PC from the tests is theirs to dispose of; the real one the host disposes.
         if (pc is null)
             builder.Services.AddSingleton(_ => new ThisPc());

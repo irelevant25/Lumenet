@@ -1,0 +1,103 @@
+<section class="output-section" aria-labelledby="usb-outputs-title">
+  <h3 id="usb-outputs-title">USB interfaces</h3>
+  <p class="hint">
+    An Enttec DMX USB Pro, or an interface that speaks its protocol (DMXking ultraDMX and others),
+    at a serial port of this PC: each plays one universe. An Open DMX USB and other interfaces
+    without a processor of their own do not work here yet.
+  </p>
+
+  @if (interfaces().length > 0) {
+    <table>
+      <caption>
+        The USB interfaces, and the universe each plays
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Port</th>
+          <th scope="col">State</th>
+          <th scope="col">Universe</th>
+          <th scope="col"><span class="hidden">Remove</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of interfaces(); track item.index) {
+          @let plan = item.view.plan;
+          <tr>
+            <th scope="row">
+              <span class="address">{{ plan.target }}</span>
+            </th>
+            <td>
+              <span class="state" [class]="item.view.state">
+                <span class="light" aria-hidden="true"></span>{{ stateOf(item.view) }}
+              </span>
+              @if (item.view.detail) {
+                <small class="detail">{{ item.view.detail }}</small>
+              }
+            </td>
+            <td>
+              <select
+                [disabled]="locked()"
+                [attr.aria-label]="'Universe of the interface at ' + plan.target"
+                (change)="onUniverse(item, $event)"
+              >
+                <option value="0" [selected]="plan.ports[0].universe === 0">Off</option>
+                @for (choice of universeChoices(); track choice) {
+                  <option [value]="choice" [selected]="choice === plan.ports[0].universe">
+                    U{{ choice }}
+                  </option>
+                }
+                @if (beyond(plan.ports[0].universe)) {
+                  <option [value]="plan.ports[0].universe" selected>
+                    U{{ plan.ports[0].universe }} (not in the project)
+                  </option>
+                }
+              </select>
+            </td>
+            <td class="act">
+              <button
+                type="button"
+                class="remove"
+                [disabled]="locked()"
+                [attr.aria-label]="'Remove the interface at ' + plan.target"
+                title="Remove from the list"
+                (click)="remove(item)"
+              >
+                ✕
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  <div class="add">
+    <label for="usb-port">Add an interface at</label>
+    <select
+      id="usb-port"
+      [disabled]="locked() || freePorts().length === 0"
+      (change)="onChoose($event)"
+    >
+      @for (port of freePorts(); track port) {
+        <option [value]="port" [selected]="port === chosen()">{{ port }}</option>
+      } @empty {
+        <option value="">no free serial port</option>
+      }
+    </select>
+    <button
+      lmLamp
+      type="button"
+      tone="system"
+      [disabled]="locked() || freePorts().length === 0"
+      aria-label="Add the interface at this port"
+      (click)="add()"
+    >
+      Add
+    </button>
+  </div>
+  <p class="hint">The list follows the interfaces that are plugged in while this window is open.</p>
+
+  @if (error()) {
+    <p class="error" role="alert">{{ error() }}</p>
+  }
+</section>

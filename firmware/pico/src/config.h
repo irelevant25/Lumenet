@@ -43,9 +43,11 @@
 #define USB_MAX_POWER_MA 300    // what the box may draw from the USB port (it needs about 200 mA)
 
 // ---------------------------------------------------------------- DMX
-#define DMX_OUTPUTS  1         // one DMX socket
-#define DMX_CHANNELS 512       // slots sent per frame (24..512). Fewer = faster refresh,
-                               // but Lumenet counts the outputs from it: keep 512 for it.
+#ifndef DMX_OUTPUTS
+#define DMX_OUTPUTS  1         // one DMX socket. The simulator (firmware/sim) also builds a Pico box
+#endif                         // with two, which does not exist as hardware.
+#define DMX_CHANNELS (512 * DMX_OUTPUTS)   // slots sent per frame, 512 for each output: Lumenet
+                                           // counts the outputs from it.
 // Break (176 us) and mark-after-break (12 us) are set in dmx_tx.pio.
 
 // ---------------------------------------------------------------- presets

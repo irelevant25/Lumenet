@@ -67,6 +67,14 @@ public interface IDeskClient
     /// <param name="boxes">All boxes as the Boxes window shows them, see <see cref="BoxNetwork.Boxes"/>.</param>
     Task BoxesChanged(BoxView[] boxes);
 
+    /// <summary>
+    /// An output besides the boxes came or went, or the project's list of them changed: an Art-Net
+    /// node that answers or stops answering, a USB interface plugged in or pulled out, an output
+    /// added in the Outputs window.
+    /// </summary>
+    /// <param name="outputs">All of them as the Outputs window shows them, see <see cref="OutputNetwork.Outputs"/>.</param>
+    Task OutputsChanged(OutputView[] outputs);
+
     /// <summary>The project's name, file or "unsaved" mark changed.</summary>
     /// <param name="project">The project after the change.</param>
     Task ProjectChanged(ProjectInfo project);

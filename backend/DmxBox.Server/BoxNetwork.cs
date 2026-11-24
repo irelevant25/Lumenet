@@ -5,11 +5,12 @@ namespace DmxBox.Server;
 
 /// <summary>
 /// All boxes the desk plays on: a <see cref="BoxLink"/> for every box it looks for, and the
-/// universe every output of every box plays (<see cref="BoxWiring"/>). It looks for three kinds
+/// universe every output of every box plays (<see cref="BoxWiring"/>). It looks for four kinds
 /// of boxes: the box of the settings ("Box:Host", the box with the Pico at 192.168.7.1 unless they
-/// say otherwise), the boxes the project lists, and every box on a network adapter of this PC. A
-/// box with the number n on its switch has the address 10.1.n.1, and gives the PC 10.1.n.2 on its
-/// USB cable: an adapter with an address 10.1.n.x stands for that box.
+/// say otherwise), the boxes the project lists, every box on a network adapter of this PC, and
+/// every simulated box that runs (<see cref="Simulators"/>). A box with the number n on its switch
+/// has the address 10.1.n.1, and gives the PC 10.1.n.2 on its USB cable: an adapter with an
+/// address 10.1.n.x stands for that box.
 /// </summary>
 /// <remarks>
 /// Every link has a thread of its own, see <see cref="BoxLink"/>. The UIs get the whole list of
@@ -36,6 +37,7 @@ internal sealed class BoxNetwork : BackgroundService
     private readonly IBox? _configuredBox;
     private readonly Func<string, IBox>? _boxAt;
     private readonly bool _discover;
+    private readonly Simulators? _simulators;
     private readonly ILogger<BoxLink> _linkLogger;
 
     private readonly Lock _lock = new();
@@ -57,6 +59,10 @@ internal sealed class BoxNetwork : BackgroundService
     /// <param name="box">The box of the settings; null for the real one. The tests pass a pretend box.</param>
     /// <param name="loggers">For the lines about the boxes.</param>
     /// <param name="boxAt">Makes the box for any other address; null for real ones. The tests make pretend boxes.</param>
+    /// <param name="simulators">
+    /// The simulated devices that run on this PC: a simulated box is looked for as long as it runs,
+    /// also when <paramref name="discover"/> is false (a test desk has a folder of its own). Null for none.
+    /// </param>
     public BoxNetwork(
         Desk desk,
         IDeskClient clients,
@@ -66,7 +72,8 @@ internal sealed class BoxNetwork : BackgroundService
         bool discover,
         IBox? box,
         ILoggerFactory loggers,
-        Func<string, IBox>? boxAt = null)
+        Func<string, IBox>? boxAt = null,
+        Simulators? simulators = null)
     {
         _desk = desk;
         _clients = clients;
@@ -74,6 +81,7 @@ internal sealed class BoxNetwork : BackgroundService
         _discover = discover;
         _configuredBox = box;
         _boxAt = boxAt;
+        _simulators = simulators;
         _linkLogger = loggers.CreateLogger<BoxLink>();
         _configured = BoxPlan.NormalAddress(port == BoxPlan.DefaultPort ? host : $"{host}:{port}");
         if (_configured is null)
@@ -164,6 +172,46 @@ internal sealed class BoxNetwork : BackgroundService
         return string.Create(CultureInfo.InvariantCulture, $"{NetworkA}.{NetworkB}.{bytes[2]}.1");
     }
 
+    /// <summary>
+    /// True for an address on the USB cable of a box: 192.168.7.x, the network of the box with the
+    /// Pico, or 10.1.n.x, the network of the box with the number n on its switch. A broadcast or a
+    /// multicast of the outputs never goes out there.
+    /// </summary>
+    /// <param name="address">An IPv4 address, of this PC or of another device.</param>
+    internal static bool IsBoxCable(IPAddress address)
+    {
+        byte[] bytes = ThisPc.Plain(address).GetAddressBytes();
+        return bytes.Length == 4
+            && ((bytes[0] == NetworkA && bytes[1] == NetworkB) || (bytes[0] == 192 && bytes[1] == 168 && bytes[2] == 7));
+    }
+
+    /// <summary>
+    /// True for the address of a dmxbox, which the desk plays with its own protocol, so that no
+    /// Art-Net may go there as well: 192.168.7.1 and 10.1.n.1, where the boxes always are, and the
+    /// address of any box the desk looks for (the box of the settings, the project's boxes).
+    /// </summary>
+    /// <param name="host">An IPv4 address, "192.168.1.50".</param>
+    public bool IsBoxAddress(string host)
+    {
+        if (IPAddress.TryParse(host, out IPAddress? ip) && IsBoxCable(ip) && ip.GetAddressBytes()[3] == 1)
+            return true;
+
+        lock (_lock)
+        {
+            if (_links.Keys.Any(address => HostOf(address) == host))
+                return true;
+        }
+
+        return (_configured is not null && HostOf(_configured) == host) || _desk.Boxes.Any(plan => HostOf(plan.Address) == host);
+    }
+
+    // The host of a box's address, without the port: "127.0.0.1" of "127.0.0.1:7001".
+    private static string HostOf(string address)
+    {
+        int colon = address.IndexOf(':', StringComparison.Ordinal);
+        return colon < 0 ? address : address[..colon];
+    }
+
     // The box of the settings, the project's boxes and the boxes on the PC's adapters.
     private HashSet<string> Wanted()
     {
@@ -181,6 +229,13 @@ internal sealed class BoxNetwork : BackgroundService
                 if (BoxBeside(address) is { } box)
                     wanted.Add(box);
             }
+        }
+
+        // A simulated box is plugged in for as long as its simulator runs.
+        foreach (string address in _simulators?.AddressesOf(SimulatedDevice.Dmxbox) ?? [])
+        {
+            if (BoxPlan.NormalAddress(address) is { } box)
+                wanted.Add(box);
         }
 
         return wanted;

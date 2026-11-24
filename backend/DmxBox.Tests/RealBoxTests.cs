@@ -77,14 +77,20 @@ public sealed class RealBoxTests
         Assert.Equal([0], observer.GetOutput(1, 1));
         Assert.False(observer.Ping().Blackout);
 
+        // The button: the box goes dark by itself, the desk's blackout switches over, and the box
+        // lets go of its own once it has the desk's output.
         observer.Blackout(true);   // like a press of the button on the box
-        link.Step(TimeSpan.FromMilliseconds(500));
-        observer.Blackout(false);   // and once more
-        link.Step(TimeSpan.FromMilliseconds(1000));
-        Assert.False(_desk.Blackout);
-        Assert.Equal([true, false], _clients.BlackoutChanges);
-        link.Step(TimeSpan.FromMilliseconds(1025));
+        link.Step(TimeSpan.FromMilliseconds(100));
+        Assert.False(_desk.Blackout);   // it was on: the press switched it off
+        Assert.False(observer.Ping().Blackout);
         Assert.Equal([200], observer.GetOutput(1, 1));
+
+        observer.Blackout(true);   // and once more
+        link.Step(TimeSpan.FromMilliseconds(200));
+        Assert.True(_desk.Blackout);
+        Assert.False(observer.Ping().Blackout);
+        Assert.Equal([0], observer.GetOutput(1, 1));
+        Assert.Equal([false, true], _clients.BlackoutChanges);
     }
 
     [Fact]

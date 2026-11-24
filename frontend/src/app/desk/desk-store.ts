@@ -10,11 +10,15 @@ import {
   CHANNEL_INDEPENDENT_COUNT,
   DEFAULT_LOOP,
   DeskState,
+  FoundNode,
   HistoryState,
   ImportAnswer,
   LanAccess,
   LightGroup,
   MAX_LEVEL,
+  NetworkChoice,
+  OutputPlan,
+  OutputView,
   MAX_SEQUENCE_STEPS,
   MEDIUM_BELOW_PX,
   MEMORY_COUNT,
@@ -162,6 +166,11 @@ export class DeskStore {
    * outputs plays. Empty while none answers and the project lists none.
    */
   readonly boxes = signal<readonly BoxView[]>([]);
+  /**
+   * The project's outputs besides its boxes, as the Outputs window shows them: Art-Net nodes, sACN
+   * and DMX USB interfaces, each with its state. Empty while the project lists none.
+   */
+  readonly outputs = signal<readonly OutputView[]>([]);
   readonly project = signal<ProjectInfo>({ name: NEW_PROJECT_NAME, path: null, unsaved: false });
   readonly version = signal('');
   /**
@@ -507,6 +516,7 @@ export class DeskStore {
     connection.on<[boolean]>('BlackoutChanged', (on) => this.blackout.set(on));
     connection.on<[DeskState]>('DeskChanged', (desk) => this.takeDesk(desk));
     connection.on<[BoxView[]]>('BoxesChanged', (boxes) => this.boxes.set(boxes));
+    connection.on<[OutputView[]]>('OutputsChanged', (outputs) => this.outputs.set(outputs));
     connection.on<[ProjectInfo]>('ProjectChanged', (project) => this.project.set(project));
     connection.on<[StackState]>('StackChanged', (stack) => this.stack.set(stack));
     connection.on<[Playback]>('PlaybackChanged', (playback) => this.takePlayback(playback));
@@ -1002,6 +1012,39 @@ export class DeskStore {
     await this.connection.invoke<void>('SetBoxes', boxes);
   }
 
+  /**
+   * The project's outputs besides its boxes as the Outputs window changed them: an Art-Net node,
+   * sACN or a USB interface added, a port changed, an output taken out. The desk program answers
+   * every page with the outputs and their states. Rejects with its message when it refuses the
+   * list (an address that is none, an output listed twice, Art-Net to a dmxbox, the stack live).
+   */
+  async setOutputs(outputs: readonly OutputPlan[]): Promise<void> {
+    await this.connection.invoke<void>('SetOutputs', outputs);
+  }
+
+  /** Asks the Art-Net nodes on the PC's networks to answer: those that did, after a second and a half. */
+  async findArtNetNodes(): Promise<FoundNode[]> {
+    return (await this.connection.invoke<FoundNode[] | undefined>('FindArtNetNodes')) ?? [];
+  }
+
+  /** The serial ports of the PC, for a DMX USB interface; none from a desk program without outputs. */
+  async serialPorts(): Promise<string[]> {
+    try {
+      return (await this.connection.invoke<string[] | undefined>('GetSerialPorts')) ?? [];
+    } catch {
+      return [];
+    }
+  }
+
+  /** The networks of the PC a broadcast or a multicast can go out on. */
+  async networks(): Promise<NetworkChoice[]> {
+    try {
+      return (await this.connection.invoke<NetworkChoice[] | undefined>('GetNetworks')) ?? [];
+    } catch {
+      return [];
+    }
+  }
+
   // ---------------------------------------------------------------- autosave
 
   /** Switches the autosave and sets how often it keeps the work (on the PC only). */
@@ -1438,6 +1481,7 @@ export class DeskStore {
       this.version.set(welcome.version);
       this.takeDesk(welcome.desk);
       this.boxes.set(welcome.boxes ?? []);
+      this.outputs.set(welcome.outputs ?? []);
       this.project.set(welcome.project);
       this.loaded.set(true);
       void this.fetchLan();

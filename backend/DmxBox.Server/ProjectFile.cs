@@ -29,6 +29,14 @@ internal sealed class ProjectFile
     public List<ProjectFileBox?>? Boxes { get; set; }
 
     /// <summary>
+    /// The outputs besides the boxes: Art-Net nodes, sACN and DMX USB interfaces, see
+    /// <see cref="OutputPlan"/>. Written only for a project that has some; older files do not
+    /// have the property, and an older program passes over it.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<ProjectFileOutput?>? Outputs { get; set; }
+
+    /// <summary>
     /// The notes of the project, instructions for the show, see <see cref="ProjectNotes"/>.
     /// Written only for a project that has some; files from before there were such notes do not
     /// have the property, nor do imported shows.
@@ -87,6 +95,38 @@ internal sealed class ProjectFileBox
 
     /// <summary>For each output, output 1 first: the universe it plays, 1 to 8, or 0 for none.</summary>
     public List<int>? Universes { get; set; }
+}
+
+/// <summary>An output besides the boxes, as it stands in a project file, see <see cref="OutputPlan"/>.</summary>
+internal sealed class ProjectFileOutput
+{
+    /// <summary>"artnet", "sacn" or "usb".</summary>
+    public string? Kind { get; set; }
+
+    /// <summary>The node's or receiver's address, "broadcast", "multicast", or a serial port like "COM3".</summary>
+    public string? Target { get; set; }
+
+    /// <summary>For a broadcast or a multicast, the network it goes out on, "192.168.1.0/24"; none for automatic.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Network { get; set; }
+
+    /// <summary>For sACN, the priority 0 to 200; none for 100.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Priority { get; set; }
+
+    /// <summary>What each port plays, and where it goes.</summary>
+    public List<ProjectFilePort?>? Ports { get; set; }
+}
+
+/// <summary>A port of an output, as it stands in a project file, see <see cref="OutputPort"/>.</summary>
+internal sealed class ProjectFilePort
+{
+    /// <summary>The universe of the project it plays, 1 to 8, or 0 for none.</summary>
+    public int? Universe { get; set; }
+
+    /// <summary>The Port-Address of Art-Net, the universe of sACN; none for USB.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Address { get; set; }
 }
 
 /// <summary>The stage plan, as it stands in a project file.</summary>

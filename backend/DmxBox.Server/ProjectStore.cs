@@ -23,6 +23,9 @@ internal sealed class ProjectStore
     // The folder of the example projects that come with the program; null for none.
     private readonly string? _examples;
 
+    // The sound files: a project's go beside its file when it is saved, and come in when it is loaded.
+    private readonly SoundStore? _soundFiles;
+
     private string _name = NewProjectName;
     private string? _path;
 
@@ -44,11 +47,16 @@ internal sealed class ProjectStore
     /// The folder of the example projects that come with the program, which are read and never
     /// written; null for none. A folder that is not there has no examples.
     /// </param>
-    public ProjectStore(Desk desk, string folder, string? examples = null)
+    /// <param name="soundFiles">
+    /// The sound files of the desk program: saving writes a project's beside its file ("Show sounds"
+    /// beside "Show.json"), loading takes them in. Null for none (the tests of other parts).
+    /// </param>
+    public ProjectStore(Desk desk, string folder, string? examples = null, SoundStore? soundFiles = null)
     {
         _desk = desk;
         Folder = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder));
         _examples = examples is null ? null : Path.TrimEndingDirectorySeparator(Path.GetFullPath(examples));
+        _soundFiles = soundFiles;
         _savedChanges = desk.ProjectChanges;
         _told = CurrentInfo();
     }
@@ -141,7 +149,8 @@ internal sealed class ProjectStore
 
         lock (_lock)
         {
-            ProjectContent content = ReadFile(name, Path.Combine(_examples, name + Extension));
+            string path = Path.Combine(_examples, name + Extension);
+            ProjectContent content = WithSoundsBeside(ReadFile(name, path), path);
             _savedChanges = _desk.ReplaceProject(content);
             _name = name;
             _path = null;
@@ -199,6 +208,7 @@ internal sealed class ProjectStore
         {
             string path = name is null ? CurrentPath() : PathOf(name);
             (ProjectContent content, long changes) = _desk.GetProject();
+            _soundFiles?.SaveBeside(path, content.Sounds);
             WriteFile(path, content);
 
             _name = name ?? _name;
@@ -220,8 +230,7 @@ internal sealed class ProjectStore
         lock (_lock)
         {
             string path = PathOf(name);
-            ProjectContent content = ReadFile(name, path);
-
+            ProjectContent content = WithSoundsBeside(ReadFile(name, path), path);
             _savedChanges = _desk.ReplaceProject(content);
             _name = name;
             _path = path;
@@ -280,6 +289,18 @@ internal sealed class ProjectStore
             _recovered = kept;
             return CurrentInfo();
         }
+    }
+
+    // A project's sounds with the files beside its file ("Show sounds" beside "Show.json"), which the
+    // store takes in: a project or an example brought from elsewhere plays them.
+    private ProjectContent WithSoundsBeside(ProjectContent content, string path)
+    {
+        if (_soundFiles is null || !content.Sounds.Any(sound => sound is not null))
+            return content;
+
+        Sound?[] sounds = [.. content.Sounds];
+        _soundFiles.LoadBeside(path, sounds);
+        return content with { Sounds = sounds };
     }
 
     // Call with the lock held.

@@ -24,6 +24,11 @@ export const routes: Routes = [
     title: 'Lumenet: effects',
   },
   {
+    path: 'sounds',
+    loadComponent: () => import('./sounds-view/sounds-view').then((file) => file.SoundsView),
+    title: 'Lumenet: sounds',
+  },
+  {
     path: 'stack',
     loadComponent: () => import('./stack-view/stack-view').then((file) => file.StackView),
     title: 'Lumenet: stack',

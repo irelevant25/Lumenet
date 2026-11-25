@@ -11,13 +11,14 @@ export const VIEWS = [
   { name: 'stage', label: 'Stage', url: '/stage' },
   { name: 'fixtures', label: 'Fixtures', url: '/fixtures' },
   { name: 'effects', label: 'Effects', url: '/effects' },
+  { name: 'sounds', label: 'Sounds', url: '/sounds' },
   { name: 'notes', label: 'Notes', url: '/notes' },
   { name: 'midi', label: 'MIDI', url: '/midi' },
   { name: 'settings', label: 'Settings', url: '/settings' },
 ] as const;
 // (Keyboard was a view after Settings until 2026-11-24; its shortcuts are a panel of Settings now.
 // A kept order or a kept list of hidden views that names it is read without it. MIDI came on
-// 2026-11-25: a kept order gets it after Notes.)
+// 2026-11-25: a kept order gets it after Notes; Sounds the same day, after Effects.)
 
 /**
  * The usual order of the views while Effects stood after Sequences (2026-11-24, for a day): a kept

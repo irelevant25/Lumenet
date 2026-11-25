@@ -1,11 +1,12 @@
 <h2>Ind</h2>
 
-<div class="keys" [lmKeyColumns]="keyCount()">
+<div class="keys" [lmKeyColumns]="keyCount()" [lmKeyColumnsLead]="true">
   <button
     lmLamp
     type="button"
+    class="edit"
     tone="ind-edit"
-    aria-label="Edit the channels, memories and effects of the independent keys"
+    aria-label="Edit the channels, memories, effects and sounds of the independent keys"
     data-action="ind.edit"
     [level]="editing() ? 3 : 1"
     [blink]="editing()"
@@ -133,6 +134,47 @@
         (click)="store.toggleEffectIndependent(item.number)"
       >
         {{ item.effect }}
+      </button>
+    }
+  }
+
+  <!-- the cyan and pink keys for sounds: each starts and stops its sound, as its own key does -->
+  @for (item of soundKeys(); track item.number) {
+    @if (editing()) {
+      <input
+        class="field sound"
+        type="text"
+        inputmode="numeric"
+        maxlength="2"
+        autocomplete="off"
+        [class.first-sound]="$first"
+        [value]="item.sound"
+        [attr.aria-label]="'Sound of independent key ' + item.name"
+        (change)="onSoundTyped(item.number, $event)"
+        (keydown.enter)="leaveField($event)"
+      />
+    } @else {
+      <button
+        lmLamp
+        type="button"
+        class="number"
+        tone="sound"
+        [class.first-sound]="$first"
+        [level]="item.lamp"
+        [blink]="item.fading"
+        [attr.aria-pressed]="item.on"
+        [attr.aria-label]="
+          'Independent ' +
+          item.name +
+          ', sound ' +
+          item.sound +
+          (item.called ? ', ' + item.called : '')
+        "
+        [attr.data-action]="'ind.sound.' + item.number"
+        [title]="item.called || null"
+        (click)="store.toggleSoundIndependent(item.number)"
+      >
+        {{ item.sound }}
       </button>
     }
   }

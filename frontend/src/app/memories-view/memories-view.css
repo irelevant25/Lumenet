@@ -48,7 +48,8 @@ h2 {
   white-space: nowrap;
 }
 
-/* the table takes the whole width, the page keys stand at the right edge */
+/* the table takes the whole width, the page keys stand at the right edge, and at the very right
+   Copy and Del (the record section) in a column of their own, as on the main view */
 .body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -65,8 +66,10 @@ h2 {
 
 /* The memory keys stand over the columns of the table: as many in a line as faders in a row.
    The table has a gap at its two edges as well, so the keys get the same room there. Under
-   each key, the two lines of its memory's note, as wide as the column. */
+   each key, the two lines of its memory's note, as wide as the column. The keys are roomy, as
+   big as their place in the line allows (styles.css, which measures it against this box). */
 .keys {
+  container-type: inline-size;
   display: grid;
   grid-template-columns: repeat(var(--line), minmax(0, 1fr));
   gap: var(--strip-gap);
@@ -178,6 +181,15 @@ caption {
   color: #fff;
 }
 
+/* the page keys, and Copy and Del of RECORD under them */
+.side {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  justify-items: center;
+  gap: var(--gap);
+  min-height: 0;
+}
+
 /* The page keys in ONE column, from the top, as in the main view: each as big as every key, and
    the column scrolls when they do not fit. */
 .rail {
@@ -207,6 +219,15 @@ caption {
 
 :host-context(.mobile) .body {
   grid-template-columns: minmax(0, 1fr);
+}
+
+:host-context(.mobile) .side {
+  display: contents;
+}
+
+/* Copy and Del under the page keys, over the memory keys */
+:host-context(.mobile) lm-record-section {
+  order: -1;
 }
 
 /* the page keys over the memory keys, apart from them: a line between */

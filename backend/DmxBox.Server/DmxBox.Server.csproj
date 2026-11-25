@@ -17,6 +17,7 @@
   <ItemGroup>
     <!-- The serial ports of the DMX USB interfaces (Enttec DMX USB Pro and compatible), on
          Windows, Linux and macOS. Lumenet.exe takes the same package. -->
+    <PackageReference Include="NAudio" Version="3.3.0" />
     <PackageReference Include="System.IO.Ports" Version="10.0.14" />
     <!-- MIDI controllers, on Windows and macOS (DryWetMIDI has no devices on Linux): MidiPorts.cs
          keeps it behind an interface of the desk's own. Lumenet.exe takes the same package. -->
@@ -29,8 +30,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- The example projects of the repository: the Load window lists them (Projects:Examples). -->
+    <!-- The example projects of the repository: the Load window lists them (Projects:Examples). An
+         example with sounds has their files in a folder beside it ("8 Sounds sounds"). -->
     <None Include="..\..\examples\*.json" Link="examples\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\examples\**\*.mp3;..\..\examples\**\*.wav" Link="examples\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

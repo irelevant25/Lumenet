@@ -9,7 +9,7 @@
           [number]="number"
           [value]="levelOf(number)"
           [lampLevel]="lamp(number)"
-          [blink]="fading(number)"
+          [blink]="blinks(number)"
           [note]="nameOf(number)"
           [choosable]="choosing()"
           [chosen]="choosing() && store.chosenEffect() === number"
@@ -21,7 +21,7 @@
     </div>
   </div>
 
-  <nav class="rail" aria-label="Effect pages" [lmPressedInSight]="first()">
+  <nav class="rail" aria-label="Effect pages" lmDragScroll [lmPressedInSight]="first()">
     @for (item of pages(); track item.first) {
       <button
         lmLamp

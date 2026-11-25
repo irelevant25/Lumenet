@@ -61,6 +61,11 @@ internal sealed class MidiDeskFaders : IMidiDesk
                 return FaderScale.PositionOf(FaderKind.Rate, now.State.Bpm);
             case FaderKind.Sequence:
                 return now.Sequences.TryGetValue(number, out Sequence? sequence) ? FaderScale.PositionOf(FaderKind.Sequence, sequence.Speed) : null;
+            case FaderKind.SoundVolume:
+                return FaderScale.PositionOf(FaderKind.SoundVolume, now.State.SoundDecibels);
+            case FaderKind.Sound:
+                // no sound under that number: its fader moves nothing
+                return now.Sounds.Contains(number) ? _desk.GetSoundPlayback(number).Level : null;
         }
 
         if (!now.Effects.Contains(number))
@@ -109,6 +114,16 @@ internal sealed class MidiDeskFaders : IMidiDesk
                     Tell(_pages.SequenceSpeedChanged(number, kept));
                     TellProject();
                     break;
+                case FaderKind.Sound:
+                    if (!Read().Sounds.Contains(number))
+                        throw new DeskException($"There is no sound {number}.");
+                    Tell(_pages.SoundPlaybackChanged(_desk.SetSoundControl(number, "level", value)));
+                    break;
+                case FaderKind.SoundVolume:
+                    _desk.SetSoundVolume(value);
+                    (double decibels, bool mute) = _desk.SoundMaster;
+                    Tell(_pages.SoundMasterChanged(decibels, mute));
+                    break;
                 default:
                     string control = fader.Kind switch
                     {
@@ -154,11 +169,12 @@ internal sealed class MidiDeskFaders : IMidiDesk
         return _snapshot ??= new Snapshot(
             _desk.GetState(),
             _desk.GetSequences(),
-            [.. _desk.GetEffects().Select(effect => effect.Number)]);
+            [.. _desk.GetEffects().Select(effect => effect.Number)],
+            [.. _desk.GetSounds().Select(sound => sound.Number)]);
     }
 
     // The desk as read once: the playbacks of the effects are asked for when needed.
-    private sealed class Snapshot(DeskState state, Dictionary<int, Sequence> sequences, HashSet<int> effects)
+    private sealed class Snapshot(DeskState state, Dictionary<int, Sequence> sequences, HashSet<int> effects, HashSet<int> sounds)
     {
         private readonly Dictionary<int, EffectPlayback> _playbacks = [];
 
@@ -167,6 +183,8 @@ internal sealed class MidiDeskFaders : IMidiDesk
         public Dictionary<int, Sequence> Sequences => sequences;
 
         public HashSet<int> Effects => effects;
+
+        public HashSet<int> Sounds => sounds;
 
         public EffectPlayback Playback(int number, Desk desk)
         {

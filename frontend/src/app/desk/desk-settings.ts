@@ -1,6 +1,7 @@
 import { Service, computed, effect, signal } from '@angular/core';
 import { CHANNEL_INDEPENDENT_COUNT, MEMORY_INDEPENDENT_COUNT } from './desk-types';
 import { EFFECT_INDEPENDENT_COUNT } from './effects';
+import { SOUND_INDEPENDENT_COUNT } from './sounds';
 import { KEY_COLORS, isColor, keyColorWithId } from './key-colors';
 import { ALWAYS_SHOWN, DEFAULT_VIEW_ORDER, ViewName, hiddenViewsOf, viewOrderOf } from './views';
 
@@ -20,7 +21,7 @@ export const CHANNEL_SIZES: readonly ChannelSize[] = ['auto', 8, 16, 32, 64, 128
 export type RowCount = 1 | 2;
 export const ROW_COUNTS: readonly RowCount[] = [1, 2];
 
-/** The row of effect faders on the main view: none at first, or one, under the memories. */
+/** The row of effect faders on the main view: none at first, or one, under the memories; the row of sound faders likewise. */
 export type EffectRowCount = 0 | 1;
 export const EFFECT_ROW_COUNTS: readonly EffectRowCount[] = [0, 1];
 
@@ -64,8 +65,12 @@ export interface DeskSettingsData {
   readonly memoryKeys: number;
   /** How many of the 32 effect keys of the independents are shown, 0 to 32; none at first. */
   readonly effectKeys: number;
+  /** How many of the 32 sound keys of the independents are shown, 0 to 32; none at first. */
+  readonly soundKeys: number;
   /** The row of effect faders under the memories on the main view: 0 (none, at first) or 1. */
   readonly effectRows: EffectRowCount;
+  /** The row of sound faders under the memories (and the effects) on the main view: 0 (none, at first) or 1. */
+  readonly soundRows: EffectRowCount;
   /** The zoom of the whole page, 1 as it is: as the browser's own zoom does, on this page only. */
   readonly zoom: number;
   /** The keyboard shortcuts: for each key of the desk that has one, by its name (see desk-actions.ts), the keys that press it. */
@@ -76,6 +81,8 @@ export interface DeskSettingsData {
   readonly hiddenViews: readonly ViewName[];
   /** The order of the views in the top bar: every view, once. */
   readonly viewOrder: readonly ViewName[];
+  /** The panel of the light at the right of the Stage view: shown (at first), or hidden for a bigger plan. */
+  readonly stagePanel: boolean;
 }
 
 export const DEFAULT_SETTINGS: DeskSettingsData = {
@@ -86,12 +93,15 @@ export const DEFAULT_SETTINGS: DeskSettingsData = {
   channelKeys: DEFAULT_SHOWN_KEYS,
   memoryKeys: DEFAULT_SHOWN_KEYS,
   effectKeys: 0,
+  soundKeys: 0,
   effectRows: 0,
+  soundRows: 0,
   zoom: 1,
   shortcuts: DEFAULT_SHORTCUTS,
   colors: {},
   hiddenViews: [],
   viewOrder: DEFAULT_VIEW_ORDER,
+  stagePanel: true,
 };
 
 /** The settings of the Settings view, as Export writes them: all but the shortcuts, which Keyboard has. */
@@ -107,11 +117,14 @@ export function settingsPart(settings: DeskSettingsData): SettingsPart {
     channelKeys: settings.channelKeys,
     memoryKeys: settings.memoryKeys,
     effectKeys: settings.effectKeys,
+    soundKeys: settings.soundKeys,
     effectRows: settings.effectRows,
+    soundRows: settings.soundRows,
     zoom: settings.zoom,
     colors: settings.colors,
     hiddenViews: settings.hiddenViews,
     viewOrder: settings.viewOrder,
+    stagePanel: settings.stagePanel,
   };
 }
 
@@ -145,7 +158,9 @@ export function settingsOf(raw: unknown): DeskSettingsData {
     channelKeys: keyCount(kept['channelKeys'], CHANNEL_INDEPENDENT_COUNT),
     memoryKeys: keyCount(kept['memoryKeys'], MEMORY_INDEPENDENT_COUNT),
     effectKeys: keyCount(kept['effectKeys'], EFFECT_INDEPENDENT_COUNT, DEFAULT_SETTINGS.effectKeys),
+    soundKeys: keyCount(kept['soundKeys'], SOUND_INDEPENDENT_COUNT, DEFAULT_SETTINGS.soundKeys),
     effectRows: oneOf(kept['effectRows'], EFFECT_ROW_COUNTS, DEFAULT_SETTINGS.effectRows),
+    soundRows: oneOf(kept['soundRows'], EFFECT_ROW_COUNTS, DEFAULT_SETTINGS.soundRows),
     // settings kept before the zoom (2026-11-24) have a size of the lettering, "fontScale": passed over
     zoom: zoomOf(kept['zoom']),
     shortcuts: shortcuts(kept['shortcuts']),
@@ -153,6 +168,8 @@ export function settingsOf(raw: unknown): DeskSettingsData {
     colors: colors(kept['colors'] ?? kept['colours']),
     hiddenViews: hiddenViewsOf(kept['hiddenViews']),
     viewOrder: viewOrderOf(kept['viewOrder']),
+    stagePanel:
+      typeof kept['stagePanel'] === 'boolean' ? kept['stagePanel'] : DEFAULT_SETTINGS.stagePanel,
   };
 }
 
@@ -222,12 +239,15 @@ export class DeskSettings {
   readonly channelKeys = computed(() => this.data().channelKeys);
   readonly memoryKeys = computed(() => this.data().memoryKeys);
   readonly effectKeys = computed(() => this.data().effectKeys);
+  readonly soundKeys = computed(() => this.data().soundKeys);
   readonly effectRows = computed(() => this.data().effectRows);
+  readonly soundRows = computed(() => this.data().soundRows);
   readonly zoom = computed(() => this.data().zoom);
   readonly shortcuts = computed(() => this.data().shortcuts);
   readonly colors = computed(() => this.data().colors);
   readonly hiddenViews = computed(() => this.data().hiddenViews);
   readonly viewOrder = computed(() => this.data().viewOrder);
+  readonly stagePanel = computed(() => this.data().stagePanel);
   /** The settings of the Settings view, without the shortcuts: what Export writes as "settings". */
   readonly settingsPart = computed(() => settingsPart(this.data()));
 
@@ -324,8 +344,21 @@ export class DeskSettings {
     this.change({ effectKeys: keyCount(count, EFFECT_INDEPENDENT_COUNT, this.data().effectKeys) });
   }
 
+  setSoundKeys(count: number): void {
+    this.change({ soundKeys: keyCount(count, SOUND_INDEPENDENT_COUNT, this.data().soundKeys) });
+  }
+
   setEffectRows(rows: EffectRowCount): void {
     this.change({ effectRows: oneOf(rows, EFFECT_ROW_COUNTS, this.data().effectRows) });
+  }
+
+  /** The panel of the light at the right of the Stage view: shown, or hidden for a bigger plan. */
+  setStagePanel(shown: boolean): void {
+    this.change({ stagePanel: shown });
+  }
+
+  setSoundRows(rows: EffectRowCount): void {
+    this.change({ soundRows: oneOf(rows, EFFECT_ROW_COUNTS, this.data().soundRows) });
   }
 
   /** The zoom one step bigger (+1) or smaller (-1), within the range. */

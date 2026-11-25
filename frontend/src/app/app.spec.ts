@@ -30,6 +30,9 @@ import {
   Welcome,
 } from './desk/desk-types';
 import { Effect } from './desk/effects';
+import { FoundMixer, Sound, SoundOutput, SoundSetup, newSound, newTrack, quietPlayback } from './desk/sounds';
+import { soundChoices } from './desk/step-choices';
+import { actionLamp } from './desk/action-lamps';
 import { IDLE } from './desk/function-mode';
 import { Keyboard } from './desk/keyboard';
 import type { MidiLamp, MidiMapping, MidiMonitorLine, MidiSetup, MidiState } from './desk/midi';
@@ -118,6 +121,15 @@ class FakeConnection {
   networks: NetworkChoice[] = [{ network: '192.168.1.0/24', address: '192.168.1.20', adapter: 'Wi-Fi', router: true }];
   /** The effects of the project, as the backend answers "GetEffects": none at first. */
   effects: Effect[] = [];
+  /** The sounds of the project, as the backend answers "GetSounds": none at first. */
+  sounds: Sound[] = [];
+  /** The device of the sound, as the backend answers "GetSoundOutput": none (a page not on the PC) unless a test gives it. */
+  soundOutput: SoundOutput | undefined = undefined;
+  /** The playlists of the mixer's USB stick and their tracks, as "GetMixerPlaylists" and "GetMixerTracks" answer. */
+  mixerPlaylists: string[] = [];
+  mixerTracks: Record<string, string[]> = {};
+  /** The mixers the key Find of Settings finds, as "FindMixers" answers. */
+  mixersFound: FoundMixer[] = [];
   /** The MIDI of the PC, as the backend answers "GetMidi": none (a desk program from before MIDI) unless a test gives it. */
   midi: MidiState | undefined = undefined;
   /** The messages that came in from the controllers, as "WatchMidi" answers. */
@@ -180,6 +192,12 @@ class FakeConnection {
     if (method === 'GetSerialPorts') return this.serialPorts;
     if (method === 'GetNetworks') return this.networks;
     if (method === 'GetEffects') return this.effects;
+    if (method === 'GetSounds') return this.sounds;
+    if (method === 'GetSoundOutput') return this.soundOutput;
+    if (method === 'SetSoundOutput') return (this.soundOutput = { ...this.soundOutput!, ...(args[0] as SoundSetup) });
+    if (method === 'GetMixerPlaylists') return this.mixerPlaylists;
+    if (method === 'GetMixerTracks') return this.mixerTracks[args[0] as string] ?? [];
+    if (method === 'FindMixers') return this.mixersFound;
     if (method === 'PreviewEffect') return null;
     if (method === 'GetMidi') return this.midi;
     if (method === 'WatchMidi') return args[0] ? this.midiLines : undefined;
@@ -248,6 +266,9 @@ const QUESTIONS = [
   'GetNetworks',
   'GetEffects',
   'PreviewEffect',
+  // the sounds of the project, and the device of the sound (asked for by the Sounds view)
+  'GetSounds',
+  'GetSoundOutput',
   // the MIDI controllers of the PC: asked for on connecting, the keys claimed when the page is used,
   // the lamps and the pages told, the list of messages watched while the MIDI panel is shown
   'GetMidi',
@@ -702,12 +723,13 @@ describe('the desk page', () => {
 
   it('the independents stand at the right edge: ten keys for channels and ten for memories', () => {
     // at the right of Main: the stack across the top, under it the master section over the
-    // record keys, the general section, and the independents last
+    // record keys, the general section, the sound section, and the independents last
     const side = page.querySelector('lm-main-view > .side');
     expect([...(side?.children ?? [])].map((part) => part.tagName.toLowerCase())).toEqual([
       'lm-stack-section',
       'div',
       'lm-general-section',
+      'lm-sound-master',
       'lm-independents',
     ]);
     expect([...page.querySelectorAll('lm-main-view .first > *')].map((part) => part.tagName.toLowerCase())).toEqual([
@@ -737,7 +759,7 @@ describe('the desk page', () => {
   });
 
   it('edit lets the memory of a memory key be changed', async () => {
-    await press(button('Edit the channels, memories and effects of the independent keys'));
+    await press(button('Edit the channels, memories, effects and sounds of the independent keys'));
     const field = page.querySelector<HTMLInputElement>('input[aria-label="Memory of independent key 12"]');
     if (!field) throw new Error('no field for independent key 12');
 
@@ -753,7 +775,7 @@ describe('the desk page', () => {
     expect(store.memoryIndependents()[1]).toBe(77);
     expect(connection.calls).toContainEqual({ method: 'SetMemoryIndependent', args: [2, 77] });
 
-    await press(button('Edit the channels, memories and effects of the independent keys'));
+    await press(button('Edit the channels, memories, effects and sounds of the independent keys'));
     await press(button('Independent 12, memory 77'));
     expect(store.memoryLevels()[76]).toBe(255);
   });
@@ -816,7 +838,7 @@ describe('the desk page', () => {
   });
 
   it('edit lets the channel of an independent key be changed', async () => {
-    await press(button('Edit the channels, memories and effects of the independent keys'));
+    await press(button('Edit the channels, memories, effects and sounds of the independent keys'));
     const field = page.querySelector<HTMLInputElement>(
       'input[aria-label="Channel of independent key 2"]',
     );
@@ -834,7 +856,7 @@ describe('the desk page', () => {
     expect(store.independents()[1]).toBe(40);
     expect(connection.calls).toContainEqual({ method: 'SetIndependent', args: [2, 40] });
 
-    await press(button('Edit the channels, memories and effects of the independent keys'));
+    await press(button('Edit the channels, memories, effects and sounds of the independent keys'));
     await press(button('Independent 2, channel 40 (U1)'));
     expect(store.channels()[39]).toBe(255);
   });
@@ -887,7 +909,7 @@ describe('the desk page', () => {
     expect(page.querySelector('lm-fader[aria-label="Channel 65 (U2)"]')).toBeTruthy();
 
     // a key of the independents takes a channel of U2 as "113 U2"
-    await press(button('Edit the channels, memories and effects of the independent keys'));
+    await press(button('Edit the channels, memories, effects and sounds of the independent keys'));
     const field = page.querySelector<HTMLInputElement>('input[aria-label="Channel of independent key 2"]')!;
     expect(field.value).toBe('2 U1');
     field.value = '113 U2';
@@ -907,7 +929,7 @@ describe('the desk page', () => {
     await fixture.whenStable();
     expect(connection.calls.filter((call) => call.method === 'SetIndependent').length).toBe(2);
     expect(field.value).toBe('7 U2');
-    await press(button('Edit the channels, memories and effects of the independent keys'));
+    await press(button('Edit the channels, memories, effects and sounds of the independent keys'));
 
     // back to one universe: the U keys go, and the faders show U1 again
     connection.emit('DeskChanged', connection.welcome.desk);
@@ -937,7 +959,7 @@ describe('the desk page', () => {
     await show('/sequences');
     await press(button('Work on memory 3'));
     const row = () => page.querySelectorAll('lm-sequences-view table.steps tbody tr')[0];
-    const kind = () => row().querySelector<HTMLSelectElement>('select[aria-label="Step 1, channel, memory, fixture, group, effect or release"]')!;
+    const kind = () => row().querySelector<HTMLSelectElement>('select[aria-label="Step 1, channel, memory, fixture, group, effect, sound or release"]')!;
     const number = () => row().querySelector<HTMLSelectElement>('select[aria-label="Step 1, number of the channel"]')!;
     expect([...kind().options].map((option) => option.text.trim())).toEqual([
       'Channel (U1)',
@@ -946,6 +968,7 @@ describe('the desk page', () => {
       'Fixture',
       'Group',
       'Effect',
+      'Sound',
       'Release',
     ]);
     expect(kind().value).toBe('channel:1');
@@ -1238,9 +1261,9 @@ describe('the desk page', () => {
     expect(store.output()[4]).toBe(0);
   });
 
-  it('at the right of Main: STACK across the top, under it MASTER over RECORD, GENERAL (CLEAR, SOLO UP, SOLO DOWN, RATE), then IND; SOLO and PAUSE are white', async () => {
+  it('at the right of Main: STACK across the top, under it MASTER over RECORD, GENERAL (CLEAR, SOLO UP, SOLO DOWN, RATE), SOUND (MUTE), then IND; SOLO and PAUSE are white', async () => {
     const side = [...(page.querySelector('lm-main-view > .side')?.children ?? [])].map((child) => child.localName);
-    expect(side).toEqual(['lm-stack-section', 'div', 'lm-general-section', 'lm-independents']);
+    expect(side).toEqual(['lm-stack-section', 'div', 'lm-general-section', 'lm-sound-master', 'lm-independents']);
     expect([...page.querySelectorAll('lm-main-view .first > *')].map((child) => child.localName)).toEqual([
       'lm-master-section',
       'lm-record-section',
@@ -1364,6 +1387,7 @@ describe('the desk page', () => {
       'Stage',
       'Fixtures',
       'Effects',
+      'Sounds',
       'Notes',
       'MIDI',
       'Settings',
@@ -1374,7 +1398,7 @@ describe('the desk page', () => {
     box('Stage').click();
     box('Main').click();
     await fixture.whenStable();
-    expect(links()).toEqual(['Memories', 'Sequences', 'Stack', 'Fixtures', 'Effects', 'Notes', 'MIDI', 'Settings']);
+    expect(links()).toEqual(['Memories', 'Sequences', 'Stack', 'Fixtures', 'Effects', 'Sounds', 'Notes', 'MIDI', 'Settings']);
     expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY)!)).toMatchObject({ hiddenViews: ['main', 'stage'] }); // kept on this device
 
     box('Stage').click();
@@ -1383,7 +1407,7 @@ describe('the desk page', () => {
 
     // Stage to the front
     for (let place = 0; place < 4; place++) await press(button('Move Stage up'));
-    expect(links()).toEqual(['Stage', 'Memories', 'Sequences', 'Stack', 'Fixtures', 'Effects', 'Notes', 'MIDI', 'Settings']);
+    expect(links()).toEqual(['Stage', 'Memories', 'Sequences', 'Stack', 'Fixtures', 'Effects', 'Sounds', 'Notes', 'MIDI', 'Settings']);
 
     // a desk that starts at Main, while Main is left out, opens on the first view in the top bar
     const router = TestBed.inject(Router);
@@ -1394,7 +1418,7 @@ describe('the desk page', () => {
   });
 
   it('Settings puts the views in another order with ▲ and ▼, and ↺ brings back the usual ones', async () => {
-    const usual = ['Main', 'Memories', 'Sequences', 'Stack', 'Stage', 'Fixtures', 'Effects', 'Notes', 'MIDI', 'Settings'];
+    const usual = ['Main', 'Memories', 'Sequences', 'Stack', 'Stage', 'Fixtures', 'Effects', 'Sounds', 'Notes', 'MIDI', 'Settings'];
     const links = () => [...page.querySelectorAll('nav[aria-label="Views"] a')].map((link) => link.textContent?.trim().split(/\s/)[0]);
     const listed = () => [...page.querySelectorAll('ul.views label')].map((label) => label.textContent?.trim().split(/\s/)[0]);
     await show('/settings');
@@ -1404,7 +1428,7 @@ describe('the desk page', () => {
 
     // One place earlier, in Settings and in the top bar; the keyboard focus goes with it.
     await press(button('Move Settings up'));
-    const moved = ['Main', 'Memories', 'Sequences', 'Stack', 'Stage', 'Fixtures', 'Effects', 'Notes', 'Settings', 'MIDI'];
+    const moved = ['Main', 'Memories', 'Sequences', 'Stack', 'Stage', 'Fixtures', 'Effects', 'Sounds', 'Notes', 'Settings', 'MIDI'];
     expect(listed()).toEqual(moved);
     expect(links()).toEqual(moved);
     expect(document.activeElement).toBe(button('Move Settings up'));
@@ -1499,7 +1523,7 @@ describe('the desk page', () => {
     await press(pause);
     expect(pause.getAttribute('aria-expanded')).toBe('true');
     const offered = [...page.querySelectorAll('.palette button')].map((swatch) => swatch.getAttribute('aria-label'));
-    expect(offered).toEqual(['Green', 'Red', 'Yellow', 'Amber', 'White', 'Blue', 'Violet']);
+    expect(offered).toEqual(['Green', 'Red', 'Yellow', 'Amber', 'White', 'Blue', 'Violet', 'Cyan']);
     expect(button('White').getAttribute('aria-current')).toBe('true'); // the one it has
     await press(button('Red'));
     expect(shown('--key-pause')).toBe('#ff5247');
@@ -2004,8 +2028,8 @@ describe('the desk page', () => {
     await planWithGroup(stageLight(1, 'Par', 11, 'RGB', null, 2, 8), stageLight(2, 'Front', 5, 'D', null, 8, 5));
     await show('/sequences');
     await press(button('Work on memory 3'));
-    const kind = page.querySelector<HTMLSelectElement>('select[aria-label="Step 1, channel, memory, fixture, group, effect or release"]')!;
-    expect([...kind.options].map((option) => option.text.trim())).toEqual(['Channel (U1)', 'Memory', 'Fixture', 'Group', 'Effect', 'Release']);
+    const kind = page.querySelector<HTMLSelectElement>('select[aria-label="Step 1, channel, memory, fixture, group, effect, sound or release"]')!;
+    expect([...kind.options].map((option) => option.text.trim())).toEqual(['Channel (U1)', 'Memory', 'Fixture', 'Group', 'Effect', 'Sound', 'Release']);
 
     // a fixture: the first by its address, which the closed field shows; its name is the note
     kind.value = 'fixture';
@@ -2255,7 +2279,7 @@ describe('the desk page', () => {
     await check('lm-import-dialog', 'Project');
     await check('lm-import-dialog', 'Settings');
     await check('lm-import-dialog', 'Keyboard');
-    expect(page.querySelector<HTMLInputElement>('lm-import-dialog input[type="file"]')?.accept).toBe('.json');
+    expect(page.querySelector<HTMLInputElement>('lm-import-dialog input[type="file"]')?.accept).toBe('.json,.zip');
     await pick(new File([file], 'Concert - project, settings, keyboard.json'));
     await press(button('Import the file'));
     await until(() => page.querySelector('lm-import-dialog .report') !== null);
@@ -2329,6 +2353,56 @@ describe('the desk page', () => {
       await press(buttonIn('lm-export-dialog', 'OK'));
       expect(dialog?.open).toBe(false);
     } finally {
+      delete (globalThis as { showSaveFilePicker?: unknown }).showSaveFilePicker;
+    }
+  });
+
+  it('Export takes the sounds of the project along in a ZIP, and Import takes such a ZIP', async () => {
+    connection.emit('SoundsChanged', [aSound(1)]);
+    const chunks: Uint8Array[] = [];
+    let suggested = '';
+    (globalThis as { showSaveFilePicker?: unknown }).showSaveFilePicker = async (options: { suggestedName: string }) => {
+      suggested = options.suggestedName;
+      return { name: options.suggestedName, createWritable: async () => new WritableStream<Uint8Array>({ write: (chunk) => void chunks.push(chunk) }) };
+    };
+    const asked: { url: string; body: unknown }[] = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (url: string, init?: RequestInit) => {
+      asked.push({ url, body: init?.body });
+      if (url.startsWith('/api/export/pack')) return new Response(new Uint8Array([80, 75, 3, 4]), { status: 200 });
+      // the desk program took the sounds of the ZIP, all but one, and gives back its file of Export
+      const exported = { format: 'lumenet-export', version: 1, name: 'Concert', project: JSON.parse(connection.projectFile) };
+      return new Response(JSON.stringify({ text: JSON.stringify(exported), leftOut: ['notes.wav'] }), { status: 200 });
+    }) as typeof fetch;
+    try {
+      await press(button('Export'));
+      await check('lm-export-dialog', 'Project');
+      await press(button('Export the file'));
+      await until(() => chunks.length > 0 && page.querySelector('lm-export-dialog .report') !== null);
+      expect(suggested).toBe('Untitled - project.zip');
+      expect(asked[0].url).toBe('/api/export/pack?name=Untitled%20-%20project');
+      expect(JSON.parse(asked[0].body as string)).toMatchObject({ format: 'lumenet-export', name: 'Untitled' });
+      expect([...chunks[0]]).toEqual([80, 75, 3, 4]);
+      expect(textOf('lm-export-dialog .report')).toContain('Saved as "Untitled - project.zip"');
+      await press(buttonIn('lm-export-dialog', 'OK'));
+
+      // a ZIP is no bigger than the desk takes: it takes it in pieces
+      await press(button('Import'));
+      await check('lm-import-dialog', 'Project');
+      const zip = new File([new Uint8Array([80, 75, 3, 4])], 'Concert - project.zip');
+      Object.defineProperty(zip, 'size', { value: 90 * 1024 * 1024 });
+      await pick(zip);
+      expect(button('Import the file').disabled).toBe(false);
+      await press(button('Import the file'));
+      await until(() => page.querySelector('lm-import-dialog .report') !== null);
+      expect(asked[1]).toEqual({ url: '/api/import/unpack', body: zip });
+      expect(connection.last('ImportProjectFile')).toEqual(['Concert', JSON.stringify(JSON.parse(connection.projectFile))]);
+      expect([...page.querySelectorAll('lm-import-dialog .report p')].map((line) => line.textContent?.trim())).toEqual([
+        'These files of the ZIP are no sounds the desk program can play: notes.wav.',
+        'The project "Concert" is open. Save keeps it in the projects folder.',
+      ]);
+    } finally {
+      globalThis.fetch = realFetch;
       delete (globalThis as { showSaveFilePicker?: unknown }).showSaveFilePicker;
     }
   });
@@ -2568,6 +2642,7 @@ describe('the desk page', () => {
       'Stage',
       'Fixtures',
       'Effects',
+      'Sounds',
       'Notes',
       'MIDI',
       'Settings',
@@ -2592,11 +2667,11 @@ describe('the desk page', () => {
     expect(cells()[69].getAttribute('data-channel')).toBe('70');
     // a cell is one element: the table is light enough for the browser's developer tools
     expect(page.querySelectorAll('lm-memories-view table.matrix td *').length).toBe(0);
-    expect(page.querySelectorAll('lm-memories-view .keys button').length).toBe(32);
+    expect(page.querySelectorAll('lm-memories-view .content .keys button').length).toBe(32);
     expect(page.querySelectorAll('nav[aria-label="Memory pages"] button').length).toBe(4);
 
-    // memory 1 is looked at first, and it is empty
-    expect(page.querySelector('.summary')?.textContent).toContain('Memory 1 is empty');
+    // memory 1 is looked at first, and it is empty: a double click on a channel stores it
+    expect(page.querySelector('.summary')?.textContent).toContain('Memory 1 is empty. A double click on a channel gives it a level and stores the memory.');
     expect(levelOf(5)).toBe('0');
 
     await press(button('Look at memory 2'));
@@ -2800,7 +2875,7 @@ describe('the desk page', () => {
     const rows = () => [...page.querySelectorAll('lm-sequences-view table.steps tbody tr')];
     const sent = () => (connection.last('SetSequence')?.[1] as Sequence).steps;
     const adds = (row: number) => rows()[row].querySelector<HTMLInputElement>('td.adds input');
-    const kind = (row: number) => `select[aria-label="Step ${row}, channel, memory, fixture, group, effect or release"]`;
+    const kind = (row: number) => `select[aria-label="Step ${row}, channel, memory, fixture, group, effect, sound or release"]`;
 
     // Add: the box of step 2; a step without it has no "add" at all
     expect(adds(1)?.checked).toBe(false);
@@ -2936,9 +3011,10 @@ describe('the desk page', () => {
 
     // the note of the step's channel stands beside its number: step 2 is on channel 6
     const headers = [...page.querySelectorAll('lm-sequences-view table.steps thead th')];
-    expect(headers.map((header) => header.textContent?.trim()).slice(0, 6)).toEqual([
+    expect(headers.map((header) => header.textContent?.trim()).slice(0, 7)).toEqual([
       'Step',
       'Add',
+      'Continue',
       'Kind',
       'Number',
       'Notes',
@@ -2978,7 +3054,7 @@ describe('the desk page', () => {
     expect(numberOf(0)?.options[0].text.trim()).toBe('5');
 
     // a step switched to "memory": only the memories that hold a look are on offer, and it lands on one
-    const kind = rows()[0].querySelector<HTMLSelectElement>('select[aria-label="Step 1, channel, memory, fixture, group, effect or release"]');
+    const kind = rows()[0].querySelector<HTMLSelectElement>('select[aria-label="Step 1, channel, memory, fixture, group, effect, sound or release"]');
     if (!kind) throw new Error('no kind field in step 1');
     kind.value = 'memory';
     kind.dispatchEvent(new Event('change'));
@@ -3001,10 +3077,10 @@ describe('the desk page', () => {
     // the number of the step big at the right of its card, the words at the left
     expect(page.querySelector('.card.current')?.lastElementChild?.className).toBe('cue');
     expect(page.querySelector('.card.current .cue')?.textContent?.trim()).toBe('Step 1.0');
-    expect(page.querySelector('.card.current .what')?.textContent?.trim()).toBe('Channel 7 (U1) at 255');
+    expect(page.querySelector('.card.current .what')?.textContent?.trim()).toBe('Channel 7 (U1)'); // its value is in the table
     expect(page.querySelector('.card.next .cue')?.textContent?.trim()).toBe('Step 2.0');
     expect(page.querySelector('.card.current .how')?.textContent).toContain('waits for Play');
-    expect(page.querySelector('.card.next .what')?.textContent).toContain('Memory 2 (Wash) at 128');
+    expect(page.querySelector('.card.next .what')?.textContent?.trim()).toBe('Memory 2 (Wash)');
     expect(rows()[1].querySelector('td.note')?.textContent?.trim()).toBe('Wash'); // the note under that fader
 
     await press(button('Play'));
@@ -3036,12 +3112,16 @@ describe('the desk page', () => {
       'Pause',
       'Next step',
     ]);
+    // the master at the left of the cards, the sound at their right
+    // the cards, then (between the wave of a sound and the steps) the master and the sound section, each in a line
+    expect(panel.querySelector(':scope > lm-stack-cards + lm-master-section.lying + lm-sound-master.lying + .table-box')).toBeTruthy();
+    expect(panel.querySelector('lm-sound-master button[aria-label="Mute"]')).toBeTruthy();
     expect([...panel.querySelectorAll('lm-stack-cards.column .card h3')].map((title) => title.textContent?.trim())).toEqual([
       'Previous',
       'Current',
       'Next',
     ]);
-    expect(panel.querySelector('.card.current .what')?.textContent).toContain('Channel 7 (U1) at 255');
+    expect(panel.querySelector('.card.current .what')?.textContent?.trim()).toBe('Channel 7 (U1)');
 
     // the steps: number, whether it adds, notes and times only, nothing to change, the one that is on marked
     const headers = [...panel.querySelectorAll('table.steps thead th')].map((header) => header.textContent?.trim());
@@ -3090,9 +3170,11 @@ describe('the desk page', () => {
         `${view} table.steps input, ${view} table.steps select, ${view} table.steps button`,
       ),
     ];
-    // per row: the number of the step, its Add box, the two lists, four typed fields and four keys (▲ ▼ + ✕)
-    expect(fields('lm-stack-view').length).toBe(2 * 12);
-    expect(fields('lm-stack-view').every((field) => field.disabled)).toBe(true);
+    // per row: the number of the step, its Add box, the two lists, four typed fields, four keys (▲ ▼ + ✕)
+    // and its box Disabled, the one field that still works: a step can be skipped during a show, not the one that is on
+    expect(fields('lm-stack-view').length).toBe(2 * 13);
+    expect(fields('lm-stack-view').filter((field) => !field.closest('td.skips')).every((field) => field.disabled)).toBe(true);
+    expect([...page.querySelectorAll<HTMLInputElement>('lm-stack-view td.skips input')].map((box) => box.disabled)).toEqual([true, false]);
     expect(page.querySelector('lm-stack-view .grip')?.getAttribute('draggable')).toBeNull();
 
     // the main view: the record keys, the notes, the independent keys and the project keys
@@ -3107,7 +3189,7 @@ describe('the desk page', () => {
       'New project',
       'Load project',
       'Import',
-      'Edit the channels, memories and effects of the independent keys',
+      'Edit the channels, memories, effects and sounds of the independent keys',
     ]) {
       expect(button(key).disabled).toBe(true);
     }
@@ -3127,7 +3209,9 @@ describe('the desk page', () => {
     expect(button('Add a step').disabled).toBe(true);
     expect(button('Once').disabled).toBe(true);
     expect(fields('lm-sequences-view').length).toBeGreaterThan(0);
-    expect(fields('lm-sequences-view').every((field) => field.disabled)).toBe(true);
+    // all but the boxes Disabled: a step of a sequence can be skipped during a show
+    expect(fields('lm-sequences-view').filter((field) => !field.closest('td.skips')).every((field) => field.disabled)).toBe(true);
+    expect(page.querySelectorAll('lm-sequences-view td.skips input:not(:disabled)').length).toBe(2);
 
     // Stack again switches it off: the lock is gone
     await show('/stack');
@@ -3168,7 +3252,7 @@ describe('the desk page', () => {
   it('a stack that goes live ends an unfinished recording and the editing of the independent keys', async () => {
     await press(button('Record sequence'));
     await press(memoryKey(9));
-    await press(button('Edit the channels, memories and effects of the independent keys'));
+    await press(button('Edit the channels, memories, effects and sounds of the independent keys'));
     expect(store.mode()).toEqual({ kind: 'recording', memory: 9 });
     expect(page.querySelector('input[aria-label="Channel of independent key 2"]')).toBeTruthy();
 
@@ -3246,7 +3330,7 @@ describe('the desk page', () => {
     expect(rows().map((row) => row.classList.contains('current'))).toEqual([false, true]);
     expect(box()?.checked).toBe(true);
     expect(box()?.disabled).toBe(true); // a live stack keeps its steps
-    expect(page.querySelector('.card.current .what')?.textContent).toContain('Memory 2 (Wash) at 128, adds');
+    expect(page.querySelector('.card.current .what')?.textContent).toContain('Memory 2 (Wash), adds');
 
     // unchecked again: the desk is told without "add"
     await stackStands(NOT_LIVE);
@@ -3266,7 +3350,7 @@ describe('the desk page', () => {
 
   it('a release takes one step of the stack down, chosen from the other steps by their numbers', async () => {
     await show('/stack');
-    const kind = page.querySelector<HTMLSelectElement>('select[aria-label="Step 2.0, channel, memory, fixture, group, effect or release"]');
+    const kind = page.querySelector<HTMLSelectElement>('select[aria-label="Step 2.0, channel, memory, fixture, group, effect, sound or release"]');
     if (!kind) throw new Error('no field for the kind of step 2.0');
     expect([...kind.options].map((option) => option.text)).toContain('Release');
 
@@ -3298,7 +3382,7 @@ describe('the desk page', () => {
     await stackStands(NOT_LIVE);
     await show('/sequences');
     await press(button('Work on memory 3'));
-    const sequenceKind = page.querySelector<HTMLSelectElement>('select[aria-label="Step 1, channel, memory, fixture, group, effect or release"]');
+    const sequenceKind = page.querySelector<HTMLSelectElement>('select[aria-label="Step 1, channel, memory, fixture, group, effect, sound or release"]');
     expect([...(sequenceKind?.options ?? [])].map((option) => option.value)).toContain('release');
   });
 
@@ -3488,7 +3572,7 @@ describe('the desk page', () => {
 
     // The Memories and Sequences views keep the row the window gives them.
     await show('/memories');
-    expect(page.querySelectorAll('lm-memories-view .keys button').length).toBe(32);
+    expect(page.querySelectorAll('lm-memories-view .content .keys button').length).toBe(32);
     expect(page.querySelectorAll('lm-memories-view table.matrix tr')[0].children.length).toBe(32);
     await show('/sequences');
     expect(page.querySelectorAll('lm-sequences-view nav[aria-label="Memory pages"] button').length).toBe(4);
@@ -3533,12 +3617,14 @@ describe('the desk page', () => {
     expect(page.querySelectorAll('lm-channel-section lm-fader-strip').length).toBe(16);
   });
 
-  it('Settings has five panels: the main view with the universes, the zoom, the autosave and LAN; the views; the colors; the keyboard; the outputs after them', async () => {
+  it('Settings has five panels: the main view with the universes, the zoom, the autosave and LAN; the views with the sound; the colors; the keyboard; the outputs', async () => {
     await show('/settings');
     const panels = [...page.querySelectorAll('lm-settings-view .panels > *')];
     const titles = (panel: Element, level: string) => [...panel.querySelectorAll(level)].map((title) => title.textContent?.trim());
     expect(panels.map((panel) => titles(panel, 'h3')[0])).toEqual(['Main view', 'Views in the top bar', 'Colors of the keys', 'Keyboard', 'Outputs']);
     expect(titles(panels[0], 'h4')).toEqual(['Universes', 'Zoom', 'Autosave', 'Network (LAN)']);
+    expect(titles(panels[1], 'h4')).toEqual(['Sound']);
+    expect(panels[1].querySelector('lm-sound-output')).toBeTruthy();
     expect(page.querySelector('#universes')?.closest('.panel')).toBe(panels[0]);
     // fields only, no sentences about them, until the autosave and LAN, which keep theirs
     const autosave = panels[0].querySelector('#autosave-title')!;
@@ -3661,7 +3747,7 @@ describe('the desk page', () => {
     // The arrow keys go from kind to kind.
     kind('General').focus();
     kind('General').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
-    expect(document.activeElement).toBe(kind('Stack'));
+    expect(document.activeElement).toBe(kind('Sound'));
 
     // A search: each kind says how many of its keys it finds; when the kind that is open finds
     // none, the first that finds some opens; emptied, the kind open before opens again.
@@ -4064,7 +4150,7 @@ describe('the desk page', () => {
     expect(page.querySelectorAll('lm-main-view lm-effect-section lm-fader-strip').length).toBeGreaterThan(0);
 
     // Edit binds an effect key to another effect
-    await press(button('Edit the channels, memories and effects of the independent keys'));
+    await press(button('Edit the channels, memories, effects and sounds of the independent keys'));
     const field = page.querySelector<HTMLInputElement>('input[aria-label="Effect of independent key 21"]')!;
     field.value = '5';
     field.dispatchEvent(new Event('change'));
@@ -4073,10 +4159,742 @@ describe('the desk page', () => {
   });
 
   it('every effect key, effect key of the independents and the Effects view has a shortcut', () => {
-    for (const id of ['view.effects', 'effect.1', 'effect.64', 'ind.effect.32', 'page.effect.2', 'effects.keep', 'effects.reset', 'effects.copy', 'effects.delete']) {
+    for (const id of ['view.effects', 'effect.1', 'effect.64', 'ind.effect.32', 'page.effect.2', 'effects.keep', 'effects.reset']) {
       expect(actionWithId(id)).toBeTruthy();
     }
     expect(ACTION_GROUPS).toContain('Effect keys');
+  });
+
+  // ---------------------------------------------------------------- sounds
+
+  /** A sound of the project, as the desk program keeps it: a file of 12.5 seconds. */
+  function aSound(number: number, change: Partial<Sound> = {}): Sound {
+    const file = { hash: 'a'.repeat(32), name: 'rain.wav', seconds: 12.5, channels: 2, rate: 48000 };
+    return { ...newSound(number, file), ...change };
+  }
+
+  it('SOUND stands at the right of GENERAL: MUTE blinks while on, and the volume goes from -100 dB to 0 dB, -20 dB at first and by a double click', async () => {
+    const mute = page.querySelector<HTMLButtonElement>('lm-sound-master button[aria-label="Mute"]')!;
+    expect(mute.getAttribute('aria-pressed')).toBe('false');
+    await press(mute);
+    expect(connection.last('SetSoundMute')).toEqual([true]);
+    expect(mute.getAttribute('aria-pressed')).toBe('true');
+    expect(actionLamp('sound.mute', store, '/')).toEqual({ level: 1, blink: true });
+
+    const fader = page.querySelector<HTMLElement>('lm-sound-master lm-fader')!;
+    expect([fader.getAttribute('aria-valuemax'), fader.getAttribute('aria-valuenow')]).toEqual(['255', '81']);
+    expect(fader.getAttribute('aria-valuetext')).toBe('-20 decibels');
+    expect(page.querySelector('lm-sound-master .readout')?.textContent?.trim()).toBe('-20 dB');
+    fader.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+    await wait(40);
+    await fixture.whenStable();
+    expect(connection.last('SetSoundVolume')).toEqual([-100]);
+    expect(page.querySelector('lm-sound-master .readout')?.textContent?.trim()).toBe('-100 dB');
+    fader.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    await wait(40);
+    expect(connection.last('SetSoundVolume')).toEqual([-20]);
+
+    // what another page did: half way is -12 dB, as the gain is the place squared
+    connection.emit('SoundMasterChanged', -12, false);
+    await fixture.whenStable();
+    expect(fader.getAttribute('aria-valuenow')).toBe('128');
+    expect(page.querySelector('lm-sound-master .readout')?.textContent?.trim()).toBe('-12 dB');
+    expect(mute.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('the row of sounds on Main: a key starts and stops its sound, and Copy and Del work on sounds, a sound onto a sound', async () => {
+    connection.emit('SoundsChanged', [aSound(2, { name: 'Rain' }), aSound(4, { name: 'Bell' })]);
+    TestBed.inject(DeskSettings).setSoundRows(1);
+    await show('/memories');
+    await show('/');
+    await until(() => !!page.querySelector('lm-main-view lm-sound-section'));
+    await fixture.whenStable();
+
+    const key = (number: number) => page.querySelector<HTMLButtonElement>(`lm-sound-section button[aria-label="Sound ${number} key"]`)!;
+    expect(key(2).classList).toContain('tone-sound'); // every sound one color
+    expect(key(3).classList).toContain('tone-sound'); // an empty number too, as the page keys
+    expect(key(4).classList).toContain('tone-sound');
+    await press(key(2));
+    expect(connection.last('SetSoundControl')).toEqual([2, 'toggle', 0]);
+
+    // Copy: the sound, then the number for the copy; a memory key says that a sound goes onto a sound
+    await press(button('Copy memory'));
+    await press(key(2));
+    await press(memoryKey(1));
+    expect(store.notice()).toBe('Copy puts sound 2 onto another sound: press the key of that one.');
+    await press(key(5));
+    expect(connection.last('CopySound')).toEqual([2, 5]);
+    expect(connection.methods().filter((method) => method === 'SetSoundControl')).toEqual(['SetSoundControl']); // only the first press played it
+
+    // Del: the sound to take out
+    await press(button('Delete memory'));
+    await press(key(2));
+    expect(connection.last('DeleteSound')).toEqual([2]);
+    expect(store.sounds().map((sound) => sound.number)).toEqual([4]);
+  });
+
+  it('Copy and Del work on the effects of the row on Main too', async () => {
+    connection.emit('EffectsChanged', [anEffect(2, { name: 'Pulse' })]);
+    TestBed.inject(DeskSettings).setEffectRows(1);
+    await show('/memories');
+    await show('/');
+    await until(() => !!page.querySelector('lm-main-view lm-effect-section'));
+    await fixture.whenStable();
+
+    const key = (number: number) => page.querySelector<HTMLButtonElement>(`lm-effect-section button[aria-label="Effect ${number} key"]`)!;
+    await press(button('Copy memory'));
+    await press(key(2));
+    await press(key(4));
+    expect(connection.last('CopyEffect')).toEqual([2, 4]);
+    await press(button('Delete memory'));
+    await press(key(2));
+    expect(connection.last('DeleteEffect')).toEqual([2]);
+    expect(connection.methods()).not.toContain('SetEffectControl');
+  });
+
+  it('the Sounds view takes a file for an empty number, and its editor changes the sound', async () => {
+    await show('/sounds');
+    expect(page.querySelector('lm-sounds-view .summary')?.textContent).toContain('Sound 1 is empty');
+
+    // the key of an empty number chooses it
+    await press(page.querySelector<HTMLButtonElement>('lm-sounds-view button[aria-label="Sound 3 key"]'));
+    expect(page.querySelector('lm-sounds-view .summary')?.textContent).toContain('Sound 3 is empty');
+    expect(page.querySelector('lm-sounds-view .make p')?.textContent).toContain('Add a file to sound 3');
+    expect(connection.methods()).not.toContain('SetSoundControl');
+
+    // Copy and Del of the view, and MUTE with the volume
+    const record = [...page.querySelectorAll('lm-sounds-view lm-record-section button')].map((item) => item.getAttribute('aria-label'));
+    expect(record).toEqual(['Copy sound', 'Delete sound']);
+    expect(page.querySelector('lm-sounds-view lm-sound-master button[aria-label="Mute"]')).toBeTruthy();
+    // a page that is not on the PC is told where the device is chosen
+    expect(page.querySelector('lm-sound-output')).toBeNull(); // the device is set up in Settings
+
+    // a file goes to the desk program, and becomes sound 3
+    const sent: string[] = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (url: string) => {
+      sent.push(url);
+      const info = { hash: 'b'.repeat(32), name: 'thunder.mp3', seconds: 3.5, channels: 2, rate: 44100 };
+      return new Response(JSON.stringify(info), { status: 200 });
+    }) as typeof fetch;
+    try {
+      const picker = page.querySelector<HTMLInputElement>('lm-sounds-view input[type="file"]')!;
+      Object.defineProperty(picker, 'files', { value: [new File(['x'], 'thunder.mp3')], configurable: true });
+      picker.dispatchEvent(new Event('change'));
+      await until(() => store.sounds().length === 1);
+      await until(() => sent.includes(`/api/sounds/${'b'.repeat(32)}/wave`));
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+    expect(sent.filter((url) => !url.endsWith('/wave'))).toEqual(['/api/sounds?name=thunder.mp3']);
+    expect([...page.querySelectorAll('lm-sound-wave .time')].map((item) => item.textContent?.trim())).toEqual(['0.0 s', '3.5 s']);
+    await wait(200);
+    expect(connection.last('SetSound')?.[0]).toMatchObject({
+      number: 3,
+      name: 'thunder',
+      file: 'thunder.mp3',
+      hash: 'b'.repeat(32),
+      decibels: 0,
+    });
+    expect(connection.last('SetSound')?.[0]).not.toHaveProperty('category');
+    expect(page.querySelector('lm-sounds-view .summary')?.textContent).toContain('Sound 3, thunder: thunder.mp3, 3.5 s, quiet.');
+
+    // the editor: a number within its range is taken, one out of it put back
+    const level = page.querySelector<HTMLInputElement>('#sound-level')!;
+    level.value = '-12.34';
+    level.dispatchEvent(new Event('change'));
+    await wait(200);
+    expect((connection.last('SetSound')?.[0] as Sound).decibels).toBe(-12.3);
+    level.value = '3'; // over 0 dB: put back
+    level.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(level.value).toBe('-12.3');
+
+    expect(page.querySelector('#sound-category')).toBeNull(); // no kinds: every sound is a sound
+    expect(page.querySelector('lm-sounds-view button[aria-label="Sound 3 key"]')?.classList).toContain('tone-sound');
+
+    // Copy of the view: the sound, then an empty number, which the editor shows then
+    await press(button('Copy sound'));
+    await press(page.querySelector<HTMLButtonElement>('lm-sounds-view button[aria-label="Sound 3 key"]'));
+    await press(page.querySelector<HTMLButtonElement>('lm-sounds-view button[aria-label="Sound 7 key"]'));
+    expect(connection.last('CopySound')).toEqual([3, 7]);
+    expect(store.chosenSound()).toBe(7);
+  });
+
+  it('the sliders of the editor work while they move; speed, pitch, echo and reverb are sliders too', async () => {
+    connection.emit('SoundsChanged', [aSound(1, { name: 'Rain' })]);
+    await show('/sounds');
+    await until(() => !!page.querySelector('lm-sound-editor'));
+    // the lying faders of the desk, as on the Effects view: keys, the wheel and a drag move them
+    const slider = (label: string) => page.querySelector<HTMLElement>(`lm-sound-editor lm-fader[aria-label^="${label}"]`)!;
+    const keyOn = (label: string, name: string) =>
+      slider(label).dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true }));
+    const pressOn = async (label: string, name: string, times = 1) => {
+      for (let time = 0; time < times; time++) keyOn(label, name);
+      await wait(100);
+    };
+    const turn = async (label: string, notches: number) => {
+      for (let notch = 0; notch < Math.abs(notches); notch++)
+        slider(label).dispatchEvent(new WheelEvent('wheel', { deltaY: notches > 0 ? -100 : 100, bubbles: true, cancelable: true }));
+      await wait(100);
+    };
+    expect(page.querySelector('lm-sound-editor input[type="range"]')).toBeNull(); // no slider of the browser's own
+    const last = () => connection.last('SetSound')?.[0] as Sound;
+    const sends = () => connection.methods().filter((method) => method === 'SetSound').length;
+
+    // the first move goes out at once, the newest of the next ones a moment later: a sound that plays follows
+    // the level: 255 places, the gain as the place squared (254 is -0.1 dB, 250 -0.3 dB)
+    expect(slider('Level').getAttribute('aria-valuenow')).toBe('255'); // 0 dB, its file as it is
+    for (let time = 0; time < 5; time++) keyOn('Level', 'ArrowLeft');
+    expect(sends()).toBe(1);
+    expect(last().decibels).toBe(-0.1);
+    await wait(100);
+    expect(sends()).toBe(2);
+    expect(last().decibels).toBe(-0.3);
+    // what the desk program says of a change before does not move the fader back
+    connection.emit('SoundsChanged', [aSound(1, { name: 'Rain', decibels: -0.1 })]);
+    await fixture.whenStable();
+    expect(store.soundsByNumber().get(1)?.decibels).toBe(-0.3);
+    expect(page.querySelector<HTMLInputElement>('#sound-level')?.value).toBe('-0.3');
+    expect(slider('Level').getAttribute('aria-valuetext')).toBe('-0.3 decibels');
+    // the wheel: a notch down is 5 places
+    await turn('Level', -1);
+    expect(last().decibels).toBe(-0.6);
+
+    // speed: half as fast at the left, 1x in the middle, twice as fast at the right
+    await pressOn('Speed', 'End');
+    expect(last().speed).toBe(2);
+    await pressOn('Speed', 'Home');
+    expect(last().speed).toBe(0.5);
+    slider('Speed').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    await wait(100);
+    expect(last().speed).toBe(1);
+    // pitch: a key or a notch of the wheel is a semitone
+    await pressOn('Pitch', 'Home');
+    expect(last().pitch).toBe(-12);
+    await turn('Pitch', 7);
+    expect(last().pitch).toBe(-5);
+    await turn('Echo', 8);
+    expect(last().echo).toBe(40);
+    expect(page.querySelector('lm-sound-editor input[aria-label^="Seconds between the repeats"]')).toBeTruthy();
+    await turn('Reverb', 6);
+    expect(last().reverb).toBe(30);
+    expect(page.querySelector('#sound-room')).toBeTruthy();
+    await pressOn('Pan', 'ArrowLeft', 3);
+    expect(last().pan).toBe(-3);
+
+    // Loop is a box, without a sentence
+    expect(page.querySelector('label[for="sound-room"]')?.textContent?.trim()).toBe('Room size (%)'); // of the reverb
+    expect(page.querySelector('label[for="sound-loop"]')?.textContent?.trim()).toBe('Loop');
+    expect(page.querySelector('lm-sound-editor')?.textContent).not.toContain('After its end');
+  });
+
+  it('the wave of the Sounds view: where the sound is on the left, how long its file is on the right', async () => {
+    connection.emit('SoundsChanged', [aSound(1, { name: 'Rain', start: 2.5 })]);
+    await show('/sounds');
+    await until(() => !!page.querySelector('lm-sound-wave'));
+    const times = () => [...page.querySelectorAll('lm-sound-wave .time')].map((item) => item.textContent?.trim());
+    expect(times()).toEqual(['2.5 s', '12.5 s']); // quiet: where it starts
+    connection.emit('SoundPlaybackChanged', { ...quietPlayback(1), playing: true, level: 255, position: 7.25 });
+    await fixture.whenStable();
+    expect(times()).toEqual(['7.3 s', '12.5 s']);
+    expect(page.querySelector('lm-sound-wave')?.getAttribute('aria-label')).toBe('Sound 1 plays, at 7.3 s of 12.5 s');
+  });
+
+  it('Copy and Del of the Memories view keep to looks, and those of the Sequences view to sequences', async () => {
+    const record = (view: string) => [...page.querySelectorAll(`${view} lm-record-section button`)].map((item) => item.getAttribute('aria-label'));
+
+    // memory 2 holds a look, memory 3 a sequence
+    await show('/memories');
+    expect(record('lm-memories-view')).toEqual(['Copy memory', 'Delete memory']);
+    await press(button('Copy memory'));
+    await press(button('Look at memory 3'));
+    expect(store.notice()).toBe('Memory 3 holds a sequence: here Copy copies looks. Sequences are on the Sequences view.');
+    await press(button('Look at memory 2'));
+    await press(button('Look at memory 3'));
+    expect(store.notice()).toBe('Memory 3 holds a sequence: a look is copied onto a look or an empty memory.');
+    await press(button('Look at memory 6'));
+    expect(connection.last('CopyMemory')).toEqual([2, 6]);
+    expect(store.inspectedMemory()).toBe(6); // the copy is looked at
+
+    await press(button('Delete memory'));
+    await press(button('Look at memory 3'));
+    expect(store.notice()).toBe('Memory 3 holds a sequence: here Del deletes looks. Sequences are on the Sequences view.');
+    await press(button('Look at memory 6'));
+    expect(connection.last('DeleteMemory')).toEqual([6]);
+
+    // without Copy or Del a key only chooses the memory to look at
+    await press(button('Look at memory 2'));
+    expect(store.inspectedMemory()).toBe(2);
+
+    await show('/sequences');
+    expect(record('lm-sequences-view')).toEqual(['Copy sequence', 'Delete sequence']);
+    await press(button('Copy sequence'));
+    await press(button('Work on memory 2'));
+    expect(store.notice()).toBe('Memory 2 holds a look: here Copy copies sequences. Looks are on the Memories view.');
+    await press(button('Work on memory 3'));
+    await press(button('Work on memory 2'));
+    expect(store.notice()).toBe('Memory 2 holds a look: a sequence is copied onto a sequence or an empty memory.');
+    await press(button('Work on memory 8'));
+    expect(connection.last('CopyMemory')).toEqual([3, 8]);
+    expect(store.inspectedMemory()).toBe(8);
+
+    await press(button('Delete sequence'));
+    await press(button('Work on memory 2'));
+    expect(store.notice()).toBe('Memory 2 holds a look: here Del deletes sequences. Looks are on the Memories view.');
+    await press(button('Work on memory 8'));
+    expect(connection.last('DeleteMemory')).toEqual([8]);
+  });
+
+  it('the Effects view has Copy and Del beside its row, and a copy made there is chosen', async () => {
+    connection.emit('EffectsChanged', [anEffect(2, { name: 'Pulse' })]);
+    await show('/effects');
+    await until(() => !!page.querySelector('lm-effects-view lm-record-section'));
+    const keys = [...page.querySelectorAll('lm-effects-view lm-record-section button')].map((item) => item.getAttribute('aria-label'));
+    expect(keys).toEqual(['Copy effect', 'Delete effect']);
+    const key = (number: number) => page.querySelector<HTMLButtonElement>(`lm-effects-view button[aria-label="Effect ${number} key"]`)!;
+    await press(button('Copy effect'));
+    await press(key(2));
+    await press(key(5));
+    expect(connection.last('CopyEffect')).toEqual([2, 5]);
+    expect(store.chosenEffect()).toBe(5);
+    await press(button('Delete effect'));
+    await press(key(2));
+    expect(connection.last('DeleteEffect')).toEqual([2]);
+    expect(connection.methods()).not.toContain('SetEffectControl');
+  });
+
+  it('Settings offers the row of effect faders and the row of sound faders as None or 1', async () => {
+    await show('/settings');
+    for (const id of ['#effect-rows', '#sound-rows']) {
+      const rows = page.querySelector<HTMLSelectElement>(id)!;
+      expect([...rows.options].map((option) => option.textContent?.trim())).toEqual(['None', '1']);
+    }
+  });
+
+  it('a step of a sequence plays a sound, and Continue is a box of the steps of sounds only', async () => {
+    connection.emit('SoundsChanged', [aSound(2, { name: 'Rain' })]);
+    await show('/sequences');
+    await press(button('Work on memory 3'));
+    const row = (index: number) => page.querySelectorAll('lm-sequences-view table.steps tbody tr')[index];
+    expect(row(0).querySelector('td.continues input')).toBeNull(); // a channel plays on nothing
+
+    const kind = row(0).querySelector<HTMLSelectElement>('select[aria-label="Step 1, channel, memory, fixture, group, effect, sound or release"]')!;
+    kind.value = 'sound';
+    kind.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    const sent = () => (connection.last('SetSequence')?.[1] as Sequence).steps[0];
+    expect(sent()).toMatchObject({ target: 'sound', number: 5, value: 200 }); // its number stays where it can
+    expect(row(0).querySelector('td.note')?.textContent?.trim()).toBe('No such sound yet');
+    const number = row(0).querySelector<HTMLSelectElement>('select[aria-label="Step 1, number of the sound"]')!;
+    number.dispatchEvent(new Event('focus'));
+    await fixture.whenStable();
+    expect([...number.options].slice(0, 2).map((option) => option.text.trim())).toEqual(['1', '2: Rain']);
+    number.value = '2';
+    number.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(row(0).querySelector('td.note')?.textContent?.trim()).toBe('Rain');
+
+    // Continue: it plays on through the steps after it
+    await press(row(0).querySelector<HTMLInputElement>('input[aria-label="Step 1 plays its sound on through the steps after it"]'));
+    expect(sent()).toMatchObject({ target: 'sound', number: 2, continue: true });
+
+    // another kind leaves Continue behind
+    kind.value = 'memory';
+    kind.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(sent().target).toBe('memory');
+    expect(sent().continue).toBeUndefined();
+  });
+
+  it('a step of the stack plays a sound, with Continue, and its card says that it plays on', async () => {
+    connection.emit('SoundsChanged', [aSound(2, { name: 'Rain' })]);
+    connection.emit('StackChanged', {
+      steps: [
+        { id: 11, cue: '1.0', ...step(2, 255, { target: 'sound', wait: 0 }), continue: true },
+        { id: 12, cue: '2.0', ...step(2, 128, { target: 'memory', wait: 3 }) },
+      ],
+    });
+    await show('/stack');
+    const headers = [...page.querySelectorAll('lm-stack-view thead th')].map((header) => header.textContent?.trim());
+    expect(headers.slice(1, 5)).toEqual(['Step', 'Add', 'Continue', 'Kind']);
+    const box = page.querySelector<HTMLInputElement>('input[aria-label="Step 1.0 plays its sound on through the steps after it"]')!;
+    expect(box.checked).toBe(true);
+    expect(page.querySelector('input[aria-label="Step 2.0 plays its sound on through the steps after it"]')).toBeNull();
+    expect(page.querySelectorAll('lm-stack-view tbody tr')[0].querySelector('td.note')?.textContent?.trim()).toBe('Rain');
+
+    await press(box);
+    expect(connection.last('UpdateStackStep')).toEqual([11, { target: 'sound', number: 2, value: 255, up: 1, wait: 0, down: 1 }]);
+    await press(box);
+    expect(connection.last('UpdateStackStep')).toEqual([11, { target: 'sound', number: 2, value: 255, up: 1, wait: 0, down: 1, continue: true }]);
+
+    await stackStands({ currentId: 11, nextId: 12, state: 'holding', paused: false, remaining: 0, live: true });
+    expect(page.querySelector('lm-stack-cards .card.current .what')?.textContent).toContain('Sound 2 (Rain), plays on');
+  });
+
+  it('Disabled skips a step of the stack, also while the stack is live, but not the step that is on', async () => {
+    await show('/stack');
+    const box = (cue: string) => page.querySelector<HTMLInputElement>(`input[aria-label="Step ${cue} is skipped"]`)!;
+    const row = (index: number) => page.querySelectorAll('lm-stack-view table.steps tbody tr')[index];
+    expect([...page.querySelectorAll('lm-stack-view table.steps thead th')].at(-1)?.textContent?.trim()).toBe('Disabled');
+
+    await press(box('2.0'));
+    expect(connection.last('SetStackStepDisabled')).toEqual([12, true]);
+    expect(row(1).classList).toContain('skipped');
+    expect(store.stack().steps[1].disabled).toBe(true);
+
+    // an edit of the step keeps it skipped
+    const value = row(1).querySelector<HTMLInputElement>('input[aria-label="Step 2.0, value, 0 to 255"]')!;
+    value.value = '100';
+    value.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(connection.last('UpdateStackStep')?.[1]).toMatchObject({ value: 100, disabled: true });
+
+    // live: the box works, but not for the step that is on
+    await stackStands(LIVE);
+    expect(box('1.0').disabled).toBe(true);
+    expect(box('2.0').disabled).toBe(false);
+    await press(box('2.0'));
+    expect(connection.last('SetStackStepDisabled')).toEqual([12, false]);
+    expect(row(1).classList).not.toContain('skipped');
+  });
+
+  it('Disabled skips a step of a sequence, and the dropdowns of a step have the color of its kind', async () => {
+    await show('/sequences');
+    await press(button('Work on memory 3'));
+    const rows = () => [...page.querySelectorAll<HTMLElement>('lm-sequences-view table.steps tbody tr')];
+    await press(page.querySelector<HTMLInputElement>('input[aria-label="Step 2 is skipped"]'));
+    expect(connection.last('SetSequenceStepDisabled')).toEqual([3, 2, true]);
+    expect(rows()[1].classList).toContain('skipped');
+
+    expect(rows()[0].style.getPropertyValue('--kind')).toBe('var(--key-channel)');
+    const kind = rows()[0].querySelector<HTMLSelectElement>('td.kind select')!;
+    kind.value = 'memory';
+    kind.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(rows()[0].style.getPropertyValue('--kind')).toBe('var(--key-memory)');
+
+    // each line of the list of the kinds has the color of its own kind, not the one chosen
+    const colors = [...rows()[0].querySelectorAll<HTMLOptionElement>('td.kind option')].map((option) => [
+      option.value,
+      option.style.getPropertyValue('--kind'),
+    ]);
+    expect(colors).toEqual(
+      expect.arrayContaining([
+        ['channel:1', 'var(--key-channel)'],
+        ['memory', 'var(--key-memory)'],
+        ['fixture', 'var(--key-channel)'],
+        ['group', 'var(--key-system)'],
+      ]),
+    );
+  });
+
+  it('the Stage view hides the panel of the light with its key Light, and Edit shows it again', async () => {
+    await show('/stage');
+    expect(page.querySelector('lm-stage-panel')).toBeTruthy();
+    await press(button('Light panel'));
+    expect(page.querySelector('lm-stage-panel')).toBeNull();
+    expect(page.querySelector('lm-stage-view')?.classList).toContain('no-panel');
+    expect(TestBed.inject(DeskSettings).stagePanel()).toBe(false);
+    await press(button('Edit the plan'));
+    expect(page.querySelector('lm-stage-panel')).toBeTruthy();
+    await press(button('Edit the plan'));
+    await press(button('Light panel'));
+    expect(page.querySelector('lm-stage-panel')).toBeTruthy();
+  });
+
+  it('Settings sets the device of the sound, its outputs and the device to listen on, on the PC', async () => {
+    connection.soundOutput = {
+      devices: [
+        { id: 'd1', name: 'Speakers', channels: 2 },
+        { id: 'd2', name: 'Line out', channels: 4 },
+      ],
+      device: '',
+      outputs: 1,
+      state: 'playing',
+      name: 'Line out',
+      channels: 4,
+      listen: false,
+      listenDevice: '',
+      listenState: '',
+      listenName: '',
+      mixer: '',
+      playlist: '',
+    };
+    await show('/settings');
+    await until(() => !!page.querySelector('#sound-device'));
+    const device = page.querySelector<HTMLSelectElement>('#sound-device')!;
+    expect([...device.options].map((option) => option.textContent?.trim())).toEqual(["Windows' default device", 'Speakers (2)', 'Line out (4)']);
+    expect(page.querySelector('lm-sound-output .state')?.textContent).toContain('Plays on Line out, 4 outputs.');
+
+    // four outputs: two pairs, and the sounds on one of them
+    expect(page.querySelector('#sound-music, #sound-effects')).toBeNull();
+    const outputs = page.querySelector<HTMLSelectElement>('#sound-outputs')!;
+    expect([...outputs.options].map((option) => option.textContent?.trim())).toEqual(['1 and 2 (of 4)', '3 and 4 (of 4)']);
+    outputs.value = '2';
+    outputs.dispatchEvent(new Event('change'));
+    await until(() => connection.last('SetSoundOutput') !== undefined);
+    expect(connection.last('SetSoundOutput')).toEqual([
+      { device: '', outputs: 2, listen: false, listenDevice: '', mixer: '', playlist: '' },
+    ]);
+
+    device.value = 'd1';
+    device.dispatchEvent(new Event('change'));
+    await until(() => (connection.last('SetSoundOutput')?.[0] as SoundSetup).device === 'd1');
+    expect(connection.last('SetSoundOutput')).toEqual([
+      { device: 'd1', outputs: 2, listen: false, listenDevice: '', mixer: '', playlist: '' },
+    ]);
+    // a device of two outputs has only 1 and 2: no field for them
+    connection.emit('SoundOutputChanged', { ...connection.soundOutput!, outputs: 1, channels: 2 });
+    await fixture.whenStable();
+    expect(page.querySelector('#sound-outputs')).toBeNull();
+
+    // Listen on: the device of the PC that plays what goes out as well, while LISTEN is lit (no box here)
+    expect(page.querySelector('#sound-listen')).toBeNull();
+    const listenOn = page.querySelector<HTMLSelectElement>('#sound-listen-device')!;
+    expect([...listenOn.options].map((option) => option.textContent?.trim())).toEqual(["Windows' default device", 'Speakers', 'Line out']);
+    listenOn.value = 'd2';
+    listenOn.dispatchEvent(new Event('change'));
+    await until(() => (connection.last('SetSoundOutput')?.[0] as SoundSetup).listenDevice === 'd2');
+    connection.emit('SoundOutputChanged', { ...connection.soundOutput!, listen: true, listenState: 'playing', listenName: 'Line out' });
+    await fixture.whenStable();
+    expect([...page.querySelectorAll('lm-sound-output .state')].map((line) => line.textContent?.trim())).toEqual([
+      'Plays on Line out, 4 outputs.',
+      'Listening on Line out.',
+    ]);
+    connection.emit('SoundOutputChanged', { ...connection.soundOutput!, listen: true, listenState: 'same', listenName: '' });
+    await fixture.whenStable();
+    expect(page.querySelectorAll('lm-sound-output .state')[1]?.textContent).toContain('it plays there already');
+  });
+
+  it('LISTEN in the sound section switches listening on and off, from any page', async () => {
+    await show('/sounds');
+    const listen = page.querySelector<HTMLButtonElement>('lm-sound-master button[aria-label="Listen"]')!;
+    expect(listen.getAttribute('aria-pressed')).toBe('false');
+    await press(listen);
+    expect(connection.last('SetSoundListen')).toEqual([true]);
+    expect(listen.getAttribute('aria-pressed')).toBe('true');
+    connection.emit('SoundListenChanged', { listen: false, state: '' }); // another page took it back
+    await fixture.whenStable();
+    expect(listen.getAttribute('aria-pressed')).toBe('false');
+    expect(actionWithId('sound.listen')).toBeTruthy();
+    expect(page.querySelector('lm-sounds-view lm-sound-output')).toBeNull(); // the device is in Settings
+  });
+
+  it('the Sound part of Settings finds a Soundcraft mixer by its address or by Find, and its playlist; there is no player mode', async () => {
+    connection.soundOutput = {
+      devices: [],
+      device: '',
+      outputs: 1,
+      state: 'playing',
+      name: 'Speakers',
+      channels: 2,
+      listen: false,
+      listenDevice: '',
+      listenState: '',
+      listenName: '',
+      mixer: '',
+      playlist: '',
+      mixerState: '',
+      mixerName: '',
+    };
+    connection.mixerPlaylists = ['Show', '~all~'];
+    await show('/settings');
+    await until(() => !!page.querySelector('#sound-mixer'));
+    expect(page.querySelector('#sound-player')).toBeNull(); // no player mode: each sound plays where it belongs
+    expect(page.querySelector('#sound-outputs')).toBeNull(); // two outputs: nothing to choose
+    const lines = () => [...page.querySelectorAll('lm-sound-output .state')].map((line) => line.textContent?.trim());
+
+    // Find: none in the network, then several to choose from, then one, which is taken at once
+    await press(buttonIn('lm-sound-output', 'Find'));
+    await until(() => lines().some((line) => line?.startsWith('No Soundcraft Ui mixer answered')));
+    connection.mixersFound = [
+      { address: '10.10.1.1', name: 'ui16, firmware 1.0.7548' },
+      { address: '192.168.1.40', name: 'ui24' },
+    ];
+    await press(buttonIn('lm-sound-output', 'Find'));
+    await until(() => !!buttonIn('lm-sound-output', 'ui24 at 192.168.1.40'));
+    expect(lines()).toContain('Several mixers answered: choose one.');
+    await press(buttonIn('lm-sound-output', 'ui24 at 192.168.1.40'));
+    await until(() => (connection.last('SetSoundOutput')?.[0] as SoundSetup | undefined)?.mixer === '192.168.1.40');
+    connection.mixersFound = [{ address: '10.10.1.1', name: 'ui16, firmware 1.0.7548' }];
+    await press(buttonIn('lm-sound-output', 'Find'));
+    await until(() => (connection.last('SetSoundOutput')?.[0] as SoundSetup | undefined)?.mixer === '10.10.1.1');
+    expect(page.querySelector<HTMLInputElement>('#sound-mixer')?.value).toBe('10.10.1.1');
+
+    const address = page.querySelector<HTMLInputElement>('#sound-mixer')!;
+    address.value = ' 10.10.1.1 ';
+    address.dispatchEvent(new Event('change'));
+
+    connection.emit('SoundOutputChanged', { ...connection.soundOutput!, mixerState: 'connecting' });
+    await fixture.whenStable();
+    expect(lines()).toContain('Looking for the mixer at 10.10.1.1: no track plays until it answers.');
+    expect(page.querySelector('lm-sound-output .hint')).toBeNull(); // not before it answers
+
+    connection.soundOutput = { ...connection.soundOutput!, mixerState: 'connected', mixerName: 'ui16, firmware 1.0.7548' };
+    connection.emit('SoundOutputChanged', connection.soundOutput);
+    await fixture.whenStable();
+    expect(lines()).toContain('The mixer answers: ui16, firmware 1.0.7548.');
+    expect(page.querySelector('lm-sound-output .hint')?.textContent).toContain('one at a time');
+
+    // the playlist: every track at first, and all the tracks of one as sounds at once
+    await until(() => !!page.querySelector('#sound-playlist option[value="Show"]'));
+    const playlist = page.querySelector<HTMLSelectElement>('#sound-playlist')!;
+    expect([...playlist.options].map((option) => option.textContent?.trim())).toEqual(['All tracks', 'Show']);
+    playlist.value = 'Show';
+    playlist.dispatchEvent(new Event('change'));
+    await until(() => (connection.last('SetSoundOutput')?.[0] as SoundSetup).playlist === 'Show');
+    await fixture.whenStable();
+    await press(buttonIn('lm-sound-output', 'Add all its tracks'));
+    expect(connection.last('AddMixerTracks')).toEqual(['Show']);
+  });
+
+  it('while the mixer answers a step offers the tracks of the playlist, and a track picked there becomes a sound', async () => {
+    connection.mixerTracks = { Show: ['Overture.mp3', 'Finale.mp3'] };
+    await show('/stack');
+    connection.emit('StackChanged', { steps: [{ id: 11, cue: '1.0', target: 'sound', number: 5, value: 255, up: 0, wait: 0, down: 0 }] });
+    connection.emit('MixerChanged', { state: 'connected', name: 'ui16', playlist: 'Show' });
+    await until(() => connection.last('GetMixerTracks')?.[0] === 'Show');
+    await fixture.whenStable();
+    const number = page.querySelector<HTMLSelectElement>('lm-stack-view td.number select')!;
+    number.dispatchEvent(new Event('focus'));
+    await fixture.whenStable();
+    expect([...number.options].map((option) => option.textContent?.trim())).toEqual(
+      expect.arrayContaining(['Overture.mp3 (new sound)', 'Finale.mp3 (new sound)']),
+    );
+    number.value = [...number.options].find((option) => option.textContent?.includes('Finale'))!.value;
+    number.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(connection.last('SetSound')?.[0]).toMatchObject({ number: 1, name: 'Finale', file: 'Finale.mp3', playlist: 'Show' });
+    expect(connection.last('UpdateStackStep')?.[1]).toMatchObject({ target: 'sound', number: 1 });
+  });
+
+  it('RECORD stands under the page keys of the Memories and Sequences views', async () => {
+    await show('/memories');
+    expect(page.querySelector('lm-memories-view .side > nav.rail + lm-record-section')).toBeTruthy();
+    await show('/sequences');
+    expect(page.querySelector('lm-sequences-view .side > nav.rail + lm-record-section')).toBeTruthy();
+  });
+
+  it('while the mixer answers, an empty sound takes a track of its USB stick, edited as a track', async () => {
+    connection.mixerPlaylists = ['Show', '~all~', '~root~'];
+    connection.mixerTracks = { '~all~': ['Intro.mp3', 'Cafe\u0301.mp3', 'Outro.mp3'], Show: ['Intro.mp3', 'Cafe\u0301.mp3'] };
+    await show('/sounds');
+    expect(page.querySelector('lm-sounds-view .track')).toBeNull(); // no mixer: nothing of it
+    connection.emit('MixerChanged', { state: 'connected', name: 'ui16' });
+    await until(() => page.querySelectorAll('select[aria-label="Track of the mixer"] option').length === 4);
+    expect(page.querySelector('lm-sounds-view .track p')?.textContent).toContain('All tracks'); // no playlist chosen: every track
+    expect(page.querySelector('select[aria-label="Playlist of the mixer"]')).toBeNull(); // never one of its own
+
+    connection.emit('MixerChanged', { state: 'connected', name: 'ui16', playlist: 'Show' });
+    await until(() => page.querySelectorAll('select[aria-label="Track of the mixer"] option').length === 3);
+    expect(page.querySelector('lm-sounds-view .track p')?.textContent).toContain('Show');
+    const tracks = page.querySelector<HTMLSelectElement>('select[aria-label="Track of the mixer"]')!;
+    expect(tracks.options[2].textContent?.trim()).toBe('Caf\u00e9.mp3'); // as letters are usually written
+    tracks.value = 'Cafe\u0301.mp3';
+    tracks.dispatchEvent(new Event('change'));
+    // sent back to the mixer exactly as it gave it
+    expect(connection.last('SetSound')?.[0]).toMatchObject({
+      number: 1,
+      name: 'Caf\u00e9',
+      file: 'Cafe\u0301.mp3',
+      hash: '',
+      playlist: 'Show',
+      decibels: 0, // as any sound: the volume of all sounds keeps it down
+    });
+
+    // the editor of a track: its name, level and fades, and the track itself
+    connection.emit('SoundsChanged', [newTrack(1, 'Show', 'Cafe\u0301.mp3')]);
+    await fixture.whenStable();
+    expect(page.querySelector('lm-sound-editor .file')?.textContent?.trim()).toBe('Show / Caf\u00e9.mp3');
+    expect(page.querySelector('lm-sound-editor #sound-fade-out')).toBeTruthy();
+    expect(page.querySelector<HTMLInputElement>('lm-sound-editor #sound-level')?.value).toBe('0'); // PLAYER L/R go there, under the volume
+    expect(page.querySelector('lm-sound-editor #sound-pan')).toBeNull();
+    expect(page.querySelector('lm-sound-editor #sound-loop')).toBeNull();
+    expect(page.querySelector('lm-sounds-view lm-sound-wave')).toBeTruthy(); // empty, with its line
+    expect(page.querySelector('lm-sounds-view .summary')?.textContent).toContain('a track of the mixer (Show / Caf\u00e9.mp3)');
+
+    connection.emit('SoundPlaybackChanged', { ...quietPlayback(1), playing: true, level: 255, position: 65, length: 200 });
+    await fixture.whenStable();
+    expect(page.querySelector('lm-sounds-view .summary')?.textContent).toContain('playing, 1:05.0 of 3:20.0');
+    expect(page.querySelector('lm-sounds-view lm-sound-wave .total')?.textContent?.trim()).toBe('3:20.0');
+  });
+
+  it('a double click on the wave of a sound that plays plays it from there, and so do the keys on it', async () => {
+    await show('/sounds');
+    connection.emit('SoundsChanged', [newSound(1, { hash: 'ab'.repeat(16), name: 'rain.wav', seconds: 100, channels: 2, rate: 48000 })]);
+    await until(() => !!page.querySelector('lm-sounds-view lm-sound-wave .well'));
+    const well = page.querySelector<HTMLElement>('lm-sounds-view lm-sound-wave .well')!;
+    expect(well.getAttribute('role')).toBeNull(); // quiet: nothing to move
+    connection.emit('SoundPlaybackChanged', { ...quietPlayback(1), playing: true, level: 255, position: 10 });
+    await fixture.whenStable();
+    expect(well.getAttribute('role')).toBe('slider');
+
+    well.getBoundingClientRect = () => ({ left: 0, width: 200, top: 0, height: 56, right: 200, bottom: 56, x: 0, y: 0, toJSON: () => ({}) });
+    well.dispatchEvent(new MouseEvent('dblclick', { clientX: 50, bubbles: true }));
+    expect(connection.last('SeekSound')).toEqual([1, 25]); // a quarter of 100 s
+
+    well.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(connection.last('SeekSound')).toEqual([1, 15]);
+    well.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+    expect(connection.last('SeekSound')).toEqual([1, 0]);
+  });
+
+  it('once a sound played, the Stack view shows its wave over the steps', async () => {
+    await show('/stack');
+    connection.emit('SoundsChanged', [{ ...newSound(2, { hash: 'cd'.repeat(16), name: 'Overture.mp3', seconds: 90, channels: 2, rate: 48000 }), category: 'music' }]);
+    await fixture.whenStable();
+    expect(page.querySelector('lm-stack-view lm-sound-now')).toBeNull();
+    connection.emit('SoundPlaybackChanged', { ...quietPlayback(2), playing: true, level: 255, position: 3 });
+    await fixture.whenStable();
+    expect(page.querySelector('lm-stack-view lm-sound-now .name')?.textContent?.trim()).toBe('Sound 2: Overture');
+    expect(page.querySelector('lm-stack-view')?.classList).toContain('sounding');
+  });
+
+  it('Settings shows sound keys in the independents, which start and stop their sounds', async () => {
+    TestBed.inject(DeskSettings).setSoundKeys(4);
+    await show('/memories');
+    await show('/');
+    connection.emit('SoundsChanged', [newSound(3, { hash: 'ef'.repeat(16), name: 'Thunder.wav', seconds: 5, channels: 2, rate: 48000 })]);
+    await until(() => !!page.querySelector('button[aria-label="Independent 23, sound 3, Thunder"]'));
+    await press(page.querySelector<HTMLButtonElement>('button[aria-label="Independent 23, sound 3, Thunder"]'));
+    expect(connection.last('SetSoundControl')).toEqual([3, 'toggle', 0]);
+    expect(actionWithId('ind.sound.32')).toBeTruthy();
+
+    // Edit binds a sound key to another sound
+    await press(button('Edit the channels, memories, effects and sounds of the independent keys'));
+    const field = page.querySelector<HTMLInputElement>('input[aria-label="Sound of independent key 21"]')!;
+    field.value = '12';
+    field.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(connection.last('SetSoundIndependent')).toEqual([1, 12]);
+  });
+
+  it('the steps offer files and tracks of the mixer alike, and while it answers its tracks that are no sounds yet', () => {
+    const sounds = [
+      { number: 1, name: 'Rain' },
+      { number: 2, name: 'Intro', playlist: 'Show', file: 'Intro.mp3' },
+    ];
+    expect(soundChoices(sounds, 3).map((choice) => choice.text)).toEqual(['1: Rain', '2: Intro', '3']);
+    expect(soundChoices(sounds, 3, ['Intro.mp3', 'Outro.mp3'], 'Show').map((choice) => choice.text)).toEqual([
+      '1: Rain',
+      '2: Intro',
+      '3',
+      'Outro.mp3 (new sound)',
+    ]);
+  });
+
+  it('MUTE is on the Stack and Stage views too, and every sound key, page and the Sounds view has a shortcut', async () => {
+    await show('/stack');
+    // in the sound section, lying beside the master section over the steps
+    expect(page.querySelector('lm-stack-view .levels > lm-master-section.lying + lm-sound-master.lying')).toBeTruthy();
+    expect(page.querySelector('lm-stack-keys button[aria-label="Mute"]')).toBeNull();
+    await press(page.querySelector<HTMLButtonElement>('lm-stack-view lm-sound-master button[aria-label="Mute"]'));
+    expect(connection.last('SetSoundMute')).toEqual([true]);
+    for (const id of ['view.sounds', 'sound.1', 'sound.64', 'sound.mute', 'page.sound.2', 'page.sound.next']) {
+      expect(actionWithId(id)).toBeTruthy();
+    }
+    expect(ACTION_GROUPS).toContain('Sound keys');
   });
 
   // ---------------------------------------------------------------- MIDI controllers

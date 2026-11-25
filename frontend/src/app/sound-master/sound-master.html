@@ -1,0 +1,49 @@
+<h2>Sound</h2>
+
+<!-- Blinks while on, as Blackout does: no sound goes out. -->
+<button
+  lmLamp
+  type="button"
+  tone="mute"
+  aria-label="Mute"
+  data-action="sound.mute"
+  title="No sound goes out while it blinks; the sounds play on, unheard"
+  [level]="1"
+  [blink]="store.soundMute()"
+  [attr.aria-pressed]="store.soundMute()"
+  (click)="store.toggleSoundMute()"
+>
+  Mute
+</button>
+
+<!-- LISTEN: what goes out plays on the device to listen on as well (chosen in Settings, Sound) -->
+<button
+  lmLamp
+  type="button"
+  tone="listen"
+  aria-label="Listen"
+  data-action="sound.listen"
+  title="What goes out plays on the device to listen on as well (Settings, Sound)"
+  [level]="listenLevel()"
+  [attr.aria-pressed]="store.listen().listen"
+  (click)="store.toggleListen()"
+>
+  Listen
+</button>
+
+<!-- The volume stands above its fader, as the level does above every other fader. -->
+<span class="readout" aria-hidden="true" [class.up]="!store.soundMute() && place() > 0">{{
+  volumeText()
+}}</span>
+<lm-fader
+  tone="system"
+  label="Volume of the sound"
+  data-fader="fader.sound-volume"
+  title="Double click: back to -20 dB"
+  [class.off]="store.soundMute()"
+  [orientation]="store.mobile() || lying() ? 'horizontal' : 'vertical'"
+  [value]="place()"
+  [valueText]="volumeSaid()"
+  (valueChange)="onFader($event)"
+  (dblclick)="resetVolume()"
+/>

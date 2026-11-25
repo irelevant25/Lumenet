@@ -2,14 +2,14 @@ namespace DmxBox.Server;
 
 /// <summary>
 /// One step of a sequence or of the stack: a channel, a memory, a fixture or a group of fixtures
-/// of the stage plan, or an effect, the value it is brought to, and three times in seconds. A step
-/// can also release another step of the same stack or sequence, see <see cref="Release"/>.
+/// of the stage plan, an effect or a sound, the value it is brought to, and three times in seconds.
+/// A step can also release another step of the same stack or sequence, see <see cref="Release"/>.
 /// </summary>
-/// <param name="Target">What the step stands for: "channel", "memory", "fixture", "group", "effect" or "release".</param>
+/// <param name="Target">What the step stands for: "channel", "memory", "fixture", "group", "effect", "sound" or "release".</param>
 /// <param name="Number">
 /// The channel (1-512) or the memory (1-128); for a fixture or a group its number in the stage
 /// plan (<see cref="StageLight.Id"/>, <see cref="LightGroup.Id"/>), 0 for one that is gone; for an
-/// effect its number (1-64); for a release the step it takes down, 0 for none: in the stack that
+/// effect or a sound its number (1-64); for a release the step it takes down, 0 for none: in the stack that
 /// step's name (<see cref="StackStep.Id"/>), in a sequence its number in the list, from 1.
 /// </param>
 /// <param name="Value">The level the step brings it to, 0-255; for a fixture or a group the intensity of its lights.</param>
@@ -49,6 +49,14 @@ public sealed record Step(string Target, int Number, int Value, double Up, doubl
     /// </summary>
     public const string EffectTarget = "effect";
 
+    /// <summary>
+    /// The <see cref="Target"/> of a step that plays a sound. In the stack it brings the sound's
+    /// fader to its value in its up time, which starts the sound, and back to zero in its down time
+    /// when the stack leaves it, which stops it. In a sequence it plays the sound as loud as the step
+    /// is up, and leaves the fader alone (Desk.Sounds.cs). <see cref="Number"/> names the sound.
+    /// </summary>
+    public const string SoundTarget = "sound";
+
     /// <summary>The longest any of the three times can be.</summary>
     public const double MaxSeconds = 999.9;
 
@@ -68,6 +76,23 @@ public sealed record Step(string Target, int Number, int Value, double Up, doubl
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public bool Add { get; init; }
 
+    /// <summary>
+    /// Only for a step of a sound: true for one that plays on through the steps after it, with Add
+    /// or without, until the sound ends by itself (a sound in a loop never does) or a release names
+    /// the step. Switching the stack off, Clear, and the fader of its sequence's memory at zero stop
+    /// it too. False for every other step; the UIs get the field only when it is true.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Continue { get; init; }
+
+    /// <summary>
+    /// True for a step that is skipped: the stack and the sequence pass over it as if it were not
+    /// there, and it stays in the list. It can be switched while the stack is live, as a way out when
+    /// something goes wrong; the step that is on just then cannot. The UIs get the field only when it is true.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Disabled { get; init; }
+
     /// <summary>True for a step that stands for a memory.</summary>
     internal bool IsMemory => Target == Memory;
 
@@ -80,8 +105,11 @@ public sealed record Step(string Target, int Number, int Value, double Up, doubl
     /// <summary>True for a step that plays an effect.</summary>
     internal bool IsEffect => Target == EffectTarget;
 
+    /// <summary>True for a step that plays a sound.</summary>
+    internal bool IsSound => Target == SoundTarget;
+
     /// <summary>True for a step that gives light: a channel, a memory, a fixture or a group.</summary>
-    internal bool GivesLight => !IsRelease && !IsEffect;
+    internal bool GivesLight => !IsRelease && !IsEffect && !IsSound;
 
     /// <summary>
     /// Checks a step that came from a UI or a file, and rounds its times to tenths of a second.
@@ -90,13 +118,18 @@ public sealed record Step(string Target, int Number, int Value, double Up, doubl
     /// <exception cref="DeskException">Something about the step is out of range. The message says what.</exception>
     internal Step Checked()
     {
-        if (Target is not (Channel or Memory or Fixture or Group or Release or EffectTarget))
-            throw new DeskException($"A step stands for a channel, a memory, a fixture, a group or an effect, not for \"{Target}\".");
+        if (Target is not (Channel or Memory or Fixture or Group or Release or EffectTarget or SoundTarget))
+            throw new DeskException($"A step stands for a channel, a memory, a fixture, a group, an effect or a sound, not for \"{Target}\".");
 
         if (IsEffect)
         {
             if (Number < 1 || Number > Effect.MaxEffects)
                 throw new DeskException($"The effect of a step must be from 1 to {Effect.MaxEffects}, not {Number}.");
+        }
+        else if (IsSound)
+        {
+            if (Number < 1 || Number > Sound.MaxSounds)
+                throw new DeskException($"The sound of a step must be from 1 to {Sound.MaxSounds}, not {Number}.");
         }
         else if (IsLights)
         {
@@ -124,10 +157,12 @@ public sealed record Step(string Target, int Number, int Value, double Up, doubl
         if (color is not null && !PlanText.IsColor(color))
             throw new DeskException($"\"{Color}\" is no color like #ff2000.");
 
-        // A release takes down and adds nothing: it never counts as a step that adds.
+        // A release takes down and adds nothing: it never counts as a step that adds. Only a sound
+        // plays on: Continue is kept for its steps alone.
         return this with
         {
             Up = Seconds(Up, "up"), Wait = Seconds(Wait, "wait"), Down = Seconds(Down, "down"), Color = color, Add = Add && !IsRelease,
+            Continue = Continue && IsSound,
         };
     }
 

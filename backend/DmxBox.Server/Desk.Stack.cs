@@ -5,16 +5,19 @@ namespace DmxBox.Server;
 // the first. The stack moves the real faders: going to a step moves the fader of its channel or
 // memory to the step's value over the step's "up" time, and leaving a step moves that fader to
 // zero over its "down" time. A step of a fixture or a group moves the channel faders of its
-// lights the same way (see FixtureLooks), and a step of an effect the effect's fader, which starts
-// the effect when it leaves zero and stops it at zero (Desk.Effects.cs). Everything else follows from the faders, but for one
+// lights the same way (see FixtureLooks), a step of an effect the effect's fader, which starts
+// the effect when it leaves zero and stops it at zero (Desk.Effects.cs), and a step of a sound the
+// sound's fader, likewise (Desk.Sounds.cs). Everything else follows from the faders, but for one
 // thing: while the faders of two looks cross, their light fades from the one look to the other
 // channel by channel, so that a light both give stays up (see _crossfade).
 //
 // More than one step can be on (see _on). A step that adds (Step.Add) comes up on top of what is
 // on and takes nothing down. A step that does not takes down every step that is on, each in its
-// own down time, unless it uses the same fader itself. A release (Step.Release) takes one step
-// that is on down, in the release's own down time, and leaves the rest. Where two steps that are
-// on use the same fader, the later one's level counts; when it goes, the earlier one's counts again.
+// own down time, unless it uses the same fader itself, and but for a step of a sound that plays on
+// (Step.Continue): that one stays on until its sound ends by itself or a release names it. A
+// release (Step.Release) takes one step that is on down, in the release's own down time, and leaves
+// the rest. Where two steps that are on use the same fader, the later one's level counts; when it
+// goes, the earlier one's counts again.
 //
 // The stack runs only while it is live. Then nothing a project holds can be changed, its own
 // steps included (RequireUnlocked in Desk.cs). While it is not live no step is on, and Play,
@@ -73,7 +76,7 @@ internal sealed partial class Desk
             lock (_lock)
             {
                 bool stackMoves = !_paused && (_moves.Count > 0 || _crossfade is not null || _phase is Fading or Waiting);
-                return stackMoves || SequencesMove(Now) || EffectsRun();
+                return stackMoves || SequencesMove(Now) || EffectsRun() || SoundsPlay();
             }
         }
     }
@@ -90,7 +93,9 @@ internal sealed partial class Desk
             double now = Now;
             AdvanceStack(now);
             bool effects = SettleEffects(now);
-            if (_moved.Count > 0 || (_crossfade is not null && !_paused) || SequencesMove(now) || effects)
+            SettleSounds(now);
+            LeaveEndedSounds();
+            if (_moved.Any(moved => !moved.Sound) || (_crossfade is not null && !_paused) || SequencesMove(now) || effects)
                 _outputChanges++;
 
             FaderMoved[] moved = [.. _moved];
@@ -133,6 +138,7 @@ internal sealed partial class Desk
                 Crossfade = CrossfadeForUi(),
                 Effects = EffectPlaybacksNow(now),
                 EffectLevels = EffectLevelsForUi(now),
+                Sounds = SoundPlaybacksNow(),
             };
         }
     }
@@ -172,18 +178,25 @@ internal sealed partial class Desk
 
             if (on && _stack.Count == 0)
                 throw new DeskException("The stack has no steps yet. Add a step first.");
+            if (on && _stack.All(entry => entry.Step.Disabled))
+                throw new DeskException("Every step of the stack is skipped (Disabled). Take Disabled off a step first.");
 
             double now = Now;
             if (on)
+            {
                 ZeroFaders();
+            }
             else
+            {
                 AdvanceStack(now);   // the faders stop where they are at this moment, not where they were a tick ago
+                StopContinuingSounds();
+            }
 
             StopStack();
             _live = on;
             _outputChanges++;
             if (on)
-                GoTo(_stack[0], now, rebuild: true);
+                GoTo(_stack.First(entry => !entry.Step.Disabled), now, rebuild: true);
         }
     }
 
@@ -255,6 +268,32 @@ internal sealed partial class Desk
             RequireReleaseFits(checkedStep, self: id);
             entry.Step = checkedStep;
             _projectChanges++;
+        }
+    }
+
+    /// <summary>
+    /// Skips a step of the stack, or takes it back (Disabled): the stack passes over a skipped step,
+    /// which stays in the list. Unlike every other change of a step this works while the stack is
+    /// live too, as a way out when something goes wrong; the step that is on just then cannot be
+    /// skipped. A skipped step that is on stays on until a step takes it down.
+    /// </summary>
+    /// <param name="id">The name of the step.</param>
+    /// <param name="disabled">True to skip it.</param>
+    /// <returns>True when the step changed.</returns>
+    /// <exception cref="DeskException">The step is not in the stack, or it is the step that is on.</exception>
+    public bool SetStackStepDisabled(int id, bool disabled)
+    {
+        lock (_lock)
+        {
+            StackEntry entry = EntryWithId(id);
+            if (entry.Step.Disabled == disabled)
+                return false;
+            if (disabled && _live && entry.Id == _currentId)
+                throw new DeskException($"Step {entry.Cue} is the step that is on: it cannot be skipped now.");
+
+            entry.Step = entry.Step with { Disabled = disabled };
+            _projectChanges++;
+            return true;
         }
     }
 
@@ -348,8 +387,10 @@ internal sealed partial class Desk
     }
 
     /// <summary>
-    /// Next: goes to the next step now, whatever the stack is doing. After the last step that
-    /// is the first one.
+    /// Next: goes to the next step now, whatever the stack is doing, and at once: the fades that run
+    /// end where they go, the new step comes without its up time and the steps that go leave without
+    /// their down times, so the sounds of those steps stop at once. After the last step that is the
+    /// first one. A wait of the new step runs as usual.
     /// </summary>
     /// <exception cref="DeskException">The stack is not live.</exception>
     public void StackNext()
@@ -360,14 +401,19 @@ internal sealed partial class Desk
             double now = Now;
             Resume(now);
             AdvanceStack(now);
-            GoOn(now);
+            EndMoves();
+            GoOn(now, atOnce: true);
+            SettleSounds(now);
         }
     }
 
     /// <summary>
-    /// Previous: goes to the step before the current one now. Before the first step that is the
-    /// last one. While no step is on it does nothing. The steps that are on then are those that
-    /// are on at that step when the stack is gone through from the top (see OnAt).
+    /// Previous: goes to the step before the current one now, and at once, as Next does: a step
+    /// played by mistake is gone at once, its sound with it. The stack stays on that step until Play,
+    /// also when the step has a wait (which would take the stack on by itself into the step it came
+    /// from). Before the first step that is the last one. While no step is on it does nothing. The
+    /// steps that are on then are those that are on at that step when the stack is gone through from
+    /// the top (see OnAt).
     /// </summary>
     /// <exception cref="DeskException">The stack is not live.</exception>
     public void StackPrevious()
@@ -378,8 +424,22 @@ internal sealed partial class Desk
             double now = Now;
             Resume(now);
             AdvanceStack(now);
-            GoTo(EntryBeside(-1), now, rebuild: true);
+            EndMoves();
+            GoTo(EntryBeside(-1), now, rebuild: true, atOnce: true);
+            if (_phase == Waiting)
+                _phase = Holding;
+            SettleSounds(now);
         }
+    }
+
+    // Call with the lock held. Every fader the stack moves stands where its move goes, at once, and a
+    // crossfade that runs is over: Prev and Next take no time.
+    private void EndMoves()
+    {
+        foreach ((Fader fader, FaderMove move) in _moves.ToArray())
+            SetByStack(fader, (byte)move.To);
+        _moves.Clear();
+        _crossfade = null;
     }
 
     // Call with the lock held: no step is on, nothing is paused, and no fader is being moved.
@@ -435,11 +495,12 @@ internal sealed partial class Desk
 
     // Call with the lock held. Goes on to the step behind the current one: on top of what is on,
     // as the stack goes; but round from the last step to the first, the first starts afresh.
-    private void GoOn(double now)
+    // "atOnce": without the times of the steps (Next).
+    private void GoOn(double now, bool atOnce = false)
     {
         StackEntry? next = EntryBeside(+1);
         if (next is not null)
-            GoTo(next, now, rebuild: !Follows(next));
+            GoTo(next, now, rebuild: !Follows(next), atOnce);
     }
 
     // True if "next" stands behind the current step in the stack (or no step is on): then the
@@ -451,43 +512,106 @@ internal sealed partial class Desk
 
     // Call with the lock held. Leaves the current step and goes to "target" now. Without a
     // target nothing happens. "rebuild": the steps that are on there are worked out from the
-    // top of the stack (OnAt), not from what is on now.
-    private void GoTo(StackEntry? target, double now, bool rebuild)
+    // top of the stack (OnAt), not from what is on now. "atOnce": every fader goes where it is to
+    // be at once, without the up and down times of the steps (Prev, Next).
+    private void GoTo(StackEntry? target, double now, bool rebuild, bool atOnce = false)
     {
         if (target is null)
             return;
 
-        Enter(target, now, rebuild);
+        Enter(target, now, rebuild, atOnce);
         AdvanceStack(now);   // a fade of no length is done at once
     }
 
-    // The steps that are on once "target" is gone to while "before" are on: a release takes its
-    // step out, a step that adds comes last (the latest counts most), any other step is alone.
-    private static List<int> OnAfter(List<int> before, StackEntry target)
+    // Call with the lock held. The steps that are on once "target" is gone to while "before" are on:
+    // a release takes its step out, a step that adds comes last (the latest counts most), any other
+    // step is alone but for the steps of sounds that play on (Continue).
+    private List<int> OnAfter(List<int> before, StackEntry target)
     {
         if (target.Step.IsRelease)
             return [.. before.Where(id => id != target.Step.Number)];
         if (target.Step.Add)
             return [.. before.Where(id => id != target.Id), target.Id];
 
-        return [target.Id];
+        return [.. before.Where(id => id != target.Id && Continues(id)), target.Id];
+    }
+
+    // Call with the lock held. True for a step of the stack that plays a sound on (Continue).
+    private bool Continues(int id)
+    {
+        return _stack.Find(entry => entry.Id == id) is { Step: { IsSound: true, Continue: true } };
     }
 
     // Call with the lock held. The steps that are on at "target" when the stack is gone through
-    // from the top: from the last step at or before it that takes everything down (or from the
-    // first step), each step in turn, without going round from the last step to the first.
+    // from the top, each step in turn, without going round from the last step to the first: those
+    // from the last step at or before it that takes everything down, and the steps of sounds that
+    // play on from before that. Going back starts no sound but that of "target": the step of another
+    // sound comes along only while its sound still plays.
     private List<int> OnAt(StackEntry target)
     {
         int at = _stack.IndexOf(target);
-        int from = at;
-        while (from > 0 && (_stack[from].Step.Add || _stack[from].Step.IsRelease))
-            from--;
-
         List<int> on = [];
-        for (int index = from; index <= at; index++)
-            on = OnAfter(on, _stack[index]);
+        for (int index = 0; index <= at; index++)
+        {
+            if (!_stack[index].Step.Disabled || index == at)
+                on = OnAfter(on, _stack[index]);
+        }
 
-        return on;
+        return [.. on.Where(id => id == target.Id || !IsSoundStep(id) || SoundOfStepPlays(id))];
+    }
+
+    // Call with the lock held. True for a step of the stack that plays a sound.
+    private bool IsSoundStep(int id)
+    {
+        return _stack.Find(entry => entry.Id == id) is { Step.IsSound: true };
+    }
+
+    // Call with the lock held. True while the sound of a step of the stack plays.
+    private bool SoundOfStepPlays(int id)
+    {
+        return _stack.Find(entry => entry.Id == id) is { Step.IsSound: true } entry && _soundRuns[entry.Step.Number - 1].Voice;
+    }
+
+    // Call with the lock held. The steps of sounds that play on (Continue) whose sound has ended by
+    // itself are over: they leave the steps that are on, and the fader of their sound goes to zero at
+    // once, unless a step that is on still holds it. Switching the stack off ends them all.
+    private void LeaveEndedSounds()
+    {
+        if (!_live || _on.Count == 0)
+            return;
+
+        int[] ended = [.. _on.Where(id => Continues(id) && SoundEnded(id))];
+        if (ended.Length == 0)
+            return;
+
+        Dictionary<Fader, Holder> was = HoldersOf(_on);
+        _on.RemoveAll(ended.Contains);
+        Dictionary<Fader, Holder> will = HoldersOf(_on);
+        foreach (Fader fader in was.Keys.Where(fader => fader.Sound && !will.ContainsKey(fader)))
+        {
+            _moves.Remove(fader);
+            SetByStack(fader, 0);
+        }
+    }
+
+    // Call with the lock held. True when the sound of a step has played to its end and is over.
+    private bool SoundEnded(int id)
+    {
+        return _stack.Find(entry => entry.Id == id) is { Step.IsSound: true } entry
+            && _soundRuns[entry.Step.Number - 1] is { Ended: true, Voice: false };
+    }
+
+    // Call with the lock held, as the stack goes off: the sounds of the steps that play on stop, their
+    // faders at zero. Every other fader stays where it is.
+    private void StopContinuingSounds()
+    {
+        foreach (int id in _on.Where(Continues).ToArray())
+        {
+            Step step = _stack.Find(entry => entry.Id == id)!.Step;
+            var fader = new Fader(Memory: false, step.Number, Sound: true);
+            _moves.Remove(fader);
+            SetByStack(fader, 0);
+        }
     }
 
     // Call with the lock held. Each fader the steps in "on" move, with the level it is to have and
@@ -515,13 +639,18 @@ internal sealed partial class Desk
     // with "target" (Previous) in the up time of "target". A fader that keeps its step and level
     // is left alone. A fixture's attributes (a shutter, a color wheel) are set at once, and stay
     // when their step goes.
-    private void Enter(StackEntry target, double at, bool rebuild)
+    private void Enter(StackEntry target, double at, bool rebuild, bool atOnce = false)
     {
         List<int> before = [.. _on];
         List<int> after = rebuild ? OnAt(target) : OnAfter(before, target);
         Dictionary<Fader, Holder> was = HoldersOf(before), will = HoldersOf(after);
         Step step = target.Step;
-        double comeIn = step.IsRelease ? step.Down : step.Up;
+        double comeIn = atOnce ? 0 : step.IsRelease ? step.Down : step.Up;
+
+        // A step of a sound that still plays does not start it again; one that is over, it does,
+        // also when its fader stays up (the steps of two sounds in a row at the same level).
+        if (step.IsSound && _soundRuns[step.Number - 1] is { Ended: true, Voice: false } over)
+            over.Ended = false;
 
         var moving = new List<Fader>();
         foreach ((Fader fader, Holder holder) in will)
@@ -539,8 +668,8 @@ internal sealed partial class Desk
             else
                 seconds = comeIn;
 
-            StartMove(fader, holder.Level, holder.Jump ? 0 : seconds, at);
-            if (!holder.Jump)
+            StartMove(fader, holder.Level, holder.Jump || atOnce ? 0 : seconds, at);
+            if (!holder.Jump && !atOnce)
                 moving.Add(fader);
         }
 
@@ -551,11 +680,14 @@ internal sealed partial class Desk
                 continue;
 
             leaving.Add(fader);
-            StartMove(fader, to: 0, step.IsRelease ? step.Down : then.Entry.Step.Down, at);
+            StartMove(fader, to: 0, atOnce ? 0 : step.IsRelease ? step.Down : then.Entry.Step.Down, at);
         }
 
         Fader[] coming = [.. moving.Where(fader => !was.TryGetValue(fader, out Holder then) || then.Jump)];
-        StartCrossfade(leaving, coming, [.. moving], comeIn, at);
+        if (atOnce)
+            _crossfade = null;
+        else
+            StartCrossfade(leaving, coming, [.. moving], comeIn, at);
         _on.Clear();
         _on.AddRange(after);
         _currentId = target.Id;
@@ -650,10 +782,11 @@ internal sealed partial class Desk
     }
 
     // A channel fader, or the fader of a memory that holds a look. A memory with a sequence gives
-    // what its sequence gives at each moment, which is no look to fade from or to; nor does an effect.
+    // what its sequence gives at each moment, which is no look to fade from or to; nor does an effect
+    // or a sound.
     private bool GivesLook(Fader fader)
     {
-        if (fader.Effect)
+        if (fader.Effect || fader.Sound)
             return false;
 
         return fader.Memory ? _memories[fader.Number - 1] is not null : fader.Number - 1 < Channels;
@@ -662,7 +795,7 @@ internal sealed partial class Desk
     // Raises "look" by what a fader gives at "level", highest wins.
     private void Contribute(byte[] look, Fader fader, byte level)
     {
-        if (level == 0 || fader.Effect)
+        if (level == 0 || fader.Effect || fader.Sound)
             return;
 
         if (!fader.Memory)
@@ -705,8 +838,8 @@ internal sealed partial class Desk
     }
 
     // Call with the lock held. The faders a step of the stack moves, and to what: the fader of its
-    // channel, memory or effect; for a fixture or a group, the channel faders of its lights, an
-    // attribute to be set at once ("jump").
+    // channel, memory, effect or sound; for a fixture or a group, the channel faders of its lights,
+    // an attribute to be set at once ("jump").
     private (Fader Fader, int Level, bool Jump)[] StackTargets(Step step)
     {
         if (step.IsRelease)
@@ -714,6 +847,9 @@ internal sealed partial class Desk
 
         if (step.IsEffect)
             return [(new Fader(Memory: false, step.Number, Effect: true), step.Value, false)];
+
+        if (step.IsSound)
+            return [(new Fader(Memory: false, step.Number, Sound: true), step.Value, false)];
 
         if (!step.IsLights)
             return [(new Fader(step.IsMemory, step.Number), step.Value, false)];
@@ -800,20 +936,24 @@ internal sealed partial class Desk
 
         if (fader.Effect)
             MoveEffectFader(fader.Number, level, Now);
+        else if (fader.Sound)
+            MoveSoundFader(fader.Number, level);
         else if (fader.Memory)
             MoveMemoryFader(fader.Number, level);
         else
             _channels[fader.Number - 1] = level;
 
         // Only the newest level of a fader is of interest to the UIs.
-        _moved.RemoveAll(moved => moved.Memory == fader.Memory && moved.Effect == fader.Effect && moved.Number == fader.Number);
-        _moved.Add(new FaderMoved(fader.Memory, fader.Number, level) { Effect = fader.Effect });
+        _moved.RemoveAll(moved => moved.Memory == fader.Memory && moved.Effect == fader.Effect && moved.Sound == fader.Sound && moved.Number == fader.Number);
+        _moved.Add(new FaderMoved(fader.Memory, fader.Number, level) { Effect = fader.Effect, Sound = fader.Sound });
     }
 
     private byte LevelOf(Fader fader)
     {
         if (fader.Effect)
             return _runs[fader.Number - 1].Level;
+        if (fader.Sound)
+            return _soundRuns[fader.Number - 1].Level;
 
         return fader.Memory ? _memoryLevels[fader.Number - 1] : _channels[fader.Number - 1];
     }
@@ -835,17 +975,24 @@ internal sealed partial class Desk
         _paused = false;
     }
 
-    // The step one place behind (+1) or before (-1) the current one. The stack goes round: behind
-    // the last step stands the first, before the first the last. Null if there is no other step
-    // to go to. While no step is on, the step "behind" is the first one and there is none "before".
+    // The step one place behind (+1) or before (-1) the current one, passing over the steps that are
+    // skipped (Disabled). The stack goes round: behind the last step stands the first, before the
+    // first the last. Null if there is no other step to go to. While no step is on, the step
+    // "behind" is the first one that is not skipped, and there is none "before".
     private StackEntry? EntryBeside(int by)
     {
         int at = _stack.FindIndex(entry => entry.Id == _currentId);
         if (at < 0)
-            return by > 0 ? _stack.FirstOrDefault() : null;
+            return by > 0 ? _stack.FirstOrDefault(entry => !entry.Step.Disabled) : null;
 
-        StackEntry other = _stack[(at + by + _stack.Count) % _stack.Count];
-        return other.Id == _currentId ? null : other;
+        for (int step = 1; step < _stack.Count; step++)
+        {
+            StackEntry other = _stack[(((at + by * step) % _stack.Count) + _stack.Count) % _stack.Count];
+            if (!other.Step.Disabled)
+                return other.Id == _currentId ? null : other;
+        }
+
+        return null;
     }
 
     private StackEntry EntryWithId(int id)
@@ -881,11 +1028,12 @@ internal sealed partial class Desk
             throw new DeskException("The stack is not live. Press Stack first.");
     }
 
-    // A fader on the desk: of a channel, of a memory, or of an effect ("Effect"; see Desk.Effects.cs).
-    private readonly record struct Fader(bool Memory, int Number, bool Effect = false)
+    // A fader on the desk: of a channel, of a memory, of an effect ("Effect"; see Desk.Effects.cs) or
+    // of a sound ("Sound"; see Desk.Sounds.cs).
+    private readonly record struct Fader(bool Memory, int Number, bool Effect = false, bool Sound = false)
     {
         // True for the fader of a channel.
-        public bool Channel => !Memory && !Effect;
+        public bool Channel => !Memory && !Effect && !Sound;
     }
 
     // A fader on its way: from one level to another, over some seconds.
@@ -960,6 +1108,8 @@ internal sealed partial class Desk
             {
                 Color = Step.Color,
                 Add = Step.Add,
+                Continue = Step.Continue,
+                Disabled = Step.Disabled,
             };
         }
     }

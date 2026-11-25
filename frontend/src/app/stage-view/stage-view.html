@@ -39,6 +39,20 @@
     >
       Add<br />light
     </button>
+    <!-- the panel of the light at the right: hidden, the plan gets its room (Edit shows it) -->
+    <button
+      lmLamp
+      type="button"
+      tone="stage-panel"
+      aria-label="Light panel"
+      data-action="stage.panel"
+      title="Shows or hides the panel of the light at the right; hidden, the plan is bigger"
+      [level]="settings.stagePanel() ? 3 : 1"
+      [attr.aria-pressed]="settings.stagePanel()"
+      (click)="settings.setStagePanel(!settings.stagePanel())"
+    >
+      Light
+    </button>
   </div>
 </header>
 
@@ -170,6 +184,9 @@
   <p class="audience" aria-hidden="true">Audience</p>
 </div>
 
-<!-- Always there, so that the plan keeps its size: the chosen light with its faders; while Edit
-     is lit, what can be changed of it or of the stage; otherwise what a click does. -->
-<lm-stage-panel [(lightId)]="selectedId" [editing]="editing()" />
+<!-- There unless the key Light hides it (while Edit is lit it is there anyway): the chosen light
+     with its faders; while Edit is lit, what can be changed of it or of the stage; otherwise what a
+     click does. Shown or hidden, the plan keeps its size until that key is pressed. -->
+@if (panelShown()) {
+  <lm-stage-panel [(lightId)]="selectedId" [editing]="editing()" />
+}

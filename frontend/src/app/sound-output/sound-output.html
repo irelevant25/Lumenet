@@ -1,0 +1,134 @@
+<h4 id="sound-output-title">Sound</h4>
+
+@if (output(); as current) {
+  <div class="form" role="group" aria-labelledby="sound-output-title">
+    <label for="sound-device">Plays on</label>
+    <select id="sound-device" (change)="onDevice($event)">
+      <option value="" [selected]="current.device === ''">Windows' default device</option>
+      @for (device of current.devices; track device.id) {
+        <option [value]="device.id" [selected]="device.id === current.device">
+          {{ device.name }} ({{ device.channels }})
+        </option>
+      }
+      @if (current.device !== '' && current.state === 'missing') {
+        <option [value]="current.device" selected>The device chosen (not there)</option>
+      }
+    </select>
+
+    <!-- a device of more than two outputs: the two the sounds go out on -->
+    @if (pairs().length > 1 || current.outputs > 1) {
+      <label for="sound-outputs">Outputs</label>
+      <select id="sound-outputs" (change)="onOutputs($event)">
+        @for (pair of pairs(); track pair.value) {
+          <option [value]="pair.value" [selected]="pair.value === current.outputs">
+            {{ pair.text }}
+          </option>
+        }
+        @if (current.outputs > pairs().length) {
+          <option [value]="current.outputs" selected>
+            {{ current.outputs * 2 - 1 }} and {{ current.outputs * 2 }} (this device: 1 and 2)
+          </option>
+        }
+      </select>
+    }
+
+    <!-- the key LISTEN of the sound section switches it on and off -->
+    <label for="sound-listen-device">Listen on</label>
+    <select id="sound-listen-device" (change)="onListenDevice($event)">
+      <option value="" [selected]="current.listenDevice === ''">Windows' default device</option>
+      @for (device of current.devices; track device.id) {
+        <option [value]="device.id" [selected]="device.id === current.listenDevice">
+          {{ device.name }}
+        </option>
+      }
+      @if (listenGone()) {
+        <option [value]="current.listenDevice" selected>The device chosen (not there)</option>
+      }
+    </select>
+
+    <label for="sound-mixer">Mixer</label>
+    <div class="mixer">
+      <input
+        id="sound-mixer"
+        type="text"
+        autocomplete="off"
+        spellcheck="false"
+        maxlength="253"
+        placeholder="Soundcraft Ui, like 10.10.1.1"
+        [value]="current.mixer ?? ''"
+        (change)="onMixer($event)"
+        (keydown.enter)="leave($event)"
+      />
+      <button
+        type="button"
+        class="text"
+        title="Looks for a Soundcraft Ui mixer in the networks of this PC"
+        [disabled]="finding()"
+        (click)="find()"
+      >
+        {{ finding() ? 'Finding…' : 'Find' }}
+      </button>
+    </div>
+
+    @if (found(); as list) {
+      @if (list.length > 1) {
+        <span class="label">Found</span>
+        <div class="found" role="group" aria-label="Mixers found">
+          @for (mixer of list; track mixer.address) {
+            <button type="button" class="text" (click)="useMixer(mixer.address)">
+              {{ mixer.name }} at {{ mixer.address }}
+            </button>
+          }
+        </div>
+      }
+    }
+
+    @if (current.mixerState === 'connected') {
+      <label for="sound-playlist">Playlist</label>
+      <div class="playlist">
+        <select id="sound-playlist" (change)="onPlaylist($event)">
+          <option value="" [selected]="(current.playlist ?? '') === ''">All tracks</option>
+          @for (name of playlists(); track name) {
+            <option [value]="name" [selected]="name === current.playlist">
+              {{ playlistText(name) }}
+            </option>
+          }
+          @if (current.playlist && !playlists().includes(current.playlist)) {
+            <option [value]="current.playlist" selected>
+              {{ playlistText(current.playlist) }}
+            </option>
+          }
+        </select>
+        <button
+          type="button"
+          class="text"
+          [disabled]="store.live() || adding()"
+          (click)="addTracks(current.playlist ?? '')"
+        >
+          {{ adding() ? 'Adding…' : 'Add all its tracks' }}
+        </button>
+      </div>
+    }
+  </div>
+  <p class="state" [class.bad]="current.state !== 'playing'" role="status">{{ state() }}</p>
+  @if (listening(); as said) {
+    <p class="state" [class.bad]="current.listenState !== 'playing'" role="status">{{ said }}</p>
+  }
+  @if (findLine(); as said) {
+    <p class="state" role="status">{{ said }}</p>
+  }
+  @if (mixerLine(); as said) {
+    <p class="state" [class.bad]="current.mixerState !== 'connected'" role="status">{{ said }}</p>
+  }
+  @if (current.mixerState === 'connected') {
+    <p class="hint">
+      The tracks of its USB stick play on the mixer's own player, <strong>one at a time</strong>,
+      beside the files of the desk program. Its PLAYER L/R are the volume of all sounds and MUTE,
+      both ways.
+    </p>
+  }
+} @else if (asked()) {
+  <p class="state">
+    The sound is set up on the PC the desk program runs on: its device, its outputs and the mixer.
+  </p>
+}

@@ -4,7 +4,7 @@
 </header>
 
 <div class="top">
-  <!-- Stack, Prev, Play, Pause, Next: the Stage view has the same keys -->
+  <!-- Stack, Prev, Play, Pause, Next: the Stage view has the same keys; MUTE of the sound right after Next -->
   <lm-stack-keys />
 
   <button
@@ -23,6 +23,17 @@
   <lm-stack-cards />
 </div>
 
+<!-- the master and the sound, lying: Blackout, MUTE, LISTEN and their faders at hand -->
+<div class="levels">
+  <lm-master-section [lying]="true" />
+  <lm-sound-master [lying]="true" />
+</div>
+
+<!-- the wave of the sound that plays: a double click plays it from there -->
+@if (sounding()) {
+  <lm-sound-now />
+}
+
 <div class="table-box">
   <table class="steps" [class.locked]="live()">
     <caption>
@@ -33,6 +44,7 @@
         <th scope="col"><span class="for-readers">Drag to move</span></th>
         <th scope="col">Step</th>
         <th scope="col" title="On top of what is on, taking nothing down">Add</th>
+        <th scope="col" title="A sound plays on through the steps after it, until its end or a release">Continue</th>
         <th scope="col">Kind</th>
         <th scope="col">Number</th>
         <th scope="col">Notes</th>
@@ -41,6 +53,7 @@
         <th scope="col">Wait (s)</th>
         <th scope="col">Down (s)</th>
         <th scope="col"><span class="for-readers">Move, add a step after, or take out</span></th>
+        <th scope="col" title="Skipped: the stack and the sequence pass over the step; it can be switched while the stack is live, not for the step that is on">Disabled</th>
       </tr>
     </thead>
     <tbody>
@@ -57,6 +70,8 @@
           [class.current]="step.id === current()?.id"
           [class.on]="on().has(step.id)"
           [class.next]="step.id === next()?.id"
+          [class.skipped]="step.disabled === true"
+          [attr.title]="step.disabled ? 'Disabled: the stack passes over this step' : null"
           [class.drop-before]="dropMark()?.id === step.id && !dropMark()?.after"
           [class.drop-after]="dropMark()?.id === step.id && dropMark()?.after"
           (stepChange)="changeStep(step.id, $event)"
@@ -101,6 +116,18 @@
               />
             }
           </td>
+          <!-- Continue: a sound plays on through the steps after it. Only a step of a sound has it. -->
+          <td before class="continues">
+            @if (step.target === 'sound') {
+              <input
+                type="checkbox"
+                [checked]="step.continue === true"
+                [disabled]="live()"
+                [attr.aria-label]="'Step ' + step.cue + ' plays its sound on through the steps after it'"
+                (change)="setContinue(step, $event)"
+              />
+            }
+          </td>
           <td after class="row-keys">
             <button
               type="button"
@@ -137,10 +164,20 @@
               ✕
             </button>
           </td>
+          <!-- Disabled: the stack passes over the step. Also while it is live, but not for the step that is on. -->
+          <td after class="skips">
+            <input
+              type="checkbox"
+              [checked]="step.disabled === true"
+              [disabled]="live() && step.id === current()?.id"
+              [attr.aria-label]="'Step ' + step.cue + ' is skipped'"
+              (change)="setDisabled(step, $event)"
+            />
+          </td>
         </tr>
       } @empty {
         <tr>
-          <td class="empty" colspan="11">No steps yet. Add step puts in the first one.</td>
+          <td class="empty" colspan="13">No steps yet. Add step puts in the first one.</td>
         </tr>
       }
     </tbody>
@@ -154,9 +191,11 @@
     rise with the new step's up time and fall with the old step's down time. Add: the step comes
     up on top of what is on and takes nothing down; the next step without Add takes everything
     down that it does not give itself. Release takes one step that is on down, in its own down
-    time, and leaves the rest. The steps that are on are marked green. After the last step comes
+    time, and leaves the rest. Sound brings the fader of a sound up, which plays it; with Continue
+    it plays on through the steps after it until its end or a release, and Stack off stops it. The steps that are on are marked green. After the last step comes
     the first. A step keeps its number when another is moved; type a number to change it. + puts
-    a new step right after its row.
+    a new step right after its row. Disabled skips a step without taking it out: the stack passes
+    over it, also when it is switched while the stack is live (not for the step that is on).
   </p>
 </div>
 

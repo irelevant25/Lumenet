@@ -162,4 +162,29 @@ internal sealed class RecordingClient : IDeskClient
 
     /// <inheritdoc />
     public Task MidiRole(MidiRole role) => Task.CompletedTask;
+
+    /// <inheritdoc />
+    public Task SoundsChanged(Sound[] sounds) => throw new NotSupportedException();
+
+    /// <inheritdoc />
+    public Task SoundPlaybackChanged(SoundPlayback playback)
+    {
+        SoundPlaybacks.Add(playback);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task SoundMasterChanged(double decibels, bool mute) => throw new NotSupportedException();
+
+    /// <inheritdoc />
+    public Task SoundOutputChanged(SoundOutputView output) => Task.CompletedTask;
+
+    public Task MixerChanged(MixerView mixer) => Task.CompletedTask;
+
+    public Task SoundListenChanged(ListenView listen) => Task.CompletedTask;
+
+    public Task SoundIndependentChanged(int index, int sound) => Task.CompletedTask;
+
+    /// <summary>The playbacks of sounds sent, the oldest first.</summary>
+    public List<SoundPlayback> SoundPlaybacks { get; } = [];
 }

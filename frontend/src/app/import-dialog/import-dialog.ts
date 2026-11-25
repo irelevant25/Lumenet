@@ -5,6 +5,7 @@ import { DeskStore } from '../desk/desk-store';
 import { IMPORT_LIMIT_BYTES } from '../desk/desk-types';
 import type { MidiSetup } from '../desk/midi';
 import { readShowFile } from '../desk/show-file';
+import { unpackImport } from '../desk/sound-files';
 import { TRANSFER_PARTS, TransferPart, TransferPartView, missingParts, pcPartNote, readImportFile } from '../desk/transfer';
 import { DialogDismiss } from '../desk/dialog-dismiss';
 import { LampButton } from '../lamp-button/lamp-button';
@@ -42,14 +43,17 @@ export class ImportDialog {
   /** What became of the file, sentence by sentence; null until it is imported. */
   protected readonly report = signal<string[] | null>(null);
 
-  /** A file larger than the desk takes in one go. */
-  private readonly tooLarge = computed(() => (this.file()?.size ?? 0) > IMPORT_LIMIT_BYTES);
+  /** A ZIP of Export: a file of Export with the sounds of its project. */
+  private readonly zip = computed(() => /\.zip$/i.test(this.file()?.name ?? ''));
+
+  /** A file larger than the desk takes in one go; a ZIP brings its sounds, and the desk program takes it in pieces. */
+  private readonly tooLarge = computed(() => !this.zip() && (this.file()?.size ?? 0) > IMPORT_LIMIT_BYTES);
 
   /** A project or a show in place of the open project throws away what was changed and not saved. */
   protected readonly losesChanges = computed(() => (this.asc() || this.chosen().has('project')) && this.store.project().unsaved);
 
   /** The kinds of files the system's window offers. */
-  protected readonly accept = computed(() => (this.asc() ? '.asc,.txt' : '.json'));
+  protected readonly accept = computed(() => (this.asc() ? '.asc,.txt' : '.json,.zip'));
 
   protected readonly canImport = computed(
     () => this.file() !== null && !this.tooLarge() && !this.busy() && (this.asc() || this.chosen().size > 0),
@@ -135,13 +139,18 @@ export class ImportDialog {
   }
 
   // The checked parts from a file of Export or a project file: all of them, or none when the file lacks one.
+  // A ZIP of Export goes to the desk program first, which takes its sounds and gives back its file of Export.
   private async importParts(file: File): Promise<string[]> {
-    const source = readImportFile(file.name, await readShowFile(file));
+    const unpacked = this.zip() ? await unpackImport(file) : null;
+    const source = readImportFile(file.name, unpacked?.text ?? (await readShowFile(file)));
     const chosen = this.chosen();
     const missing = missingParts(chosen, source);
     if (missing) throw new Error(`"${file.name}" does not have ${missing}. Nothing was imported.`);
 
     const report: string[] = [];
+    if (unpacked?.leftOut.length) {
+      report.push(`These files of the ZIP are no sounds the desk program can play: ${unpacked.leftOut.join(', ')}.`);
+    }
     if (chosen.has('project') && source.project !== null) {
       await this.store.importProjectFile(source.name, source.project);
       report.push(`The project "${this.store.project().name}" is open. Save keeps it in the projects folder.`);

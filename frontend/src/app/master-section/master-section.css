@@ -51,24 +51,28 @@ lm-fader {
   color: #fff;
 }
 
-/* ---- mobile: one line. Blackout, then the title as the fader's caption, the fader over the
-   room that is left, and its level. */
+/* ---- mobile, and lying (the Stack view): one line. Blackout, then the title as the fader's
+   caption, the fader over the room that is left, and its level. */
+:host(.lying),
 :host-context(.mobile) {
   display: flex;
   align-items: center;
 }
 
+:host(.lying) > [lmLamp],
 :host-context(.mobile) > [lmLamp] {
   flex: none;
   height: var(--key-h);
 }
 
+:host(.lying) h2,
 :host-context(.mobile) h2 {
   order: 1;
   margin: 0 6px 0 14px;
   font-size: 13px;
 }
 
+:host(.lying) lm-fader,
 :host-context(.mobile) lm-fader {
   flex: 1;
   order: 2;
@@ -78,6 +82,7 @@ lm-fader {
 }
 
 /* in the one line there is no "above": the level stands at the end, after the fader */
+:host(.lying) .readout,
 :host-context(.mobile) .readout {
   order: 3;
   min-width: 3ch;

@@ -6,8 +6,13 @@
     <lm-effect-section />
   }
 }
+@if (soundRow()) {
+  @defer (on immediate) {
+    <lm-sound-section />
+  }
+}
 <!-- At the right: the stack across the top, and under it the master over the record keys, the
-     general section and the independents, each in a column of its own. -->
+     general section, the sound section and the independents, each in a column of its own. -->
 <div class="side">
   <lm-stack-section />
   <div class="first">
@@ -15,6 +20,7 @@
     <lm-record-section />
   </div>
   <lm-general-section />
+  <lm-sound-master />
   @if (independents()) {
     <lm-independents />
   }

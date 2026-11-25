@@ -96,7 +96,7 @@ export class StackSection {
   protected placeName(place: WheelPlace): string | null {
     if (!this.seen(place)) return null;
     if (!place.step) return place.offset === 0 ? 'No step is on' : null;
-    const step = `${place.step.cue}, ${this.noteOf(place)}`;
+    const step = `${place.step.cue}, ${this.noteOf(place)}${place.step.disabled ? ', skipped' : ''}`;
     switch (place.kind) {
       case 'previous':
         return `Previous step: ${step}`;

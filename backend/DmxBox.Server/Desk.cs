@@ -529,6 +529,7 @@ internal sealed partial class Desk
             DefaultIndependents().CopyTo(_independents, 0);
             DefaultMemoryIndependents().CopyTo(_memoryIndependents, 0);
             PutEffects([], DefaultEffectIndependents());
+            PutSounds([], DefaultSoundIndependents());
             PutStage(StagePlan.Empty);
             _stagePicture = null;
             _notes = "";
@@ -557,6 +558,7 @@ internal sealed partial class Desk
             PutProject(project);
             Array.Clear(_memoryLevels);
             StopEffects();
+            StopSounds();
             CountLookChange();
             return _projectChanges;
         }
@@ -604,6 +606,8 @@ internal sealed partial class Desk
                 Sequences = Copy(_sequences),
                 Effects = Copy(_effects),
                 EffectIndependents = Copy(_effectIndependents),
+                Sounds = Copy(_sounds),
+                SoundIndependents = Copy(_soundIndependents),
                 Stack = _stack.Select(entry => new ProjectStep(entry.Cue, entry.Step) { Releases = ReleasedCue(entry.Step) }).ToArray(),
                 Stage = _stage,
                 StagePicture = _stagePicture,
@@ -646,7 +650,11 @@ internal sealed partial class Desk
             {
                 Universes = _universes,
                 EffectIndependents = Copy(_effectIndependents),
+                SoundIndependents = Copy(_soundIndependents),
                 Effects = EffectPlaybacksNow(Now),
+                Sounds = SoundPlaybacksNow(),
+                SoundDecibels = _soundDecibels,
+                SoundMute = _soundMute,
             };
         }
     }
@@ -826,6 +834,7 @@ internal sealed partial class Desk
         project.Independents.CopyTo(_independents, 0);
         project.MemoryIndependents.CopyTo(_memoryIndependents, 0);
         PutEffects(project.Effects, project.EffectIndependents);
+        PutSounds(project.Sounds, project.SoundIndependents);
         ClearAbove(Channels);
     }
 
@@ -954,6 +963,7 @@ internal sealed partial class Desk
         Array.Clear(_channels);
         Array.Clear(_memoryLevels);
         StopEffects();
+        StopSounds();
         _moved.Clear();
         _crossfade = null;
     }
@@ -1000,10 +1010,14 @@ internal sealed partial class Desk
             throw new ArgumentException($"There must be {ChannelIndependentCount} channel independents.", nameof(project));
         if (project.MemoryIndependents.Length != MemoryIndependentCount)
             throw new ArgumentException($"There must be {MemoryIndependentCount} memory independents.", nameof(project));
+        if (project.Sounds.Length != Sound.MaxSounds)
+            throw new ArgumentException($"There must be {Sound.MaxSounds} entries for sounds, one per number.", nameof(project));
         if (project.Effects.Length != Effect.MaxEffects)
             throw new ArgumentException($"There must be {Effect.MaxEffects} entries for effects, one per number.", nameof(project));
         if (project.EffectIndependents.Length != EffectIndependentCount)
             throw new ArgumentException($"There must be {EffectIndependentCount} effect independents.", nameof(project));
+        if (project.SoundIndependents.Length != SoundIndependentCount)
+            throw new ArgumentException($"There must be {SoundIndependentCount} sound independents.", nameof(project));
         if (project.Sequences.Length != MemoryCount)
             throw new ArgumentException($"There must be {MemoryCount} entries for sequences, one per memory.", nameof(project));
         for (int index = 0; index < MemoryCount; index++)

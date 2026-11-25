@@ -78,4 +78,27 @@ public sealed class MidiDeskFadersTests : IDisposable
         Assert.Equal(255, _faders.PositionOf(new DeskFader(FaderKind.Effect, 1)));
         Assert.Contains(_notes.Notes, note => note.StartsWith("EffectPlaybackChanged effect 1 level 255", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public void ASoundsFaderPlaysItAndTheVolumeOfTheSoundGoesTo200PerCent()
+    {
+        Assert.Null(_faders.PositionOf(new DeskFader(FaderKind.Sound, 1)));      // no sound there yet
+        FaderMove refused = _faders.Move(new DeskFader(FaderKind.Sound, 1), 200);
+        Assert.Equal((null, "There is no sound 1."), (refused.Position, refused.Refused));
+
+        _desk.SetSound(new Sound(1, "Rain", "rain.wav", new string('a', 32)) { Seconds = 10 });
+        _faders.Refresh();
+        Assert.Equal(new FaderMove(255, null), _faders.Move(new DeskFader(FaderKind.Sound, 1), 255));
+        SoundPlayback playback = _desk.GetSoundPlayback(1);
+        Assert.Equal((true, 255), (playback.Playing, playback.Level));
+        Assert.Contains("SoundPlaybackChanged sound 1 level 255 playing true", _notes.Notes);
+
+        // the master volume of the sound: -100 dB to 0 dB, 0 dB at the top, half way -12 dB; -20 dB at first
+        Assert.Equal(81, _faders.PositionOf(new DeskFader(FaderKind.SoundVolume)));
+        _faders.Move(new DeskFader(FaderKind.SoundVolume), 128);
+        Assert.Equal((-12, false), _desk.SoundMaster);
+        Assert.Contains("SoundMasterChanged -12 false", _notes.Notes);
+        _faders.Move(new DeskFader(FaderKind.SoundVolume), 0);
+        Assert.Equal((-100, false), _desk.SoundMaster);
+    }
 }

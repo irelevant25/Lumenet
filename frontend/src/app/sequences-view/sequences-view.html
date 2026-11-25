@@ -14,9 +14,10 @@
             class="number"
             [tone]="keyTone(number)"
             [level]="keyLamp(number)"
+            [blink]="keyBlinks(number)"
             [attr.aria-pressed]="number === memory()"
             [attr.aria-label]="'Work on memory ' + number"
-            (click)="memory.set(number)"
+            (click)="press(number)"
           >
             {{ number }}
           </button>
@@ -34,7 +35,7 @@
     @if (holdsLook()) {
       <p class="hint">
         A look is not turned into a sequence by itself. Empty memory {{ memory() }} with Del in
-        the main view first, or choose another memory.
+        the main view or the Memories view first, or choose another memory.
       </p>
     } @else {
       <div class="tools">
@@ -119,7 +120,9 @@
         once. Down: seconds back to zero when a step takes it down. Add: the step comes up on top
         of what is on; the next step without Add takes everything down, and so does every new
         round. Release takes one step down, in its own down time. Effect plays an effect as strongly
-        as its step is up. The steps that are on are marked green. Random plays all steps on every
+        as its step is up, Sound a sound as loud; with Continue the sound plays on through the steps
+        after it, also into a new round, until its end or a release. The steps that are on are
+        marked green. Disabled skips a step without taking it out, also while the stack is live. Random plays all steps on every
         round, each round in a new order. The speed divides every time: 2× is twice as fast. Rec
         seq in the main view adds steps by pressing keys.
       </p>
@@ -134,6 +137,7 @@
             <tr>
               <th scope="col">Step</th>
               <th scope="col" title="On top of what is on, taking nothing down">Add</th>
+              <th scope="col" title="A sound plays on through the steps after it, until its end or a release">Continue</th>
               <th scope="col">Kind</th>
               <th scope="col">Number</th>
               <th scope="col">Notes</th>
@@ -142,6 +146,7 @@
               <th scope="col">Wait (s)</th>
               <th scope="col">Down (s)</th>
               <th scope="col"><span class="for-readers">Move or take out</span></th>
+              <th scope="col" title="Skipped: the stack and the sequence pass over the step; it can be switched while the stack is live, not for the step that is on">Disabled</th>
             </tr>
           </thead>
           <tbody>
@@ -156,6 +161,8 @@
                 [locked]="locked()"
                 [class.on]="onSteps().has($index + 1)"
                 [class.current]="runningStep() === $index + 1"
+                [class.skipped]="step.disabled === true"
+                [attr.title]="step.disabled ? 'Disabled: the sequence passes over this step' : null"
                 (stepChange)="changeStep($index, $event)"
                 (colorPick)="pickColor($index, step)"
               >
@@ -169,6 +176,18 @@
                       [disabled]="locked()"
                       [attr.aria-label]="'Step ' + ($index + 1) + ' adds on top of what is on'"
                       (change)="setAdd($index, $event)"
+                    />
+                  }
+                </td>
+                <!-- Continue: a sound plays on through the steps after it. Only a step of a sound has it. -->
+                <td before class="continues">
+                  @if (step.target === 'sound') {
+                    <input
+                      type="checkbox"
+                      [checked]="step.continue === true"
+                      [disabled]="locked()"
+                      [attr.aria-label]="'Step ' + ($index + 1) + ' plays its sound on through the steps after it'"
+                      (change)="setContinue($index, $event)"
                     />
                   }
                 </td>
@@ -199,10 +218,20 @@
                     ✕
                   </button>
                 </td>
+                <!-- Disabled: the sequence passes over the step. Also while the stack is live, but not for the step that plays. -->
+                <td after class="skips">
+                  <input
+                    type="checkbox"
+                    [checked]="step.disabled === true"
+                    [disabled]="runningStep() === $index + 1"
+                    [attr.aria-label]="'Step ' + ($index + 1) + ' is skipped'"
+                    (change)="setDisabled($index, $event)"
+                  />
+                </td>
               </tr>
             } @empty {
               <tr>
-                <td class="empty" colspan="10">
+                <td class="empty" colspan="12">
                   No steps yet. Add step puts in the first one, Template makes a whole fire, chase
                   or storm, and Rec seq in the main view records them key by key.
                 </td>
@@ -214,23 +243,28 @@
     }
   </div>
 
-  <nav class="rail" aria-label="Memory pages" [lmPressedInSight]="store.viewFirstMemory()">
-    @for (item of pages(); track item.first) {
-      <button
-        lmLamp
-        type="button"
-        class="range"
-        tone="memory"
-        [level]="item.lamp"
-        [attr.aria-pressed]="item.shown"
-        [attr.aria-label]="'Memories ' + item.first + ' to ' + item.last"
-        [attr.data-action]="'page.memory.' + ($index + 1)"
-        (click)="store.showMemoryPage(item.first)"
-      >
-        {{ item.first }}-<wbr />{{ item.last }}
-      </button>
-    }
-  </nav>
+  <!-- the page keys, and RECORD under them -->
+  <div class="side">
+    <nav class="rail" aria-label="Memory pages" lmDragScroll [lmPressedInSight]="store.viewFirstMemory()">
+      @for (item of pages(); track item.first) {
+        <button
+          lmLamp
+          type="button"
+          class="range"
+          tone="memory"
+          [level]="item.lamp"
+          [attr.aria-pressed]="item.shown"
+          [attr.aria-label]="'Memories ' + item.first + ' to ' + item.last"
+          [attr.data-action]="'page.memory.' + ($index + 1)"
+          (click)="store.showMemoryPage(item.first)"
+        >
+          {{ item.first }}-<wbr />{{ item.last }}
+        </button>
+      }
+    </nav>
+
+    <lm-record-section subject="sequence" />
+  </div>
 </div>
 
 <lm-template-dialog />

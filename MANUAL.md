@@ -60,17 +60,19 @@ with Esc; a drag that begins inside it and ends outside leaves it open. The text
 and copied, as on any page; the keys, the faders, the links of the top bar and the things that are dragged
 (the stage plan, a color field, a position pad) cannot, so that a press, a double click or a drag there never
 selects text. At the right of Main the
-**Stack** lies across the top, and under it stand three columns: the **Master** section (Black out and the
+**Stack** lies across the top, and under it stand four columns: the **Master** section (Black out and the
 master fader with its level) over **Record**; the **General** section (Clear, Solo up, Solo down, Rate, the
-tempo fader with the tempo on top, and Tempo under it); and at the right edge the **Independents** (unless Settings shows none of
-their keys). On a phone the master section, the general section and the stack lie across the top, one line
-each.
+tempo fader with the tempo on top, and Tempo under it); the **Sound** section (MUTE, LISTEN and the volume
+of all sounds); and at the right edge the **Independents** (unless Settings shows none of
+their keys). On a phone the master section, the general section, the sound section and the stack lie across
+the top, one line each.
 
 ![The Main view on a PC: channel and memory faders, the master, general, record and stack sections, and the independents](docs/screenshots/main.png)
 
 * **Channels:** two rows of faders (or one, as Settings says). The keys at the right choose which of the 512
   channels of a universe they show, in one column, as big as every key. When they do not fit into it, the
-  column scrolls (with the wheel, a finger or the keyboard) and keeps the lit key in sight. In a project of several universes a key for each, U1, U2 and on, stands
+  column scrolls (with the wheel, a finger, the mouse held down on it and pulled, or the keyboard) and keeps
+  the lit key in sight. In a project of several universes a key for each, U1, U2 and on, stands
   above the faders and chooses the universe (see [Universes and outputs](#universes-and-outputs)).
 * **Memories:** one row of faders (or two), with page keys for the 128 memories. A memory holds a look:
   the levels the channel faders were set to at the moment it was saved. Its fader plays that look at the
@@ -105,7 +107,9 @@ each.
     of the Fixtures view put in steps of their fixture or group, in the color it shows at that moment.
     Press Rec seq again when the sequence is complete. A new sequence is played in a loop.
   * **Copy:** press the memory to copy from, then the memory to copy to. A sequence is copied like a look.
-  * **Del:** press the memory to empty, whatever it holds.
+    The keys of the effects and of the sounds work the same way: an effect onto an effect, a sound onto a
+    sound.
+  * **Del:** press the memory to empty, whatever it holds; or an effect or a sound, to take it out.
   * Pressing the lit function again cancels it.
 * **Clear** cancels an unfinished function and brings every channel fader, memory fader and effect fader to
   zero, so every effect stops too.
@@ -166,20 +170,23 @@ each.
   shortcut). Esc leaves the whole screen at any time; the stack stays live. A stack switched on or off on
   another device leaves this screen as it is.
 * **Independents:** keys in a column at the right edge, under the stack: green ones for channels, red ones
-  for memories and violet ones for effects; ten green and ten red and no violet ones unless Settings says
-  otherwise (0 to 32 of each; with none of any the column is left out). A green key switches
-  its channel between zero and full, and that channel's fader follows; a red key does the same with the fader
-  of its memory; a violet key starts and stops its effect, as the effect's own key does (see
-  [Effects](#effects)). The keys start on channels 1, 2, 3 ..., memories 1, 2, 3 ... and effects 1, 2, 3 ...
+  for memories, violet ones for effects, and cyan ones for sounds; ten green and ten red and none of
+  the others unless Settings says otherwise (0 to 32 of each; with none of any the column is left out). A
+  green key switches its channel between zero and full, and that channel's fader follows; a red key does the
+  same with the fader of its memory; a violet key starts and stops its effect, as the effect's own key does
+  (see [Effects](#effects)); a sound key starts and stops its sound, as the sound's own key does (see
+  [Sounds](#sounds)). The keys start on channels 1, 2, 3 ...,
+  memories 1, 2, 3 ..., effects 1, 2, 3 ... and sounds 1, 2, 3 ...
   Press Edit there, type other numbers onto the keys (a channel of another universe as 113 U2), and press
   Edit again. In a
   project of several universes a green key shows its channel's universe under the number. A green key is lit when its channel's own fader is up (a
   memory that holds the channel does not light it); a red key is lit like the key under its memory's fader,
   and runs from red to yellow for a sequence; a violet key is half lit for an effect that is there, fully
   lit while it runs, and blinks while it fades in or out. Keys that do not fit into the column go on in
-  another one.
+  another one; Edit then stands alone in its row above them.
 * **Effects:** when Settings shows it, a row of effect faders under the memories, with page keys for the
   64 effects: the fader, the key under it and the effect's name under the key, as on the Effects view.
+* **Sounds:** when Settings shows it, a row of sound faders under them, likewise (see [Sounds](#sounds)).
 
 ![The Main view with the row of effects under the memories and six effect keys among the independents](docs/screenshots/main-effects.png)
 
@@ -193,6 +200,9 @@ each.
   the same size: when channels have notes, every cell keeps room for two lines of one. The page keys at the
   right choose which memories the keys show. This view and the Sequences view go by the window only: what
   Settings says about Main does not change them. Choosing a memory changes nothing.
+  * **Record** under the page keys has **Copy** and **Del** for looks: Copy, the memory to copy, then the memory
+    for the copy (one with a look, or an empty one), which the view then shows; Del, then the memory to
+    empty. A memory that holds a sequence belongs to the Sequences view: its key says so here.
   * **A double click changes it.** On the note under a memory key: two lines to type into, as under a fader
     on Main (here and on the Sequences view). On a cell of the table: fields over the cell for the level
     the memory gives that channel (0 to 255) and, under it, the two lines of the channel's note; the one
@@ -211,12 +221,15 @@ each.
   on a tablet over LAN while you program on Main.
   * **The stack** stands at the left of the plan (under it on a phone), to run a show while the plan shows
     its lights: the keys of the Stack view (Stack, Prev, Play, Pause, Next), its cards Previous, Current and
-    Next one under the other, each with the number of its step big at the right, and its steps with their
-    notes and times, the current one green and the next one with an amber edge. When the list is longer
+    Next one under the other, each with the number of its step big at the right; under them the wave of
+    the sound that plays, the master section (Black out and the master fader) and the sound section (MUTE,
+    LISTEN and the volume of all sounds) in a line each; and its steps with their notes and times, the
+    current one green and the next one with an amber edge. When the list is longer
     than its room, it follows the stack: when the step that comes on or the next one is out of sight, the
     list scrolls so that the step before it stands at the top. Nothing about the steps can be changed there:
     the Stack view does that. The panel at the right is as wide as the stack, so the plan stands in the
-    middle.
+    middle. **Light** (top right) hides the panel, and the plan takes its room; pressed again it is back.
+    While Edit is lit the panel is there anyway, as Edit works in it. This device keeps the choice.
   * **Shutter and strobe:** a light whose shutter is closed is dark. A light that strobes flashes, as its
     strobe channel (S) says: a strobe flashes, a pulse swells and fades, a ramp rises or falls, and a random
     strobe flashes at uneven moments. A light of a library says in which range of its strobe channel it
@@ -226,8 +239,8 @@ each.
     seizure in people with photosensitive epilepsy), and a mark over the light gives the real speed: ⚡ 13.3
     Hz, or ⚡ alone when the light does not say it. When the system asks for less motion, the mark alone
     shows it.
-  * **The panel** at the right (under the plan on a phone) is always there, so the plan never changes its
-    place or size. **A click on a light** shows it there: its name, its kind and its channels, and a fader
+  * **The panel** at the right (under the plan on a phone) is there unless Light hides it, so the plan keeps
+    its place and size until Light is pressed. **A click on a light** shows it there: its name, its kind and its channels, and a fader
     for each of its channels (R red, D dimmer, ... under it, then the channel's number), colored as its
     channel is. They are the channel faders of Main: moving one there moves it here, and a memory that
     holds a channel up holds its fader up here too. A press beside the lights, Close or Esc lets the light
@@ -340,7 +353,7 @@ each.
   `Documents\Lumenet`. It holds the memories (looks and sequences), the effects, the stack, the notes under
   the faders and of the Notes view, the stage plan and what the independent keys are bound to, not the fader
   positions or what runs, so loading a project never switches a light on by itself. New empties the desk; it asks first.
-  A project keeps 32 channel keys, 32 memory keys and 32 effect keys of the independents, however many the
+  A project keeps 32 channel keys, 32 memory keys, 32 effect keys and 32 sound keys of the independents, however many the
   page shows. A project with effects is a file of a newer version, which an older Lumenet does not open. An
   older project keeps the keys it has (10 of each, or 16 channel keys from before there were memory keys);
   the others are where they are on a new desk. The layout, the colors of the keys and the shortcuts belong
@@ -356,7 +369,8 @@ each.
 * **Examples:** the Load window lists them under the projects. One opens as a project of its name, without a
   file: the example itself stays as it is, and Save asks for a name. Each has notes on what it shows and how
   to use it (the Notes view), and none brings settings or shortcuts. The first four show one thing each, the
-  next two all of it together, and the seventh the effects:
+  next two all of it together, the seventh the effects, the eighth the sounds and the ninth a show of
+  sounds and lights in the stack:
   * **1 Memories and the stack:** eight lamps of a small theatre, six looks in memories and a stack of nine
     cues, one of which goes on by itself.
   * **2 Sequences:** a row of six lamps, two washes and a blinder: a chase, a bounce, a random sparkle at
@@ -380,6 +394,14 @@ each.
     circle and a fan of the heads, a chase and a pulse of the pars, a rainbow and red and blue, and bars, a
     ripple, sparkle and plasma over the cells of the bars. Memories point the heads and light the pars, and a
     stack plays the effects with Add and a release.
+  * **8 Sounds:** a stormy night in sound and light, on the stage of example 3: rain and wind in loops,
+    thunder near and far (one file played two ways), a church bell with an echo, applause and a short piece
+    of music, which a second sound plays slower at the same pitch; four looks and a lightning effect. The
+    sounds were made for Lumenet from noise and tones alone, so they are free to use; they lie in the folder
+    "8 Sounds sounds" beside the example, and come along when it is opened.
+  * **9 Sounds in the stack:** the night of example 8 as a show of 15 steps: looks and sounds together,
+    the music, the rain and the wind with Continue through the scenes after them until a release stops each,
+    the thunder, the bell and the applause with Add, and the lightning.
 
   They are the files in `examples/`; the desk program takes them along when it is built, and the setting
   `Projects:Examples` names another folder for them.
@@ -612,6 +634,9 @@ it gives in red.
 * Choose a memory with the keys along the top; the two lines of its note stand under each. Add step puts
   in a step like the last one that is no release, on the next channel or memory. Every change goes to the
   desk at once. Rec seq in the main view is the other way to put in steps: by pressing keys.
+* **Record** under the page keys has **Copy** and **Del** for sequences: Copy, the memory with the sequence, then
+  the memory for the copy (one with a sequence, or an empty one), which the view then works on; Del, then
+  the memory to empty. A memory that holds a look belongs to the Memories view: its key says so here.
 * **Once**, **Loop** or **Random:** played once, the last step stays on; in a loop the first step follows
   the last. Random loops too, but plays all steps on every round in a new order, so that a few steps never
   look like a loop (the same step never comes twice in a row between two rounds). A new sequence is played
@@ -648,14 +673,24 @@ it gives in red.
 * **Effect** plays an effect as strongly as its step is up, scaled by the fader of the sequence's memory,
   and moves no fader: the effect's own fader stays where it is, and the higher of the two counts. The effect
   starts when its step begins to come up and stops when neither its fader nor a sequence plays it.
+* **Sound** plays a sound as loud as its step is up, scaled by the fader of the sequence's memory, and moves
+  no fader, like Effect. With **Continue** (the box after Add, only for a sound) the sound plays on through
+  the steps after it, also into a new round of a loop, until it ends by itself or a release names its step;
+  the memory's fader at zero stops it too. A step of a sound that still plays does not start it again; one
+  whose sound is over plays it again from its start.
+* **Disabled** (the box at the end of a row) skips a step: the sequence leaves it out of its rounds and
+  plays the other steps. It can be switched while the stack is live too, but not for the step a running
+  sequence plays just then; a running sequence goes on, its rounds shorter or longer from then on.
 * What still differs from the stack: many sequences can run at once, each dimmed by its memory's fader; a
   sequence never moves a fader on the page; and a wait of 0 goes on at once, where the stack waits for Play.
   A project whose sequences add, release or play effects is saved as version 8 of the project file, which an
-  older Lumenet refuses with a message instead of playing it wrong.
+  older Lumenet refuses with a message instead of playing it wrong; one with sounds or steps of sounds as
+  version 9.
 * A step that stands for a memory plays that memory's look. A memory that holds a sequence itself gives
   nothing there: sequences are not played inside sequences. So the list for a memory step offers only the
   memories that hold a look.
-* A memory that holds a look is not turned into a sequence: empty it first with Del. Save mem over a
+* A memory that holds a look is not turned into a sequence: empty it first with Del (on Main or the
+  Memories view). Save mem over a
   sequence replaces it by a look; Copy and Del work on sequences as on looks; Edit mem does not.
 
 ### The Stack view
@@ -678,7 +713,11 @@ back to zero. A memory that holds a sequence starts running, because its fader g
 * While the stack is not live it does not run: Play, Pause, Next and Prev are dark. That is the time to
   change the steps.
 * **Play** goes to the next step, or goes on after Pause. **Pause** holds a fade or a wait where it is.
-  **Next** and **Prev** go to the next or the previous step at once, with the steps' own times.
+  **Next** and **Prev** go to the next or the previous step at once, and without the steps' times: the
+  new step is there at once, the steps that go are gone at once, and so are their sounds. A fade that runs
+  ends where it goes. After Prev the stack stays on that step until Play, also when the step has a wait:
+  a step played by mistake (Play pressed too soon) is taken back with Prev, its music stops at once, and it
+  does not come again by itself.
 * **The stack goes round:** after the last step comes the first, for Play, for Next and when the stack goes
   on by itself. Prev from the first step goes to the last.
 * A wait of 0 means the stack stays on the step until Play. With a wait above 0 it goes on by itself that
@@ -689,6 +728,9 @@ back to zero. A memory that holds a sequence starts running, because its fader g
   what the previous, the current and the next step are, each with the number of its step big at its right,
   in the card's color. Prev, Play, Pause and Next are bigger than the other keys of the desk, Play the
   biggest. Stack also puts the page on the whole screen (see Main).
+* **Master and Sound** lie in a row under the keys and the cards: the master section (Black out and the
+  master fader) and the sound section (MUTE, LISTEN and the volume of all sounds), as on Main. Under them
+  stands the wave of the sound that plays (see [The Sounds view](#the-sounds-view)).
 * **Add** (the box after the step number): a step with Add comes up on top of what is on and takes nothing
   down. A step without Add takes down everything that is on and that it does not give itself, each in its own
   down time: the step before it and every step that added since. A light that both give stays where it is.
@@ -708,6 +750,26 @@ back to zero. A memory that holds a sequence starts running, because its fader g
   step. The stack uses the step's times, not the effect's own fade times, and moves the effect's real fader,
   so the Effects view and the row on Main show it. (A sequence plays the effect without moving the fader:
   see the Sequences view.)
+* **Sound** is a kind of step too, chosen from the 64 sounds (`2: Rain`): going to it brings the sound's
+  fader up to the step's value in its up time, which starts the sound; leaving it brings the fader down in
+  its down time, which stops it. **Continue** (the box after Add, only for a sound) keeps the step on
+  through every step after it, with Add or without, until the sound ends by itself (a sound in a loop never
+  does) or a release names the step: rain can fall through five scenes and stop at the sixth. Stack off and
+  Clear stop such a sound too; the other faders stay where they are when the stack goes off, as always. A
+  step of a sound that still plays does not start it again, one whose sound is over plays it again; and
+  Prev starts no sound but that of the step it goes to: a step of another sound comes along only while its
+  sound still plays. While a Soundcraft Ui mixer answers, the list of numbers offers, after the sounds,
+  the tracks of its playlist that are no sound yet: one picked becomes a sound in the first free number
+  (see [Tracks of a Soundcraft Ui mixer](#tracks-of-a-soundcraft-ui-mixer)). The same on the Sequences view.
+* **Disabled** (the box at the end of a row) skips a step without taking it out: the stack passes over it
+  with Play, Next, Prev and when it goes on by itself, and going live starts at the first step that is not
+  skipped. It can be switched while the stack is live too, as a way out when something goes wrong, but not
+  for the step that is on. A skipped step is faint and its number struck through, on Main's wheel too, and a
+  project with one is a file of version 9.
+* **The kind and the number** of a step are in the color of its kind, as a key that is half lit: channels
+  and fixtures green, memories red, groups amber, effects violet, sounds cyan, releases white. So a long
+  stack reads at a glance, also while it is live. The same on the
+  Sequences view.
 * **Prev** sets up the steps that are on as if the stack had come to that step from the top: from the last
   step before it without Add, through the steps that add. Round from the last step, the first one starts
   afresh, with nothing on under it.
@@ -748,6 +810,8 @@ plan; a pixel effect works on every cell of its lights, by where the cell is on 
     of the view says "played by a sequence"; the key still brings the fader up and down.
   * **The name** under a key chooses the effect for the editor; the chosen one is framed. A number without an
     effect shows a dash.
+* **Record** beside the row has **Copy** and **Del**, as on Main: Copy, the effect to copy, then the number
+  for the copy (which the editor then shows); Del, then the effect to take out. Undo brings it back.
 * **To make an effect,** press the key (or the dash) of a number without one: the view offers Movement,
   Intensity, Color and Pixel, and the effect is made with the first shape of its kind, on every light of the
   plan that can do it, at a speed that suits it. (On Main, the key of a number without an effect only says
@@ -761,9 +825,8 @@ plan; a pixel effect works on every cell of its lights, by where the cell is on 
   lights of the plan that can do what it does, with All and None; or **A group**); its speed, size, spread,
   order, blocks, wings, direction and fade times; and what its shape needs besides: how long a pulse is on,
   how wide bars are, an angle, a center, a point, colors. Every change is stored at once, and is a step of
-  Undo. An effect still called after its shape takes the name of a shape chosen next. **Copy** puts a copy
-  under the next free number and shows it; **Del** takes the effect out (Undo brings it back). While the
-  stack is live the editor is locked.
+  Undo. An effect still called after its shape takes the name of a shape chosen next. (Record beside the
+  row copies an effect and takes it out.) While the stack is live the editor is locked.
 * **The preview** (at the right) is one cycle of the effect as the desk program plays it: a movement as the
   path of each head over its pan (across) and tilt (down) with a dot where it is now; an intensity as a bar
   for each light; a color as a swatch for each light; a pattern as the cells of its lights where they are on
@@ -870,6 +933,182 @@ The playback of every effect can also be worked from outside the page: start and
 the size and the spread, as "effect 3 speed = 120 BPM". A MIDI controller does it with its keys and faders
 (see [MIDI controllers](#midi-controllers)); another program as [DEV.md](DEV.md#effects-from-outside) says.
 
+## Sounds
+
+A sound is a file (music, a noise, a voice) that the desk program plays on a device of its PC: MP3, WAV,
+AIFF, FLAC, M4A, AAC or WMA. A project has up to 64 sounds, numbered like the effects. The desk program mixes
+them itself, as many at once as are up, and plays them out of one device; the files stay with the desk
+program and are saved with the project (see [The files](#the-files)). Sounds play on Windows; on another
+system the desk program plays them without a sound. A sound can also be a track of the USB stick of a
+Soundcraft Ui mixer, played by the mixer's own player beside the files (see
+[Tracks of a Soundcraft Ui mixer](#tracks-of-a-soundcraft-ui-mixer)).
+
+### The Sounds view
+
+* **The row of sounds** at the top: a fader for each sound, its key under it and its name under the key, as
+  on the Effects view, all of them cyan, as the page keys are.
+  * **The fader** is the sound's level: at full it plays at the sound's own level. Raised from zero, it
+    starts the sound from its start; down at zero, the sound stops. A sound without a loop takes its fader
+    down with its end: in its fade-out time before its end, as its key would, so that it fades out, and at
+    its end without one. Its key, or its fader from zero, plays it again. Where a step of the stack holds
+    the fader, or a sequence plays the sound, the fader stays up at the end, and the stack or the sequence
+    decides (see the Stack view).
+  * **The key** moves the fader: up to full in the sound's fade-in time, which starts it, and pressed again
+    down to zero in its fade-out time, which stops it. It is faint where there is no sound, half lit for a
+    quiet one, fully lit while it plays, and blinks while it moves the fader.
+  * **The name** under a key chooses the sound for the editor; the chosen one is framed. A number without a
+    sound shows a dash.
+* **To add a sound,** choose a number without one (its key or its dash) and press **Choose files…**, or drop
+  files onto the view. Each file goes to the desk program, and becomes a sound named after the file;
+  several files fill the next empty numbers too. While the stack is live nothing can be added. While a
+  Soundcraft Ui mixer answers, an empty number also takes a **track of the mixer's USB stick** (see
+  [Tracks of a Soundcraft Ui mixer](#tracks-of-a-soundcraft-ui-mixer)); without the mixer there is no such
+  field.
+* **Record** beside the row has **Copy** and **Del**, as on Main: Copy, the sound to copy, then the number
+  for the copy (which the editor then shows); Del, then the sound to take out. Undo brings it back.
+* **Sound** beside them has MUTE, LISTEN and the volume of all sounds, as on Main (see
+  [Sound on Main](#sound-on-main)).
+* **The editor** changes the sound itself. Every change is stored at once and is a step of Undo; a sound
+  that plays goes on with it, and follows a slider while it moves. The sliders are lying faders, as on the
+  Effects view: a drag, the mouse wheel (with Shift one step at a time) and the arrow keys move them. While
+  the stack is live the editor is locked.
+  * **Name:** what the key, the steps and the cards call it.
+  * **File:** its name and how long it is. **Another file…** puts another file in its place and keeps the
+    rest; a sound that plays starts again with it.
+  * **Plays from** and **to**, in seconds of the file: empty "to" is the end of the file. **Loop**: after
+    its end it starts again from its start, until it is stopped.
+  * **Level:** its own level in decibels, from -100 dB (nothing) to 0 dB (the file as it is, at first),
+    to a tenth of a decibel: typed, or with the slider, where half way is -12 dB (the gain goes with the
+    square of its place, as on the fader of all sounds). A double click on the slider puts it back to 0 dB.
+  * **Fade in** and **Fade out:** the seconds its key takes to bring it up and to take it down.
+  * **Pan:** from -100 (all left) to 100 (all right); a double click on the slider puts it in the middle.
+  * **Speed:** 0.5 to 2 times, with 1× in the middle of its slider; its pitch stays. **Pitch:** -12 to 12
+    semitones; its speed stays. A double click on a slider puts it back to 1× or 0.
+  * **Echo:** how loud its echo is (0 for none), and its repeats: every so many seconds, each so many per
+    cent of the one before. **Reverb:** how much of a room's sound it gets (0 for none), and its **room
+    size**: from a small room (0) to a big hall (100), which rings longer. A double click on the sliders of
+    echo and reverb takes them off, on Room size it puts the middle.
+  * **A track of the mixer** has only its name, the track (playlist and name), its level and its fade
+    times: the mixer's player plays it as it is, and while it plays its level comes on top of PLAYER L/R
+    on the mixer (see [Tracks of a Soundcraft Ui mixer](#tracks-of-a-soundcraft-ui-mixer)). A new track is at 0 dB, as every
+    new sound: the volume of all sounds keeps it down.
+* **The wave** over the editor is the sound's whole file: at the left where the sound is (where it starts,
+  while it is quiet), at the right how long the file is, and a line that glides along while it plays. Before
+  From and after To the wave is dim; what the sound has played is brighter than what is still to come.
+  A track of the mixer has an empty wave, a flat line, with the line where it is and its length as the
+  mixer tells while it plays.
+* **To play from elsewhere,** double click the wave of a sound that plays: it goes on from that place.
+  With the focus on the wave, the arrows go 5 seconds back and on, Page Up and Page Down 30, Home to its
+  start. A fade at its end that had begun is taken back. The Stack view and the Stage view show the wave
+  of the sound that plays over their steps, with the same double click: the one that started last, and
+  while none plays the one that played last.
+
+### The device
+
+The **Sound** part of Settings (under the views in the top bar) chooses the device the sounds play on: one
+at a time. **Windows' default device** follows Windows, also when that changes. A device of more than two
+outputs (a sound card of four, say) also shows **Outputs**: the two of them the sounds go out on (1 and 2,
+3 and 4 and on); a device of two has no such field. A device chosen that is not there plays nothing until
+it is back; Settings says so. The device and the outputs
+belong to the PC, not to the project, and only a page on that PC can change them; a page on a phone or a
+tablet says where they are chosen. To play through a mixing desk, a cable from the device's output to the
+mixer's line input is enough.
+
+**LISTEN** plays what goes out once more on a second device of the PC, in stereo: headphones or the
+speakers of the PC, while the device of the sound feeds a mixing desk. Choose that device in the Sound part
+of Settings (**Listen on**); the key LISTEN of the sound section (Main, the Sounds view, the Stage view and
+the Stack view) switches it on and off, also from a phone: lit while it plays there, half lit while that
+device is not there. It plays every sound, under the volume of all sounds and MUTE, a moment after the
+device of the sound. The device of the sound itself is not opened twice (Settings says that it plays there
+already), and a device that is not there is looked for again. Like the device, it belongs to the PC.
+
+### Tracks of a Soundcraft Ui mixer
+
+A Soundcraft Ui mixer (Ui12, Ui16, Ui24R) has a player of its own for the tracks of a USB stick in it. A
+sound can be such a track: it plays on the mixer's player, while the sounds of files play on the PC beside
+it, and each sound knows which it is. The desk works the mixer over the network (its Wi-Fi or a cable):
+
+* **Mixer** in the Sound part of Settings: the mixer's IP address (10.10.1.1 on its own Wi-Fi, else the one
+  your network gave it; a port after a colon when it is not 80). **Find** looks through the networks of the
+  PC for it, in about three seconds: one mixer found is taken at once, of several one is chosen, and when
+  none answers Settings says so (the address can still be typed). Settings says when the mixer answers, and
+  what it is; one that does not answer is looked for again every 2 seconds. The mixer belongs to the PC,
+  like the device.
+* While it answers:
+  * its tracks play on its player, **one at a time**: a track that starts ends the one before. The sounds
+    of files play on beside them. Without the mixer a track does not play, and the line at the top of the
+    Sounds view says so.
+  * the mixer's **PLAYER L/R** are the sound section of the desk, both ways: their fader is the volume of
+    all sounds, their mute MUTE. When the desk finds the mixer, it takes them as they stand. Moved or muted
+    on the mixer (its own page, a tablet), the SOUND fader of the desk follows and MUTE lights; moved on the
+    desk, PLAYER L/R follow on the mixer.
+  * the track that plays adds its own level (see the editor) and its fader on top: with the volume at
+    -20 dB, a track at -6 dB with its fader at full plays at -26 dB. So its key's fades, the up and down
+    times of the stack and the fade at its end move PLAYER L/R on the mixer. When the desk stops a track,
+    PLAYER L/R go to the bottom first and stay there while the player sounds on (it does, a moment after it
+    is told to stop), about 1.5 seconds; then they stand at the volume again. A track that starts meanwhile
+    gets its level as soon as the mixer plays it. A hand on PLAYER L/R while a track plays sets the volume to what is left after the
+    track's level and its fader. After the network to the mixer was gone a moment, the desk gives the
+    mixer what the desk has. A double click on the wave jumps in the track.
+  * the player plays a track and stops at its end: the desk sets it to manual, not one track after another.
+  * keys, faders and the steps of the stack and of sequences start and stop a track as they do a file. A
+    step offers every sound, and after them the tracks of the playlist that are no sound yet.
+* **Playlist** (in the Sound part, while the mixer answers): All tracks at first, or a folder of the stick,
+  or Tracks outside the folders: the tracks the steps and the Sounds view offer. **Add all its tracks**
+  makes every track of it a sound named after the track, in the free numbers from 1 on; a track that is a
+  sound already is left out.
+* **To add a track,** choose an empty sound on the Sounds view, then under Choose files… a track of the
+  mixer: it becomes a sound named after the track. Its playlist and name stay as the mixer has them; a
+  project keeps those, and on a stick without the track it stays quiet, and the line at the top of the
+  Sounds view says so.
+* The mixer's player plays on by itself: when the network to the mixer is gone a moment, the desk takes the
+  track as playing until the mixer answers again; when the desk program is closed, the track plays on.
+
+### Sound on Main
+
+* **Sound** stands at the right of General: **MUTE** and **LISTEN** over the volume of all sounds. MUTE
+  blinks while it is on: no sound goes out, and the sounds play on unheard. LISTEN: see
+  [The device](#the-device). The volume goes from -100 dB (nothing) at the bottom to 0 dB at the top, where
+  every sound plays at its own level; half way is -12 dB, as the gain goes with the square of the place. It
+  is -20 dB at first, so that nothing starts loud; the volume stands on top, and a double click puts it back
+  to -20 dB. Both belong to the evening, like the master fader: a project keeps neither. While a Soundcraft
+  Ui mixer answers they are its PLAYER L/R, both ways (see
+  [Tracks of a Soundcraft Ui mixer](#tracks-of-a-soundcraft-ui-mixer)).
+* **The sound section** is also on the Sounds view, on the Stage view (in a line under the master
+  section) and on the Stack view (lying, beside the master section).
+* **Sound keys** of the independents: when Settings shows them, keys that start and stop their sounds (see
+  the independents above).
+* **The row of sounds:** when Settings shows it, a row of sound faders under the memories (and the
+  effects), with page keys for the 64 sounds, as on the Sounds view.
+* **Copy and Del** of Record work on the keys of the sounds and of the effects too, as on the memories: a
+  sound goes onto a sound and an effect onto an effect; a memory key pressed instead says so.
+
+### Sounds in the stack and in sequences
+
+A step of the stack or of a sequence can play a sound (its kind **Sound**), at a level from 0 to 255 (255:
+the sound's own level), in its up time and down time instead of the sound's fade times. **Continue** lets it
+play on through the steps after it until its end or a release; without it, the next step without Add takes
+it down, as any step. See the Stack view and the Sequences view.
+
+### The files
+
+A file added on the Sounds view is kept by the desk program (in the folder sounds beside its LAN password,
+under its contents: the same file added twice is kept once). Save writes the project's sounds into a folder
+beside the project's file: "Show.json" gets "Show sounds" with the files under their names. Load takes them
+from there, so a project with its folder can go to another PC. A project with sounds is a file of version 9.
+**Export** of a project with sounds saves a ZIP instead of a JSON file: the file of Export and its sounds,
+laid out the same way ("Show - project.json" and "Show - project sounds/"); **Import** takes such a ZIP,
+and the sounds come with the project, also on another PC.
+A sound whose file is missing stays silent: played, the line at the top of the Sounds view says that its file
+cannot be played. A track of the mixer has no file: a project keeps its playlist and its name
+("playlist" in the file), and the ZIP of Export has nothing of it.
+
+### Keys and MIDI
+
+The sound keys (1 to 64), the sound pages, MUTE and LISTEN have shortcuts, and a MIDI controller can press
+them. Its faders can move the sound faders (fader.sound.1 to 64) and the volume of all sounds
+(fader.sound-volume: -100 dB at the bottom, 0 dB at the top, -12 dB half way, as on the page).
+
 ## Screens, phones and tablets
 
 ### Window width
@@ -877,9 +1116,14 @@ the size and the spread, as "effect 3 speed = 120 BPM". A MIDI controller does i
 A window at least 1850 pixels wide shows 32 faders in a row, so 64 channels and 32 memories
 at a time. A narrower window shows 16 in a row (32 channels and 16 memories) and twice as many page keys.
 Settings can fix another number, and the rows, for Main. The page keys stand in one column at the right, as big
-as every key; when they are too many for the height, the column scrolls. The rows of faders fit the
+as every key; when they are too many for the height, the column scrolls: with the wheel, a finger, or the
+mouse held down on it and pulled (a press that does not move presses its key). The rows of faders fit the
 window and never scroll sideways (on a low window, where the independents take two columns, the faders get
-a little narrower), unless a channel size chosen in Settings makes them wider than it.
+a little narrower), unless a channel size chosen in Settings makes them wider than it. What has no 32 faders
+to fit in a row keeps the size of a narrower window on a wider one too: the strips of the Fixtures view, and
+the memory keys at the top of the Memories and Sequences views (as big as their place in the line allows, a
+little room between them). The ranges on the page keys ("33-64") are at least 12 pixels high; a long one
+breaks after its dash.
 
 ### Small screens
 
@@ -944,10 +1188,14 @@ LAN to the desk program.
 
 Settings has five panels side by side, as many as the window has room for, each as high as the window
 lets it be and scrolling where it holds more: **Main view** (with the universes, the zoom, the autosave and
-the network under it), **Views in the top bar**, **Colors of the keys** (one under the other),
-**Keyboard** (see [Keyboard](#keyboard)) and the **Outputs** of the project (see
-[The outputs](#the-outputs)), which is two columns wide for its table. The MIDI controllers have a view of
-their own (see [MIDI controllers](#midi-controllers)).
+the network under it), **Views in the top bar** (with **Sound** under the views: the device of the sounds
+and its outputs, the device to listen on, and a Soundcraft Ui mixer (typed, or found with Find) with its
+playlist, see [The device](#the-device) and [Tracks of a Soundcraft Ui mixer](#tracks-of-a-soundcraft-ui-mixer); on the PC only, a phone
+says where it is set up), **Colors of the keys** (one under the other), **Keyboard** (see
+[Keyboard](#keyboard)) and the **Outputs** of the project (see [The outputs](#the-outputs)), which is two
+columns wide for its table. Panels that do not fit beside the others go on under them, as high as what
+they hold; the panels then scroll down to them. Every label stands beside its field. The MIDI controllers
+have a view of their own (see [MIDI controllers](#midi-controllers)).
 
 * **Channels on a page** (Main): Auto (a row of 32 or 16 by the window, as above), or 8, 16, 32, 64 or 128.
 * **Rows of channel faders** and **rows of memory faders** (Main): 1 or 2 of each, at first 2 and 1. A
@@ -958,10 +1206,12 @@ their own (see [MIDI controllers](#midi-controllers)).
   each on their own, with a big scrollbar. The Memories and Sequences views keep the rows of the window.
 * **Steps the stack wheel shows** (Main): 1, 3, 5, 7 or 9; at first 7. (A browser that kept its settings
   before 7 was the first keeps the 3 it had; choose 7 here once.)
-* **Row of effect faders** (Main): none (at first), or 1 row under the memories, as high as a row of
+* **Row of effect faders** (Main): None (at first), or 1: a row under the memories, as high as a row of
   memories (see [Effects](#effects)).
-* **Keys of the independents:** how many green, red and violet keys the column shows, 0 to 32 of each (at
-  first 10, 10 and none); with 0 of all, Main has no independents.
+* **Row of sound faders** (Main): None (at first), or 1: a row under the memories and the effects (see
+  [Sounds](#sounds)).
+* **Keys of the independents:** how many green, red, violet and sound keys the column shows, 0 to 32 of
+  each (at first 10, 10, none and none); with 0 of all, Main has no independents.
 * **Universes of the project:** 1 to 8, of 512 channels each (see [Universes and outputs](#universes-and-outputs)).
   The project keeps it, and the list shows the project's number until the desk program has taken a new one.
   Locked while the stack is live.
@@ -980,14 +1230,14 @@ their own (see [MIDI controllers](#midi-controllers)).
   in its top bar opens on the first view that is. A view that came later than the order kept (Notes,
   Effects, MIDI) stands after the view it follows in the usual order.
 * **Colors of the keys:** a color for each kind (channels, memories, the color a memory with a
-  sequence runs into, and effects), which is that of all its keys, page keys and faders, and one for each other key, group
+  sequence runs into, effects and sounds), which is that of all its keys, page keys and faders, and one for each other key, group
   by group: Black out; Clear, Solo up, Solo down, Rate (with its fader) and Tempo; Stack, Prev, Play, Pause, Next and Add step (Play also colors the
   step that is on, Next the step Play goes to); the keys of Record, of the top bar, Edit of the independents,
   the keys of the Sequences view, of the Effects view, of the Stage view and of the Notes view. A press on a color opens the colors the keys have at
-  first (green, red, yellow, amber, white, blue and violet, the one it has ringed) to take one of them, and Other for
+  first (green, red, yellow, amber, white, blue, violet and cyan, the one it has ringed) to take one of them, and Other for
   any color; while that one is picked, the desk shows it at once. A press anywhere else, or Esc, closes them.
   Each has a key back to its usual color, and ↺ beside the title takes all of them back. At first Clear, Solo
-  and Pause are white, Black out blue, Play green, Stack and Del of the Effects view red, the effects violet
+  and Pause are white, Black out blue, Play green, Stack and Mute red, the effects violet, the sounds cyan
   and the others amber.
 
 The keys that take something out, ✕ at the end of a step in the Sequences and Stack views and of a shortcut
@@ -1007,9 +1257,9 @@ their own, Keyboard, with tabs; its address now opens Settings.)
 
 ![The Keyboard panel of Settings: the keys of the project and LAN open, Undo and Redo with their shortcuts](docs/screenshots/keyboard.png)
 
-* The kinds of keys stand one under the other (Views, Project and LAN, Master, General, Stack, Record,
-  Sequences view, Effects view, Stage view, Notes view, Independents, Channel pages, Memory pages, Effect
-  pages, Channel keys, Memory keys, Effect keys), each with the number of its keys and, in brackets, how many
+* The kinds of keys stand one under the other (Views, Project and LAN, Master, General, Sound, Stack,
+  Record, Sequences view, Effects view, Stage view, Notes view, Independents, Channel pages, Memory pages,
+  Effect pages, Sound pages, Channel keys, Memory keys, Effect keys, Sound keys), each with the number of its keys and, in brackets, how many
   of them have a shortcut, in green:
   Stack 6 (4). A press on a kind opens its keys under it and closes any other: one is open at a time, and
   none at first; pressed again, it closes. The arrow keys up and down, Home and End go from kind to kind.
@@ -1035,7 +1285,7 @@ their own, Keyboard, with tabs; its address now opens Settings.)
 * A shortcut is the physical key, whatever letter the keyboard's language puts on it. It presses its key on
   the page as a click would, and a locked key stays locked; when the key is not on the view that is shown (a
   page of faders that is not shown, another view), it does what that key does, except the keys of the
-  Sequences view and of the Stage view, Copy and Del of the Effects view and Edit of the independents, which
+  Sequences view and of the Stage view and Edit of the independents, which
   work only where they are (Keep and ↺ work on the effect the Effects view shows). Shortcuts rest while a note
   or another field is typed into and while a window such as Load is open.
 

@@ -75,6 +75,8 @@ export class Fader {
   readonly max = input(MAX_LEVEL);
   /** How far an arrow key or a notch of the wheel moves the fader. Shift with the wheel moves it by 1. */
   readonly step = input(1);
+  /** How far a notch of the wheel moves it, where that is not as `step` says: 1 semitone on a short scale. */
+  readonly wheelStep = input<number | null>(null);
   /** What a screen reader says for the value, when the number itself means nothing to a person, like "1.50 times". */
   readonly valueText = input<string | null>(null);
 
@@ -151,7 +153,9 @@ export class Fader {
     const turn = event.deltaY !== 0 ? event.deltaY : event.deltaX;
     if (turn === 0) return;
 
-    const step = event.shiftKey ? 1 : this.step() === 1 ? WHEEL_STEP : this.step();
+    const step = event.shiftKey
+      ? 1
+      : (this.wheelStep() ?? (this.step() === 1 ? WHEEL_STEP : this.step()));
     this.nudge(turn < 0 ? step : -step);
   }
 

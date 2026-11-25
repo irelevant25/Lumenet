@@ -59,7 +59,8 @@ internal static class BuiltIn
     }
 
     // The desk lists the examples in a folder, so they are written to one of their own at every
-    // start, as this version of Lumenet has them: Lumenet\examples in the local application data.
+    // start, as this version of Lumenet has them: Lumenet\examples in the local application data. An
+    // example with sounds has their files in a folder beside it ("8 Sounds sounds").
     private static string? UnpackExamples(LogBook log)
     {
         string folder = Path.Combine(
@@ -73,19 +74,29 @@ internal static class BuiltIn
                 if (!resource.StartsWith(ExamplesPrefix, StringComparison.Ordinal))
                     continue;
 
-                string file = resource[ExamplesPrefix.Length..];
+                string file = Path.GetFullPath(Path.Combine(folder, resource[ExamplesPrefix.Length..].Replace('\\', '/')));
+                if (!file.StartsWith(folder + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                    continue;   // only inside the folder
+
+                Directory.CreateDirectory(Path.GetDirectoryName(file)!);
                 using (Stream from = Self.GetManifestResourceStream(resource)!)
-                using (FileStream to = File.Create(Path.Combine(folder, file)))
+                using (FileStream to = File.Create(file))
                     from.CopyTo(to);
 
                 written.Add(file);
             }
 
-            // Examples of an earlier version that this one does not have.
-            foreach (string old in Directory.GetFiles(folder, "*.json"))
+            // Examples of an earlier version that this one does not have, and their sounds.
+            foreach (string old in Directory.GetFiles(folder, "*", SearchOption.AllDirectories))
             {
-                if (!written.Contains(Path.GetFileName(old)))
+                if (!written.Contains(Path.GetFullPath(old)))
                     File.Delete(old);
+            }
+
+            foreach (string old in Directory.GetDirectories(folder))
+            {
+                if (!Directory.EnumerateFileSystemEntries(old).Any())
+                    Directory.Delete(old);
             }
 
             return folder;

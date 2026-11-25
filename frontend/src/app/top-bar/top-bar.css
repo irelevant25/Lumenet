@@ -158,15 +158,25 @@ h1 {
   vertical-align: 1px;
 }
 
-/* From 1366 to about 1440 pixels the ten links share one line with the project tightly: closer
-   together, they leave its name the room it had beside nine. */
-@container (max-width: 1420px) {
+/* From 1366 to 1600 pixels the eleven links share one line with the project tightly: closer together
+   and in smaller letters (the smallest under 1440), they leave its name the room it had beside nine. */
+@container (max-width: 1600px) {
   :host-context(html:not(.narrow)) .views {
     gap: 3px;
   }
 
   :host-context(html:not(.narrow)) .views a {
     padding-inline: 4px;
+    font-size: 14px;
+    letter-spacing: 0.02em;
+  }
+}
+
+@container (max-width: 1440px) {
+  :host-context(html:not(.narrow)) .views a {
+    padding-inline: 3px;
+    font-size: 13px;
+    letter-spacing: 0;
   }
 }
 

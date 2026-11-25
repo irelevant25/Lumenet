@@ -12,7 +12,10 @@ namespace DmxBox.Server;
 /// up on top of them and takes nothing down. A release comes in over its "down" time: it takes
 /// down the step it names (by its number in the list, from 1) and leaves the rest. With "loop"
 /// the first step follows the last and starts afresh: everything that is on goes down, as at a
-/// step without "add". Played once, what is on after the last step stays on.
+/// step without "add". Played once, what is on after the last step stays on. A step of a sound that
+/// plays on ("continue") is the one exception: no step but a release that names it takes it down,
+/// not at a new round either; its sound ends it (Desk.Sounds.cs). A step that is skipped
+/// ("disabled") is not played at all: the rounds are made of the other steps.
 /// </para>
 /// <para>
 /// A sequence played at random goes through all its steps on every round, each round in an
@@ -45,27 +48,27 @@ internal static class SequenceTimeline
     public static Moment At(Sequence sequence, double elapsed, int seed = 0)
     {
         Step[] steps = sequence.Steps;
-        if (steps.Length == 0)
+        int[] played = InTurn(steps);
+        if (played.Length == 0)
             return Moment.None;
 
         elapsed = Math.Max(0, elapsed);
         var replay = new Replay(steps, elapsed);
         if (!sequence.Loops)
         {
-            int[] order = InTurn(steps.Length);
-            replay.Round(order, start: 0, PlaceAt(steps, order, elapsed));
+            replay.Round(played, start: 0, PlaceAt(steps, played, elapsed), round: 0);
             return replay.Moment();
         }
 
         // The rounds before this one, as far back as a step of theirs can still be on its way
         // down: the first of them starts afresh, and what was on before it is down by now.
-        (long round, double inRound, double length) = Where(steps, elapsed);
-        long first = Math.Min(round - 1, (long)Math.Floor((elapsed - steps.Max(step => step.Down)) / length));
-        first = Math.Max(0, Math.Max(first, round - MaxRoundsBack(steps.Length)));
+        (long round, double inRound, double length) = Where(steps, played, elapsed);
+        long first = Math.Min(round - 1, (long)Math.Floor((elapsed - played.Max(step => steps[step].Down)) / length));
+        first = Math.Max(0, Math.Max(first, round - MaxRoundsBack(played.Length)));
         for (long at = first; at <= round; at++)
         {
             int[] order = OrderOf(sequence, seed, at);
-            replay.Round(order, at * length, at == round ? PlaceAt(steps, order, inRound) : order.Length - 1);
+            replay.Round(order, at * length, at == round ? PlaceAt(steps, order, inRound) : order.Length - 1, at);
         }
 
         return replay.Moment();
@@ -101,14 +104,14 @@ internal static class SequenceTimeline
     public static int CurrentStep(Sequence sequence, double elapsed, int seed = 0)
     {
         Step[] steps = sequence.Steps;
-        if (steps.Length == 0)
+        int[] order = InTurn(steps);
+        if (order.Length == 0)
             return -1;
 
-        int[] order = InTurn(steps.Length);
         double time = elapsed;
         if (sequence.Loops)
         {
-            (long round, double inRound, _) = Where(steps, elapsed);
+            (long round, double inRound, _) = Where(steps, order, elapsed);
             order = OrderOf(sequence, seed, round);
             time = inRound;
         }
@@ -122,7 +125,8 @@ internal static class SequenceTimeline
     public static bool StillMoves(Sequence sequence, double elapsed)
     {
         Step[] steps = sequence.Steps;
-        if (steps.Length == 0)
+        int[] played = InTurn(steps);
+        if (played.Length == 0)
             return false;
         if (sequence.Loops)
             return true;
@@ -130,14 +134,14 @@ internal static class SequenceTimeline
         // Played once: it rests when the last step has come in and every step that went is down.
         double start = 0, end = 0;
         List<int> on = [];
-        for (int index = 0; index < steps.Length; index++)
+        foreach (int index in played)
         {
             Step step = steps[index];
-            (List<int> after, bool tookAll) = OnAfter(on, index, step, afresh: index == 0);
+            (List<int> after, bool tookAll) = OnAfter(steps, on, index, step, afresh: index == played[0]);
             end = Math.Max(end, start + ComeIn(step));
             if (tookAll)
             {
-                foreach (int went in on)
+                foreach (int went in on.Where(went => !after.Contains(went)))
                     end = Math.Max(end, start + DownOf(steps[went], step));
             }
 
@@ -159,8 +163,8 @@ internal static class SequenceTimeline
     /// <param name="round">The round, counted from 0.</param>
     public static int[] OrderOf(Sequence sequence, int seed, long round)
     {
-        int count = sequence.Steps.Length;
-        int[] order = InTurn(count);
+        int[] order = InTurn(sequence.Steps);
+        int count = order.Length;
         if (!sequence.Random || count < 2)
             return order;
 
@@ -169,7 +173,7 @@ internal static class SequenceTimeline
         {
             // The round before as it was shuffled. Its last place is never changed by the rule
             // here, which only swaps the first two places.
-            int[] before = InTurn(count);
+            int[] before = InTurn(sequence.Steps);
             Shuffle(before, seed, round - 1);
             if (order[0] == before[^1])
                 (order[0], order[1]) = (order[1], order[0]);
@@ -184,8 +188,8 @@ internal static class SequenceTimeline
     /// </summary>
     public static double AverageStep(Sequence sequence)
     {
-        Step[] steps = sequence.Steps;
-        return steps.Length == 0 ? 1 : steps.Sum(LengthOf) / steps.Length;
+        Step[] played = [.. sequence.Steps.Where(step => !step.Disabled)];
+        return played.Length == 0 ? 1 : played.Sum(LengthOf) / played.Length;
     }
 
     // How many rounds a moment goes back through at most. A step played longer ago is taken for
@@ -197,12 +201,12 @@ internal static class SequenceTimeline
     }
 
     // Which round "elapsed" falls in, how far into it, and how long a round is. Every round is
-    // equally long whatever its order: it plays every step once.
-    private static (long Round, double InRound, double Length) Where(Step[] steps, double elapsed)
+    // equally long whatever its order: it plays every step that is played once.
+    private static (long Round, double InRound, double Length) Where(Step[] steps, int[] played, double elapsed)
     {
         double length = 0;
-        foreach (Step step in steps)
-            length += LengthOf(step);
+        foreach (int step in played)
+            length += LengthOf(steps[step]);
 
         long round = (long)Math.Floor(elapsed / length);
         return (round, elapsed - round * length, length);
@@ -223,9 +227,10 @@ internal static class SequenceTimeline
         return place;
     }
 
-    private static int[] InTurn(int count)
+    // The steps a round plays, in turn, by their places in the list: every step but those skipped.
+    private static int[] InTurn(Step[] steps)
     {
-        return Enumerable.Range(0, count).ToArray();
+        return [.. Enumerable.Range(0, steps.Length).Where(index => !steps[index].Disabled)];
     }
 
     // Fisher and Yates' shuffle, driven by SplitMix64: a small generator that gives the same
@@ -248,17 +253,20 @@ internal static class SequenceTimeline
     // The steps that are on once the step at "index" has started while "before" were on, as the
     // stack has it: the first step of a run or a round starts afresh, with nothing on under it (a
     // release there leaves nothing on); a release takes its step out; a step that adds comes last;
-    // any other step is alone. "TookAll": every step that was on went down.
-    private static (List<int> After, bool TookAll) OnAfter(List<int> before, int index, Step step, bool afresh)
+    // any other step is alone. Steps of sounds that play on stay through all of that, unless a
+    // release names them. "TookAll": every step that was on went down, but those that play on.
+    private static (List<int> After, bool TookAll) OnAfter(Step[] steps, List<int> before, int index, Step step, bool afresh)
     {
-        if (afresh)
-            return (step.IsRelease ? [] : [index], true);
-        if (step.IsRelease)
+        if (step.IsRelease && !afresh)
             return ([.. before.Where(on => on != step.Number - 1)], false);
-        if (step.Add)
+        if (step.Add && !afresh)
             return ([.. before.Where(on => on != index), index], false);
 
-        return ([index], true);
+        List<int> stay = [.. before.Where(on => on != index && steps[on].Continue && !(step.IsRelease && on == step.Number - 1))];
+        if (!step.IsRelease)
+            stay.Add(index);
+
+        return (stay, true);
     }
 
     // How long the step "went" takes to go down when "taker" takes everything down: its own down
@@ -298,6 +306,9 @@ internal static class SequenceTimeline
     /// <param name="Going">The steps on their way down, the latest to go first.</param>
     public sealed record Moment(int Current, double In, bool TookAll, int[] Before, int[] On, Going[] Going)
     {
+        /// <summary>The round the step played last belongs to, counted from 0; always 0 for a sequence played once.</summary>
+        public long Round { get; init; }
+
         /// <summary>The moment of a sequence without steps.</summary>
         public static readonly Moment None = new(-1, 0, TookAll: true, [], [], []);
     }
@@ -321,15 +332,17 @@ internal static class SequenceTimeline
         private int _current = -1;
         private double _in;
         private bool _tookAll = true;
+        private long _round;
 
         // The steps of one round in "order", from the moment "start", through the place "last".
         // The first of them starts afresh.
-        public void Round(int[] order, double start, int last)
+        public void Round(int[] order, double start, int last, long round)
         {
             for (int place = 0; place <= last; place++)
             {
                 Step step = steps[order[place]];
                 Play(order[place], step, start, afresh: place == 0);
+                _round = round;
                 start += LengthOf(step);
             }
         }
@@ -337,19 +350,23 @@ internal static class SequenceTimeline
         public Moment Moment()
         {
             Going[] going = [.. Enumerable.Reverse(_going).SelectMany(went => went)];
-            return new Moment(_current, _in, _tookAll, [.. _before], [.. _on], going);
+            return new Moment(_current, _in, _tookAll, [.. _before], [.. _on], going) { Round = _round };
         }
 
         // The step at "index" starts at the moment "start".
         private void Play(int index, Step step, double start, bool afresh)
         {
-            (List<int> after, bool tookAll) = OnAfter(_on, index, step, afresh);
+            (List<int> after, bool tookAll) = OnAfter(steps, _on, index, step, afresh);
             if (tookAll && _on.Count > 0)
             {
-                // Every step that was on goes down from here: it was all the way up when it went.
+                // Every step that was on goes down from here (but those that play on): it was all
+                // the way up when it went.
                 var going = new List<Going>();
                 for (int place = _on.Count - 1; place >= 0; place--)
                 {
+                    if (after.Contains(_on[place]))
+                        continue;
+
                     double seconds = DownOf(steps[_on[place]], step);
                     double left = seconds > 0 ? Math.Clamp(1 - (elapsed - start) / seconds, 0, 1) : 0;
                     if (left > 0)

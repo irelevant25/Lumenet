@@ -1,0 +1,41 @@
+<h2>Sounds</h2>
+
+<div class="body">
+  <div class="rows big-scrollbar">
+    <div class="row">
+      @for (number of numbers(); track number) {
+        <lm-fader-strip
+          kind="sound"
+          [number]="number"
+          [value]="levelOf(number)"
+          [lampLevel]="lamp(number)"
+          [blink]="blinks(number)"
+          [note]="nameOf(number)"
+          [choosable]="choosing()"
+          [chosen]="choosing() && store.chosenSound() === number"
+          (valueChange)="store.setSoundLevel(number, $event)"
+          (keyPress)="press(number)"
+          (choose)="store.chosenSound.set(number)"
+        />
+      }
+    </div>
+  </div>
+
+  <nav class="rail" aria-label="Sound pages" lmDragScroll [lmPressedInSight]="first()">
+    @for (item of pages(); track item.first) {
+      <button
+        lmLamp
+        type="button"
+        class="range"
+        tone="sound"
+        [level]="item.lamp"
+        [attr.aria-pressed]="item.shown"
+        [attr.aria-label]="'Sounds ' + item.first + ' to ' + item.last"
+        [attr.data-action]="'page.sound.' + ($index + 1)"
+        (click)="store.showSoundPage(item.first)"
+      >
+        {{ item.first }}-<wbr />{{ item.last }}
+      </button>
+    }
+  </nav>
+</div>

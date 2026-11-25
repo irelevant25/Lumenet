@@ -46,6 +46,12 @@ internal sealed record ProjectContent(byte[]?[] Looks, string[] ChannelNotes, st
     /// <summary>The effect number, 1-64, of each of the 32 effect keys of the independents; key 1 first.</summary>
     public int[] EffectIndependents { get; init; } = Desk.DefaultEffectIndependents();
 
+    /// <summary>One entry per sound number, sound 1 first: the sound, or null where there is none.</summary>
+    public Sound?[] Sounds { get; init; } = new Sound?[Sound.MaxSounds];
+
+    /// <summary>The sound number, 1-64, of each of the 32 sound keys of the independents; key 1 first.</summary>
+    public int[] SoundIndependents { get; init; } = Desk.DefaultSoundIndependents();
+
     /// <summary>The steps of the stack, in the order of their numbers.</summary>
     public ProjectStep[] Stack { get; init; } = [];
 

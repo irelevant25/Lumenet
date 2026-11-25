@@ -331,28 +331,4 @@
   }
 </div>
 
-<div class="keys">
-  <button
-    lmLamp
-    type="button"
-    tone="effect-copy"
-    aria-label="Copy the effect to the next free number"
-    data-action="effects.copy"
-    [disabled]="locked()"
-    (click)="copy()"
-  >
-    Copy
-  </button>
-  <button
-    lmLamp
-    type="button"
-    tone="effect-delete"
-    aria-label="Take the effect out"
-    data-action="effects.delete"
-    [disabled]="locked()"
-    (click)="remove()"
-  >
-    Del
-  </button>
-</div>
 <p class="explain">{{ explain() }}</p>

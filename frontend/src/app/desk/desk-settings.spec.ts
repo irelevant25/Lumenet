@@ -13,12 +13,15 @@ describe('the settings this browser keeps', () => {
       channelKeys: 10,
       memoryKeys: 10,
       effectKeys: 0,
+      soundKeys: 0,
       effectRows: 0,
+      soundRows: 0,
       zoom: 1,
       shortcuts: { 'project.undo': 'Ctrl+KeyZ', 'project.redo': 'Ctrl+KeyY' },
       colors: {},
       hiddenViews: [],
-      viewOrder: ['main', 'memories', 'sequences', 'stack', 'stage', 'fixtures', 'effects', 'notes', 'midi', 'settings'],
+      viewOrder: ['main', 'memories', 'sequences', 'stack', 'stage', 'fixtures', 'effects', 'sounds', 'notes', 'midi', 'settings'],
+      stagePanel: true,
     });
   });
 
@@ -51,13 +54,13 @@ describe('the settings this browser keeps', () => {
 
   it('put every view in the top bar once: the known ones in their order, the others after the view they follow', () => {
     const order = parseSettings(JSON.stringify({ viewOrder: ['notes', 'stage', 'nothing', 'notes', 3, 'main'] })).viewOrder;
-    expect(order).toEqual(['notes', 'midi', 'settings', 'stage', 'fixtures', 'effects', 'main', 'memories', 'sequences', 'stack']);
+    expect(order).toEqual(['notes', 'midi', 'settings', 'stage', 'fixtures', 'effects', 'sounds', 'main', 'memories', 'sequences', 'stack']);
     expect(parseSettings(JSON.stringify({ viewOrder: 'stage' })).viewOrder).toEqual(DEFAULT_SETTINGS.viewOrder);
 
-    // An order kept before there were notes, effects and MIDI: Effects comes after Fixtures, Notes
-    // after Effects and MIDI after Notes, where they usually are. One kept while Keyboard was a view
+    // An order kept before there were notes, effects, sounds and MIDI: Effects comes after Fixtures,
+    // Sounds after Effects, Notes after Sounds and MIDI after Notes, where they usually are. One kept while Keyboard was a view
     // (until 2026-11-24, now a panel of Settings) is read without it.
-    const usual = ['main', 'memories', 'sequences', 'stack', 'stage', 'fixtures', 'effects', 'notes', 'midi', 'settings'];
+    const usual = ['main', 'memories', 'sequences', 'stack', 'stage', 'fixtures', 'effects', 'sounds', 'notes', 'midi', 'settings'];
     const before = ['main', 'memories', 'sequences', 'stack', 'stage', 'fixtures', 'keyboard', 'settings'];
     expect(parseSettings(JSON.stringify({ viewOrder: before })).viewOrder).toEqual(usual);
 
@@ -85,7 +88,9 @@ describe('the settings this browser keeps', () => {
         channelKeys: 32,
         memoryKeys: 33, // there are 32
         effectKeys: 8,
+        soundKeys: 40, // there are 32
         effectRows: 2, // none or one
+        soundRows: 3, // none or one
         zoom: 1.24,
         // the size of the lettering, before there was the zoom: passed over
         fontScale: 1.5,
@@ -104,14 +109,19 @@ describe('the settings this browser keeps', () => {
       channelKeys: 32,
       memoryKeys: 10,
       effectKeys: 8,
+      soundKeys: 0,
       effectRows: 0,
+      soundRows: 0,
       zoom: 1.2,
       shortcuts: { 'master.clear': 'Ctrl+KeyC', 'project.undo': 'Ctrl+KeyZ', 'project.redo': 'Ctrl+KeyY' },
       colors: { pause: '#ffaa00', channel: '#00ff00' },
       hiddenViews: [],
       viewOrder: DEFAULT_SETTINGS.viewOrder,
+      stagePanel: true,
     });
     expect(parseSettings(JSON.stringify({ channelSize: 12 })).channelSize).toBe('auto');
+    expect(parseSettings(JSON.stringify({ stagePanel: false })).stagePanel).toBe(false);
+    expect(parseSettings(JSON.stringify({ stagePanel: 'no' })).stagePanel).toBe(true);
     expect(parseSettings(JSON.stringify({ wheelSize: 9 })).wheelSize).toBe(9);
   });
 

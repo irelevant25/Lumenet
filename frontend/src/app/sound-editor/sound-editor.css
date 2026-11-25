@@ -1,0 +1,28 @@
+/* What only the editor of a sound has besides the form of the effect editor: lying faders beside
+   their numbers (as on the Effects view), the name of the file, and the box of the loop. */
+.pair lm-fader {
+  width: 200px;
+  max-width: 100%;
+  height: calc(var(--key-h) * 0.8);
+}
+
+/* the stack is live: nothing can be changed */
+.pair lm-fader.off {
+  opacity: 0.45;
+}
+
+.file {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* (more particular than the 260 pixels of every field in the form) */
+.form > input.loop {
+  justify-self: start;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--legend);
+}

@@ -32,9 +32,10 @@
             class="number"
             [tone]="keyTone(memory)"
             [level]="keyLamp(memory)"
+            [blink]="keyBlinks(memory)"
             [attr.aria-pressed]="memory === store.inspectedMemory()"
             [attr.aria-label]="'Look at memory ' + memory"
-            (click)="store.inspectedMemory.set(memory)"
+            (click)="press(memory)"
           >
             {{ memory }}
           </button>
@@ -102,20 +103,25 @@
     </div>
   </div>
 
-  <nav class="rail" aria-label="Memory pages" [lmPressedInSight]="store.viewFirstMemory()">
-    @for (item of pages(); track item.first) {
-      <button
-        lmLamp
-        type="button"
-        class="range"
-        tone="memory"
-        [level]="item.lamp"
-        [attr.aria-pressed]="item.shown"
-        [attr.aria-label]="'Memories ' + item.first + ' to ' + item.last"
-        (click)="store.showMemoryPage(item.first)"
-      >
-        {{ item.first }}-<wbr />{{ item.last }}
-      </button>
-    }
-  </nav>
+  <!-- the page keys, and RECORD under them -->
+  <div class="side">
+    <nav class="rail" aria-label="Memory pages" lmDragScroll [lmPressedInSight]="store.viewFirstMemory()">
+      @for (item of pages(); track item.first) {
+        <button
+          lmLamp
+          type="button"
+          class="range"
+          tone="memory"
+          [level]="item.lamp"
+          [attr.aria-pressed]="item.shown"
+          [attr.aria-label]="'Memories ' + item.first + ' to ' + item.last"
+          (click)="store.showMemoryPage(item.first)"
+        >
+          {{ item.first }}-<wbr />{{ item.last }}
+        </button>
+      }
+    </nav>
+
+    <lm-record-section subject="look" />
+  </div>
 </div>

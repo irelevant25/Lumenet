@@ -225,7 +225,7 @@ public sealed class DeskSequenceTests
     [Fact]
     public void StepsOutOfRangeAreRefused()
     {
-        AssertRefused("stands for a channel, a memory, a fixture, a group or an effect", new Step("light", 1, 1, 0, 0, 0));
+        AssertRefused("stands for a channel, a memory, a fixture, a group, an effect or a sound", new Step("light", 1, 1, 0, 0, 0));
         AssertRefused("The channel of a step must be from 1 to 4096, not 4097.", new Step("channel", 4097, 1, 0, 0, 0));
         AssertRefused("Channel 1 (U2) is not in the project, which has 1 universe.", new Step("channel", 513, 1, 0, 0, 0));
         AssertRefused("The memory of a step must be from 1 to 128, not 0.", new Step("memory", 0, 1, 0, 0, 0));

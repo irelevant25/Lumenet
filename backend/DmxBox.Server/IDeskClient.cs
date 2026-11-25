@@ -156,6 +156,42 @@ public interface IDeskClient
     /// <param name="effect">The effect the key starts and stops now, 1-64.</param>
     Task EffectIndependentChanged(int index, int effect);
 
+    /// <summary>A sound key of the independents was bound to another sound.</summary>
+    /// <param name="index">Number of the key, 1-32.</param>
+    /// <param name="sound">The sound it starts and stops now, 1-64.</param>
+    Task SoundIndependentChanged(int index, int sound);
+
+    /// <summary>
+    /// A sound was stored, copied or taken out. (After undo, redo, a load, a new project or an
+    /// import the UIs get the whole desk instead, and ask for the sounds with it.)
+    /// </summary>
+    /// <param name="sounds">The sounds of the project now, in the order of their numbers.</param>
+    Task SoundsChanged(Sound[] sounds);
+
+    /// <summary>
+    /// The playback of a sound changed: its key or its fader, by a UI or from outside. The playbacks
+    /// also come with every <see cref="Playback"/>.
+    /// </summary>
+    /// <param name="playback">The playback now.</param>
+    Task SoundPlaybackChanged(SoundPlayback playback);
+
+    /// <summary>The master volume of the sound or MUTE changed.</summary>
+    /// <param name="decibels">The master volume, -100 dB to 0 dB.</param>
+    /// <param name="mute">True while MUTE is on.</param>
+    Task SoundMasterChanged(double decibels, bool mute);
+
+    /// <summary>The device of the sound changed, or its outputs, or it went or came back. Only the pages on the PC get it.</summary>
+    /// <param name="output">The device now.</param>
+    Task SoundOutputChanged(SoundOutputView output);
+
+    /// <summary>LISTEN ON went on or off, or its device went or came back. Every page gets it.</summary>
+    /// <param name="listen">The listening now.</param>
+    Task SoundListenChanged(ListenView listen);
+
+    /// <summary>Player mode went on or off, or the mixer was found or lost. Every page gets it.</summary>
+    /// <param name="mixer">The mixer now.</param>
+    Task MixerChanged(MixerView mixer);
+
     /// <summary>
     /// The MIDI changed: a device came or went, the setup changed, learning started or ended. Only
     /// the pages on the PC get it.

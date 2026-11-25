@@ -13,12 +13,14 @@ export interface StepChoice {
   readonly text: string;
   /** What the closed field shows, where that is not the number: a fixture's address, "G2" for a group. */
   readonly short?: string;
+  /** A track of the mixer's playlist that is no sound yet: chosen, it becomes one (a number below 0 until then). */
+  readonly track?: string;
 }
 
 /**
  * The lists for the kinds of step. `release`: the steps a release can take down (in the stack by
- * their ids, in a sequence by their numbers); `effect`: the effects. A table without them offers
- * neither kind.
+ * their ids, in a sequence by their numbers); `effect`: the effects; `sound`: the sounds. A table
+ * without them offers none of those kinds.
  */
 export interface StepChoices {
   readonly channel: readonly StepChoice[];
@@ -27,6 +29,7 @@ export interface StepChoices {
   readonly group: readonly StepChoice[];
   readonly release?: readonly StepChoice[];
   readonly effect?: readonly StepChoice[];
+  readonly sound?: readonly StepChoice[];
 }
 
 /** The choices for the effects: every number, "3: Circle" for one the project has, the number alone for one it has not. */
@@ -35,6 +38,32 @@ export function effectChoices(effects: readonly { number: number; name: string }
     const name = effects.find((effect) => effect.number === index + 1)?.name;
     return { number: index + 1, text: name ? `${index + 1}: ${name}` : String(index + 1) };
   });
+}
+
+/**
+ * The choices for the sounds, as for the effects: "2: Rain", or the number alone; files and tracks of
+ * the mixer alike, as each plays where it belongs. While the mixer answers (a playlist is given), the
+ * tracks of its playlist that are no sounds yet come after them, "Overture.mp3 (new sound)": chosen, a
+ * track becomes a sound in the lowest free number.
+ */
+export function soundChoices(
+  sounds: readonly { number: number; name: string; playlist?: string | null; file?: string }[],
+  count: number,
+  tracks: readonly string[] = [],
+  playlist = '',
+): StepChoice[] {
+  const known = effectChoices(sounds, count);
+  if (!playlist) return known;
+  const fresh = tracks.filter((track) => !sounds.some((sound) => sound.playlist === playlist && sound.file === track));
+  return [
+    ...known,
+    ...fresh.map((track, index) => ({
+      number: -(index + 1),
+      text: `${track.normalize('NFC')} (new sound)`,
+      short: 'new',
+      track,
+    })),
+  ];
 }
 
 /**

@@ -3,6 +3,7 @@ import { DeskStore } from '../desk/desk-store';
 import { MEMORY_COUNT, stripNumbers } from '../desk/desk-types';
 import { heldMemory, memoryBlinks } from '../desk/function-mode';
 import { LampLevel, memoryLamp, memoryPageLamp } from '../desk/lamps';
+import { DragScroll } from '../desk/drag-scroll';
 import { PressedInSight } from '../desk/pressed-in-sight';
 import { FaderStrip } from '../fader-strip/fader-strip';
 import { LampButton } from '../lamp-button/lamp-button';
@@ -15,7 +16,7 @@ import { LampButton } from '../lamp-button/lamp-button';
  * record key wants.
  */
 @Component({
-  imports: [FaderStrip, LampButton, PressedInSight],
+  imports: [DragScroll, FaderStrip, LampButton, PressedInSight],
   selector: 'lm-memory-section',
   styleUrl: './memory-section.css',
   templateUrl: './memory-section.html',

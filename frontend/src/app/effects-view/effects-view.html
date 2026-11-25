@@ -3,7 +3,10 @@
   <p class="summary" role="status">{{ summary() }}</p>
 </header>
 
-<lm-effect-section [choosing]="true" />
+<div class="top">
+  <lm-effect-section [choosing]="true" />
+  <lm-record-section subject="effect" />
+</div>
 
 <section class="work" aria-labelledby="effect-title">
   <h3 id="effect-title">Effect {{ chosen() }}</h3>

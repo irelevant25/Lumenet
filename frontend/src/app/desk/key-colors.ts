@@ -19,6 +19,7 @@ export const KEY_COLOR_GROUPS = [
   'Kinds',
   'Master',
   'General',
+  'Sound',
   'Stack',
   'Record',
   'Top bar',
@@ -39,6 +40,7 @@ export const KEY_COLORS: readonly KeyColor[] = [
   color('memory', 'Kinds', 'Memories: their keys, pages, independent keys and faders', '--memory', '#ff5247'),
   color('sequence', 'Kinds', 'Sequences: the color a memory that holds one runs into', '--sequence-end', '#ffd426'),
   color('effect', 'Kinds', 'Effects: their keys, pages, independent keys and faders', '--effect', '#b388ff'),
+  color('sound', 'Kinds', 'Sounds: their keys, pages, independent keys and faders', '--sound', '#2ad4c8'),
 
   key('blackout', 'Master', 'Blackout', '#4aa3ff'),
 
@@ -47,6 +49,9 @@ export const KEY_COLORS: readonly KeyColor[] = [
   key('solo-down', 'General', 'Solo down', WHITE),
   key('rate', 'General', 'Rate (and its fader)', AMBER),
   key('tempo', 'General', 'Tempo', AMBER),
+
+  key('mute', 'Sound', 'Mute', '#ff5247'),
+  key('listen', 'Sound', 'Listen (on the device to listen on)', '#8ab4ff'),
 
   color('stack', 'Stack', 'Stack (live), and the Live mark in the top bar', '--live', '#ff5247'),
   key('prev', 'Stack', 'Prev', AMBER),
@@ -79,14 +84,13 @@ export const KEY_COLORS: readonly KeyColor[] = [
   key('template', 'Sequences view', 'Template', AMBER),
   key('normal-speed', 'Sequences view', '1x (normal speed)', AMBER),
 
-  key('effect-copy', 'Effects view', 'Copy', AMBER),
-  key('effect-delete', 'Effects view', 'Del (take the effect out)', '#ff5247'),
   key('effect-keep', 'Effects view', 'Keep (the live values)', AMBER),
   key('effect-reset', 'Effects view', '↺ (the effect\'s own values again)', AMBER),
 
   key('stage-clear', 'Stage view', 'Clear', WHITE),
   key('stage-edit', 'Stage view', 'Edit', AMBER),
   key('stage-add', 'Stage view', 'Add light', AMBER),
+  key('stage-panel', 'Stage view', 'Light (the panel of the light)', AMBER),
 
   key('notes-edit', 'Notes view', 'Edit', AMBER),
   key('notes-tools', 'Notes view', 'The tools (bold, underline, size, lists, color)', AMBER),
@@ -101,6 +105,7 @@ export const STANDARD_KEY_COLORS: readonly { readonly color: string; readonly na
   { color: WHITE, name: 'White' },
   { color: '#4aa3ff', name: 'Blue' },
   { color: '#b388ff', name: 'Violet' },
+  { color: '#2ad4c8', name: 'Cyan' },
 ];
 
 const BY_ID = new Map(KEY_COLORS.map((entry) => [entry.id, entry]));

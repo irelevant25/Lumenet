@@ -287,6 +287,7 @@ public class NotedPages : DispatchProxy
         double number => number.ToString(CultureInfo.InvariantCulture),
         bool flag => flag ? "true" : "false",
         EffectPlayback playback => FormattableString.Invariant($"effect {playback.Number} level {playback.Level} speed {playback.Speed} size {playback.Size} spread {playback.Spread}"),
+        SoundPlayback playback => FormattableString.Invariant($"sound {playback.Number} level {playback.Level} playing {(playback.Playing ? "true" : "false")}"),
         _ => Convert.ToString(value, CultureInfo.InvariantCulture) ?? "?",
     };
 }

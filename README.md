@@ -18,6 +18,12 @@ Pico that takes what the desk sends over USB to the DMX512 cable of the lights.
 * **Effects** worked out live from a shape: circles and swings of moving heads, chases and pulses, rainbows
   and color chases, and patterns over the cells of LED bars by where they are on the stage. Each has a key and
   a fader, live speed, size and spread, and a preview; on Main and in the stack too.
+* **Sounds:** music and other sounds from files, mixed by the desk program and played on a sound device of the
+  PC, each with a key and a fader, its own level in decibels, fades, pan, speed, pitch, echo and reverb; a
+  volume for all, MUTE and LISTEN on a second device; in the stack and in sequences, where a sound can play on
+  through the steps after it until its end or a release. Beside them the tracks of the USB stick of a
+  Soundcraft Ui mixer, played on the mixer's own player, its PLAYER channel the volume of all sounds and MUTE,
+  both ways; the desk finds the mixer in the network by itself.
 * **Fixtures:** lights by their kind, taken from the Open Fixture Library (666 lights) or the library of QLC+
   (1,781), played by intensity and color, moving heads by pan and tilt too; groups with one fader for all their
   lights.
@@ -29,7 +35,7 @@ Pico that takes what the desk sends over USB to the DMX512 cable of the lights.
   the desk lights their keys and moves their motorized faders. Learn maps a control in two presses; the Akai
   APC mini mk2, Korg nanoKONTROL2 and Behringer X-Touch Mini and Compact have ready-made mappings.
 * A keyboard shortcut for every key, and settings for how each device shows the desk.
-* **Seven example shows** to start from, from a few memories to a whole concert, and one of effects.
+* **Nine example shows** to start from, from a few memories to a whole concert, one of effects and two of sounds.
 
 The desk also works without the box, on other DMX hardware or none. The box speaks Art-Net too, so other
 lighting software such as QLC+ can use it.

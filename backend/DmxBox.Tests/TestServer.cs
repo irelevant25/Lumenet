@@ -81,6 +81,7 @@ internal sealed class TestServer : IAsyncDisposable
             "--Box:Host=pretend-box",
             "--Outputs:Bind=127.0.0.1",
             "--Outputs:ArtNetReplyPort=0",
+            "--Sound:Output=none",
             .. moreSettings,
         ];
         WebApplication app = Program.Build(settings, box, pc);

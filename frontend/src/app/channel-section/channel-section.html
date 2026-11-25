@@ -49,7 +49,12 @@
     }
   </div>
 
-  <nav class="rail" aria-label="Channel pages" [lmPressedInSight]="store.firstChannel()">
+  <nav
+    class="rail"
+    aria-label="Channel pages"
+    lmDragScroll
+    [lmPressedInSight]="store.firstChannel()"
+  >
     @for (item of pages(); track item.first) {
       <button
         lmLamp

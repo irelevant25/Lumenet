@@ -55,7 +55,7 @@ public sealed class ExampleProjectTests : IDisposable
     public void TheExamplesGoFromOneThingToAllOfIt()
     {
         Assert.Equal(
-            ["1 Memories and the stack", "2 Sequences", "3 Fixtures and the stage", "4 Moving heads", "5 Theatre show", "6 Concert", "7 Effects"],
+            ["1 Memories and the stack", "2 Sequences", "3 Fixtures and the stage", "4 Moving heads", "5 Theatre show", "6 Concert", "7 Effects", "8 Sounds", "9 Sounds in the stack"],
             _store.List().Examples);
     }
 
@@ -221,6 +221,72 @@ public sealed class ExampleProjectTests : IDisposable
             _desk.SetEffectControl(effect.Number, "level", 0);
             Assert.Equal(before, _desk.GetOutput());
         }
+    }
+
+    [Fact]
+    public void TheSoundsExampleBringsItsFilesAndShowsWhatASoundCanDo()
+    {
+        var soundFiles = new SoundStore(Path.Combine(_folder.FullName, "store"));
+        var store = new ProjectStore(_desk, _folder.FullName, Examples, soundFiles);
+        store.OpenExample("8 Sounds");
+        Sound[] sounds = _desk.GetSounds();
+
+        // every file comes from the folder beside the example into the desk program's sounds, and plays
+        Assert.All(sounds, sound => Assert.NotNull(soundFiles.InfoOf(sound.Hash)));
+        Assert.All(sounds, sound => Assert.True(sound.Seconds > 1, $"sound {sound.Number} is {sound.Seconds} s long"));
+        Assert.Contains(sounds, sound => sound.Loop && sound.FadeIn > 0 && sound.FadeOut > 0);
+        Assert.Contains(sounds, sound => sound.Decibels < 0);   // quieter than its file
+        Assert.Contains(sounds, sound => sound.Pan != 0);
+        Assert.Contains(sounds, sound => sound.Pitch != 0);
+        Assert.Contains(sounds, sound => sound.Speed != 1);
+        Assert.Contains(sounds, sound => sound.Echo > 0);
+        Assert.Contains(sounds, sound => sound.Reverb > 0);
+
+        // one file played two ways: the same thunder, near and far
+        Assert.Contains(sounds.GroupBy(sound => sound.Hash), same => same.Count() > 1);
+
+        // the waves of the files can be drawn
+        Assert.All(sounds, sound => Assert.Contains(soundFiles.WaveOf(sound.Hash)!.Peaks, peak => peak > 100));
+    }
+
+    [Fact]
+    public void TheShowOfSoundsInTheStackLetsTheRainFallThroughFourScenes()
+    {
+        var time = new ManualTime();
+        var desk = new Desk(time);
+        var soundFiles = new SoundStore(Path.Combine(_folder.FullName, "store"));
+        new ProjectStore(desk, _folder.FullName, Examples, soundFiles).OpenExample("9 Sounds in the stack");
+        StackStep[] stack = desk.GetStack().Steps;
+        Assert.All(desk.GetSounds(), sound => Assert.NotNull(soundFiles.InfoOf(sound.Hash)));
+        Assert.Contains(stack, step => step.Target == Step.SoundTarget && step.Continue);
+        Assert.Contains(stack, step => step.Target == Step.SoundTarget && step.Add && !step.Continue);
+        Assert.Contains(stack, step => step.Target == Step.Release && stack.Any(other => other.Id == step.Number && other.Continue));
+        Assert.Contains(stack, step => step.Target == Step.EffectTarget);
+
+        bool Plays(int sound) => desk.GetSoundPlayback(sound).Playing;
+        void Go(bool live = false)
+        {
+            if (live)
+                desk.SetStackLive(true);
+            else
+                desk.StackNext();
+            time.Pass(15);   // every fade and release of a scene is over
+            desk.Tick();
+        }
+
+        Go(live: true);   // 1.0 Night, 1.1 the music
+        Assert.True(Plays(1));
+        Go();             // 2.0 the rain
+        Go();             // 3.0 Storm, 3.1 the wind, 3.2 the lightning, 3.3 the thunder
+        Assert.True(Plays(1) && Plays(2) && Plays(3) && Plays(4));
+        Go();             // 4.0 the music is released
+        Assert.False(Plays(1));
+        Go();             // 5.0 Church, 5.1 the wind is released, 5.2 the bell
+        Assert.True(Plays(2) && Plays(6));
+        Assert.False(Plays(3));
+        Go();             // 6.0 Morning, 6.1 the rain is released
+        Assert.False(Plays(2));
+        Assert.Equal(255, desk.GetOutput()[0]);   // the front of Morning at full
     }
 
     private static string WithoutCarriageReturns(string text) => text.Replace("\r\n", "\n", StringComparison.Ordinal);

@@ -32,6 +32,12 @@ internal enum FaderKind
 
     /// <summary>The live spread of an effect, 0-100 %.</summary>
     EffectSpread,
+
+    /// <summary>The fader of a sound, 1-64: its level.</summary>
+    Sound,
+
+    /// <summary>The master volume of the sound, 0 to 200 %.</summary>
+    SoundVolume,
 }
 
 /// <summary>
@@ -42,7 +48,8 @@ internal enum FaderKind
 /// <list type="bullet">
 /// <item>fader.channel.N (1-4096), fader.memory.N (1-128), fader.master, fader.rate (the tempo),
 /// fader.sequence.N (the speed of the sequence in memory N), fader.effect.N (1-64, how much of it),
-/// fader.effect-speed.N, fader.effect-size.N, fader.effect-spread.N;</item>
+/// fader.effect-speed.N, fader.effect-size.N, fader.effect-spread.N, fader.sound.N (1-64, its
+/// level), fader.sound-volume (the master volume of the sound);</item>
 /// <item>fader.slot.channel.K, fader.slot.memory.K, fader.slot.effect.K: the K-th fader of the
 /// page of channels, memories or effects the PC shows, which follows its page keys.</item>
 /// </list>
@@ -84,9 +91,11 @@ internal readonly partial record struct ControlTarget(string Name, FaderKind? Fa
                 "effect-speed" when !slot => FaderKind.EffectSpeed,
                 "effect-size" when !slot => FaderKind.EffectSize,
                 "effect-spread" when !slot => FaderKind.EffectSpread,
+                "sound" when !slot => FaderKind.Sound,
+                "sound-volume" when !slot => FaderKind.SoundVolume,
                 _ => null,
             };
-            bool numbered = found is not (FaderKind.Master or FaderKind.Rate);
+            bool numbered = found is not (FaderKind.Master or FaderKind.Rate or FaderKind.SoundVolume);
             if (found is null || numbered != fader.Groups["number"].Success || (numbered && number is < 1 or > MaxNumber))
                 return null;
 
@@ -112,7 +121,8 @@ internal readonly partial record struct ControlTarget(string Name, FaderKind? Fa
 /// A channel, a memory, the master and an effect's fader are their levels; the rate goes from 30
 /// to 300 BPM; a sequence's speed has 1x in the middle (0.1x to 1x from 0 to 127, 1x to 10x from
 /// 128 to 255: both middle places are 1x, easy to find by hand); an effect's live speed goes in
-/// octaves from 0.5 to 600 BPM; its size and spread are per cent.
+/// octaves from 0.5 to 600 BPM; its size and spread are per cent. A sound's fader is its level; the
+/// master volume of the sound goes from 0 to 200 %.
 /// </summary>
 internal static class FaderScale
 {
@@ -148,6 +158,7 @@ internal static class FaderScale
             FaderKind.Rate => (value - MinBpm) / (MaxBpm - MinBpm),
             FaderKind.EffectSpeed => Math.Log(Math.Clamp(value, MinEffectSpeed, MaxEffectSpeed) / MinEffectSpeed) / Math.Log(MaxEffectSpeed / MinEffectSpeed),
             FaderKind.EffectSize or FaderKind.EffectSpread => value / 100,
+            FaderKind.SoundVolume => value <= Sound.MinDecibels ? 0 : Math.Pow(10, value / 40),   // the gain is the place squared
             _ => value / Top,
         };
         return (int)Math.Round(Math.Clamp(share, 0, 1) * Top);
@@ -168,7 +179,8 @@ internal static class FaderScale
                 ? MinSpeed + ((1 - MinSpeed) * place / Half)
                 : 1 + ((MaxSpeed - 1) * (place - Half - 1) / Half)),
             FaderKind.EffectSpeed => Math.Round(MinEffectSpeed * Math.Pow(MaxEffectSpeed / MinEffectSpeed, share), 1),
-            FaderKind.Effect => Math.Round(share * 100, 1),
+            FaderKind.Effect or FaderKind.Sound => Math.Round(share * 100, 1),
+            FaderKind.SoundVolume => share <= 0 ? Sound.MinDecibels : Math.Max(Sound.MinDecibels, Math.Round(40 * Math.Log10(share), 1)),
             FaderKind.EffectSize or FaderKind.EffectSpread => Math.Round(share * 100),
             _ => Math.Clamp(position, 0, Top),
         };

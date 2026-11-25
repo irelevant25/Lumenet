@@ -6,4 +6,11 @@ namespace DmxBox.Server;
 /// <param name="Boxes">The boxes, which of them are connected and what they play, see <see cref="BoxNetwork.Boxes"/>.</param>
 /// <param name="Project">The project that is open.</param>
 /// <param name="Outputs">The outputs besides the boxes, with their states, see <see cref="OutputNetwork.Outputs"/>.</param>
-internal sealed record HelloAnswer(string Version, DeskState Desk, BoxView[] Boxes, ProjectInfo Project, OutputView[] Outputs);
+internal sealed record HelloAnswer(string Version, DeskState Desk, BoxView[] Boxes, ProjectInfo Project, OutputView[] Outputs)
+{
+    /// <summary>The Soundcraft Ui mixer of the tracks: whether it answers, what it is, its playlist.</summary>
+    public MixerView Mixer { get; init; } = new(UiMixer.None, "");
+
+    /// <summary>LISTEN ON: whether what goes out plays on the device to listen on as well.</summary>
+    public ListenView Listen { get; init; } = new(false, "");
+}

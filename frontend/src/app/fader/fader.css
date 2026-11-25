@@ -19,6 +19,10 @@
   --lamp: var(--effect);
 }
 
+:host(.tone-sound) {
+  --lamp: var(--sound);
+}
+
 :host(.tone-system) {
   --lamp: var(--system);
 }

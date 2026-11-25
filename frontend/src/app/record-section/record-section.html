@@ -12,7 +12,7 @@
       [attr.aria-pressed]="item.active"
       [attr.aria-label]="item.name"
       [attr.data-action]="'record.' + item.function"
-      (click)="store.pressFunction(item.function)"
+      (click)="press(item.function)"
     >
       <span class="words" [class.two]="item.label.length > 1">
         @for (word of item.label; track $index) {

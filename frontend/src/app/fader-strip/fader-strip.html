@@ -6,7 +6,7 @@
   [value]="value()"
   [ownLevel]="ownLevel()"
   [label]="name()"
-  [tone]="kind()"
+  [tone]="faderTone()"
   (valueChange)="valueChange.emit($event)"
 />
 
@@ -35,7 +35,7 @@
   {{ caption() ?? number() }}
 </button>
 
-@if (kind() === 'effect' && choosable()) {
+@if (named() && choosable()) {
   <button
     type="button"
     class="note chooser"
@@ -47,7 +47,7 @@
     <span>{{ nameLines()[0] || '—' }}</span>
     <span>{{ nameLines()[1] }}</span>
   </button>
-} @else if (kind() === 'effect') {
+} @else if (named()) {
   <div class="note" [attr.title]="note() || null">
     <span>{{ nameLines()[0] }}</span>
     <span>{{ nameLines()[1] }}</span>

@@ -205,6 +205,7 @@ internal sealed class MidiMapper
                 FaderKind.Channel when target.Number > _desk.ChannelCount => null,
                 FaderKind.Memory or FaderKind.Sequence when target.Number > Desk.MemoryCount => null,
                 FaderKind.Effect or FaderKind.EffectSpeed or FaderKind.EffectSize or FaderKind.EffectSpread when target.Number > Effect.MaxEffects => null,
+                FaderKind.Sound when target.Number > Sound.MaxSounds => null,
                 _ => new DeskFader(kind, target.Number),
             };
         }

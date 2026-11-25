@@ -1,8 +1,9 @@
 /* Channels (two rows of faders) above memories (one row), or as many rows as Settings says: the
    two sections share the height in the proportion of their rows (--channel-share and
    --memory-share, set by main-view.ts). At the right, over the whole height: the stack across the
-   top, and under it three columns: the master section over the record keys, the general section,
-   and the independents at the right edge, unless Settings shows none of their keys. */
+   top, and under it four columns: the master section over the record keys, the general section,
+   the sound section, and the independents at the right edge, unless Settings shows none of their
+   keys. */
 :host {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -12,11 +13,19 @@
   min-height: 0;
 }
 
-/* the row of effect faders under the memories, as high as one row of memories */
-:host(.with-effects) {
+/* the row of effect faders under the memories, and the row of sound faders under them: each as high
+   as one row of memories */
+:host(.with-effects),
+:host(.with-sounds) {
   grid-template-rows:
     minmax(0, var(--channel-share, 2fr)) minmax(0, var(--memory-share, 1fr))
     minmax(0, 1fr);
+}
+
+:host(.with-effects.with-sounds) {
+  grid-template-rows:
+    minmax(0, var(--channel-share, 2fr)) minmax(0, var(--memory-share, 1fr))
+    minmax(0, 1fr) minmax(0, 1fr);
 }
 
 /* The stack (its title, and its five keys or the wheel of steps, --wheel-size of them, whichever
@@ -43,7 +52,7 @@
   display: grid;
   grid-row: 1 / -1;
   grid-column: 2;
-  grid-template-columns: auto auto auto;
+  grid-template-columns: auto auto auto auto;
   grid-template-rows:
     minmax(
       calc(var(--frame) + var(--keys-min)),
@@ -57,7 +66,7 @@
 }
 
 :host(.no-independents) .side {
-  grid-template-columns: auto auto;
+  grid-template-columns: auto auto auto;
 }
 
 lm-stack-section {
@@ -94,7 +103,7 @@ lm-stack-section {
   order: -3;
 }
 
-:host-context(.mobile) lm-general-section {
+:host-context(.mobile) :is(lm-general-section, lm-sound-master) {
   order: -2;
 }
 

@@ -930,6 +930,154 @@ value out of its range is refused with the reason ("The speed of an effect goes 
 The MIDI controllers call it through the targets `fader.effect.N`, `fader.effect-speed.N` and the like (see
 [MIDI controllers](#midi-controllers)); OSC is to do the same.
 
+### Sounds
+
+The desk program plays the sounds itself, with NAudio (MIT): on Windows through WASAPI, shared, on one
+device of the PC; elsewhere, and on a desk for tests (`--Sound:Output=none`), the mixer runs on a clock of
+its own without a device, so that playing, ending and the positions work the same.
+
+* **Where:** `Sound.cs` is a sound as the project keeps it (number 1 to 64, name, the file's name and hash, start, end, loop, its level in decibels, fades, pan, speed, pitch, echo, reverb)
+  and its check. `Desk.Sounds.cs` plays them as the desk sees it: the faders, the keys with their fades, the
+  volume of all sounds and MUTE; it tells `ISoundPlayer` what to start, level and stop. `SoundEngine.cs` is
+  that player: the device (`sound.json` of the PC beside `midi.json`: the device's id, empty for Windows'
+  default, the pair of outputs (`outputs`; the `music` of a sound.json of before is read as it), the
+  device to listen on, and the mixer and its playlist; the page's Sound part of Settings, in the panel of
+  the views, `sound-output`, which shows the outputs only for a device of more than two), watched every 2
+  seconds for a
+  device that went or came back. A change of the outputs or of the listening leaves the device open.
+  `SoundMixer.cs` mixes on the audio thread: commands are posted to it, gains move in short ramps, the
+  sounds go out on their pair of outputs, under the volume of all sounds and MUTE; a voice's gain is
+  its fader times the gain of its sound's own level (`Sound.GainOf`). `SoundVoice.cs` is one
+  sound: the file read from its start to its end (in a loop), the speed (WdlResampler), the pitch
+  (SmbPitchShifter, only when the pitch is not the speed's), pan, echo (a delay with feedback) and reverb
+  (Freeverb).
+* **Listen on:** the mixer writes what goes out, every sound in stereo under the
+  master, into a `ListenTap` (`ListenTap.cs`), a ring of a second that the second device reads on its own
+  clock (`ListenSource`: WdlResamplingSampleProvider to its rate, the first two of its outputs). Two devices
+  never run at quite the same pace: the reader stays 80 ms behind, jumps on when it falls more than twice
+  that behind, and waits (silence) when it catches up. The device of the sound itself is not opened again
+  (state "same").
+* **Decibels:** every level of a sound is in decibels, -100 (nothing) to 0, to a tenth (`Sound.Tenth`,
+  never minus zero): a sound's own level (`Sound.Decibels`, "decibels" in the project file, left out at 0) and
+  the volume of all sounds (`Desk.SetSoundVolume`, `DeskState.SoundDecibels`, not in the project). A gain
+  is 10^(dB/20), nothing at -100. The fader of the volume of all sounds, on the page (`decibelsAt` and
+  `placeOf` in `sounds.ts`, also the slider of a sound's level) and on a MIDI controller
+  (`FaderScale`), has the gain as its place squared: 255 places, 0 dB at the top, -12 dB half way. A file
+  written before this kept "volume" in per cent; it is read as 20·log10(p/100), at most 0 dB (120 % plays at
+  0 dB, 0 % is nothing), and written as decibels from then on; its "category" (music or a sound effect,
+  which had a color and outputs of its own) is passed over. Every new sound is at 0 dB, a track too; the
+  volume of all sounds is -20 dB at first (`Desk.DefaultSoundDecibels`, the page's
+  `DEFAULT_SOUND_DECIBELS`), and a double click on its fader puts it back there.
+* **The wave:** `GET /api/sounds/{hash}/wave` reads the whole file once (`SoundWave.cs`, on a thread of
+  the pool) and gives the loudest sample and the mean loudness of each of 1000 parts, 0 to 255, as Base64;
+  the store keeps it while the desk program runs. The page (`sound-wave`) draws it on a canvas and moves the
+  line on at the sound's speed between the positions the desk program sends about 10 times a second.
+* **Steps of sounds** (`Step.SoundTarget`, "sound"): in the stack they move the sound's fader like an effect
+  step (`Fader.Sound` in `Desk.Stack.cs`); in a sequence `AddSequenceSounds` gives `SoundRun.Played`, the
+  higher of it and the fader counts. `Step.Continue` (sounds only) keeps a step on through steps without
+  Add, in the stack (`OnAfter`) and in `SequenceTimeline` (also through the start of a round), until a
+  release names it; in the stack a step whose sound has ended leaves (`LeaveEndedSounds`), Stack off stops
+  them (`StopContinuingSounds`), and `OnAt` (Prev, going round) takes a step of a sound other than the
+  target only while its sound plays. A step of a sound that starts plays the sound again when it is over:
+  `Enter` in the stack, and in a sequence a new step or round seen in `_soundStepsSeen`. Such steps make a
+  file version 9 too ("continue": true).
+* **Prev and Next at once:** `StackPrevious` and `StackNext` end every move (`EndMoves`), enter the step
+  with `atOnce` (moves of no time, no crossfade) and settle the sounds right away, so a sound of a step that
+  goes stops at once. After Prev a wait does not take the stack on (`Holding`): a step played by mistake
+  does not come again. Play keeps the steps' times.
+* **Skipped steps** (`Step.Disabled`, "disabled": true, version 9): the stack's `EntryBeside` passes over
+  them (Play, Next, Prev, waits, going live from the first one not skipped; all skipped refuses going
+  live), `OnAt` leaves them out; `SequenceTimeline.InTurn` makes the rounds of the other steps only.
+  `SetStackStepDisabled` and `SetSequenceStepDisabled` are the only changes of stored things allowed
+  while the stack is live; they refuse the step that is on (the current one of the stack, the step a
+  running sequence plays). The page sends them from the box at the end of a row, also while live.
+* **The editor** sends a sound at once and then at most every 60 ms while it keeps changing (a slider), the
+  newest each time; the history makes one step of them. A list of the sounds that comes meanwhile leaves the
+  sound being sent as the page has it.
+* **Files:** `SoundStore.cs` keeps each file once, under the start of its SHA-256 (32 hex digits), in
+  `sounds` beside the LAN password (`--Sound:Folder`). A page sends a file with `POST /api/sounds?name=`
+  (SignalR would take 10 MB at most), and `GET /api/sounds/{hash}` gives it back. Save writes the project's
+  files into "<Name> sounds" beside "<Name>.json"; Load copies those the store lacks. A project with sounds
+  is a file of version 9. Export of such a project is a ZIP (`SoundPack.cs`): the page sends the text of
+  Export to `POST /api/export/pack?name=` and saves the ZIP it gets (the file of Export and "<Name> sounds/");
+  Import sends a ZIP to `POST /api/import/unpack`, which takes its sound files into the store and gives
+  back the file of Export. An example with sounds has them in "<Name> sounds" beside it too: `examples/8
+  Sounds sounds`, made from noise, filters and sine waves by `backend/ExampleSounds` (`dotnet run
+  --project backend/ExampleSounds -- <folder>`, on Windows, whose own encoder makes the MP3 files; no part
+  of the solution). It gives the same files byte for byte; the loops are WAV, so that they go round
+  without a gap, the rest MP3. DmxBox.Server copies them with the examples, Lumenet.exe carries
+  them as resources and unpacks them into the examples' folder, and opening the example takes them in.
+* **The hub:** GetSounds, SetSound (the file must be in the store, a track needs none; a file name another
+  sound uses for another file gets "(2)"), DeleteSound, CopySound, SetSoundControl ("go", "toggle", "level"
+  in per cent: also the way in for MIDI), SeekSound, SetSoundVolume (decibels, -100 to 0), SetSoundMute,
+  SetSoundListen (LISTEN, from any page), SetSoundIndependent, GetSoundOutput and SetSoundOutput (only a
+  page on the PC), GetMixerPlaylists, GetMixerTracks and AddMixerTracks (any page: the tracks of a playlist
+  that are no sound yet become sounds in the free numbers, one step of Undo). The pages hear SoundsChanged,
+  SoundPlaybackChanged, SoundMasterChanged (decibels and MUTE), SoundOutputChanged (the pages on the PC),
+  MixerChanged and SoundListenChanged (all; Hello has `mixer` and `listen` too).
+* **Tracks of a Soundcraft Ui mixer:** a sound with a `Playlist` is a track of the mixer's USB stick, and
+  plays on the mixer's player while the mixer answers; every other sound is a file and plays on the PC,
+  side by side (no mode switches between them; at first there was a "player mode" in which only tracks
+  played, and the owner found that it only got in the way). `UiMixer.cs` is the link, worked out from soundcraft-ui-connection
+  (MIT, Ferdinand Malcher): a websocket to ws://address, frames "3:::" with lines "SETD^path^number" and
+  "SETS^path^text"; the mixer sends its whole state on connecting, every change after that but not the
+  client's own (so the link notes what it sets), and its meters about 50 times a second: 5 seconds of
+  nothing is a lost mixer (a Wi-Fi gone). ALIVE every second, a new try every 2 seconds, the lines out
+  one after the other through a channel. Lists on request: MEDIA_GET_PLISTS gives PLISTS^..., and
+  MEDIA_GET_PLIST_TRACKS^list gives PLIST_TRACKS^list^... (empty entries dropped; names sent back
+  exactly, a stick keeps many in NFD). The player: settings.playMode 0 (manual), MEDIA_SWITCH_TRACK^list^track,
+  MEDIA_PLAY, MEDIA_STOP; var.currentState (2 playing, 3 paused), var.currentTrack, var.currentLength,
+  var.currentTrackPos (0 to 1); MEDIA_JUMP_TO^part (0 to 1) jumps, as the mixer's own web page does. Of
+  the mixer's channels the desk works PLAYER L/R only (p.0 and p.1, the same value; `UiFader` is the
+  mixer's fader law: 0 dB at 0.7647, +10 dB at the top), while it answers, as the sound section, both
+  ways. The desk sends the volume of all sounds while no track plays, and while one does the volume plus
+  the track's own level plus 20·log10 of its fader (`UiTrackPlayer.TargetDecibels`), from the bottom at
+  the start of a track, at most every 50 ms while it moves (the last place after that pause, on a timer),
+  the bottom at once; MUTE sets p.0.mute and p.1.mute. A track the desk stops takes PLAYER L/R to the
+  bottom before MEDIA_STOP, and they stay there (`StopQuietly`, `Wake`): the player sounds on a moment
+  after MEDIA_STOP, and with PLAYER back up at once the owner heard up to half a second at full level. The
+  quiet lasts `QuietTime` (1.5 s), longer while the mixer says the stopped track plays (at most 4 s); a
+  track started meanwhile gets its level when the mixer says it plays that one. The other way: the mixer tells no client its own
+  changes, so every p.0/p.1 mix or mute `UiMixer` hears is another's (`PlayerMoved`, `PlayerMuted`),
+  except what it tells in the first 1.5 s after it was found again when the link had set PLAYER before:
+  that is its state as it was, and the desk sends what it wants instead. `UiTrackPlayer` turns a heard
+  place into the volume of all sounds (what is left after the level and the fader of the track that plays;
+  nothing while its fader is at 0) and a heard mute into MUTE, and records the place as sent, so that
+  nothing goes back; `VolumeHeard` and `MuteHeard` go through the engine (`ISoundPlayer`) to
+  `Desk.SoundMasterHeard`, and Program.cs tells every page (SoundMasterChanged; MIDI motors follow the
+  desk). The first connection takes PLAYER as it stands. (At first the desk set 0 dB,
+  far too loud in the room; then the level on the mixer was 100 % and the desk's volume worked from it;
+  then each track got a level of its own in decibels; then the owner made PLAYER L/R the sound section,
+  both ways, the volume at -20 dB at first.) `UiTrackPlayer.cs` plays tracks (sounds with `Playlist`,
+  `Sound.CheckedTrack` keeps only name, level and fades; `SameSource` compares tracks): one at a time,
+  counted as playing for 3 seconds after its start whatever the mixer says
+  (the player loads), then while the player has it (`SameTrack`: NFC, a folder before it, no ending); a
+  track the player never took is missing; while the link is lost a track plays on. `SoundEngine` routes by
+  `_onMixer` (the sound under a number is a track); a track without the mixer is missing at once.
+  sound.json keeps `mixer` and `playlist` (empty: every track, "~all~"); a `playerMode` of before is
+  passed over. The key Find of Settings (`FindMixers` of the hub, only from the PC; `UiMixerFinder.cs`)
+  tries port 80 of every address of the PC's networks (254 of each, those of the 24 bits around the PC in a
+  bigger one) and 10.10.1.1, within 0.7 s, then asks those that answer as the link asks a mixer: one that
+  tells its model is one. It changes nothing on them. Checked against a Ui16 (firmware 1.0.7548): its lists, and with the owner's word one
+  track played with PLAYER L/R both ways (see the checks, 2026-11-25, evening); the tests use a pretend mixer
+  (`PretendUiMixer.cs`).
+* **MIDI:** fader.sound.N moves a sound's fader, fader.sound-volume the volume of all sounds (-100 dB at 0,
+  0 dB at the top, the gain as the place squared).
+* **Seeking** (`SeekSound` of the hub, `ISoundPlayer.Seek`): a file's voice jumps on the mixer's thread
+  (`SoundMixer.Seek`, clamped to its start and a moment before its end, its gain from 0 again so that it
+  does not click); a track jumps with MEDIA_JUMP_TO once the mixer told its length. The page sends it from a
+  double click on the wave (`sound-wave`, a slider for the keyboard while the sound plays), also from the
+  wave over the Stack and Stage views (`sound-now`, the sound `DeskStore.shownSound` picks).
+* **The end of a sound** (`Desk.Sounds`): where its fader is the hand's (`FaderOfHand`: no sequence plays
+  it, the live stack neither moves it nor has a step of it on), a sound without a loop takes its fader down
+  with its end: `FadeAtEnd` starts a move to zero in the time that is left once that is no more than the
+  fade-out time (not while a key moves the fader), and a sound that is over drops its fader to zero.
+  `EndFading` marks that move: a seek takes it back. Faders the stack holds keep the old way (over with
+  the fader up), on which Continue and the restart of a step rely.
+* **Sound keys of the independents** (`Desk.SoundIndependentCount`, 32 bound to sounds 1 to 32): kept in
+  the project ("soundIndependents", written only when not as on a new desk, version 9), set with
+  `SetSoundIndependent`, heard as SoundIndependentChanged; on the page `ind.sound.N`, a count in Settings.
+
 ### MIDI controllers
 
 The desk program takes the MIDI controllers of the PC, not the page: several pages are often open at once
@@ -1033,7 +1181,7 @@ publish.cmd        # builds the page, then publish\Lumenet.exe
 
 ### Tests
 
-`dotnet test backend/DmxBox.sln` (775 tests: the client, also against the simulator with two outputs, the
+`dotnet test backend/DmxBox.sln` (844 tests: the client, also against the simulator with two outputs, the
 desk, solo, sequences and the stack with a clock the tests set by hand, the rate and its tempo, undo and the autosave, the
 stage plan and its picture, fixtures, their attributes, their steps and their notes, the notes, the
 universes, project files with Export and Import, the examples, the import of show files, the links to the
@@ -1047,7 +1195,30 @@ shapes, the places in the run and the pixels, and project files of version 7; MI
 bytes, the scales, 14 bits, the endless encoders, pickup, slots that follow the pages, held keys, the page
 that presses the keys, Learn, lights and motors sent back, devices pulled out and plugged in again with
 pretend ports (`MidiPretend.cs`), midi.json, the ready-made mappings, and the simulated controllers against
-the desk's own ports), and in `frontend/`: `npm test -- --watch=false` (264 tests of the page; for MIDI the
+the desk's own ports; the sounds: the mixer with real files (levels, pan, routing, start, end and loop,
+speed and pitch by the frequency, echo and reverb), the desk's faders, keys, master and MUTE with a pretend
+player, the files beside a project of version 9, the ZIP of Export and Import, the hub with its upload, the
+wave of a file, the tap of Listen on and its ring, the example with its files, and the steps of sounds in the
+stack and in sequences with Add, Continue, releases, Stack off, Prev and new rounds; the tracks of a
+pretend Soundcraft mixer: the fader law, the lists, the player, one track at a time, PLAYER L/R as the
+sound section both ways (taken over when the mixer is found, the volume with the level and the fader of
+the track that plays on it, back at the volume after it, a hand on L or R and on their mute, a mixer found
+again, PLAYER L/R at the bottom while a stopped track sounds on), a jump in a track, a lost mixer, files and
+tracks playing side by side, the finder of mixers, tracks in the project and the hub, a playlist's tracks
+added as sounds; levels in decibels and files with the volume in per cent and the
+category of before; LISTEN from any page; one pair of outputs; seeking in a file, the fader of a sound down with its end, Prev and Next at once and a
+step played by mistake taken back, and the sound keys of the independents), and in `frontend/`:
+`npm test -- --watch=false` (295 tests of the page; for the sounds the SOUND section with LISTEN and its
+volume in decibels (-20 dB at first), every sound in one color, the row on Main with
+Copy and Del, the Sounds view with a file added, its editor with sliders that send while they move, the wave,
+the device and Listen on, Export and Import of a ZIP; Copy and Del of the Memories, Sequences and Effects
+views, kept to looks and to sequences; steps of sounds with Continue in both tables; the mixer in the
+Sound part of Settings with the outputs of a device of four, Find (none, several, one) and the
+playlist, a track of the mixer added on the Sounds view (only while it answers) and its editor with its
+level, the Stage view's master and sound sections, the steps that offer files and tracks alike and the
+tracks of the playlist, the level of a sound in decibels, the wave
+that seeks with a double click and with keys, the wave over the Stack view, RECORD under the page keys of the
+Memories and Sequences views, and the sound keys of the independents; for MIDI the
 keys of a controller pressed as shortcuts with their locks and holds, the keys of the pages shown, the lamps
 and pages told, the panel, Listen, and Export and Import; for sequences Add, Release and Effect in the table,
 the releases following their steps, and the steps that are on).
@@ -1750,6 +1921,61 @@ receivers listen at 5568 and the desk sends from a port of its own.
   the channels' title and the line at the top of Memories, and nothing on a key, the head of a kind, a
   link of the top bar or a channel fader; a double click on a cell of the Memories table opened its fields
   with nothing selected. No error on the page.
+* **Sounds, and player mode with a Soundcraft Ui mixer (2026-11-25):** the backend passes 840 tests and the
+  page 295. On test copies (port 5081, `--Sound:Output=none`, so nothing was heard there: what sounds is the
+  owner's to judge) with a pretend Ui mixer on 127.0.0.1 whose PLAYER L stood at 0.45 (-14.7 dB), in Edge
+  headless: "Add all its tracks" made three sounds at -20 dB; a track at -10 dB put PLAYER at 0 and then at
+  -10.0 dB; the volume of all sounds at -6 dB gave -16.0 dB; the track's level changed to -3 dB while it
+  played gave -9.0 dB; MUTE muted and unmuted PLAYER; its key's fade-out of 2 s moved PLAYER down in 31
+  steps, and the stop put it back at 0.45. The SOUND fader showed -12 dB half way (place 128), also lying on
+  the Stack view; a track's editor shows its level. Before that, in the same way: Prev took back a step of
+  example 9 and held, a double click on the wave jumped to 21.7 s, the page keys of the channels pulled with
+  the mouse scrolled 120 pixels without pressing a key while a click still pressed one, Edit of the
+  independents stood alone in its row over four columns, the Stage view showed the master section, the
+  cards and the sound section side by side, and RECORD stood under the page keys of Memories. The owner's
+  Ui16 (firmware 1.0.7548) was only connected to and listed: the desk has never played a track on it or
+  moved one of its faders. No error on the page. AXE was not run.
+* **One kind of sound, PLAYER L/R both ways, Settings (2026-11-25, evening):** the owner's words: the
+  volume of all sounds -20 dB at first and each sound 0 dB; no music and sound effects, every sound one
+  color (so one pair of outputs); MUTE and the volume of PLAYER L/R follow what is set on the mixer; on
+  the Stage view the master and sound sections between the wave and the steps; no "at 255" in the steps
+  of the cards; the line on the wave trembled; the Sounds view still asked for a playlist; the Sound panel
+  of Settings sank to 26 pixels at 2354 pixels wide and was to go under the views; no sentence about the
+  autosave; labels beside their fields; the effect editor without its own Copy and Del; the generator of
+  the example sounds into the repository. The backend passes 843 tests and the page 295. On a test copy
+  with the pretend mixer (PLAYER at 0.45, -14.7 dB), which passes a change of one client to the others as
+  the real one does, in Edge headless: player mode on made the volume -14.7 dB; a second client putting
+  PLAYER L at -25 dB made it -25 dB, the SOUND readout on Main too, and its mute lit MUTE, unmuted unlit
+  it; the Sounds view offered the three tracks of the playlist of Settings, and the one picked became a
+  sound at 0 dB without a category; the Stage view stood keys, cards, wave, master, sound, steps; over 180
+  frames of a playing track the line on the wave never went back (it moved from x 33 to 58). Settings at
+  2354 pixels: five panels in a row, the Sound part under the views; at 1920 the Outputs panel went on
+  under the others, 954 pixels high (before: 26), the panels scrolling down to it; at 2354 and 1400 every
+  label beside its field. The generator made the six files of the examples byte for byte. No error on the
+  page. AXE was not run. Then, with the owner's word, on the owner's Ui16 (firmware 1.0.7548) from the test
+  copy: PLAYER L/R stood at -30.3 dB, and player mode on made that the volume; a track of All tracks at its
+  own -9.7 dB played at -40.0 dB on PLAYER L/R; the volume 3 dB down gave -43.1 dB; a second client putting
+  PLAYER L/R at -46 dB made the volume -36.3 dB, its mute lit MUTE and its unmute put it out; after the
+  track PLAYER L/R stood at the volume, -36.3 dB. Then PLAYER L/R, their mute and the player's play mode
+  were put back as they were, and a new connection read them so. Then the owner heard, at the end of a
+  fade-out, up to half a second of the track at full level: the desk put PLAYER L/R back up at once after
+  MEDIA_STOP, while the player sounded on. Now they wait at the bottom until it is quiet. A test does a
+  fade-out that ends in a stop and a track started right after a stop; the backend passes 844 tests. On the
+  test copy with the pretend mixer, a key's fade-out of 1.5 s took PLAYER L down in 25 moves to the bottom at
+  1550 ms, MEDIA_STOP went at 1550 ms, and PLAYER came back at the volume at 3037 ms. Not yet heard on the
+  real mixer.
+* **No player mode; Find; the outputs only where there is a choice (2026-11-25, night):** the owner's words:
+  why can the normal music not play in player mode; avoid that setting; while the mixer is connected just
+  offer its tracks on the Sounds view (and nothing of it before); find the IP by itself, typing still
+  possible; what does "On outputs 1-2" mean; no sentence under the sound editor. Now each sound plays where
+  it belongs, files and tracks side by side; the Sounds view offers the mixer's tracks only while it
+  answers (every track, or those of the playlist of Settings); the outputs show only for a device of more
+  than two ("1 and 2 (of 4)"); the key Find. The backend passes 845 tests and the page 295. On a test copy
+  with the pretend mixer, in Edge headless: no field for tracks without the mixer, five tracks of All
+  tracks with it, the one picked became sound 20 (playlist "~all~"), and sound 1 of example 8 (a file) and
+  sound 20 (a track) played together; Settings showed no switch of a mode, no outputs for two, and Find.
+  Find on this PC took 0.9 s and found the owner's Ui16 ("ui16, firmware 1.0.7548-ui16") and nothing else,
+  asking it only what it is. No error on the page.
 * **dmxbox 2 on paper (2026-11-23):** both versions (two outputs and one) are drawn from their `circuit.py`,
   and each drawing passed its check against it: the schematic, the breadboard plan, the perfboard plan (38 and
   26 insulated wires, with SW1 at the cut left edge and the holes around the four screws kept empty;

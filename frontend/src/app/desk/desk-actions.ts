@@ -9,6 +9,7 @@ import {
 } from './desk-types';
 import { EFFECT_INDEPENDENT_COUNT, MAX_EFFECTS } from './effects';
 import type { FunctionName } from './function-mode';
+import { MAX_SOUNDS, SOUND_INDEPENDENT_COUNT } from './sounds';
 import { universeStart } from './universes';
 
 /** What an action needs when its key is not on the view that is shown. */
@@ -43,6 +44,7 @@ export const ACTION_GROUPS = [
   'Project and LAN',
   'Master',
   'General',
+  'Sound',
   'Stack',
   'Record',
   'Sequences view',
@@ -53,9 +55,11 @@ export const ACTION_GROUPS = [
   'Channel pages',
   'Memory pages',
   'Effect pages',
+  'Sound pages',
   'Channel keys',
   'Memory keys',
   'Effect keys',
+  'Sound keys',
 ] as const;
 
 export type ActionGroup = (typeof ACTION_GROUPS)[number];
@@ -68,6 +72,8 @@ export const MAX_CHANNEL_PAGES = UNIVERSE_SIZE / 8;
 export const MAX_MEMORY_PAGES = MEMORY_COUNT / 4;
 /** With 4 effects in a row (a channel size of 8 in two rows), 16 pages of effects. */
 export const MAX_EFFECT_PAGES = MAX_EFFECTS / 4;
+/** The same for sounds. */
+export const MAX_SOUND_PAGES = MAX_SOUNDS / 4;
 
 const RECORD_KEYS: readonly { function: FunctionName; label: string }[] = [
   { function: 'save', label: 'Save mem' },
@@ -83,6 +89,7 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
   view('memories', 'Memories view', '/memories'),
   view('sequences', 'Sequences view', '/sequences'),
   view('effects', 'Effects view', '/effects'),
+  view('sounds', 'Sounds view', '/sounds'),
   view('stack', 'Stack view', '/stack'),
   view('stage', 'Stage view', '/stage'),
   view('fixtures', 'Fixtures view', '/fixtures'),
@@ -116,6 +123,9 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
   // tapped in time with the music; only while RATE is lit (the store sees to that)
   { id: 'master.tempo', group: 'General', label: 'Tempo (tap)', run: ({ store }) => store.tapTempo() },
 
+  { id: 'sound.mute', group: 'Sound', label: 'Mute', run: ({ store }) => store.toggleSoundMute() },
+  { id: 'sound.listen', group: 'Sound', label: 'Listen on the device to listen on', run: ({ store }) => store.toggleListen() },
+
   {
     id: 'stack.live',
     group: 'Stack',
@@ -146,9 +156,7 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
   { id: 'sequence.template', group: 'Sequences view', label: 'Template', run: null },
   { id: 'sequence.speed', group: 'Sequences view', label: 'Normal speed (1x)', run: null },
 
-  // The keys of the editor work on the effect it shows.
-  { id: 'effects.copy', group: 'Effects view', label: 'Copy (the effect, to the next free number)', run: null },
-  { id: 'effects.delete', group: 'Effects view', label: 'Del (take the effect out)', run: null },
+  // Keep and ↺ work on the effect the view shows.
   {
     id: 'effects.keep',
     group: 'Effects view',
@@ -164,6 +172,7 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
 
   { id: 'stage.edit', group: 'Stage view', label: 'Edit (stage plan)', run: null },
   { id: 'stage.add', group: 'Stage view', label: 'Add light', run: null },
+  { id: 'stage.panel', group: 'Stage view', label: 'Light (show or hide the panel)', run: null },
   // (The Stage view's Clear is the Clear of General: master.clear.)
   { id: 'fixtures.group', group: 'Stage view', label: 'New group (Fixtures view)', run: null },
 
@@ -189,6 +198,12 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
     group: 'Independents',
     label: `Effect key ${key} of the independents`,
     run: ({ store }) => store.toggleEffectIndependent(key),
+  })),
+  ...numbered(SOUND_INDEPENDENT_COUNT, (key) => ({
+    id: `ind.sound.${key}`,
+    group: 'Independents',
+    label: `Sound key ${key} of the independents`,
+    run: ({ store }) => store.toggleSoundIndependent(key),
   })),
 
   // The U keys above the channel faders, of a project with more than one universe.
@@ -260,6 +275,26 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
       },
     }),
   ),
+  ...numbered(MAX_SOUND_PAGES, (page) => ({
+    id: `page.sound.${page}`,
+    group: 'Sound pages',
+    label: `Sound page ${page}`,
+    run: ({ store }) => {
+      const first = (page - 1) * store.stripsPerRow() + 1;
+      if (first <= MAX_SOUNDS) store.showSoundPage(first);
+    },
+  })),
+  ...[-1, 1].map(
+    (step): DeskAction => ({
+      id: `page.sound.${step > 0 ? 'next' : 'previous'}`,
+      group: 'Sound pages',
+      label: step > 0 ? 'Next sound page' : 'Previous sound page',
+      run: ({ store }) => {
+        const first = store.firstSound() + step * store.stripsPerRow();
+        if (first >= 1 && first <= MAX_SOUNDS) store.showSoundPage(first);
+      },
+    }),
+  ),
 
   // All 4096; the Keyboard panel lists those of the project's universes, and a key of a universe
   // the project does not have does nothing.
@@ -285,7 +320,13 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
     id: `effect.${effect}`,
     group: 'Effect keys',
     label: `Effect key ${effect} (start and stop)`,
-    run: ({ store }) => store.toggleEffect(effect),
+    run: ({ store }) => store.pressItem('effect', effect),
+  })),
+  ...numbered(MAX_SOUNDS, (sound) => ({
+    id: `sound.${sound}`,
+    group: 'Sound keys',
+    label: `Sound key ${sound} (start and stop)`,
+    run: ({ store }) => store.pressItem('sound', sound),
   })),
 ];
 

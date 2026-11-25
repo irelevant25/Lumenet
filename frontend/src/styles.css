@@ -21,6 +21,7 @@
   --blue-lamp: #4aa3ff;
   --live: #ff5247; /* the stack is live: the red of an "on air" sign, on the Stack key and in the top bar */
   --effect: #b388ff; /* effects: their keys and faders, violet */
+  --sound: #2ad4c8; /* sounds: their keys and faders, cyan */
   --previous: var(--blue-lamp); /* the step of the stack before the one that is on: blue */
   --danger: #ff5247; /* a key that takes something out (✕): red */
 
@@ -29,6 +30,9 @@
   --key-channel: var(--channel);
   --key-memory: var(--memory);
   --key-effect: var(--effect);
+  --key-sound: var(--sound);
+  --key-mute: #ff5247;
+  --key-listen: #8ab4ff;
   --key-system: var(--system);
   --key-white: var(--white-lamp);
   --key-blue: var(--blue-lamp);
@@ -68,10 +72,9 @@
   --key-stage-clear: #f1f3f6;
   --key-stage-edit: #ffb020;
   --key-stage-add: #ffb020;
+  --key-stage-panel: #ffb020;
   --key-notes-edit: #ffb020;
   --key-notes-tools: #ffb020;
-  --key-effect-copy: #ffb020;
-  --key-effect-delete: #ff5247;
   --key-effect-keep: #ffb020;
   --key-effect-reset: #ffb020;
 
@@ -88,11 +91,11 @@
 
   /* ---- layout ----
      A wide window shows 32 faders in a row. The width of one fader strip follows the window:
-     32 strips, the one column of page keys beside them and the general section's column are
-     33.64 strips (a key is 0.82 strips wide); the other 395px are the gaps, the paddings and
-     the two other columns at the right (the master section with record, and the independents).
-     When those take more (the independents in two columns on a low window), the rows of faders
-     make their strips a little narrower (channel-section.css). */
+     32 strips, the one column of page keys beside them and the columns of the general and the
+     sound section are 34.46 strips (a key is 0.82 strips wide); the other 425px are the gaps, the
+     paddings and the two other columns at the right (the master section with record, and the
+     independents). When those take more (the independents in two columns on a low window), the
+     rows of faders make their strips a little narrower (channel-section.css). */
   --gap: 10px;
   --strip-gap: 4px;
   --strips: 32; /* faders in one row */
@@ -102,7 +105,12 @@
      page sets it on <html>), the strips keep the width they have here, and a row that is too
      wide for the window scrolls sideways. */
   --fit-line: var(--strips);
-  --strip: clamp(28px, calc((100vw / var(--zoom) - 395px) / 33.64), 60px);
+  --strip: clamp(28px, calc((100vw / var(--zoom) - 425px) / 34.46), 60px);
+  /* The strip of a medium window (16 faders in a row, see html.medium): up to 60px, narrower only
+     on a window under about 1470 pixels. Strips and keys that need not fit 32 faders in a row keep
+     it on a wider window too ("roomy keys" below). */
+  --roomy-strip: clamp(28px, calc((100vw / var(--zoom) - 361px) / 18.46), 60px);
+  --roomy-key: min(var(--roomy-strip), max(32px, calc(var(--roomy-strip) * 0.82)));
 
   /* A column of keys that is too high for its place first gets flatter keys, down to this
      height, and after that it scrolls. */
@@ -113,10 +121,11 @@
   --key-w: min(var(--strip), max(32px, calc(var(--strip) * 0.82)));
   --key-h: calc(var(--key-w) * 0.86);
 
-  /* Lettering sizes that grow with the keys. */
+  /* Lettering sizes that grow with the keys. The ranges of the page keys ("33-64") at least 12px, to be
+     read on a wide window too; a long one breaks after its dash. */
   --key-number: max(11px, var(--key-w) * 0.36);
   --key-word: max(10px, var(--key-w) * 0.3);
-  --key-range: max(9px, var(--key-w) * 0.26);
+  --key-range: clamp(12px, var(--key-w) * 0.36, 15px);
   --readout: max(11px, var(--key-w) * 0.31);
 
   /* The wheel of the stack on the main view: a place for each step, numbers about half as high
@@ -133,7 +142,30 @@
 /* medium: 16 faders in a row, and twice as many page keys */
 html.medium {
   --strips: 16;
-  --strip: clamp(28px, calc((100vw / var(--zoom) - 331px) / 17.64), 60px);
+  --strip: var(--roomy-strip);
+}
+
+/* Roomy keys: a view whose strips wrap into as many lines as they need (the Fixtures view) has no
+   32 faders to fit in a row: on a wide window it keeps the strips and keys of a medium one, instead
+   of getting smaller as the main view's do above 1850 pixels. The sizes that follow from the strip
+   go again from this one. */
+html:not(.mobile) lm-fixtures-view {
+  --strip: var(--roomy-strip);
+  --key-w: var(--roomy-key);
+  --key-h: calc(var(--key-w) * 0.86);
+  --key-number: max(11px, var(--key-w) * 0.36);
+  --key-word: max(10px, var(--key-w) * 0.3);
+  --key-range: clamp(12px, var(--key-w) * 0.36, 15px);
+  --readout: max(11px, var(--key-w) * 0.31);
+}
+
+/* The memory keys at the top of the Memories and Sequences views are roomy too, but each no wider
+   than its place in the line less 4px (100cqw: the box of the keys), so that some room stays
+   between them. */
+html:not(.mobile) :is(lm-memories-view, lm-sequences-view) > .body > .content > .keys [lmLamp] {
+  --key-w: min(var(--roomy-key), (100cqw - (var(--line) + 1) * var(--strip-gap)) / var(--line) - 4px);
+  --key-h: calc(var(--key-w) * 0.86);
+  --key-number: max(11px, var(--key-w) * 0.36);
 }
 
 /* mobile: a small screen, or a window too narrow or too low for the whole desk. The sections
@@ -403,6 +435,30 @@ table.steps tr.next > * {
   border-color: var(--key-next);
 }
 
+/* A step that is skipped (Disabled): faint and struck through, but for its box, which takes it back */
+table.steps tr.skipped > *:not(.skips) {
+  opacity: 0.4;
+}
+
+table.steps tr.skipped > th,
+table.steps tr.skipped td.cue input {
+  text-decoration: line-through;
+}
+
+/* (more particular than the green of Add and Continue, which stand after this) */
+table.steps tr td.skips input {
+  accent-color: var(--danger);
+}
+
+/* a skipped step on the wheel of the stack on Main: faint, its number struck through */
+lm-stack-section li.skipped {
+  opacity: 0.4;
+}
+
+lm-stack-section li.skipped .cue {
+  text-decoration: line-through;
+}
+
 /* while a step is dragged: a line where it would land, above or below this row */
 table.steps tr.drop-before > * {
   box-shadow: inset 0 3px 0 var(--focus);
@@ -412,14 +468,18 @@ table.steps tr.drop-after > * {
   box-shadow: inset 0 -3px 0 var(--focus);
 }
 
-/* Add: a box in the middle of its narrow cell, not a field as wide as the cell */
-table.steps td.adds {
+/* Add, Continue and Disabled: a box in the middle of its narrow cell, not a field as wide as the cell */
+table.steps td.adds,
+table.steps td.continues,
+table.steps td.skips {
   width: 1%;
   padding: 0 10px;
   text-align: center;
 }
 
-table.steps td.adds input {
+table.steps td.adds input,
+table.steps td.continues input,
+table.steps td.skips input {
   width: 18px;
   height: 18px;
   margin: 0;
@@ -429,7 +489,9 @@ table.steps td.adds input {
   cursor: pointer;
 }
 
-table.steps td.adds input:disabled {
+table.steps td.adds input:disabled,
+table.steps td.continues input:disabled,
+table.steps td.skips input:disabled {
   cursor: default;
 }
 
@@ -460,6 +522,25 @@ table.steps select {
 table.steps input:hover,
 table.steps select:hover {
   border-color: var(--legend-dim);
+}
+
+/* The kind and the number of a step in the color of its kind (--kind, set by the row: channels green,
+   memories red, effects violet, sounds cyan or pink), as a key that is half lit: so a table of many
+   steps reads at a glance, also while the stack is live. Each line of a list that opens has the
+   color of its own kind (the row sets --kind on the lines of the kinds and of the sounds). */
+table.steps td.kind select,
+table.steps td.number select,
+table.steps td.kind select:disabled,
+table.steps td.number select:disabled {
+  border-color: color-mix(in srgb, var(--kind, var(--edge)) 80%, transparent);
+  background: color-mix(in srgb, var(--kind, var(--panel)) 40%, var(--well));
+  color: #fff;
+}
+
+table.steps td.kind option,
+table.steps td.number option {
+  background-color: color-mix(in srgb, var(--kind, var(--panel)) 40%, var(--well));
+  color: #fff;
 }
 
 table.steps input:focus-visible,

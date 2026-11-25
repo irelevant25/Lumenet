@@ -3,10 +3,10 @@ namespace DmxBox.Server;
 /// <summary>A step of the stack as the UI gets it: a <see cref="Step"/> with its name and its number.</summary>
 /// <param name="Id">Names the step for as long as the program runs; its number may change, this does not.</param>
 /// <param name="Cue">Its number in the order of the stack, written like "2.1".</param>
-/// <param name="Target">What the step stands for: "channel", "memory", "fixture", "group" or "release".</param>
+/// <param name="Target">What the step stands for: "channel", "memory", "fixture", "group", "effect", "sound" or "release".</param>
 /// <param name="Number">
 /// The channel (1-512) or the memory (1-128); a fixture or a group by its number in the stage plan;
-/// for a release the <see cref="Id"/> of the step it takes down, 0 for none.
+/// an effect or a sound by its number (1-64); for a release the <see cref="Id"/> of the step it takes down, 0 for none.
 /// </param>
 /// <param name="Value">The level the step brings its fader to, 0-255.</param>
 /// <param name="Up">Seconds the fader takes to the value.</param>
@@ -22,6 +22,14 @@ public sealed record StackStep(int Id, string Cue, string Target, int Number, in
     /// <summary>True for a step that comes up on top of what is on, see <see cref="Step.Add"/>. Sent only when it is true.</summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public bool Add { get; init; }
+
+    /// <summary>True for a step of a sound that plays on, see <see cref="Step.Continue"/>. Sent only when it is true.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Continue { get; init; }
+
+    /// <summary>True for a step the stack passes over, see <see cref="Step.Disabled"/>. Sent only when it is true.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Disabled { get; init; }
 }
 
 /// <summary>The stack as the UI gets it.</summary>
@@ -51,8 +59,9 @@ public sealed record StackPlayback(int? CurrentId, int? NextId, string State, bo
 {
     /// <summary>
     /// The steps that are on, in the order they came: the current one, and with it the steps
-    /// it came on top of (<see cref="Step.Add"/>). Empty while no step is on, and after a
-    /// release that took the last one down.
+    /// it came on top of (<see cref="Step.Add"/>) and the steps of sounds that play on
+    /// (<see cref="Step.Continue"/>). Empty while no step is on, and after a release that took the
+    /// last one down.
     /// </summary>
     public int[] On { get; init; } = [];
 }
@@ -93,6 +102,35 @@ public sealed record Playback(int[] Levels, Dictionary<int, int> SequenceSteps, 
     /// <summary>What the running effects give the channels they touch; left out while none runs.</summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public EffectLevels? EffectLevels { get; init; }
+
+    /// <summary>The playbacks of the sounds the project has, and of any other whose fader is up.</summary>
+    public SoundPlayback[] Sounds { get; init; } = [];
+}
+
+/// <summary>
+/// The playback of a sound as the UIs see it: whether it plays, its fader, where it is. None of it
+/// is part of the project, like the positions of the faders.
+/// </summary>
+/// <param name="Number">The sound, 1 to 64.</param>
+/// <param name="Playing">True from its start until it is over or stopped.</param>
+/// <param name="Level">Its fader, 0-255: how loud it is, of its own volume.</param>
+/// <remarks>Public only because <see cref="IDeskClient"/> has to be.</remarks>
+public sealed record SoundPlayback(int Number, bool Playing, int Level)
+{
+    /// <summary>True while its key moves its fader up or down, in the sound's fade times.</summary>
+    public bool Fading { get; init; }
+
+    /// <summary>How strongly the sequences play it, 0-255; 0 while none does.</summary>
+    public int Played { get; init; }
+
+    /// <summary>Where it is in its file, in seconds.</summary>
+    public double Position { get; init; }
+
+    /// <summary>True when its file could not be found or played, or its track (no mixer answers, or its stick has no such track).</summary>
+    public bool Missing { get; init; }
+
+    /// <summary>For a track of the mixer: how long it is, in seconds, as the mixer says while it plays; 0 when unknown.</summary>
+    public double Length { get; init; }
 }
 
 /// <summary>A fader the stack has moved, to be told to the UIs.</summary>
@@ -103,6 +141,9 @@ internal readonly record struct FaderMoved(bool Memory, int Number, int Level)
 {
     /// <summary>True for the fader of an effect.</summary>
     public bool Effect { get; init; }
+
+    /// <summary>True for the fader of a sound.</summary>
+    public bool Sound { get; init; }
 }
 
 /// <summary>A step of the stack with its number, as a project holds it.</summary>

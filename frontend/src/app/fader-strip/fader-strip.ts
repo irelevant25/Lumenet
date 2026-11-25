@@ -7,6 +7,9 @@ import { LampButton, LampTone } from '../lamp-button/lamp-button';
 /** A key that is used in no step. One shared list, so that the keys have nothing to redraw. */
 const NO_STEPS: readonly number[] = [];
 
+/** What a screen reader calls a fader of each kind, before its number. */
+const KIND_NAMES = { channel: 'Channel', memory: 'Memory', effect: 'Effect', sound: 'Sound' } as const;
+
 /**
  * One fader with its level number above it, its numbered key below it, and a note under the key.
  * The fader of an effect has the effect's name there instead, in two lines, as lettering.
@@ -14,6 +17,7 @@ const NO_STEPS: readonly number[] = [];
 @Component({
   host: {
     '[class.up]': 'value() > 0',
+    '[style.--strip-lamp]': "'var(--key-' + faderTone() + ')'",
   },
   imports: [Fader, LampButton],
   selector: 'lm-fader-strip',
@@ -21,8 +25,8 @@ const NO_STEPS: readonly number[] = [];
   templateUrl: './fader-strip.html',
 })
 export class FaderStrip {
-  readonly kind = input.required<'channel' | 'memory' | 'effect'>();
-  /** The channel, memory or effect number: the key's name for the shortcuts ("channel.625"), and what it prints unless `caption` says otherwise. */
+  readonly kind = input.required<'channel' | 'memory' | 'effect' | 'sound'>();
+  /** The channel, memory, effect or sound number: the key's name for the shortcuts ("channel.625"), and what it prints unless `caption` says otherwise. */
   readonly number = input.required<number>();
   /** What the key prints in place of the number: a channel's number in its universe, 113 for channel 625. */
   readonly caption = input<number | null>(null);
@@ -41,7 +45,10 @@ export class FaderStrip {
   readonly blink = input(false);
   /** True for a memory that holds a sequence: its key is red running into yellow. */
   readonly sequence = input(false);
-  protected readonly keyTone = computed<LampTone>(() => (this.sequence() ? 'sequence' : this.kind()));
+  protected readonly faderTone = computed<LampTone>(() => this.kind());
+  protected readonly keyTone = computed<LampTone>(() => (this.sequence() ? 'sequence' : this.faderTone()));
+  /** An effect or a sound has its name under its key, as lettering; channels and memories a note to type. */
+  protected readonly named = computed(() => this.kind() === 'effect' || this.kind() === 'sound');
   /**
    * The key under the fader was pressed. What that does is the section's business: the fader to
    * full and back to zero, or what the lit record key wants.
@@ -75,17 +82,13 @@ export class FaderStrip {
   /** True while the note cannot be changed: the stack is live. */
   readonly locked = input(false);
 
-  protected readonly name = computed(
-    () =>
-      this.called() ??
-      `${this.kind() === 'channel' ? 'Channel' : this.kind() === 'memory' ? 'Memory' : 'Effect'} ${this.number()}`,
-  );
+  protected readonly name = computed(() => this.called() ?? `${KIND_NAMES[this.kind()]} ${this.number()}`);
 
-  /** An effect's name in two lines, as it stands under its key. */
+  /** An effect's or a sound's name in two lines, as it stands under its key. */
   protected readonly nameLines = computed(() => inTwoLines(this.note()));
-  /** An effect on the Effects view: its name is a button that chooses it for the editor. */
+  /** An effect on the Effects view, a sound on the Sounds view: its name is a button that chooses it for the editor. */
   readonly choosable = input(false);
-  /** The effect the editor works on. */
+  /** The effect or sound the editor works on. */
   readonly chosen = input(false);
   readonly choose = output<void>();
 

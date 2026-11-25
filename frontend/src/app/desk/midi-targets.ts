@@ -8,6 +8,7 @@ import { ACTION_GROUPS, DESK_ACTIONS, DeskAction } from './desk-actions';
 import { MAX_CHANNELS, MEMORY_COUNT } from './desk-types';
 import { MAX_EFFECTS } from './effects';
 import type { MidiMapping, MidiMode, MidiMonitorLine } from './midi';
+import { MAX_SOUNDS } from './sounds';
 import { channelLabel } from './universes';
 
 // ---------------------------------------------------------------- the faders
@@ -21,6 +22,7 @@ export const FADER_GROUPS = [
   'Sequence speeds',
   'Effect faders',
   'Effect speed, size and spread',
+  'Sound faders',
 ] as const;
 
 export type FaderGroup = (typeof FADER_GROUPS)[number];
@@ -93,6 +95,12 @@ export const FADER_TARGETS: readonly FaderTarget[] = [
       label: `Live spread of effect ${effect}`,
     },
   ]).flat(),
+  { id: 'fader.sound-volume', group: 'Sound faders', label: 'Volume of the sound (-100 to 0 dB)' },
+  ...numbered<FaderTarget>(MAX_SOUNDS, (sound) => ({
+    id: `fader.sound.${sound}`,
+    group: 'Sound faders',
+    label: `Sound fader ${sound}`,
+  })),
 ];
 
 /** The kind of the keys of the pages shown, which only controllers have. */

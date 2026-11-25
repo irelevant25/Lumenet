@@ -16,13 +16,34 @@ import {
   TimedStep,
   UNIVERSE_SIZE,
 } from '../desk/desk-types';
+import { DeskStore } from '../desk/desk-store';
 import { StepChoice, StepChoices, channelsOf, withCurrent } from '../desk/step-choices';
 import { channelNumber, universeOf, universeStart } from '../desk/universes';
 
-/** One line of the field for the kind: "channel:2" is a channel of universe 2. */
+/** One line of the field for the kind: "channel:2" is a channel of universe 2; with the color of that kind. */
 interface KindChoice {
   readonly value: string;
   readonly text: string;
+  readonly color: string;
+}
+
+/**
+ * The tone of the keys each kind of step takes: a channel and a fixture green, a memory red, a group
+ * amber, an effect violet, a sound cyan, a release white.
+ */
+const KIND_TONES: Record<StepKind, string> = {
+  channel: 'channel',
+  memory: 'memory',
+  fixture: 'channel',
+  group: 'system',
+  effect: 'effect',
+  sound: 'sound',
+  release: 'white',
+};
+
+/** A tone of the keys as a color: "memory" is var(--key-memory). */
+function keyColor(tone: string): string {
+  return `var(--key-${tone})`;
 }
 
 /** The three times of a step. */
@@ -52,12 +73,14 @@ const rowWithList = signal<StepRow | null>(null);
  * the allowed range is put back as it was.
  */
 @Component({
+  host: { '[style.--kind]': 'kindColor()' },
   selector: 'tr[lmStepRow]',
   styleUrl: './step-row.css',
   templateUrl: './step-row.html',
 })
 export class StepRow {
   private readonly changes = inject(ChangeDetectorRef);
+  private readonly store = inject(DeskStore);
 
   constructor() {
     inject(DestroyRef).onDestroy(() => {
@@ -93,6 +116,12 @@ export class StepRow {
   /** True for a step of a fixture or a group, which has a color. */
   protected readonly lights = computed(() => isLights(this.step().target));
 
+  /**
+   * The color of the step's kind, which its dropdowns get as a key that is half lit: a channel and a
+   * fixture green, a memory red, a group amber, an effect violet, a sound cyan, a release white.
+   */
+  protected readonly kindColor = computed(() => keyColor(KIND_TONES[this.step().target]));
+
   /** True for a release: it takes another step down, and has no value and no up time. */
   protected readonly release = computed(() => this.step().target === 'release');
 
@@ -102,25 +131,36 @@ export class StepRow {
   /** The steps a release of this row can take down: all but itself. Undefined where there are no releases. */
   private readonly releasable = computed(() => this.choices().release?.filter((choice) => choice.number !== this.self()));
 
-  /** The lines of the field for the kind: a channel of each universe, then memory, fixture, group, effect and release. */
-  protected readonly kinds = computed<KindChoice[]>(() => [
-    ...Array.from({ length: this.universes() }, (_, index) => ({
-      value: `channel:${index + 1}`,
-      text: `Channel (U${index + 1})`,
-    })),
-    { value: 'memory', text: 'Memory' },
-    { value: 'fixture', text: 'Fixture' },
-    { value: 'group', text: 'Group' },
-    ...(this.choices().effect ? [{ value: 'effect', text: 'Effect' }] : []),
-    ...(this.releasable() ? [{ value: 'release', text: 'Release' }] : []),
-  ]);
+  /**
+   * The lines of the field for the kind: a channel of each universe, then memory, fixture, group,
+   * effect, sound and release; each in the color of its kind, so the open list shows them as the
+   * rows do.
+   */
+  protected readonly kinds = computed<KindChoice[]>(() => {
+    const color = (kind: StepKind): string => keyColor(KIND_TONES[kind]);
+    return [
+      ...Array.from({ length: this.universes() }, (_, index) => ({
+        value: `channel:${index + 1}`,
+        text: `Channel (U${index + 1})`,
+        color: color('channel'),
+      })),
+      { value: 'memory', text: 'Memory', color: color('memory') },
+      { value: 'fixture', text: 'Fixture', color: color('fixture') },
+      { value: 'group', text: 'Group', color: color('group') },
+      ...(this.choices().effect ? [{ value: 'effect', text: 'Effect', color: color('effect') }] : []),
+      ...(this.choices().sound ? [{ value: 'sound', text: 'Sound', color: color('sound') }] : []),
+      ...(this.releasable() ? [{ value: 'release', text: 'Release', color: color('release') }] : []),
+    ];
+  });
 
   /** What a screen reader calls the field for the kind. */
-  protected readonly kindLabel = computed(
-    () =>
-      `${this.label()}, channel, memory, fixture` +
-      (this.releasable() ? `, group${this.choices().effect ? ', effect' : ''} or release` : ' or group'),
-  );
+  protected readonly kindLabel = computed(() => {
+    const kinds = ['channel', 'memory', 'fixture', 'group'];
+    if (this.choices().effect) kinds.push('effect');
+    if (this.choices().sound) kinds.push('sound');
+    if (this.releasable()) kinds.push('release');
+    return `${this.label()}, ${kinds.slice(0, -1).join(', ')} or ${kinds.at(-1)}`;
+  });
 
   /** What a screen reader calls the field for the number. */
   protected readonly numberLabel = computed(() =>
@@ -177,7 +217,9 @@ export class StepRow {
   protected onTarget(event: Event): void {
     const [kind, universe] = (event.target as HTMLSelectElement).value.split(':');
     const target = kind as StepKind;
-    const { color, ...rest } = this.step();
+    // only a step of a sound plays on: another kind leaves Continue behind
+    const { color, continue: playsOn, ...rest } = this.step();
+    if (target === 'sound' && playsOn) Object.assign(rest, { continue: true });
     const number =
       target === 'channel' ? this.channelIn(Number(universe))
       : target === 'release' ? this.stepAbove()
@@ -192,7 +234,18 @@ export class StepRow {
   }
 
   protected onNumber(event: Event): void {
-    const number = Number((event.target as HTMLSelectElement).value);
+    const field = event.target as HTMLSelectElement;
+    let number = Number(field.value);
+    if (number < 0) {
+      // a track of the mixer's playlist that is no sound yet: it becomes one first
+      const track = this.list().find((choice) => choice.number === number)?.track;
+      const made = track ? this.store.addTrackSound(track) : null;
+      if (made === null) {
+        field.value = String(this.step().number);
+        return;
+      }
+      number = made;
+    }
     if (number !== this.step().number) this.stepChange.emit({ ...this.step(), number });
   }
 

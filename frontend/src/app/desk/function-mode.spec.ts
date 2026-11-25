@@ -4,10 +4,14 @@ import {
   activeFunction,
   channelKeysArmed,
   functionBlinks,
+  heldItem,
   heldMemory,
+  itemBlinks,
+  itemWaits,
   memoryBlinks,
   pressChannel,
   pressFunction,
+  pressItem,
   pressMemory,
 } from './function-mode';
 
@@ -90,6 +94,49 @@ describe('the record keys', () => {
     expect(pressMemory(target, 9, 'nothing')).toEqual({
       mode: IDLE,
       command: { kind: 'copyMemory', from: 6, to: 9 },
+    });
+  });
+
+  it('copy and del work on effects and sounds as on memories, each onto its own kind', () => {
+    // outside Copy and Del the keys start and stop their effects and sounds
+    expect(pressItem(IDLE, 'sound', 3, true)).toBeNull();
+    expect(pressItem(pressFunction(IDLE, 'save').mode, 'effect', 3, true)).toBeNull();
+    expect(itemWaits(IDLE)).toBe(false);
+
+    const picking = pressFunction(IDLE, 'copy').mode;
+    expect(itemWaits(picking)).toBe(true);
+    expect(itemBlinks(picking, 'sound', 3, true)).toBe(true);
+    expect(itemBlinks(picking, 'sound', 4, false)).toBe(false);
+    expect(pressItem(picking, 'sound', 4, false)).toEqual({ mode: picking }); // nothing to copy
+    const target = pressItem(picking, 'sound', 3, true)!.mode;
+    expect(target).toEqual({ kind: 'copy-target', from: 3, of: 'sound' });
+    expect(heldItem(target, 'sound')).toBe(3);
+    expect(heldItem(target, 'effect')).toBeNull();
+    expect(heldMemory(target)).toBeNull();
+    expect(itemBlinks(target, 'sound', 9, false)).toBe(true);
+    expect(itemBlinks(target, 'sound', 3, true)).toBe(false); // not onto itself
+    expect(itemBlinks(target, 'effect', 9, true)).toBe(false);
+    expect(memoryBlinks(target, 9, 'nothing')).toBe(false);
+
+    // a sound goes onto a sound only: an effect or a memory says so
+    expect(pressItem(target, 'effect', 9, false)?.notice).toBe('Copy puts sound 3 onto another sound: press the key of that one.');
+    expect(pressMemory(target, 9, 'nothing').notice).toBe('Copy puts sound 3 onto another sound: press the key of that one.');
+    expect(pressItem(target, 'sound', 3, true)).toEqual({ mode: target });
+    expect(pressItem(target, 'sound', 9, false)).toEqual({
+      mode: IDLE,
+      command: { kind: 'copyItem', of: 'sound', from: 3, to: 9 },
+    });
+
+    // a memory goes onto a memory only
+    const memory = pressMemory(picking, 6, 'look').mode;
+    expect(pressItem(memory, 'effect', 2, true)?.notice).toBe('Copy puts memory 6 onto another memory: press the key of that one.');
+
+    const deleting = pressFunction(IDLE, 'delete').mode;
+    expect(itemBlinks(deleting, 'effect', 2, true)).toBe(true);
+    expect(pressItem(deleting, 'effect', 5, false)).toEqual({ mode: deleting });
+    expect(pressItem(deleting, 'effect', 2, true)).toEqual({
+      mode: IDLE,
+      command: { kind: 'deleteItem', of: 'effect', number: 2 },
     });
   });
 
@@ -179,5 +226,40 @@ describe('the record keys', () => {
     expect(pressFunction(editing, 'delete')).toEqual({ mode: { kind: 'delete-pick' } });
     expect(pressFunction({ kind: 'save' }, 'copy')).toEqual({ mode: { kind: 'copy-pick' } });
     expect(pressFunction({ kind: 'recording', memory: 2 }, 'save')).toEqual({ mode: { kind: 'save' } });
+  });
+
+  it('Copy and Del of the Memories view keep to looks, those of the Sequences view to sequences', () => {
+    const copyLooks = pressFunction(IDLE, 'copy', 'look').mode;
+    expect(copyLooks).toEqual({ kind: 'copy-pick', only: 'look' });
+    expect(pressMemory(copyLooks, 3, 'sequence').notice).toBe(
+      'Memory 3 holds a sequence: here Copy copies looks. Sequences are on the Sequences view.',
+    );
+    const target = pressMemory(copyLooks, 2, 'look').mode;
+    expect(target).toEqual({ kind: 'copy-target', from: 2, only: 'look' });
+    expect(memoryBlinks(target, 3, 'sequence')).toBe(false);
+    expect(memoryBlinks(target, 4, 'look')).toBe(true);
+    expect(memoryBlinks(target, 5, 'nothing')).toBe(true);
+    expect(pressMemory(target, 3, 'sequence').notice).toBe(
+      'Memory 3 holds a sequence: a look is copied onto a look or an empty memory.',
+    );
+    expect(pressMemory(target, 5, 'nothing')).toEqual({
+      mode: IDLE,
+      command: { kind: 'copyMemory', from: 2, to: 5 },
+    });
+
+    const deleteSequences = pressFunction(IDLE, 'delete', 'sequence').mode;
+    expect(memoryBlinks(deleteSequences, 2, 'look')).toBe(false);
+    expect(memoryBlinks(deleteSequences, 3, 'sequence')).toBe(true);
+    expect(pressMemory(deleteSequences, 2, 'look').notice).toBe(
+      'Memory 2 holds a look: here Del deletes sequences. Looks are on the Memories view.',
+    );
+    expect(pressMemory(deleteSequences, 3, 'sequence')).toEqual({
+      mode: IDLE,
+      command: { kind: 'deleteMemory', memory: 3 },
+    });
+
+    // the other keys take no scope; the main view's Copy and Del take any memory
+    expect(pressFunction(IDLE, 'save', 'look').mode).toEqual({ kind: 'save' });
+    expect(pressMemory({ kind: 'delete-pick' }, 3, 'sequence').command).toEqual({ kind: 'deleteMemory', memory: 3 });
   });
 });

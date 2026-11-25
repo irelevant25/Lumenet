@@ -2,14 +2,17 @@ import { Component, ElementRef, computed, inject, signal, viewChild } from '@ang
 import { CellEdit, CellEditor } from '../cell-editor/cell-editor';
 import { DeskStore } from '../desk/desk-store';
 import { STRIPS_PER_LINE_PHONE, UNIVERSE_SIZE, stripNumbers } from '../desk/desk-types';
+import { heldMemory, itemWaits, memoryBlinks } from '../desk/function-mode';
 import { LampLevel } from '../desk/lamps';
 import { storedMemoryPages } from '../desk/memory-pages';
 import { splitNote } from '../desk/notes';
+import { DragScroll } from '../desk/drag-scroll';
 import { PressedInSight } from '../desk/pressed-in-sight';
 import { channelLabel, channelNumber, universeStart } from '../desk/universes';
 import { pageZoom } from '../desk/zoom';
 import { LampButton, LampTone } from '../lamp-button/lamp-button';
 import { NoteLines } from '../note-lines/note-lines';
+import { RecordSection } from '../record-section/record-section';
 
 /** One cell of the table: a channel, the level the memory holds for it, and the channel's note. */
 interface Cell {
@@ -54,7 +57,7 @@ const EDITOR_MIN_WIDTH = 64;
  * stack is live, which locks everything that is stored.
  */
 @Component({
-  imports: [CellEditor, LampButton, NoteLines, PressedInSight],
+  imports: [CellEditor, DragScroll, LampButton, NoteLines, PressedInSight, RecordSection],
   selector: 'lm-memories-view',
   styleUrl: './memories-view.css',
   templateUrl: './memories-view.html',
@@ -155,14 +158,16 @@ export class MemoriesView {
       if (this.store.memorySequence()[memory - 1]) {
         return `Memory ${memory} holds a sequence, not a look. Its steps are in the Sequences view.`;
       }
-      return `Memory ${memory} is empty.`;
+      return this.store.live()
+        ? `Memory ${memory} is empty.`
+        : `Memory ${memory} is empty. A double click on a channel gives it a level and stores the memory.`;
     }
 
     const note = splitNote(this.store.memoryNotes()[memory - 1]).join(' ').trim();
     const name = note ? `Memory ${memory} (${note})` : `Memory ${memory}`;
     const up = look.filter((level) => level > 0).length;
     if (up === 0) return `${name} is stored, with every channel at zero.`;
-    return `${name}: ${up} of ${look.length} ${up === 1 ? 'channel is' : 'channels are'} above zero.`;
+    return `${name}: ${up} of ${look.length} channels ${up === 1 ? 'is' : 'are'} above zero.`;
   });
 
   /**
@@ -217,10 +222,27 @@ export class MemoriesView {
     if (typed.note !== edit.note) this.store.setChannelNote(edit.channel, typed.note);
   }
 
-  /** Full for the memory that is looked at, half for any other that holds something. */
+  /**
+   * A memory key chooses the memory to look at; while Copy or Del waits for a memory, it is that
+   * memory (Copy and Del of this view keep to looks). A copy that was made is looked at.
+   */
+  protected press(memory: number): void {
+    const mode = this.store.mode();
+    const copying = mode.kind === 'copy-target' && !mode.of && mode.from !== memory;
+    if (!this.store.pressViewMemory(memory)) this.store.inspectedMemory.set(memory);
+    else if (copying && this.store.mode().kind === 'idle') this.store.inspectedMemory.set(memory);
+  }
+
+  /** Full for the memory that is looked at and the one Copy copies, half for any other that holds something. */
   protected keyLamp(memory: number): LampLevel {
-    if (memory === this.store.inspectedMemory()) return 3;
+    if (memory === this.store.inspectedMemory() || memory === heldMemory(this.store.mode())) return 3;
     return this.store.memoryStored()[memory - 1] ? 2 : 1;
+  }
+
+  /** While Copy or Del waits: the keys it can take. */
+  protected keyBlinks(memory: number): boolean {
+    const mode = this.store.mode();
+    return itemWaits(mode) && memoryBlinks(mode, memory, this.store.memoryContent(memory));
   }
 
   /** Red, or red running into yellow for a memory that holds a sequence. */

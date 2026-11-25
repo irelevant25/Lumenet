@@ -9,20 +9,25 @@ import {
 import { DeskStore } from '../desk/desk-store';
 import { TimedStep } from '../desk/desk-types';
 import { pageZoom } from '../desk/zoom';
+import { MasterSection } from '../master-section/master-section';
+import { SoundMaster } from '../sound-master/sound-master';
+import { SoundNow } from '../sound-now/sound-now';
 import { StackCards } from '../stack-cards/stack-cards';
 import { StackKeys } from '../stack-keys/stack-keys';
 
 /**
  * The stack at the left of the Stage view, to run a show while the plan shows its lights: the
- * keys of the Stack view (Stack, Prev, Play, Pause, Next), its three cards one under the other,
- * and its steps with their notes and times, a tick at those that add, and the steps that are on
- * marked. Nothing can be changed here: the Stack view does that.
+ * keys of the Stack view (Stack, Prev, Play, Pause, Next), its three cards one under the other, the
+ * wave of the sound that plays, the master section (Blackout, the master fader) and the sound section
+ * (MUTE, LISTEN, the volume) in a line each, and its steps with their notes and times, a tick at those
+ * that add, and the steps that are on marked. Nothing can be changed here: the Stack view does that.
  *
  * The list of steps follows the stack: when another step comes on and it or the next one is out
  * of sight, the list scrolls so that the step before it stands at the top.
  */
 @Component({
-  imports: [StackCards, StackKeys],
+  host: { '[class.sounding]': 'sounding()' },
+  imports: [MasterSection, SoundMaster, SoundNow, StackCards, StackKeys],
   selector: 'lm-stage-stack',
   styleUrl: './stage-stack.css',
   templateUrl: './stage-stack.html',
@@ -32,6 +37,8 @@ export class StageStack {
   private readonly tableBox = viewChild.required<ElementRef<HTMLElement>>('tableBox');
 
   protected readonly steps = computed(() => this.store.stack().steps);
+  /** True once a sound played: its wave stands over the steps. */
+  protected readonly sounding = computed(() => this.store.shownSound() !== undefined);
   protected readonly previous = computed(() => this.store.stackPosition().previous?.id);
   protected readonly current = computed(() => this.store.stackPosition().current?.id);
   protected readonly next = computed(() => this.store.stackPosition().next?.id);

@@ -1,5 +1,12 @@
 <lm-stack-keys />
 <lm-stack-cards class="column" />
+<!-- the wave of the sound that plays: a double click plays it from there -->
+@if (sounding()) {
+  <lm-sound-now />
+}
+<!-- between the wave and the steps, each in a line: the master (Blackout), then the sound (MUTE, LISTEN) -->
+<lm-master-section [lying]="true" />
+<lm-sound-master [lying]="true" />
 
 <div #tableBox class="table-box">
   <table class="steps">
@@ -23,6 +30,7 @@
           [class.current]="step.id === current()"
           [class.on]="on().has(step.id)"
           [class.next]="step.id === next()"
+          [class.skipped]="step.disabled === true"
         >
           <th scope="row">{{ step.cue }}</th>
           <td class="adds">

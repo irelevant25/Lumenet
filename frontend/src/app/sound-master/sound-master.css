@@ -1,0 +1,98 @@
+/* A narrow section beside the general section: the title, MUTE, and the volume fader with the volume
+   above it. The fader takes the height that is left; on a low window the key gets flatter too, down
+   to --master-key-min (set by the main view), and the fader keeps 50 pixels. */
+:host {
+  display: grid;
+  grid-template-rows:
+    auto
+    minmax(var(--master-key-min, var(--key-h)), var(--key-h))
+    minmax(var(--master-key-min, var(--key-h)), var(--key-h))
+    auto
+    minmax(50px, 1fr);
+  justify-items: center;
+  gap: var(--strip-gap);
+  min-height: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: var(--panel-raised);
+}
+
+:host > [lmLamp] {
+  height: auto;
+  align-self: stretch;
+}
+
+h2 {
+  justify-self: start;
+  margin: 0 0 4px;
+  color: var(--legend-dim);
+  font-size: 12px;
+  font-stretch: 75%;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+lm-fader {
+  width: var(--key-w);
+}
+
+/* muted: the fader can be set, but nothing goes out */
+lm-fader.off {
+  opacity: 0.45;
+}
+
+/* the volume above the fader: bright while sound goes out */
+.readout {
+  margin-top: 6px;
+  color: var(--legend-dim);
+  font-size: var(--readout);
+  font-stretch: 87.5%;
+  line-height: 1;
+}
+
+.readout.up {
+  color: #fff;
+}
+
+/* ---- mobile, and lying (the Stack view): one line. MUTE and LISTEN, then the title as the fader's
+   caption, the fader over the room that is left, and the volume. */
+:host(.lying),
+:host-context(.mobile) {
+  display: flex;
+  align-items: center;
+  gap: var(--strip-gap);
+}
+
+:host(.lying) > [lmLamp],
+:host-context(.mobile) > [lmLamp] {
+  flex: none;
+  height: var(--key-h);
+}
+
+:host(.lying) h2,
+:host-context(.mobile) h2 {
+  order: 1;
+  margin: 0 6px 0 14px;
+  font-size: 13px;
+}
+
+:host(.lying) lm-fader,
+:host-context(.mobile) lm-fader {
+  flex: 1;
+  order: 2;
+  width: auto;
+  height: var(--key-h);
+  margin: 0;
+}
+
+/* in the one line there is no "above": the volume stands at the end, after the fader */
+:host(.lying) .readout,
+:host-context(.mobile) .readout {
+  order: 3;
+  min-width: 7ch;
+  margin: 0 0 0 6px;
+  text-align: right;
+}

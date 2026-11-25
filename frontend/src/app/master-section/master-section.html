@@ -21,7 +21,7 @@
   tone="system"
   label="Master"
   data-fader="fader.master"
-  [orientation]="store.mobile() ? 'horizontal' : 'vertical'"
+  [orientation]="store.mobile() || lying() ? 'horizontal' : 'vertical'"
   [value]="store.master()"
   (valueChange)="store.setMaster($event)"
 />

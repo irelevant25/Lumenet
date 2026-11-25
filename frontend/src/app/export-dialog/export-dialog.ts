@@ -2,7 +2,8 @@ import { Component, ElementRef, Injector, afterNextRender, computed, inject, sig
 import { DeskMidi } from '../desk/desk-midi';
 import { DeskSettings } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
-import { saveTextFile } from '../desk/save-file';
+import { saveTextFile, saveZipFile } from '../desk/save-file';
+import { packExport } from '../desk/sound-files';
 import { TRANSFER_PARTS, TransferPart, TransferPartView, exportFileName, exportText, pcPartNote } from '../desk/transfer';
 import { DialogDismiss } from '../desk/dialog-dismiss';
 import { LampButton } from '../lamp-button/lamp-button';
@@ -75,7 +76,13 @@ export class ExportDialog {
         shortcuts: this.settings.shortcuts(),
         midi,
       });
-      const saved = await saveTextFile(exportFileName(chosen, name), text);
+      // A project with sounds takes their files along: a ZIP of the file and of its sounds.
+      const fileName = exportFileName(chosen, name);
+      const base = fileName.replace(/\.json$/, '');
+      const saved =
+        chosen.has('project') && this.store.sounds().length > 0
+          ? await saveZipFile(`${base}.zip`, () => packExport(base, text))
+          : await saveTextFile(fileName, text);
       if (saved === null) return; // no place was chosen: the window stays as it was
       this.saved.set(saved);
       // The Export key is gone with the question; the key that closes the window takes the focus.

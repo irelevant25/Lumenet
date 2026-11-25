@@ -75,6 +75,7 @@
         <li
           [class]="place.kind"
           [class.empty]="!place.step"
+          [class.skipped]="place.step?.disabled === true"
           [attr.aria-hidden]="placeName(place) === null ? 'true' : null"
           [attr.aria-label]="placeName(place)"
           [attr.title]="placeName(place)"

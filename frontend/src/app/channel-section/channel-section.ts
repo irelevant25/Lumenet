@@ -3,6 +3,7 @@ import { DeskStore } from '../desk/desk-store';
 import { UNIVERSE_SIZE, stripNumbers } from '../desk/desk-types';
 import { channelKeysArmed } from '../desk/function-mode';
 import { LampLevel, channelLamp, channelPageLamp } from '../desk/lamps';
+import { DragScroll } from '../desk/drag-scroll';
 import { PressedInSight } from '../desk/pressed-in-sight';
 import { channelLabel, channelNumber, universeStart } from '../desk/universes';
 import { FaderStrip } from '../fader-strip/fader-strip';
@@ -17,7 +18,7 @@ import { LampButton } from '../lamp-button/lamp-button';
  * window. The key under a fader puts it to full, and back to zero.
  */
 @Component({
-  imports: [FaderStrip, LampButton, PressedInSight],
+  imports: [DragScroll, FaderStrip, LampButton, PressedInSight],
   selector: 'lm-channel-section',
   styleUrl: './channel-section.css',
   templateUrl: './channel-section.html',

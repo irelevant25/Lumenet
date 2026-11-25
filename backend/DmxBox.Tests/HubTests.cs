@@ -21,7 +21,7 @@ public sealed class HubTests
     [
         "channels", "memoryLevels", "memoryStored", "master", "blackout", "channelNotes", "memoryNotes", "independents",
         "memorySequence", "memoryIndependents", "bpm", "rateOn", "solo", "channelClaims", "memoryClaims", "universes",
-        "effectIndependents", "effects",
+        "effectIndependents", "soundIndependents", "effects", "sounds", "soundDecibels", "soundMute",
     ];
 
     [Fact]
@@ -32,7 +32,7 @@ public sealed class HubTests
 
         JsonElement hello = await ui.InvokeAsync("Hello");
 
-        Assert.Equal(["version", "desk", "boxes", "project", "outputs"], NamesIn(hello));
+        Assert.Equal(["version", "desk", "boxes", "project", "outputs", "mixer", "listen"], NamesIn(hello));
         Assert.Equal(TestServer.Version, hello.GetProperty("version").GetString());
 
         JsonElement desk = hello.GetProperty("desk");

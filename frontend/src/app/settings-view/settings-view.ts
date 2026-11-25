@@ -12,6 +12,7 @@ import {
 } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
 import { EFFECT_INDEPENDENT_COUNT } from '../desk/effects';
+import { SOUND_INDEPENDENT_COUNT } from '../desk/sounds';
 import {
   CHANNEL_INDEPENDENT_COUNT,
   MAX_UNIVERSES,
@@ -23,6 +24,7 @@ import { ALWAYS_SHOWN, DEFAULT_VIEW_ORDER, ViewName, viewNamed } from '../desk/v
 import { KeyColorsPanel } from '../key-colors-panel/key-colors-panel';
 import { KeyboardPanel } from '../keyboard-panel/keyboard-panel';
 import { OutputsPanel } from '../outputs-panel/outputs-panel';
+import { SoundOutputPanel } from '../sound-output/sound-output';
 
 /** How often the autosave can keep the work, in seconds: as the desk program offers it. */
 const AUTOSAVE_INTERVALS: readonly number[] = [5, 30, 60, 300];
@@ -49,7 +51,7 @@ const AUTOSAVE_INTERVALS: readonly number[] = [5, 30, 60, 300];
  * the rest is kept as desk-settings.ts says.
  */
 @Component({
-  imports: [KeyColorsPanel, KeyboardPanel, OutputsPanel],
+  imports: [KeyColorsPanel, KeyboardPanel, OutputsPanel, SoundOutputPanel],
   selector: 'lm-settings-view',
   styleUrl: './settings-view.css',
   templateUrl: './settings-view.html',
@@ -153,8 +155,20 @@ export class SettingsView {
     field.value = String(this.settings.effectKeys());
   }
 
+  protected readonly maxSoundKeys = SOUND_INDEPENDENT_COUNT;
+
+  protected onSoundKeys(event: Event): void {
+    const field = event.target as HTMLInputElement;
+    this.settings.setSoundKeys(Number(field.value));
+    field.value = String(this.settings.soundKeys());
+  }
+
   protected onEffectRows(event: Event): void {
     this.settings.setEffectRows((event.target as HTMLSelectElement).value === '1' ? 1 : 0);
+  }
+
+  protected onSoundRows(event: Event): void {
+    this.settings.setSoundRows((event.target as HTMLSelectElement).value === '1' ? 1 : 0);
   }
 
   protected readonly zoomSaid = computed(() => `${Math.round(this.settings.zoom() * 100)} %`);

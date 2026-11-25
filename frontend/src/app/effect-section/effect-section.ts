@@ -2,7 +2,9 @@ import { Component, computed, inject, input } from '@angular/core';
 import { DeskStore } from '../desk/desk-store';
 import { stripNumbers } from '../desk/desk-types';
 import { MAX_EFFECTS, effectLamp } from '../desk/effects';
+import { heldItem, itemBlinks, itemWaits } from '../desk/function-mode';
 import { LampLevel } from '../desk/lamps';
+import { DragScroll } from '../desk/drag-scroll';
 import { PressedInSight } from '../desk/pressed-in-sight';
 import { FaderStrip } from '../fader-strip/fader-strip';
 import { LampButton } from '../lamp-button/lamp-button';
@@ -16,7 +18,7 @@ import { LampButton } from '../lamp-button/lamp-button';
  * as many faders as the window has room for.
  */
 @Component({
-  imports: [FaderStrip, LampButton, PressedInSight],
+  imports: [DragScroll, FaderStrip, LampButton, PressedInSight],
   selector: 'lm-effect-section',
   // the same layout as the row of memories
   styleUrl: '../memory-section/memory-section.css',
@@ -56,28 +58,41 @@ export class EffectSection {
   });
 
   /**
-   * The key of an effect moves its fader (see DeskStore.toggleEffect). On the Effects view the key of
-   * an empty number chooses it instead, and the view offers the kinds to make it.
+   * The key of an effect moves its fader (see DeskStore.toggleEffect), or Copy or Del works on it
+   * (DeskStore.pressItem). On the Effects view the key of an empty number chooses it instead (unless
+   * Copy waits for the number to copy to), and the view offers the kinds to make it; a copy made
+   * there is chosen.
    */
   protected press(number: number): void {
-    if (this.choosing() && !this.store.effectsByNumber().has(number))
+    const mode = this.store.mode();
+    if (this.choosing() && !this.store.effectsByNumber().has(number) && !itemWaits(mode)) {
       this.store.chosenEffect.set(number);
-    else this.store.toggleEffect(number);
+      return;
+    }
+    const copying = mode.kind === 'copy-target' && mode.of === 'effect' && mode.from !== number;
+    this.store.pressItem('effect', number);
+    if (this.choosing() && copying) this.store.chosenEffect.set(number);
   }
 
   protected levelOf(number: number): number {
     return this.store.effectPlaybacks().get(number)?.level ?? 0;
   }
 
+  /** The effect Copy copies from stays lit. */
   protected lamp(number: number): LampLevel {
+    if (heldItem(this.store.mode(), 'effect') === number) return 3;
     return effectLamp(
       this.store.effectsByNumber().get(number),
       this.store.effectPlaybacks().get(number),
     );
   }
 
-  protected fading(number: number): boolean {
-    return this.store.effectPlaybacks().get(number)?.fading ?? false;
+  /** While its key moves its fader, and while Copy or Del waits for it. */
+  protected blinks(number: number): boolean {
+    return (
+      (this.store.effectPlaybacks().get(number)?.fading ?? false) ||
+      itemBlinks(this.store.mode(), 'effect', number, this.store.effectsByNumber().has(number))
+    );
   }
 
   protected nameOf(number: number): string {

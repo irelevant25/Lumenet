@@ -1,0 +1,19 @@
+<span class="time" title="Where it is">{{ now() }}</span>
+<!-- while it plays: a double click plays it from there, the arrows go back and on -->
+<div
+  class="well"
+  [class.seekable]="playing()"
+  [attr.role]="playing() ? 'slider' : null"
+  [attr.tabindex]="playing() ? 0 : null"
+  [attr.aria-label]="playing() ? 'Where sound ' + sound().number + ' plays' : null"
+  [attr.aria-valuemin]="playing() ? 0 : null"
+  [attr.aria-valuemax]="playing() ? length() : null"
+  [attr.aria-valuenow]="playing() ? at() : null"
+  [attr.aria-valuetext]="playing() ? now() + (total() ? ' of ' + total() : '') : null"
+  [attr.title]="playing() ? 'Double click: play from there' : null"
+  (dblclick)="onDoubleClick($event)"
+  (keydown)="onKey($event)"
+>
+  <canvas #canvas aria-hidden="true"></canvas>
+</div>
+<span class="time total" title="How long it is">{{ total() }}</span>

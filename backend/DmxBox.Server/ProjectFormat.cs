@@ -78,15 +78,23 @@ namespace DmxBox.Server;
 /// and 7 have these in the stack only: a program that reads them would play such a sequence wrong
 /// (a step that adds as one that does not) or refuse it with a message about the stack. So a file
 /// with such a sequence says version 8, and one without stays as it was.
+/// Version 9 has "sounds" (see <see cref="Sound"/>): music and sound effects, each with its "file"
+/// (in the folder beside the project's file: "Show sounds" beside "Show.json") and its "hash"; and
+/// steps of the stack and of sequences that play a sound ("target": "sound", "number": 3), which can
+/// play on through the steps after them ("continue": true); and steps that are skipped ("disabled":
+/// true), of the stack and of sequences. An older program would drop the sounds unsaid when it saves,
+/// cannot read the steps of sounds and would play a skipped step, so a project with any of them says
+/// version 9.
 /// </remarks>
 internal static class ProjectFormat
 {
     private const string FormatName = "lumenet-project";
 
-    // The newest version this program reads, and the one it writes for a project whose sequences
-    // add, release or play effects (see the remarks). Version 7 has effects; version 6 a stack with
-    // steps that add or release; version 5 the universes and the boxes.
-    private const int CurrentVersion = 8;
+    // The newest version this program reads, and the one it writes for a project with sounds (see
+    // the remarks). Version 8 has sequences that add, release or play effects; version 7 effects;
+    // version 6 a stack with steps that add or release; version 5 the universes and the boxes.
+    private const int CurrentVersion = 9;
+    private const int VersionWithSequencesLikeTheStack = 8;
     private const int VersionWithEffects = 7;
     private const int VersionWithAddOrRelease = 6;
     private const int VersionWithoutAddOrRelease = 5;
@@ -118,7 +126,12 @@ internal static class ProjectFormat
             || !project.EffectIndependents.SequenceEqual(Desk.DefaultEffectIndependents());
         bool sequencesLikeTheStack = project.Sequences.Any(sequence =>
             sequence is not null && sequence.Steps.Any(step => step.Add || !step.GivesLight));
-        int version = sequencesLikeTheStack ? CurrentVersion
+        bool sounds = project.Sounds.Any(sound => sound is not null);
+        bool soundKeys = !project.SoundIndependents.SequenceEqual(Desk.DefaultSoundIndependents());
+        bool soundSteps = project.Stack.Any(step => step.Step.IsSound || step.Step.Disabled)
+            || project.Sequences.Any(sequence => sequence is not null && sequence.Steps.Any(step => step.IsSound || step.Disabled));
+        int version = sounds || soundSteps || soundKeys ? CurrentVersion
+            : sequencesLikeTheStack ? VersionWithSequencesLikeTheStack
             : effects ? VersionWithEffects
             : addsOrReleases ? VersionWithAddOrRelease
             : VersionWithoutAddOrRelease;
@@ -128,6 +141,8 @@ internal static class ProjectFormat
             Version = version,
             Effects = effects ? project.Effects.OfType<Effect>().Select(effect => FileEffect(effect, places)).ToList<ProjectFileEffect?>() : null,
             EffectIndependents = effects ? [.. project.EffectIndependents] : null,
+            Sounds = sounds ? project.Sounds.OfType<Sound>().Select(FileSound).ToList<ProjectFileSound?>() : null,
+            SoundIndependents = soundKeys ? [.. project.SoundIndependents] : null,
             Universes = project.Universes,
             Boxes = project.Boxes.Length == 0
                 ? null
@@ -205,6 +220,8 @@ internal static class ProjectFormat
             Sequences = SequencesOf(file.Sequences, looks),
             Effects = EffectsOf(file.Effects),
             EffectIndependents = EffectIndependentsOf(file.EffectIndependents),
+            Sounds = SoundsOf(file.Sounds),
+            SoundIndependents = SoundIndependentsOf(file.SoundIndependents),
             Stack = StackOf(file.Stack),
             Stage = stage,
             StagePicture = picture,
@@ -771,6 +788,8 @@ internal static class ProjectFormat
             {
                 Color = entry.Color,
                 Add = entry.Add == true,
+                Continue = entry.Continue == true,
+                Disabled = entry.Disabled == true,
             };
             return step.Checked();
         }
@@ -815,6 +834,8 @@ internal static class ProjectFormat
             Down = step.Down,
             Color = step.Color,
             Add = step.Add ? true : null,
+            Continue = step.Continue ? true : null,
+            Disabled = step.Disabled ? true : null,
         };
     }
 
@@ -896,6 +917,81 @@ internal static class ProjectFormat
         return effects;
     }
 
+    // A sound as the file has it: only what differs from how a sound is unless it says otherwise.
+    private static ProjectFileSound FileSound(Sound sound)
+    {
+        return new ProjectFileSound
+        {
+            Number = sound.Number,
+            Name = sound.Name,
+            File = sound.File,
+            Playlist = sound.Playlist,
+            Hash = sound.IsTrack ? null : sound.Hash,
+            Seconds = sound.Seconds > 0 ? sound.Seconds : null,
+            Start = sound.Start > 0 ? sound.Start : null,
+            End = sound.End,
+            Loop = sound.Loop ? true : null,
+            Decibels = sound.Decibels != 0 ? sound.Decibels : null,
+            FadeIn = sound.FadeIn > 0 ? sound.FadeIn : null,
+            FadeOut = sound.FadeOut > 0 ? sound.FadeOut : null,
+            Pan = sound.Pan != 0 ? sound.Pan : null,
+            Speed = sound.Speed != 1 ? sound.Speed : null,
+            Pitch = sound.Pitch != 0 ? sound.Pitch : null,
+            Echo = sound.Echo > 0 ? sound.Echo : null,
+            EchoTime = sound.Echo > 0 ? sound.EchoTime : null,
+            EchoRepeats = sound.Echo > 0 ? sound.EchoRepeats : null,
+            Reverb = sound.Reverb > 0 ? sound.Reverb : null,
+            Room = sound.Reverb > 0 ? sound.Room : null,
+        };
+    }
+
+    // One entry per sound number: the sound, or null for one the file does not list. A file from
+    // before there were sounds has none.
+    private static Sound?[] SoundsOf(List<ProjectFileSound?>? listed)
+    {
+        var sounds = new Sound?[Sound.MaxSounds];
+        var defaults = new Sound(1, "", "x.wav", "");
+        foreach (ProjectFileSound? entry in listed ?? [])
+        {
+            if (entry?.Number is not int number || number < 1 || number > Sound.MaxSounds)
+                throw Bad($"The file has a sound without a number from 1 to {Sound.MaxSounds}.");
+            if (sounds[number - 1] is not null)
+                throw Bad($"The file lists sound {number} twice.");
+
+            try
+            {
+                // "category" (music or a sound effect) of a file of before means nothing now
+                sounds[number - 1] = new Sound(number, entry.Name ?? "", entry.File ?? "", entry.Hash ?? "")
+                {
+                    Playlist = entry.Playlist,
+                    Seconds = entry.Seconds ?? 0,
+                    Start = entry.Start ?? 0,
+                    End = entry.End,
+                    Loop = entry.Loop ?? false,
+                    Decibels = entry.Decibels ?? (entry.Volume is int percent
+                        ? Math.Round(Math.Min(Sound.MaxDecibels, Sound.DecibelsOf(percent / 100.0)), 1)
+                        : defaults.Decibels),
+                    FadeIn = entry.FadeIn ?? 0,
+                    FadeOut = entry.FadeOut ?? 0,
+                    Pan = entry.Pan ?? 0,
+                    Speed = entry.Speed ?? defaults.Speed,
+                    Pitch = entry.Pitch ?? 0,
+                    Echo = entry.Echo ?? 0,
+                    EchoTime = entry.EchoTime ?? defaults.EchoTime,
+                    EchoRepeats = entry.EchoRepeats ?? defaults.EchoRepeats,
+                    Reverb = entry.Reverb ?? 0,
+                    Room = entry.Room ?? defaults.Room,
+                }.Checked();
+            }
+            catch (DeskException e)
+            {
+                throw Bad($"Sound {number} in the file cannot be used. {e.Message}");
+            }
+        }
+
+        return sounds;
+    }
+
     // The effect of each effect key of the independents; a file without them has them where they are on a new desk.
     private static int[] EffectIndependentsOf(List<int>? listed)
     {
@@ -905,6 +1001,18 @@ internal static class ProjectFormat
             throw Bad($"The file lists {listed.Count} effect independents; there must be {Desk.EffectIndependentCount}.");
 
         CheckKeys(listed, "Effect independent", ("effect", "effects"), Effect.MaxEffects);
+        return [.. listed];
+    }
+
+    // The sound of each sound key of the independents; a file without them has them where they are on a new desk.
+    private static int[] SoundIndependentsOf(List<int>? listed)
+    {
+        if (listed is null)
+            return Desk.DefaultSoundIndependents();
+        if (listed.Count != Desk.SoundIndependentCount)
+            throw Bad($"The file lists {listed.Count} sound independents; there must be {Desk.SoundIndependentCount}.");
+
+        CheckKeys(listed, "Sound independent", ("sound", "sounds"), Sound.MaxSounds);
         return [.. listed];
     }
 

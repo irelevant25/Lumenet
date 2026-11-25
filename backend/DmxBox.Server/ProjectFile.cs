@@ -87,6 +87,14 @@ internal sealed class ProjectFile
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<int>? EffectIndependents { get; set; }
 
+    /// <summary>The sounds, see <see cref="Sound"/>. Written only for a project that has some (version 9).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<ProjectFileSound?>? Sounds { get; set; }
+
+    /// <summary>The sound number (1-64) of each of the 32 sound keys of the independents, key 1 first. Written only when not as on a new desk (version 9).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<int>? SoundIndependents { get; set; }
+
     /// <summary>
     /// The stage plan: the size of the stage and the lights of the rig on it. Files from before
     /// there were plans do not have the property, nor do imported shows.
@@ -284,6 +292,81 @@ internal sealed class ProjectFileLight
 }
 
 /// <summary>
+/// A sound, as it stands in a project file, see <see cref="Sound"/>. Its file is in the folder
+/// beside the project's file ("Show sounds" beside "Show.json"), under <see cref="File"/>. What is
+/// as a sound has it unless it says otherwise is left out, and a file that leaves it out means that.
+/// </summary>
+internal sealed class ProjectFileSound
+{
+    /// <summary>Its number, 1-64.</summary>
+    public int? Number { get; set; }
+
+    public string? Name { get; set; }
+
+    /// <summary>The name of its file, in the folder beside the project's file; for a track of the mixer its name on the stick.</summary>
+    public string? File { get; set; }
+
+    /// <summary>Only for a track of the mixer's USB player: its playlist. Written only then.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Playlist { get; set; }
+
+    /// <summary>The start of the SHA-256 of its file: how the desk program finds it without the folder.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]   // a track of the mixer has none
+    public string? Hash { get; set; }
+
+    /// <summary>How long the file is, in seconds.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? Seconds { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? Start { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? End { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? Loop { get; set; }
+
+    /// <summary>Its level in decibels, -100 to 0; written when it is not 0.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? Decibels { get; set; }
+
+    /// <summary>Its level in per cent, 0 to 200, as files of before had it: read as decibels, never written.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Volume { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? FadeIn { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? FadeOut { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Pan { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? Speed { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Pitch { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Echo { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? EchoTime { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? EchoRepeats { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Reverb { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Room { get; set; }
+}
+
+/// <summary>
 /// An effect, as it stands in a project file, see <see cref="Effect"/>. What is as an effect has
 /// it unless it says otherwise is left out, and a file that leaves it out means that.
 /// </summary>
@@ -392,20 +475,28 @@ internal sealed class ProjectFileStep
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Cue { get; set; }
 
-    /// <summary>"channel", "memory", "fixture" or "group"; in the stack also "release" and "effect".</summary>
+    /// <summary>"channel", "memory", "fixture", "group", "release", "effect" or "sound".</summary>
     public string? Target { get; set; }
 
     /// <summary>
     /// The channel (1-512) or the memory (1-128); a fixture or a group by its place in the file's
     /// list of lights or groups, counted from 1 (0 for one that is gone). 0 for a release of the
     /// stack, which names its step with <see cref="Releases"/>; for a release of a sequence the
-    /// number of the step it takes down, counted from 1 (0 for none). The effect (1-64) of a step of an effect.
+    /// number of the step it takes down, counted from 1 (0 for none). The effect or the sound (1-64) of a step of one.
     /// </summary>
     public int? Number { get; set; }
 
     /// <summary>Only for a step that comes up on top of what is on: true. Written only then.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? Add { get; set; }
+
+    /// <summary>Only for a step of a sound that plays on through the steps after it: true. Written only then.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? Continue { get; set; }
+
+    /// <summary>Only for a step that is skipped: true. Written only then.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? Disabled { get; set; }
 
     /// <summary>
     /// Only for a release: the number of the step of the stack it takes down, like "2.1". Written

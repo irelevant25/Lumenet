@@ -6,10 +6,13 @@ import {
   activeFunction,
   channelKeysArmed,
   functionBlinks,
+  heldItem,
   heldMemory,
+  itemBlinks,
   memoryBlinks,
 } from './function-mode';
 import { LampLevel, channelLamp, channelPageLamp, memoryLamp, memoryPageLamp } from './lamps';
+import { MAX_SOUNDS, listenLamp, soundLamp } from './sounds';
 import { universeStart } from './universes';
 
 /** How a key of the desk is lit: faint, half or full, and whether it blinks. */
@@ -68,10 +71,22 @@ export function actionLamp(id: string, store: DeskStore, path: string): ActionLa
     case 'memory':
       return memoryKeyLamp(number, store);
     case 'effect': {
+      const effect = store.effectsByNumber().get(number);
       const playback = store.effectPlaybacks().get(number);
       return {
-        level: effectLamp(store.effectsByNumber().get(number), playback),
-        blink: playback?.fading ?? false,
+        level: heldItem(store.mode(), 'effect') === number ? 3 : effectLamp(effect, playback),
+        blink: (playback?.fading ?? false) || itemBlinks(store.mode(), 'effect', number, !!effect),
+      };
+    }
+    case 'sound': {
+      // MUTE blinks while it is on, as Blackout does
+      if (second === 'mute') return { level: 1, blink: store.soundMute() };
+      if (second === 'listen') return { level: listenLamp(store.listen()), blink: false };
+      const sound = store.soundsByNumber().get(number);
+      const playback = store.soundPlaybacks().get(number);
+      return {
+        level: heldItem(store.mode(), 'sound') === number ? 3 : soundLamp(sound, playback),
+        blink: (playback?.fading ?? false) || itemBlinks(store.mode(), 'sound', number, !!sound),
       };
     }
     case 'slot': {
@@ -147,6 +162,15 @@ function independentLamp(kind: string, key: number, store: DeskStore): ActionLam
         blink: playback?.fading ?? false,
       };
     }
+    case 'sound': {
+      const sound = store.soundIndependents()[key - 1];
+      if (!sound) return FAINT;
+      const playback = store.soundPlaybacks().get(sound);
+      return {
+        level: soundLamp(store.soundsByNumber().get(sound), playback),
+        blink: playback?.fading ?? false,
+      };
+    }
     default:
       return FAINT;
   }
@@ -195,6 +219,18 @@ function pageLamp(kind: string, page: number, store: DeskStore): ActionLamp {
         { length: Math.min(perPage, MAX_EFFECTS - first + 1) },
         (_, index) => first + index,
       ).some((effect) => effects.has(effect));
+      return { level: holds ? 2 : 1, blink: false };
+    }
+    case 'sound': {
+      const perPage = store.stripsPerRow();
+      const first = (page - 1) * perPage + 1;
+      if (first > MAX_SOUNDS) return FAINT;
+      if (first === store.firstSound()) return LIT;
+      const sounds = store.soundsByNumber();
+      const holds = Array.from(
+        { length: Math.min(perPage, MAX_SOUNDS - first + 1) },
+        (_, index) => first + index,
+      ).some((sound) => sounds.has(sound));
       return { level: holds ? 2 : 1, blink: false };
     }
     default:

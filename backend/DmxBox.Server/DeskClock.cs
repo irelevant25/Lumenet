@@ -42,7 +42,9 @@ internal sealed class DeskClock : BackgroundService
     {
         foreach (FaderMoved moved in _desk.Tick())
         {
-            await (moved.Effect
+            await (moved.Sound
+                ? _everyUi.SoundPlaybackChanged(_desk.GetSoundPlayback(moved.Number))
+                : moved.Effect
                 ? _everyUi.EffectPlaybackChanged(_desk.GetEffectPlayback(moved.Number))
                 : moved.Memory
                     ? _everyUi.MemoryLevelChanged(moved.Number, moved.Level)

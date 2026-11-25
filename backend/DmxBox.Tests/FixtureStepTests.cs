@@ -98,7 +98,7 @@ public sealed class FixtureStepTests
         Assert.Equal([0, 255, 0], Output(1, 3));
         Assert.Equal("#00ff00", _desk.GetStack().Steps[0].Color);
 
-        _desk.StackNext();
+        _desk.StackPlay();
         Pass(0.1);
         Assert.Equal(8, Faders(12, 1)[0]);   // the shutter at once
         Pass(0.9);
@@ -135,7 +135,7 @@ public sealed class FixtureStepTests
         DeskException error = Assert.Throws<DeskException>(() => Lights("fixture", 1, 255, "red").Checked());
         Assert.Equal("\"red\" is no color like #ff2000.", error.Message);
         error = Assert.Throws<DeskException>(() => Lights("light", 1, 255, null).Checked());
-        Assert.Equal("A step stands for a channel, a memory, a fixture, a group or an effect, not for \"light\".", error.Message);
+        Assert.Equal("A step stands for a channel, a memory, a fixture, a group, an effect or a sound, not for \"light\".", error.Message);
         error = Assert.Throws<DeskException>(() => Lights("group", -1, 255, null).Checked());
         Assert.Equal("The group of a step must be one of the stage plan, not -1.", error.Message);
     }

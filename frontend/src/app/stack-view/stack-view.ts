@@ -2,8 +2,12 @@ import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { DeskStore } from '../desk/desk-store';
 import { StackStep, TimedStep } from '../desk/desk-types';
 import { MAX_EFFECTS } from '../desk/effects';
-import { StepChoices, channelChoices, effectChoices, lightChoices, stepChoices } from '../desk/step-choices';
+import { MAX_SOUNDS, tracksPlaylist } from '../desk/sounds';
+import { StepChoices, channelChoices, effectChoices, lightChoices, soundChoices, stepChoices } from '../desk/step-choices';
 import { LampButton } from '../lamp-button/lamp-button';
+import { MasterSection } from '../master-section/master-section';
+import { SoundMaster } from '../sound-master/sound-master';
+import { SoundNow } from '../sound-now/sound-now';
 import { StackCards } from '../stack-cards/stack-cards';
 import { StackKeys } from '../stack-keys/stack-keys';
 import { StepColorDialog } from '../step-color-dialog/step-color-dialog';
@@ -30,7 +34,8 @@ interface DropMark {
  * that fits its new place.
  */
 @Component({
-  imports: [LampButton, StackCards, StackKeys, StepColorDialog, StepRow],
+  host: { '[class.sounding]': 'sounding()' },
+  imports: [LampButton, MasterSection, SoundMaster, SoundNow, StackCards, StackKeys, StepColorDialog, StepRow],
   selector: 'lm-stack-view',
   styleUrl: './stack-view.css',
   templateUrl: './stack-view.html',
@@ -40,6 +45,9 @@ export class StackView {
   private readonly colorDialog = viewChild.required(StepColorDialog);
 
   protected readonly steps = computed(() => this.store.stack().steps);
+
+  /** True once a sound played: its wave stands over the steps. */
+  protected readonly sounding = computed(() => this.store.shownSound() !== undefined);
 
   /** True while the stack is live: it runs, and its steps are locked. */
   protected readonly live = this.store.live;
@@ -64,6 +72,12 @@ export class StackView {
     memory: stepChoices(this.store.memoryNotes(), (memory) => this.store.memoryStored()[memory - 1]),
     ...lightChoices(this.store.stage()),
     effect: effectChoices(this.store.effects(), MAX_EFFECTS),
+    sound: soundChoices(
+      this.store.sounds(),
+      MAX_SOUNDS,
+      this.store.playlistTracks(),
+      this.store.mixer().state === 'connected' ? tracksPlaylist(this.store.mixer()) : '',
+    ),
     release: this.steps()
       .filter((step) => step.target !== 'release')
       .map((step) => ({ number: step.id, text: `${step.cue}: ${this.store.stepWithNote(step)}`, short: step.cue })),
@@ -99,17 +113,31 @@ export class StackView {
 
   /**
    * A row hands back its step with one field changed. Only the step itself goes to the desk, not
-   * its name and number; whether it adds only when it does (a release never does).
+   * its name and number; whether it adds only when it does (a release never does), whether it plays
+   * on only for a sound that does.
    */
   protected changeStep(id: number, step: TimedStep): void {
     const { target, number, value, up, wait, down, color, add } = step;
     const sent: TimedStep = color === undefined ? { target, number, value, up, wait, down } : { target, number, value, up, wait, down, color };
-    this.store.updateStackStep(id, add && target !== 'release' ? { ...sent, add: true } : sent);
+    const adds = add && target !== 'release' ? { ...sent, add: true } : sent;
+    const plays = step.continue && target === 'sound' ? { ...adds, continue: true } : adds;
+    this.store.updateStackStep(id, step.disabled ? { ...plays, disabled: true } : plays);
+  }
+
+  /** The Disabled box of a step: checked, the stack passes over it. Also while the stack is live. */
+  protected setDisabled(step: StackStep, event: Event): void {
+    const box = event.target as HTMLInputElement;
+    this.store.setStackStepDisabled(step.id, box.checked);
   }
 
   /** The Add box of a step: checked, the step comes up on top of what is on and takes nothing down. */
   protected setAdd(step: StackStep, event: Event): void {
     this.changeStep(step.id, { ...step, add: (event.target as HTMLInputElement).checked });
+  }
+
+  /** The Continue box of a step of a sound: checked, its sound plays on through the steps after it. */
+  protected setContinue(step: StackStep, event: Event): void {
+    this.changeStep(step.id, { ...step, continue: (event.target as HTMLInputElement).checked });
   }
 
   /**

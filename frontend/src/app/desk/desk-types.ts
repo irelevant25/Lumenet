@@ -1,4 +1,5 @@
 import { type EffectLevels, type EffectPlayback, MAX_EFFECTS } from './effects';
+import { type ListenView, MAX_SOUNDS, type MixerView, type SoundPlayback } from './sounds';
 
 /**
  * Sizes of the desk. A universe is the 512 channels one DMX cable carries; a project has 1 to 8
@@ -33,7 +34,8 @@ export const MEDIUM_BELOW_PX = 1850;
 /**
  * Narrower than this is "narrow": the top bar takes two lines, the links to the views under the
  * name, the keys and the project, which no longer fit beside them. At 1366 pixels, a usual laptop,
- * the nine links still leave the project's name about 60 pixels in one line.
+ * the eleven links, in smaller letters there (top-bar.css), still leave the project's name its room
+ * in one line.
  */
 export const NARROW_BELOW_PX = 1366;
 /**
@@ -96,8 +98,15 @@ export interface DeskState {
   memoryClaims?: number[];
   /** The effect each effect key of the independents starts and stops. Missing from a desk program from before effects. */
   effectIndependents?: number[];
+  /** The sound each sound key of the independents starts and stops. Missing from an older desk program. */
+  soundIndependents?: number[];
   /** The playbacks of the effects (of every effect the project has, and of any other whose fader is up). */
   effects?: EffectPlayback[];
+  /** The playbacks of the sounds. Missing from a desk program from before sounds. */
+  sounds?: SoundPlayback[];
+  /** The volume of all sounds, -100 dB to 0 dB, and MUTE. */
+  soundDecibels?: number;
+  soundMute?: boolean;
 }
 
 /** A key of a channel or a memory held for a solo. */
@@ -269,11 +278,11 @@ export type StepTarget = 'channel' | 'memory';
 /**
  * What a step of a sequence or of the stack stands for: a fader, or a fixture or a group of
  * fixtures of the stage plan; "effect": a step that plays an effect (its number is the effect's;
- * in the stack it brings the effect's fader up); "release": a step that takes another step of the
- * same stack or sequence down (its number names that step: in the stack its id, in a sequence its
- * number in the list).
+ * in the stack it brings the effect's fader up); "sound": a step that plays a sound, likewise;
+ * "release": a step that takes another step of the same stack or sequence down (its number names
+ * that step: in the stack its id, in a sequence its number in the list).
  */
-export type StepKind = StepTarget | 'fixture' | 'group' | 'release' | 'effect';
+export type StepKind = StepTarget | 'fixture' | 'group' | 'release' | 'effect' | 'sound';
 
 /** The longest time a step can have, in seconds. */
 export const MAX_STEP_SECONDS = 999.9;
@@ -289,7 +298,7 @@ export interface TimedStep {
   target: StepKind;
   /**
    * The channel (1 to 512 for each universe) or the memory (1 to 128); a fixture or a group by its
-   * id in the stage plan; the effect (1 to 64); for a release the step it takes down, 0 for none:
+   * id in the stage plan; the effect or the sound (1 to 64); for a release the step it takes down, 0 for none:
    * in the stack that step's id, in a sequence its number in the list, from 1.
    */
   number: number;
@@ -302,6 +311,18 @@ export interface TimedStep {
   color?: string | null;
   /** True for a step that comes up on top of what is on and takes nothing down. Missing means false. */
   add?: boolean;
+  /**
+   * Only for a step of a sound: true for one that plays on through the steps after it, with Add or
+   * without, until the sound ends by itself or a release names the step (Stack off, Clear and the
+   * fader of its sequence's memory at zero stop it too). Missing means false.
+   */
+  continue?: boolean;
+  /**
+   * True for a step that is skipped: the stack and the sequence pass over it, and it stays in the
+   * list. It can be switched while the stack is live too; not the step that is on just then. Missing
+   * means false.
+   */
+  disabled?: boolean;
 }
 
 /** A sequence, stored in a memory: its steps run one after the other while the memory's fader is up. */
@@ -396,6 +417,8 @@ export interface Playback {
   effects?: EffectPlayback[];
   /** What the running effects give the channels they touch; missing while none runs. */
   effectLevels?: EffectLevels | null;
+  /** The playbacks of the sounds. Missing from a desk program from before sounds. */
+  sounds?: SoundPlayback[];
 }
 
 /** The first step of a new list, and the pattern for the next ones. */
@@ -429,7 +452,13 @@ export function stepAfter(
   const number =
     last.target === 'fixture' ? nextOf([...plan.lights].sort((a, b) => a.address - b.address).map((light) => light.id))
     : last.target === 'group' ? nextOf(plan.groups.map((group) => group.id))
-    : Math.min(last.number + 1, last.target === 'channel' ? channels : last.target === 'effect' ? MAX_EFFECTS : MEMORY_COUNT);
+    : Math.min(
+        last.number + 1,
+        last.target === 'channel' ? channels
+        : last.target === 'effect' ? MAX_EFFECTS
+        : last.target === 'sound' ? MAX_SOUNDS
+        : MEMORY_COUNT,
+      );
   const { target, value, up, wait, down, color } = last;
   return color === undefined ? { target, number, value, up, wait, down } : { target, number, value, up, wait, down, color };
 }
@@ -617,6 +646,10 @@ export interface Welcome {
   project: ProjectInfo;
   /** The outputs besides the boxes, with their states. Missing from an older desk program. */
   outputs?: OutputView[];
+  /** The Soundcraft Ui mixer of the tracks. Missing from an older desk program. */
+  mixer?: MixerView;
+  /** LISTEN ON. Missing from an older desk program. */
+  listen?: ListenView;
 }
 
 /** One project file in the projects folder. */

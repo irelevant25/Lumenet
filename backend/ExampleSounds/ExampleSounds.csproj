@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Makes the sound files of the example projects "8 Sounds" and "9 Sounds in the stack" from
+    nothing (no recordings, no samples): rain, wind, thunder, a church bell, applause and a short
+    piece of music. Only for the examples; no part of the desk program. See Program.cs.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NAudio" Version="3.3.0" />
+  </ItemGroup>
+
+</Project>

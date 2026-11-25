@@ -207,7 +207,7 @@ public sealed class CrossfadeTests
     }
 
     [Fact]
-    public void NextDuringAFadeFadesOnFromWhereTheLightIs()
+    public void NextDuringAFadeGoesToTheNextStepAtOnce()
     {
         StackOf(
             new Step("memory", 1, 255, Up: 0, Wait: 0, Down: 4),
@@ -217,17 +217,13 @@ public sealed class CrossfadeTests
         Pass(1);
         Assert.Equal(195, _desk.GetOutput()[36]);
 
-        _desk.StackNext();                           // memory 4 comes before the fade from 1 to 2 is over
-        Assert.Equal(195, _desk.GetOutput()[36]);    // no jump
-        Assert.Equal(255, _desk.GetOutput()[44]);
-        for (int quarter = 0; quarter < 16; quarter++)
-        {
-            Pass(0.25);
-            Assert.Equal(255, _desk.GetOutput()[44]);
-        }
+        _desk.StackNext();                           // memory 4 before the fade from 1 to 2 is over: at once
+        AssertLevels(37, 30, 38, 0, 45, 255, 60, 0); // only memory 4: no up time, no down time
+        Pass(3);
+        AssertLevels(37, 30, 38, 0, 45, 255, 60, 0);
 
-        Assert.Equal(30, _desk.GetOutput()[36]);     // and in the end only memory 4
-        Assert.Equal(0, _desk.GetOutput()[59]);
+        _desk.StackPrevious();                       // back to memory 2, at once too
+        AssertLevels(37, 150, 38, 200, 45, 255, 60, 80);
     }
 
     // ---------------------------------------------------------------- the owner's numbers: one channel at 120 and at 150

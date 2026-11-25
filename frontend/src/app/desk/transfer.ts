@@ -40,7 +40,7 @@ export const TRANSFER_PARTS: readonly TransferPartView[] = [
   {
     part: 'project',
     label: 'Project',
-    hint: 'everything the project holds: memories, sequences, the stack, the stage and the notes',
+    hint: 'everything the project holds: memories, sequences, the stack, the stage, the notes and the sounds (with sounds the file is a ZIP)',
     said: 'the project',
   },
   { part: 'stage', label: 'Stage', hint: 'the stage alone: its lights, their kinds, the groups and the picture', said: 'the stage' },

@@ -494,17 +494,25 @@ public sealed class BoxLinkTests
         var thread = new Thread(() => _link.Run(stop.Token));
 
         thread.Start();
-        await Wait.UntilAsync(() => _link.Status.Connected, "The link did not connect to the pretend box.");
-        Assert.Equal(200, _box.Levels[0]);
+        try
+        {
+            await Wait.UntilAsync(() => _link.Status.Connected, "The link did not connect to the pretend box.");
+            Assert.Equal(200, _box.Levels[0]);
 
-        _desk.SetChannel(1, 100);
-        await Wait.UntilAsync(() => _box.Levels[0] == 100, "The link did not send the change.");
+            _desk.SetChannel(1, 100);
+            await Wait.UntilAsync(() => _box.Levels[0] == 100, "The link did not send the change.");
 
-        _box.Unplug();
-        await Wait.UntilAsync(() => !_link.Status.Connected, "The link did not notice the box going away.");
+            _box.Unplug();
+            await Wait.UntilAsync(() => !_link.Status.Connected, "The link did not notice the box going away.");
+        }
+        finally
+        {
+            // also when a wait failed: a thread left running would wait on the stop after it is gone,
+            // which ends the whole test run
+            stop.Cancel();
+            Assert.True(thread.Join(TimeSpan.FromSeconds(5)), "The link's thread did not stop.");
+        }
 
-        stop.Cancel();
-        Assert.True(thread.Join(TimeSpan.FromSeconds(5)), "The link's thread did not stop.");
         _link.Dispose();
         Assert.True(_box.Disposed);
     }

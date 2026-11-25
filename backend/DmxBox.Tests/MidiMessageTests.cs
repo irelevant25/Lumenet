@@ -77,8 +77,11 @@ public sealed class MidiMessageTests
         Assert.Equal(new ControlTarget("fader.master", FaderKind.Master, 0, false), ControlTarget.Parse("fader.master"));
         Assert.Equal(new ControlTarget("fader.slot.memory.3", FaderKind.Memory, 3, true), ControlTarget.Parse("fader.slot.memory.3"));
         Assert.Equal(FaderKind.EffectSpread, ControlTarget.Parse("fader.effect-spread.64")?.Fader);
+        Assert.Equal(new ControlTarget("fader.sound.64", FaderKind.Sound, 64, false), ControlTarget.Parse("fader.sound.64"));
+        Assert.Equal(new ControlTarget("fader.sound-volume", FaderKind.SoundVolume, 0, false), ControlTarget.Parse("fader.sound-volume"));
+        Assert.True(ControlTarget.Parse("sound.mute")?.IsKey);
 
-        foreach (string wrong in new[] { "", "Memory.5", "fader.channel", "fader.master.1", "fader.slot.master", "fader.channel.0", "fader.channel.4097", "fader.colour.1", "memory 5", "fader.slot.sequence.1" })
+        foreach (string wrong in new[] { "", "Memory.5", "fader.channel", "fader.master.1", "fader.slot.master", "fader.channel.0", "fader.channel.4097", "fader.colour.1", "memory 5", "fader.slot.sequence.1", "fader.sound", "fader.sound-volume.1", "fader.slot.sound.1" })
             Assert.Null(ControlTarget.Parse(wrong));
     }
 
@@ -114,5 +117,13 @@ public sealed class MidiMessageTests
         Assert.InRange(Math.Abs((at240 - at120) - (at120 - at60)), 0, 1);   // twice as fast: the same way further
         Assert.Equal(50.0, FaderScale.ValueAt(FaderKind.EffectSize, 128));
         Assert.Equal(128, FaderScale.PositionOf(FaderKind.EffectSpread, 50));
+
+        // a sound: its level in per cent; the volume of the sound -100 dB to 0 dB, the gain as the place squared
+        Assert.Equal(100.0, FaderScale.ValueAt(FaderKind.Sound, 255));
+        Assert.Equal(0.0, FaderScale.ValueAt(FaderKind.SoundVolume, 255));
+        Assert.Equal(-12.0, FaderScale.ValueAt(FaderKind.SoundVolume, 128));
+        Assert.Equal(-100.0, FaderScale.ValueAt(FaderKind.SoundVolume, 0));
+        Assert.InRange(FaderScale.ValueAt(FaderKind.SoundVolume, FaderScale.PositionOf(FaderKind.SoundVolume, -20)), -20.2, -19.8);
+        Assert.Equal(0, FaderScale.PositionOf(FaderKind.SoundVolume, -100));
     }
 }

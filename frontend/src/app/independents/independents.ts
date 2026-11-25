@@ -3,6 +3,7 @@ import { DeskSettings } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
 import { MEMORY_COUNT, StepTarget } from '../desk/desk-types';
 import { MAX_EFFECTS, effectLamp } from '../desk/effects';
+import { MAX_SOUNDS, soundLamp } from '../desk/sounds';
 import { KeyColumns } from '../desk/key-columns';
 import { memoryLamp } from '../desk/lamps';
 import { channelField, channelFromText, channelLabel, channelNumber, universeOf } from '../desk/universes';
@@ -11,10 +12,11 @@ import { LampButton, LampTone } from '../lamp-button/lamp-button';
 /**
  * The independents: a column at the right edge. The green keys each switch a channel between
  * zero and full, the red ones each switch the fader of a memory, the violet ones each start and
- * stop an effect (with its fade times, at its fader's level); Settings says how many of each are
- * shown (0 to 32: 10 green and 10 red at first, no violet; with none of any the main view leaves
- * the section out). The channel, memory or effect a key works is printed on it; Edit lets the
- * owner change those numbers. Keys that do not fit into one column go on in another.
+ * stop an effect (with its fade times, at its fader's level), the cyan and pink ones each start and
+ * stop a sound (music, a sound effect), as its own key does; Settings says how many of each are
+ * shown (0 to 32: 10 green and 10 red at first, none of the others; with none of any the main view
+ * leaves the section out). The channel, memory, effect or sound a key works is printed on it; Edit
+ * lets the owner change those numbers. Keys that do not fit into one column go on in another.
  */
 @Component({
   imports: [KeyColumns, LampButton],
@@ -28,7 +30,12 @@ export class Independents {
 
   /** Edit, and the keys of every kind that are shown. */
   protected readonly keyCount = computed(
-    () => 1 + this.settings.channelKeys() + this.settings.memoryKeys() + this.settings.effectKeys(),
+    () =>
+      1 +
+      this.settings.channelKeys() +
+      this.settings.memoryKeys() +
+      this.settings.effectKeys() +
+      this.settings.soundKeys(),
   );
 
   /**
@@ -107,6 +114,32 @@ export class Independents {
       }));
   });
 
+  /**
+   * The sound keys that are shown: which sound each one starts and stops, and how lit it is, like the
+   * key of that sound.
+   */
+  protected readonly soundKeys = computed(() => {
+    const sounds = this.store.soundsByNumber();
+    const playbacks = this.store.soundPlaybacks();
+    const before = this.settings.channelKeys() + this.settings.memoryKeys() + this.settings.effectKeys();
+    return this.store
+      .soundIndependents()
+      .slice(0, this.settings.soundKeys())
+      .map((sound, index) => {
+        const kept = sounds.get(sound);
+        const playback = playbacks.get(sound);
+        return {
+          number: index + 1,
+          name: before + index + 1,
+          sound,
+          called: kept?.name ?? '',
+          on: playback?.playing ?? false,
+          fading: playback?.fading ?? false,
+          lamp: soundLamp(kept, playback),
+        };
+      });
+  });
+
   protected toggleEditing(): void {
     this.editing.update((on) => !on);
   }
@@ -117,6 +150,14 @@ export class Independents {
     const effect = wholeNumber(field.value, MAX_EFFECTS);
     if (effect !== null) this.store.setEffectIndependent(key, effect);
     field.value = String(this.store.effectIndependents()[key - 1]);
+  }
+
+  /** A new sound number was typed onto a sound key. */
+  protected onSoundTyped(key: number, event: Event): void {
+    const field = event.target as HTMLInputElement;
+    const sound = wholeNumber(field.value, MAX_SOUNDS);
+    if (sound !== null) this.store.setSoundIndependent(key, sound);
+    field.value = String(this.store.soundIndependents()[key - 1]);
   }
 
   /**

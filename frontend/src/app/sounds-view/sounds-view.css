@@ -1,0 +1,190 @@
+/* One section over the whole view: the title with a sentence about the chosen sound; the row of
+   sounds with Copy and Del and the sound section beside it; under them the chosen sound, its editor
+   and the device. */
+:host {
+  display: grid;
+  grid-template-rows: auto clamp(190px, calc(45vh / var(--zoom)), 400px) minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: var(--panel-raised);
+}
+
+header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* the number of the sound, and the wave of its file over the rest of the line */
+.heading {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+h2,
+h3 {
+  flex: none;
+  margin: 0;
+  color: var(--legend-dim);
+  font-size: 12px;
+  font-stretch: 75%;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.summary {
+  margin: 0;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* the row of sounds, then Copy and Del, then MUTE and the volume: as high as the row */
+.top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: var(--gap);
+  min-height: 0;
+}
+
+.top > * {
+  min-height: 0;
+}
+
+.work {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: start;
+  gap: 10px;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+/* the editor (or the files to add) */
+.edit {
+  display: grid;
+  grid-template-columns: fit-content(640px);
+  justify-content: start;
+  align-items: start;
+  gap: 16px 28px;
+  min-height: 0;
+}
+
+.make {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  max-width: 420px;
+}
+
+.make p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.make .hint {
+  color: var(--legend-dim);
+  line-height: 1.35;
+}
+
+.make-file {
+  min-height: 34px;
+  padding: 4px 14px;
+  border: 1px solid var(--sound);
+  border-radius: 4px;
+  background: var(--well);
+  color: var(--legend);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.make-file:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--sound) 18%, var(--well));
+}
+
+.make-file:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* a track of the mixer's stick: a playlist, then a track of it */
+.track {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.choose {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.choose select {
+  max-width: 260px;
+  min-height: 32px;
+  padding: 2px 6px;
+  border: 1px solid var(--sound);
+  border-radius: 4px;
+  background: var(--well);
+  color: var(--legend);
+  font: inherit;
+  font-size: 14px;
+}
+
+.choose select:disabled {
+  opacity: 0.5;
+}
+
+/* ---- mobile: everything under each other, the page scrolls */
+:host-context(.mobile) {
+  grid-template-rows: none;
+}
+
+:host-context(.mobile) header {
+  display: block;
+}
+
+:host-context(.mobile) .heading {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+:host-context(.mobile) .summary {
+  margin-top: 6px;
+  white-space: normal;
+}
+
+:host-context(.mobile) .top {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* the row of sounds without a frame of its own: the strips of a small screen are made for the
+   width inside one frame (styles.css), and this row is already in the view's */
+:host-context(.mobile) lm-sound-section {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+:host-context(.mobile) .work {
+  overflow: visible;
+}
+
+:host-context(.mobile) .edit {
+  grid-template-columns: minmax(0, 1fr);
+}

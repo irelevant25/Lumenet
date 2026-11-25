@@ -2,13 +2,17 @@ namespace DmxBox.Server;
 
 // The part of the desk that deals with sequences: a memory can hold one in place of a look.
 // A sequence runs while the fader of its memory is up, from the moment the fader leaves zero.
-// It plays itself the way the stack is played (steps that add, releases, effects; see
+// It plays itself the way the stack is played (steps that add, releases, effects, sounds; see
 // SequenceTimeline), but it is a layer like a look: scaled by the fader, merged highest-wins, and
-// it moves no fader, an effect's neither (Desk.Effects.cs).
+// it moves no fader, an effect's or a sound's neither (Desk.Effects.cs, Desk.Sounds.cs).
 internal sealed partial class Desk
 {
     // The sequence stored in each memory. Null where the memory holds a look or nothing.
     private readonly Sequence?[] _sequences = new Sequence?[MemoryCount];
+
+    // The round and the step each sequence played last as the sounds saw it: a step of a sound that
+    // starts plays its sound again when the sound is over (AddSequenceSounds).
+    private readonly (long Round, int Step)[] _soundStepsSeen = [.. Enumerable.Repeat((-1L, -1), MemoryCount)];
 
     // The moment each sequence was last worked out for, with what it was worked out from: the
     // output of one frame needs it several times (the light, the effects, the attributes).
@@ -85,6 +89,40 @@ internal sealed partial class Desk
             Array.ForEach(checkedSequence.Steps, RequireStepFits);
             StoreSequence(memory, checkedSequence);
             CountLookChange();
+        }
+    }
+
+    /// <summary>
+    /// Skips a step of a sequence, or takes it back (Disabled): the sequence passes over a skipped
+    /// step, which stays in the list. Unlike every other change of a sequence this works while the
+    /// stack is live too, as a way out when something goes wrong; the step a running sequence plays
+    /// just then cannot be skipped. A sequence that runs goes on: its rounds are shorter or longer
+    /// from now on.
+    /// </summary>
+    /// <param name="memory">Memory number, 1-128.</param>
+    /// <param name="step">The step, counted from 1.</param>
+    /// <param name="disabled">True to skip it.</param>
+    /// <returns>True when the step changed.</returns>
+    /// <exception cref="DeskException">The memory holds no sequence with that step, or the step plays just now.</exception>
+    public bool SetSequenceStepDisabled(int memory, int step, bool disabled)
+    {
+        RequireMemory(memory);
+        lock (_lock)
+        {
+            if (_sequences[memory - 1] is not { } sequence)
+                throw new DeskException($"Memory {memory} holds no sequence.");
+            if (step < 1 || step > sequence.Steps.Length)
+                throw new DeskException($"The sequence of memory {memory} has no step {step}.");
+            if (sequence.Steps[step - 1].Disabled == disabled)
+                return false;
+            if (disabled && _memoryLevels[memory - 1] > 0 && MomentOf(memory - 1, sequence, Now).Current == step - 1)
+                throw new DeskException($"Step {step} of the sequence in memory {memory} plays just now: it cannot be skipped now.");
+
+            Step[] steps = [.. sequence.Steps];
+            steps[step - 1] = steps[step - 1] with { Disabled = disabled };
+            _sequences[memory - 1] = sequence with { Steps = steps };
+            CountLookChange();
+            return true;
         }
     }
 
@@ -235,6 +273,7 @@ internal sealed partial class Desk
     {
         _sequenceStarts[index] = Now;
         _sequenceSeeds[index] = System.Random.Shared.Next();
+        _soundStepsSeen[index] = (-1, -1);
     }
 
     // Call with the lock held. The time of the sequence at "index": seconds since its start,
@@ -387,6 +426,46 @@ internal sealed partial class Desk
                 }
 
                 levels[effect] = Math.Max(levels[effect], value * fader / (MaxLevel * (double)MaxLevel));
+            }
+        }
+    }
+
+    // Call with the lock held. Raises "levels" (one per sound, 0 to 1) to how loud the running
+    // sequences play each sound at "now": as far as its step is up, scaled by the fader of the
+    // sequence's memory; the highest wins. A step of a sound comes and goes like that of an effect;
+    // one that plays on (Continue) stays on through the steps after it (SequenceTimeline).
+    private void AddSequenceSounds(double[] levels, double now)
+    {
+        for (int index = 0; index < MemoryCount; index++)
+        {
+            byte fader = _memoryLevels[index];
+            if (fader == 0 || _sequences[index] is not { } sequence || !sequence.Steps.Any(step => step.IsSound))
+                continue;
+
+            SequenceTimeline.Moment moment = MomentOf(index, sequence, now);
+            var looks = new SequenceLooks(this, sequence.Steps, Channels);
+            byte[] from = looks.SoundsOf(moment.Before), to = looks.SoundsOf(moment.On);
+            (byte[] Levels, double Fraction)[] going = [.. moment.Going.Select(step => (looks.SoundsOf(step), step.Fraction))];
+            for (int sound = 0; sound < levels.Length; sound++)
+            {
+                double value = Between(from[sound], to[sound], moment.In, moment.TookAll);
+                foreach ((byte[] played, double fraction) in going)
+                {
+                    if (played[sound] > value)
+                        value += (played[sound] - value) * fraction;
+                }
+
+                levels[sound] = Math.Max(levels[sound], value * fader / (MaxLevel * (double)MaxLevel));
+            }
+
+            // A step of a sound that has just started plays its sound again when the sound is over,
+            // also where the sound stayed up from a step before (one that plays on, a new round).
+            if (_soundStepsSeen[index] != (moment.Round, moment.Current) && moment.Current >= 0)
+            {
+                _soundStepsSeen[index] = (moment.Round, moment.Current);
+                Step started = sequence.Steps[moment.Current];
+                if (started is { IsSound: true, Value: > 0 } && _soundRuns[started.Number - 1] is { Ended: true, Voice: false } over)
+                    over.Ended = false;
             }
         }
     }
@@ -549,12 +628,36 @@ internal sealed partial class Desk
             return EffectLevels(Without(going));
         }
 
+        // How loud the steps in "on" play each sound, all the way up, 0-255.
+        public byte[] SoundsOf(int[] on)
+        {
+            return SoundLevels(Held(on));
+        }
+
+        // How loud a step on its way down played each sound, from all the way up.
+        public byte[] SoundsOf(SequenceTimeline.Going going)
+        {
+            return SoundLevels(Without(going));
+        }
+
         private static byte[] EffectLevels(IEnumerable<KeyValuePair<Fader, byte>> faders)
         {
             byte[] levels = new byte[Effect.MaxEffects];
             foreach ((Fader fader, byte level) in faders)
             {
                 if (fader.Effect)
+                    levels[fader.Number - 1] = Math.Max(levels[fader.Number - 1], level);
+            }
+
+            return levels;
+        }
+
+        private static byte[] SoundLevels(IEnumerable<KeyValuePair<Fader, byte>> faders)
+        {
+            byte[] levels = new byte[Sound.MaxSounds];
+            foreach ((Fader fader, byte level) in faders)
+            {
+                if (fader.Sound)
                     levels[fader.Number - 1] = Math.Max(levels[fader.Number - 1], level);
             }
 
@@ -602,7 +705,7 @@ internal sealed partial class Desk
             }
             else if (!step.IsRelease)
             {
-                faders[new Fader(step.IsMemory, step.Number, step.IsEffect)] = (byte)step.Value;
+                faders[new Fader(step.IsMemory, step.Number, step.IsEffect, step.IsSound)] = (byte)step.Value;
             }
 
             return _faders[index] = faders;

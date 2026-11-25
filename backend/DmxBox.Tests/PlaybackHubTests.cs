@@ -176,7 +176,7 @@ public sealed class PlaybackHubTests
         await using HubClient ui = await server.ConnectAsync();
 
         JsonElement idle = await ui.InvokeAsync("GetPlayback");
-        Assert.Equal(["levels", "sequenceSteps", "stack", "sequenceOn", "effects"], idle.EnumerateObject().Select(property => property.Name));
+        Assert.Equal(["levels", "sequenceSteps", "stack", "sequenceOn", "effects", "sounds"], idle.EnumerateObject().Select(property => property.Name));
         Assert.Equal(512, idle.GetProperty("levels").GetArrayLength());
         Assert.Equal(
             """{"currentId":null,"nextId":null,"state":"idle","paused":false,"remaining":0,"live":false,"on":[]}""",
@@ -199,8 +199,10 @@ public sealed class PlaybackHubTests
         await ui.InvokeAsync("StackPause");
         Assert.True((await ui.InvokeAsync("GetPlayback")).GetProperty("stack").GetProperty("paused").GetBoolean());
 
-        await ui.InvokeAsync("StackNext");
-        await ui.InvokeAsync("StackPlay");           // a fade is running: Play leaves it alone
+        await ui.InvokeAsync("StackNext");           // at once, without the quarter of an hour
+        JsonElement next = (await ui.InvokeAsync("GetPlayback")).GetProperty("stack");
+        Assert.Equal(second, next.GetProperty("currentId").GetInt32());
+        Assert.NotEqual("fading", next.GetProperty("state").GetString());
         await ui.InvokeAsync("StackPrevious");
         Assert.Equal(id, (await ui.InvokeAsync("GetPlayback")).GetProperty("stack").GetProperty("currentId").GetInt32());
 
@@ -467,6 +469,20 @@ public sealed class PlaybackHubTests
         public Task MidiKey(string key, bool down) => Task.CompletedTask;
 
         public Task MidiRole(MidiRole role) => Task.CompletedTask;
+
+        public Task SoundsChanged(Sound[] sounds) => Note("sounds");
+
+        public Task SoundPlaybackChanged(SoundPlayback playback) => Note($"sound {playback.Number} {playback.Level}");
+
+        public Task SoundMasterChanged(double decibels, bool mute) => Note($"sound master {decibels} {mute}");
+
+        public Task SoundOutputChanged(SoundOutputView output) => Task.CompletedTask;
+
+        public Task MixerChanged(MixerView mixer) => Task.CompletedTask;
+
+        public Task SoundListenChanged(ListenView listen) => Task.CompletedTask;
+
+        public Task SoundIndependentChanged(int index, int sound) => Task.CompletedTask;
 
         private Task Note(string message)
         {

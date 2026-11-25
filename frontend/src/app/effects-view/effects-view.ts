@@ -6,6 +6,7 @@ import { EffectEditor } from '../effect-editor/effect-editor';
 import { EffectLive } from '../effect-live/effect-live';
 import { EffectPreviewPanel } from '../effect-preview/effect-preview';
 import { EffectSection } from '../effect-section/effect-section';
+import { RecordSection } from '../record-section/record-section';
 
 /**
  * The Effects view: the effects with their faders and keys at the top, as on the main view; under
@@ -13,7 +14,7 @@ import { EffectSection } from '../effect-section/effect-section';
  * itself, and a preview of one cycle of it. An empty number offers the four kinds to make one.
  */
 @Component({
-  imports: [EffectEditor, EffectLive, EffectPreviewPanel, EffectSection],
+  imports: [EffectEditor, EffectLive, EffectPreviewPanel, EffectSection, RecordSection],
   selector: 'lm-effects-view',
   styleUrl: './effects-view.css',
   templateUrl: './effects-view.html',

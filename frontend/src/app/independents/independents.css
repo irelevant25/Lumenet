@@ -39,6 +39,12 @@ h2 {
   height: auto;
 }
 
+/* Edit alone in the first row, over all the columns, so that no key stands beside it */
+.keys > .edit {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
 /* in a project of several universes: the universe of a key's channel, small under its number */
 .universe {
   font-size: 0.6em;
@@ -70,6 +76,10 @@ h2 {
   border-color: var(--effect);
 }
 
+.field.sound {
+  border-color: var(--sound);
+}
+
 /* ---- mobile: the section lies down. The title over the whole width; Edit at the left under it,
    as it stands first on a big screen; then the channel keys in the columns of the faders, and the
    memory keys and the effect keys each start a line of their own. */
@@ -93,7 +103,7 @@ h2 {
 
 /* a line of their own: the keys after Edit, the memory keys, the effect keys */
 :host-context(.mobile) .keys > :nth-child(2),
-:host-context(.mobile) :is(.first-memory, .first-effect) {
+:host-context(.mobile) :is(.first-memory, .first-effect, .first-sound) {
   grid-column-start: 1;
 }
 

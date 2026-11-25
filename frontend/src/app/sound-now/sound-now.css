@@ -1,0 +1,28 @@
+/* The name of the sound, then its wave over the rest of the line. In the narrow column of the Stage
+   view the name stands over the wave, and the wave is lower. */
+:host {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.name {
+  max-width: 22ch;
+  overflow: hidden;
+  color: var(--legend-dim);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:host-context(lm-stage-stack) {
+  --wave-h: 40px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+
+:host-context(lm-stage-stack) .name {
+  max-width: none;
+}

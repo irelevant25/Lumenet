@@ -20,6 +20,13 @@ describe('how a group of keys stands', () => {
     expect(keyColumns(0, 600)).toEqual({ columns: 1, rows: 1 });
   });
 
+  it('can keep the first key alone in its row over the columns (Edit of the independents)', () => {
+    // 26 keys in 600 pixels: two columns; Edit in a row of its own, the 25 others in 13 rows under it
+    expect(keyColumns(26, 600, 20, true)).toEqual({ columns: 2, rows: 14 });
+    // in one column it is alone in its row anyway
+    expect(keyColumns(8, 600, 20, true)).toEqual({ columns: 1, rows: 8 });
+  });
+
   it('can keep keys higher, and then goes on in another column sooner', () => {
     // the 64 channel pages of before, keys at least 34 pixels high: five columns of 13
     expect(keyColumns(64, 600, 34)).toEqual({ columns: 5, rows: 13 });

@@ -9,16 +9,20 @@ import {
   stepAfter,
   stripNumbers,
 } from '../desk/desk-types';
+import { heldMemory, itemWaits, memoryBlinks } from '../desk/function-mode';
 import { LampLevel } from '../desk/lamps';
 import { storedMemoryPages } from '../desk/memory-pages';
 import { noteInOneLine } from '../desk/notes';
+import { DragScroll } from '../desk/drag-scroll';
 import { PressedInSight } from '../desk/pressed-in-sight';
 import { MAX_EFFECTS } from '../desk/effects';
 import { SPEED_KEY_STEP, SPEED_POSITIONS, speedAt, speedPosition, speedText } from '../desk/speed';
-import { StepChoices, channelChoices, effectChoices, lightChoices, stepChoices } from '../desk/step-choices';
+import { MAX_SOUNDS, tracksPlaylist } from '../desk/sounds';
+import { StepChoices, channelChoices, effectChoices, lightChoices, soundChoices, stepChoices } from '../desk/step-choices';
 import { Fader } from '../fader/fader';
 import { LampButton, LampTone } from '../lamp-button/lamp-button';
 import { NoteLines } from '../note-lines/note-lines';
+import { RecordSection } from '../record-section/record-section';
 import { StepColorDialog } from '../step-color-dialog/step-color-dialog';
 import { StepRow } from '../step-row/step-row';
 import { TemplateDialog } from '../template-dialog/template-dialog';
@@ -50,7 +54,7 @@ const PLAY_MODES: readonly { mode: PlayMode; lines: readonly string[]; name: str
  * While the stack is live the view only shows: nothing that is stored can be changed then.
  */
 @Component({
-  imports: [Fader, LampButton, NoteLines, PressedInSight, StepColorDialog, StepRow, TemplateDialog],
+  imports: [DragScroll, Fader, LampButton, NoteLines, PressedInSight, RecordSection, StepColorDialog, StepRow, TemplateDialog],
   selector: 'lm-sequences-view',
   styleUrl: './sequences-view.css',
   templateUrl: './sequences-view.html',
@@ -133,6 +137,12 @@ export class SequencesView {
     ),
     ...lightChoices(this.store.stage()),
     effect: effectChoices(this.store.effects(), MAX_EFFECTS),
+    sound: soundChoices(
+      this.store.sounds(),
+      MAX_SOUNDS,
+      this.store.playlistTracks(),
+      this.store.mixer().state === 'connected' ? tracksPlaylist(this.store.mixer()) : '',
+    ),
     release: this.steps().flatMap((step, index) =>
       step.target === 'release'
         ? []
@@ -165,10 +175,27 @@ export class SequencesView {
       : `${what} It runs while the fader of memory ${memory} is up.${live}`;
   });
 
-  /** Full for the memory that is worked on, half for any other that holds something. */
+  /**
+   * A memory key chooses the memory to work on; while Copy or Del waits for a memory, it is that
+   * memory (Copy and Del of this view keep to sequences). A copy that was made is worked on.
+   */
+  protected press(memory: number): void {
+    const mode = this.store.mode();
+    const copying = mode.kind === 'copy-target' && !mode.of && mode.from !== memory;
+    if (!this.store.pressViewMemory(memory)) this.memory.set(memory);
+    else if (copying && this.store.mode().kind === 'idle') this.memory.set(memory);
+  }
+
+  /** Full for the memory that is worked on and the one Copy copies, half for any other that holds something. */
   protected keyLamp(memory: number): LampLevel {
-    if (memory === this.memory()) return 3;
+    if (memory === this.memory() || memory === heldMemory(this.store.mode())) return 3;
     return this.store.memoryStored()[memory - 1] ? 2 : 1;
+  }
+
+  /** While Copy or Del waits: the keys it can take. */
+  protected keyBlinks(memory: number): boolean {
+    const mode = this.store.mode();
+    return itemWaits(mode) && memoryBlinks(mode, memory, this.store.memoryContent(memory));
   }
 
   /** Red, or red running into yellow for a memory that holds a sequence. */
@@ -191,6 +218,16 @@ export class SequencesView {
   /** The Add box of a step: checked, the step comes up on top of what is on and takes nothing down. */
   protected setAdd(index: number, event: Event): void {
     this.changeStep(index, { ...this.steps()[index], add: (event.target as HTMLInputElement).checked });
+  }
+
+  /** The Disabled box of a step: checked, the sequence passes over it. Also while the stack is live. */
+  protected setDisabled(index: number, event: Event): void {
+    this.store.setSequenceStepDisabled(this.memory(), index, (event.target as HTMLInputElement).checked);
+  }
+
+  /** The Continue box of a step of a sound: checked, its sound plays on through the steps after it. */
+  protected setContinue(index: number, event: Event): void {
+    this.changeStep(index, { ...this.steps()[index], continue: (event.target as HTMLInputElement).checked });
   }
 
   /** The color of a step of a fixture or a group was pressed: the window asks for another. */

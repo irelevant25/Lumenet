@@ -3,7 +3,9 @@
    the table of steps. */
 :host {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  /* one column, as wide as the view: a long line in a card is cut short, it does not widen the view */
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr);
   gap: 12px;
   min-width: 0;
   min-height: 0;
@@ -11,6 +13,18 @@
   border: 1px solid var(--edge);
   border-radius: 6px;
   background: var(--panel-raised);
+}
+
+/* once a sound played, its wave stands between the master and sound line and the steps */
+:host(.sounding) {
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
+}
+
+/* the master section and the sound section, each a line lying down */
+.levels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 560px));
+  gap: 12px;
 }
 
 header {
@@ -131,6 +145,10 @@ table.locked .grip {
 
 :host-context(.mobile) .top {
   flex-wrap: wrap;
+}
+
+:host-context(.mobile) .levels {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 :host-context(.mobile) .table-box {

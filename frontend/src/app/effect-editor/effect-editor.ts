@@ -13,10 +13,8 @@ import {
   Effect,
   EffectKind,
   EffectOrder,
-  MAX_EFFECTS,
   MAX_EFFECT_COLORS,
 } from '../desk/effects';
-import { LampButton } from '../lamp-button/lamp-button';
 import { channelLabel } from '../desk/universes';
 
 /** What each kind's Size does, and what the kind does, in a sentence for under the editor. */
@@ -38,7 +36,6 @@ const EXPLAIN: Readonly<Record<EffectKind, string>> = {
  * once (the store sends quick changes together); nothing while the stack is live.
  */
 @Component({
-  imports: [LampButton],
   selector: 'lm-effect-editor',
   styleUrl: './effect-editor.css',
   templateUrl: './effect-editor.html',
@@ -218,23 +215,6 @@ export class EffectEditor {
   /** Another random order and other random shapes. */
   protected newSeed(): void {
     this.update({ seed: Math.floor(Math.random() * 1_000_000) + 1 });
-  }
-
-  /** Copy: to the next number without an effect, which the editor then shows. */
-  protected copy(): void {
-    const from = this.effect().number;
-    const taken = this.store.effectsByNumber();
-    for (let step = 1; step < MAX_EFFECTS; step++) {
-      const to = ((from - 1 + step) % MAX_EFFECTS) + 1;
-      if (taken.has(to)) continue;
-      this.store.copyEffect(from, to);
-      this.store.chosenEffect.set(to);
-      return;
-    }
-  }
-
-  protected remove(): void {
-    this.store.deleteEffect(this.effect().number);
   }
 
   protected leave(event: Event): void {

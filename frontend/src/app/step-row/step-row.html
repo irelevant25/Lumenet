@@ -8,7 +8,13 @@
     (change)="onTarget($event)"
   >
     @for (choice of kinds(); track choice.value) {
-      <option [value]="choice.value" [selected]="choice.value === kind()">{{ choice.text }}</option>
+      <option
+        [value]="choice.value"
+        [selected]="choice.value === kind()"
+        [style.--kind]="choice.color"
+      >
+        {{ choice.text }}
+      </option>
     }
   </select>
 </td>
@@ -25,7 +31,10 @@
   >
     @if (listed()) {
       @for (choice of list(); track choice.number) {
-        <option [value]="choice.number" [selected]="choice.number === step().number">
+        <option
+          [value]="choice.number"
+          [selected]="choice.number === step().number"
+        >
           {{ choice.text }}
         </option>
       }

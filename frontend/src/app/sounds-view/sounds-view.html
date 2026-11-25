@@ -1,0 +1,76 @@
+<header>
+  <h2>Sounds</h2>
+  <p class="summary" role="status">{{ summary() }}</p>
+</header>
+
+<div class="top">
+  <lm-sound-section [choosing]="true" />
+  <lm-record-section subject="sound" />
+  <lm-sound-master />
+</div>
+
+<section class="work" aria-labelledby="sound-title">
+  <div class="heading">
+    <h3 id="sound-title">Sound {{ chosen() }}</h3>
+    @if (sound(); as current) {
+      <lm-sound-wave [sound]="current" [playback]="playback()" />
+    }
+  </div>
+
+  <div class="edit">
+    @if (sound(); as current) {
+      <lm-sound-editor [sound]="current" />
+    } @else {
+      <div class="make" role="group" [attr.aria-label]="'Add a file to sound ' + chosen()">
+        <p>Add a file to sound {{ chosen() }}</p>
+        <button
+          type="button"
+          class="make-file"
+          [disabled]="store.live() || sending() !== ''"
+          (click)="pick()"
+        >
+          Choose files…
+        </button>
+        <input
+          #picker
+          type="file"
+          multiple
+          hidden
+          [attr.accept]="accept"
+          (change)="onFiles($event)"
+        />
+        @if (sending(); as file) {
+          <p class="hint" role="status">Sending {{ file }}…</p>
+        } @else if (store.live()) {
+          <p class="hint">The stack is live: switch Stack off to add a sound.</p>
+        } @else {
+          <p class="hint">
+            MP3, WAV, AIFF, FLAC, M4A, AAC or WMA. Several files fill the next empty numbers too.
+            Files can also be dropped here.
+          </p>
+        }
+        @if (store.mixer().state === 'connected') {
+          <div
+            class="track"
+            role="group"
+            [attr.aria-label]="'Add a track of the mixer to sound ' + chosen()"
+          >
+            <p>Or a track of the mixer ({{ playlistText(playlist()) }})</p>
+            <div class="choose">
+              <select
+                aria-label="Track of the mixer"
+                [disabled]="store.live()"
+                (change)="onTrack($event)"
+              >
+                <option value="" selected>{{ tracksText() }}</option>
+                @for (name of store.playlistTracks(); track name) {
+                  <option [value]="name">{{ shown(name) }}</option>
+                }
+              </select>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</section>

@@ -131,11 +131,6 @@ button:disabled {
   cursor: default;
 }
 
-.keys {
-  display: flex;
-  gap: var(--strip-gap);
-}
-
 /* the sentence about the kind wraps in the width of the fields: it does not widen the editor, so
    the preview stays close to them */
 .explain {

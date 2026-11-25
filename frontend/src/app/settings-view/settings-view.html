@@ -40,7 +40,14 @@
       <label for="effect-rows">Row of effect faders</label>
       <select id="effect-rows" (change)="onEffectRows($event)">
         <option value="0" [selected]="settings.effectRows() === 0">None</option>
-        <option value="1" [selected]="settings.effectRows() === 1">1 row, under the memories</option>
+        <option value="1" [selected]="settings.effectRows() === 1">1</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="sound-rows">Row of sound faders</label>
+      <select id="sound-rows" (change)="onSoundRows($event)">
+        <option value="0" [selected]="settings.soundRows() === 0">None</option>
+        <option value="1" [selected]="settings.soundRows() === 1">1</option>
       </select>
     </div>
     <div class="field">
@@ -85,6 +92,18 @@
         step="1"
         [value]="settings.effectKeys()"
         (change)="onEffectKeys($event)"
+      />
+    </div>
+    <div class="field">
+      <label for="sound-keys">Sound keys of the independents</label>
+      <input
+        id="sound-keys"
+        type="number"
+        min="0"
+        [max]="maxSoundKeys"
+        step="1"
+        [value]="settings.soundKeys()"
+        (change)="onSoundKeys($event)"
       />
     </div>
 
@@ -145,10 +164,6 @@
           }
         </select>
       </div>
-      <p class="hint">
-        The desk program keeps the work that is not saved in a file of its own on this PC, and brings
-        it back if it stops before it is saved. Off, it keeps nothing.
-      </p>
     } @else {
       <p class="hint">
         @if (store.lan() && !store.lan()?.local) {
@@ -288,6 +303,9 @@
       bar, and ↺ brings all of them back in the usual order. Without Main the desk opens on the
       first view ticked.
     </p>
+
+    <!-- the sound: the device, its outputs, listening, the mixer and its playlist -->
+    <lm-sound-output />
   </section>
 
   <!-- ---------------------------------------------------------------- colors -->

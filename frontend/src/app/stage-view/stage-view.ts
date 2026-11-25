@@ -1,4 +1,5 @@
 import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
+import { DeskSettings } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
 import { FixtureType, MAX_LEVEL, STAGE_BACK_ROOM, STAGE_FRONT_ROOM, STAGE_SIDE_ROOM, StageLight } from '../desk/desk-types';
 import {
@@ -116,7 +117,7 @@ interface Dragged {
  * change while the stack is live.
  */
 @Component({
-  host: { '[class.editing]': 'editing()' },
+  host: { '[class.editing]': 'editing()', '[class.no-panel]': '!panelShown()' },
   imports: [LampButton, StagePanel, StageStack],
   selector: 'lm-stage-view',
   styleUrl: './stage-view.css',
@@ -124,6 +125,7 @@ interface Dragged {
 })
 export class StageView {
   protected readonly store = inject(DeskStore);
+  protected readonly settings = inject(DeskSettings);
   private readonly planBox = viewChild.required<ElementRef<HTMLElement>>('plan');
 
   private readonly editMode = signal(false);
@@ -131,6 +133,9 @@ export class StageView {
   protected readonly editing = computed(() => this.editMode() && !this.store.live());
   /** True when the plan can be edited now. */
   protected readonly canEdit = computed(() => this.store.stageKnown() && !this.store.live());
+
+  /** The light panel at the right: as the key Light says, and always while Edit is lit (Edit works in it). */
+  protected readonly panelShown = computed(() => this.settings.stagePanel() || this.editing());
   /** True when every channel of the project has a light: there is no room for another. */
   protected readonly full = computed(() => this.store.stage().lights.length >= this.store.channelCount());
 

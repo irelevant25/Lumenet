@@ -1,12 +1,17 @@
-/* The keys at the top, the three cards under them, and the steps in the room that is left,
-   scrolling when there are more than fit. The rows look like those of the Stack view
-   (styles.css, "tables of steps"), with lettering instead of fields. */
+/* The keys at the top, the three cards under them, the master section and the sound section in a
+   line each, and the steps in the room that is left, scrolling when there are more than fit. The rows
+   look like those of the Stack view (styles.css, "tables of steps"), with lettering instead of fields. */
 :host {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
   gap: 12px;
   min-width: 0; /* as wide as its column, the row of keys: the cards and the notes cut their lettering */
   min-height: 0;
+}
+
+/* once a sound played, its wave stands between the cards and the master section */
+:host(.sounding) {
+  grid-template-rows: auto auto auto auto auto minmax(0, 1fr);
 }
 
 .table-box {

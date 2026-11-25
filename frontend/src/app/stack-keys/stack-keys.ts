@@ -4,7 +4,8 @@ import { LampButton } from '../lamp-button/lamp-button';
 
 /**
  * The keys a show is run with: Stack, which takes the stack live, and Prev, Play, Pause and
- * Next, which go through it. The Stack view and the Stage view both show them, alike.
+ * Next, which go through it. The Stack view and the Stage view both show them, alike, with MUTE of
+ * the sound at the end of their row (lm-mute-key).
  */
 @Component({
   imports: [LampButton],

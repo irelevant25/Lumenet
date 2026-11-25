@@ -1,4 +1,4 @@
-import { Service, computed, effect, inject, signal } from '@angular/core';
+import { Service, computed, effect, inject, signal, untracked } from '@angular/core';
 import { DeskConnection } from './desk-connection';
 import { DeskSettings } from './desk-settings';
 import { enterFullscreen, leaveFullscreen } from './fullscreen';
@@ -58,10 +58,14 @@ import {
   FunctionMode,
   FunctionName,
   IDLE,
+  ItemKind,
   MemoryContent,
+  MemoryScope,
   Step,
+  itemWaits,
   pressChannel,
   pressFunction,
+  pressItem,
   pressMemory,
 } from './function-mode';
 import {
@@ -94,6 +98,25 @@ import {
   MAX_EFFECTS,
   withEffectLevels,
 } from './effects';
+import {
+  DEFAULT_SOUND_DECIBELS,
+  MAX_DECIBELS,
+  MAX_SOUNDS,
+  MIN_DECIBELS,
+  FoundMixer,
+  ListenView,
+  MixerView,
+  NO_LISTEN,
+  NO_MIXER,
+  SOUND_INDEPENDENT_COUNT,
+  Sound,
+  SoundControl,
+  SoundOutput,
+  SoundPlayback,
+  newTrack,
+  quietPlayback,
+  tracksPlaylist,
+} from './sounds';
 
 /**
  * While a sequence is recorded: for every channel, memory, fixture and group it uses, the
@@ -127,6 +150,12 @@ const EFFECT_SEND_DELAY_MS = 150;
 
 /** A fader or live value of an effect that the page moved keeps the page's value for this long. */
 const EFFECT_TOUCH_MS = 600;
+
+/**
+ * A sound that keeps changing (a slider of the editor dragged) goes to the desk program at once and
+ * then at most this often, the newest each time, so that what is heard follows the slider.
+ */
+const SOUND_SEND_MS = 60;
 
 /** Nothing runs: no sequence gives anything, and no step of the stack is on. */
 const NO_PLAYBACK: Playback = {
@@ -176,6 +205,8 @@ export class DeskStore {
   readonly memoryIndependents = signal<readonly number[]>(oneToCount(MEMORY_INDEPENDENT_COUNT));
   /** The effect each of the 32 effect keys of the independents starts and stops: 1 to 32 until the owner changes them. */
   readonly effectIndependents = signal<readonly number[]>(oneToCount(EFFECT_INDEPENDENT_COUNT));
+  /** The sound each sound key of the independents starts and stops. */
+  readonly soundIndependents = signal<readonly number[]>(oneToCount(SOUND_INDEPENDENT_COUNT));
   /** The effects of the project, in the order of their numbers. */
   readonly effects = signal<readonly Effect[]>([]);
   /** False while the effects could not be fetched: a desk program from before effects. */
@@ -184,6 +215,48 @@ export class DeskStore {
   readonly effectsByNumber = computed(() => new Map(this.effects().map((effect) => [effect.number, effect])));
   /** The playbacks of the effects by their numbers: whether each runs, its fader and its live values. */
   readonly effectPlaybacks = signal<ReadonlyMap<number, EffectPlayback>>(new Map());
+  /** The sounds of the project, in the order of their numbers. */
+  readonly sounds = signal<readonly Sound[]>([]);
+  /** False while the sounds could not be fetched: a desk program from before sounds. */
+  readonly soundsKnown = signal(false);
+  /** The sounds by their numbers. */
+  readonly soundsByNumber = computed(() => new Map(this.sounds().map((sound) => [sound.number, sound])));
+  /** The playbacks of the sounds by their numbers: whether each plays, its fader, where it is. */
+  readonly soundPlaybacks = signal<ReadonlyMap<number, SoundPlayback>>(new Map());
+  /** For each sound that played on this page, when it last started: the higher, the later. */
+  private readonly soundStarts = signal<ReadonlyMap<number, number>>(new Map());
+  private soundStartCount = 0;
+  /**
+   * The sound whose wave the Stack and Stage views show: of the sounds that play, the one that started
+   * last; while none plays, the one that played last. Undefined before any played.
+   */
+  readonly shownSound = computed(() => {
+    const starts = this.soundStarts();
+    const playbacks = this.soundPlaybacks();
+    const sounds = this.soundsByNumber();
+    const ranked = [...starts.entries()]
+      .filter(([number]) => sounds.has(number))
+      .sort((a, b) => b[1] - a[1])
+      .map(([number]) => number);
+    const playing = ranked.filter((number) => playbacks.get(number)?.playing);
+    return playing[0] ?? ranked[0];
+  });
+  /**
+   * The volume of all sounds, -100 dB to 0 dB (every sound at its own level), -20 dB at first; like
+   * the master fader it belongs to the evening.
+   */
+  readonly soundDecibels = signal(DEFAULT_SOUND_DECIBELS);
+  /** MUTE: no sound goes out while it is on. */
+  readonly soundMute = signal(false);
+  /** The device of the sound as the desk program last told this page (only a page on the PC hears of it). */
+  readonly soundOutputNews = signal<SoundOutput | null>(null);
+  /** The Soundcraft Ui mixer of the tracks: whether it answers, what it is, its playlist. Every page hears of it. */
+  readonly mixer = signal<MixerView>(NO_MIXER);
+  /** The tracks of the playlist chosen in Settings (or every track), while the mixer answers: the steps and the Sounds view offer them. */
+  readonly playlistTracks = signal<readonly string[]>([]);
+  private playlistAsked = 0;
+  /** LISTEN ON: what goes out plays on the device to listen on as well. Every page hears of it. */
+  readonly listen = signal<ListenView>(NO_LISTEN);
   readonly master = signal(MAX_LEVEL);
   readonly blackout = signal(false);
   /**
@@ -395,8 +468,14 @@ export class DeskStore {
     const steps = this.stack().steps;
     const { currentId, nextId } = this.playback().stack;
     const index = currentId === null ? -1 : steps.findIndex((step) => step.id === currentId);
+    // the step Prev goes to: the one before, past the steps that are skipped, going round
+    let previous: StackStep | null = null;
+    for (let back = 1; index >= 0 && back < steps.length && previous === null; back++) {
+      const step = steps[(((index - back) % steps.length) + steps.length) % steps.length];
+      if (!step.disabled) previous = step;
+    }
     return {
-      previous: index >= 0 && steps.length > 1 ? steps[(index - 1 + steps.length) % steps.length] : null,
+      previous,
       current: index >= 0 ? steps[index] : null,
       next: nextId === null ? null : (steps.find((step) => step.id === nextId) ?? null),
     };
@@ -459,6 +538,12 @@ export class DeskStore {
   readonly viewFirstEffect = computed(() => pageStart(this.wantedEffect(), this.viewMemoriesPerPage()));
   /** The effect the editor of the Effects view works on. */
   readonly chosenEffect = signal(1);
+  /** A sound that must be on the page of sounds shown: on the main view a row as long as the memories', on the Sounds view the window's. */
+  private readonly wantedSound = signal(1);
+  readonly firstSound = computed(() => pageStart(this.wantedSound(), this.stripsPerRow()));
+  readonly viewFirstSound = computed(() => pageStart(this.wantedSound(), this.viewMemoriesPerPage()));
+  /** The sound the Sounds view works on. */
+  readonly chosenSound = signal(1);
   /** Where a record key (save or edit a memory, record a sequence, copy, delete) stands. */
   readonly mode = signal<FunctionMode>(IDLE);
   /** The steps of the sequence that is being recorded, by what they use; null while none is recorded. */
@@ -468,7 +553,7 @@ export class DeskStore {
 
     const used = { channel: new Map<number, number[]>(), memory: new Map<number, number[]>(), fixture: new Map<number, number[]>(), group: new Map<number, number[]>() };
     (this.sequences()[mode.memory]?.steps ?? []).forEach((step, index) => {
-      if (step.target === 'release' || step.target === 'effect') return; // no key records these
+      if (step.target === 'release' || step.target === 'effect' || step.target === 'sound') return; // no key records these
       const users = used[step.target];
       const numbers = users.get(step.number);
       if (numbers) numbers.push(index + 1);
@@ -525,6 +610,12 @@ export class DeskStore {
   // an effect, by "3 level", "3 speed" and so on.
   private readonly effectTimers = new Map<number, ReturnType<typeof setTimeout>>();
   private readonly effectTouched = new Map<string, number>();
+  // Sounds: by number, the one that went to the desk program a moment ago (until SOUND_SEND_MS is
+  // over) with the change that waits for its turn; how many times this page changed each; and when
+  // this page last moved a fader of one.
+  private readonly soundSends = new Map<number, { timer: ReturnType<typeof setTimeout>; waiting: Sound | null }>();
+  private readonly soundChanges = new Map<number, number>();
+  private readonly soundTouched = new Map<number, number>();
   private outboxTimer: ReturnType<typeof setTimeout> | null = null;
   private noticeTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -574,6 +665,24 @@ export class DeskStore {
     );
     connection.on<[Effect[]]>('EffectsChanged', (effects) => this.effects.set(effects ?? []));
     connection.on<[EffectPlayback]>('EffectPlaybackChanged', (playback) => this.takeEffectPlaybacks([playback], false));
+    connection.on<[Sound[]]>('SoundsChanged', (sounds) => this.takeSounds(sounds ?? []));
+    connection.on<[SoundPlayback]>('SoundPlaybackChanged', (playback) => this.takeSoundPlaybacks([playback], false));
+    connection.on<[number, boolean]>('SoundMasterChanged', (decibels, mute) => {
+      this.soundDecibels.set(decibels);
+      this.soundMute.set(mute);
+    });
+    connection.on<[SoundOutput]>('SoundOutputChanged', (output) => this.soundOutputNews.set(output));
+    connection.on<[MixerView]>('MixerChanged', (mixer) => this.mixer.set(mixer ?? NO_MIXER));
+    connection.on<[ListenView]>('SoundListenChanged', (listen) => this.listen.set(listen ?? NO_LISTEN));
+    // the tracks of the playlist chosen in Settings (or every track), once the mixer answers
+    effect(() => {
+      const mixer = this.mixer();
+      const playlist = mixer.state === 'connected' ? tracksPlaylist(mixer) : '';
+      untracked(() => void this.askPlaylistTracks(playlist));
+    });
+    connection.on<[number, number]>('SoundIndependentChanged', (key, sound) =>
+      this.soundIndependents.update((sounds) => withItem(sounds, key - 1, sound)),
+    );
     connection.on<[number, number]>('EffectIndependentChanged', (key, effect) =>
       this.effectIndependents.update((effects) => withItem(effects, key - 1, effect)),
     );
@@ -710,6 +819,7 @@ export class DeskStore {
     if (step.target === 'channel') return `Channel ${channelLabel(step.number)}`;
     if (step.target === 'memory') return `Memory ${step.number}`;
     if (step.target === 'effect') return `Effect ${step.number}`;
+    if (step.target === 'sound') return `Sound ${step.number}`;
     if (step.target === 'release') {
       const released = this.releasedBy(step);
       return released ? `Release of step ${released.cue}` : 'Release of no step';
@@ -738,6 +848,8 @@ export class DeskStore {
         return this.stage().groups.find((group) => group.id === step.number)?.name ?? 'A group that is gone';
       case 'effect':
         return this.effectsByNumber().get(step.number)?.name ?? 'No such effect yet';
+      case 'sound':
+        return this.soundsByNumber().get(step.number)?.name ?? 'No such sound yet';
       case 'release': {
         const released = this.releasedBy(step);
         return released ? this.stepWithNote(released) : 'No step to take down: choose one';
@@ -895,6 +1007,18 @@ export class DeskStore {
     this.run('SetEffectIndependent', key, effect);
   }
 
+  /** A sound key of the independents starts or stops its sound, as the key of the sound does. Solo leaves it alone. */
+  toggleSoundIndependent(key: number): void {
+    this.toggleSound(this.soundIndependents()[key - 1]);
+  }
+
+  /** Binds a sound key of the independents to another sound. */
+  setSoundIndependent(key: number, sound: number): void {
+    if (key < 1 || key > SOUND_INDEPENDENT_COUNT || sound < 1 || sound > MAX_SOUNDS) return;
+    this.soundIndependents.update((sounds) => withItem(sounds, key - 1, sound));
+    this.run('SetSoundIndependent', key, sound);
+  }
+
   // ---------------------------------------------------------------- effects
 
   /** Shows the page of effects that starts at `first`, on the main view and the Effects view. */
@@ -1024,6 +1148,257 @@ export class DeskStore {
       );
     }
     this.effectPlaybacks.set(kept);
+  }
+
+  // ---------------------------------------------------------------- sounds
+
+  /** Shows the page of sounds that starts at `first`, on the main view and the Sounds view. */
+  showSoundPage(first: number): void {
+    this.wantedSound.set(first);
+  }
+
+  /**
+   * Stores a sound, new or changed. The page shows it at once and sends it at once; while it keeps
+   * changing (a slider dragged) the newest goes out every SOUND_SEND_MS, so a sound that plays
+   * follows the slider. The desk program makes one step of the history of them.
+   */
+  /** LISTEN ON on or off: the key LISTEN of the sound section (the device to listen on is chosen in Settings). */
+  toggleListen(): void {
+    const listen = !this.listen().listen;
+    this.listen.update((now) => ({ ...now, listen }));
+    this.connection
+      .invoke<ListenView | undefined>('SetSoundListen', listen)
+      .then((view) => {
+        if (view) this.listen.set(view);
+      })
+      .catch((error: Error) => this.say(error.message));
+  }
+
+  /**
+   * A track of the mixer's playlist becomes a sound in the lowest free number, unless it is one already:
+   * its number either way; null when every number has a sound.
+   */
+  addTrackSound(track: string): number | null {
+    const playlist = tracksPlaylist(this.mixer());
+    const known = this.sounds().find((sound) => sound.playlist === playlist && sound.file === track);
+    if (known) return known.number;
+    const taken = this.soundsByNumber();
+    for (let number = 1; number <= MAX_SOUNDS; number++) {
+      if (!taken.has(number)) {
+        this.setSound(newTrack(number, playlist, track));
+        return number;
+      }
+    }
+    this.say('Every number has a sound: take one out on the Sounds view first.');
+    return null;
+  }
+
+  /** Every track of a playlist of the mixer that is no sound yet becomes one, in the free numbers. */
+  async addMixerTracks(playlist: string): Promise<void> {
+    try {
+      const added = (await this.connection.invoke<number>('AddMixerTracks', playlist)) ?? 0;
+      this.say(
+        added > 0
+          ? `${added} ${added === 1 ? 'track' : 'tracks'} of ${playlist.normalize('NFC')} became sounds.`
+          : `Every track of ${playlist.normalize('NFC')} is a sound already, or every number has one.`,
+      );
+    } catch (error) {
+      this.say((error as Error).message);
+    }
+  }
+
+  // The tracks of the playlist chosen in Settings, for the steps and the Sounds view; none without one.
+  private async askPlaylistTracks(playlist: string): Promise<void> {
+    const asked = ++this.playlistAsked;
+    const tracks = playlist ? await this.mixerTracks(playlist) : [];
+    if (asked === this.playlistAsked) this.playlistTracks.set(tracks);
+  }
+
+  /** The Soundcraft Ui mixers in the networks of the PC (the key Find of Settings); none when the search fails. */
+  async findMixers(): Promise<FoundMixer[]> {
+    try {
+      return (await this.connection.invoke<FoundMixer[]>('FindMixers')) ?? [];
+    } catch (error) {
+      this.say((error as Error).message);
+      return [];
+    }
+  }
+
+  /** The playlists of the mixer's USB stick; none while the mixer does not answer, or from an older desk program. */
+  async mixerPlaylists(): Promise<string[]> {
+    try {
+      return (await this.connection.invoke<string[]>('GetMixerPlaylists')) ?? [];
+    } catch {
+      return [];
+    }
+  }
+
+  /** The tracks of a playlist of the mixer's USB stick, by their names there. */
+  async mixerTracks(playlist: string): Promise<string[]> {
+    try {
+      return (await this.connection.invoke<string[]>('GetMixerTracks', playlist)) ?? [];
+    } catch {
+      return [];
+    }
+  }
+
+  setSound(sound: Sound): void {
+    this.putSound(sound);
+    this.soundChanges.set(sound.number, (this.soundChanges.get(sound.number) ?? 0) + 1);
+    const sending = this.soundSends.get(sound.number);
+    if (sending) sending.waiting = sound;
+    else this.sendSound(sound);
+  }
+
+  /** Takes a sound out of the project; it stops. A change of it that waits goes with it. */
+  deleteSound(number: number): void {
+    const sending = this.soundSends.get(number);
+    if (sending) clearTimeout(sending.timer);
+    this.soundSends.delete(number);
+    this.soundChanges.set(number, (this.soundChanges.get(number) ?? 0) + 1);
+    this.sounds.update((all) => all.filter((item) => item.number !== number));
+    this.run('DeleteSound', number);
+  }
+
+  // Sends a sound, and holds the next change of it back for SOUND_SEND_MS. The answer is the sound as
+  // the desk program keeps it (a file name made unique, numbers rounded): the page takes it unless
+  // it changed the sound again since.
+  private sendSound(sound: Sound): void {
+    const change = this.soundChanges.get(sound.number) ?? 0;
+    const entry = {
+      waiting: null as Sound | null,
+      timer: setTimeout(() => {
+        this.soundSends.delete(sound.number);
+        if (entry.waiting) this.sendSound(entry.waiting);
+      }, SOUND_SEND_MS),
+    };
+    this.soundSends.set(sound.number, entry);
+    this.connection
+      .invoke<Sound | undefined>('SetSound', sound)
+      .then((kept) => {
+        if (kept && this.soundChanges.get(sound.number) === change) this.putSound(kept);
+      })
+      .catch((error: Error) => {
+        // refused: what waits goes too, and the page shows the sound as the desk program has it
+        const sending = this.soundSends.get(sound.number);
+        if (sending) clearTimeout(sending.timer);
+        this.soundSends.delete(sound.number);
+        this.say(error.message);
+        void this.fetchSounds();
+      });
+  }
+
+  // One sound in the page's list, in place of the one under its number.
+  private putSound(sound: Sound): void {
+    this.sounds.update((all) => [...all.filter((item) => item.number !== sound.number), sound].sort((a, b) => a.number - b.number));
+  }
+
+  // The sounds as the desk program lists them. A sound this page sends right now stays as the page
+  // has it: the list may still be from a change before (a slider would jump back for a moment).
+  private takeSounds(sounds: readonly Sound[]): void {
+    if (this.soundSends.size === 0) {
+      this.sounds.set([...sounds]);
+      return;
+    }
+    const mine = this.soundsByNumber();
+    const kept = sounds.filter((sound) => !this.soundSends.has(sound.number));
+    for (const number of this.soundSends.keys()) {
+      const own = mine.get(number);
+      if (own) kept.push(own);
+    }
+    this.sounds.set(kept.sort((a, b) => a.number - b.number));
+  }
+
+  /** Stores a copy of a sound under another number. */
+  copySound(from: number, to: number): void {
+    this.run('CopySound', from, to);
+  }
+
+  /** The key of a sound: brings its fader up in its fade-in time, which starts it, or down in its fade-out time, which stops it. */
+  toggleSound(number: number): void {
+    if (!this.soundsByNumber().has(number)) {
+      this.say(`There is no sound ${number} yet. On the Sounds view, add a file to it.`);
+      return;
+    }
+    this.soundControl(number, 'toggle');
+  }
+
+  /** The fader of a sound, 0 to 255: from zero it starts the sound, at zero it stops it. */
+  setSoundLevel(number: number, level: number): void {
+    this.soundControl(number, 'level', (level / MAX_LEVEL) * 100);
+  }
+
+  /**
+   * Works the playback of a sound (SetSoundControl in the desk program): "go" and "toggle" are
+   * answered with the playback; "level" (per cent) moves like a fader: the page shows it at once and
+   * sends the newest only.
+   */
+  soundControl(number: number, control: SoundControl, value = 0): void {
+    if (control === 'level') {
+      this.touchSound(number, value);
+      this.sendSoon(`sound ${number}`, 'SetSoundControl', number, control, value);
+      return;
+    }
+    this.connection
+      .invoke<SoundPlayback | undefined>('SetSoundControl', number, control, value)
+      .then((playback) => {
+        if (playback) this.takeSoundPlaybacks([playback], false);
+      })
+      .catch((error: Error) => this.say(error.message));
+  }
+
+  /** A sound that plays goes on from another place of its file, in seconds: a double click on its wave. */
+  seekSound(number: number, seconds: number): void {
+    this.connection
+      .invoke<SoundPlayback | undefined>('SeekSound', number, Math.max(0, seconds))
+      .then((playback) => {
+        if (playback) this.takeSoundPlaybacks([playback], false);
+      })
+      .catch((error: Error) => this.say(error.message));
+  }
+
+  /** The volume of all sounds, -100 dB to 0 dB, to a tenth of a decibel. */
+  setSoundVolume(decibels: number): void {
+    const kept = Math.max(MIN_DECIBELS, Math.min(MAX_DECIBELS, Math.round(decibels * 10) / 10)) + 0;
+    this.soundDecibels.set(kept);
+    this.sendSoon('sound volume', 'SetSoundVolume', kept);
+  }
+
+  /** MUTE of the sound: no sound goes out while it is on. */
+  toggleSoundMute(): void {
+    const mute = !this.soundMute();
+    this.soundMute.set(mute);
+    this.run('SetSoundMute', mute);
+  }
+
+  // The playback shows a moved fader at once; a fader that leaves zero starts the sound and one that
+  // comes to zero stops it, as the desk program does.
+  private touchSound(number: number, percent: number): void {
+    this.soundTouched.set(number, Date.now());
+    const old = this.soundPlaybacks().get(number) ?? quietPlayback(number);
+    const level = Math.round((percent * MAX_LEVEL) / 100);
+    const playing = level > 0 ? old.playing || this.soundsByNumber().has(number) : false;
+    this.soundPlaybacks.update((all) => new Map(all).set(number, { ...old, level, playing, fading: false }));
+  }
+
+  // Playbacks from the desk program. A fader this page moved a moment ago keeps the page's value.
+  // "whole": the list of every playback; else only these change.
+  private takeSoundPlaybacks(playbacks: readonly SoundPlayback[], whole: boolean): void {
+    const now = Date.now();
+    const old = this.soundPlaybacks();
+    const kept = whole ? new Map<number, SoundPlayback>() : new Map(old);
+    let starts: Map<number, number> | null = null;
+    for (const playback of playbacks) {
+      const mine = old.get(playback.number);
+      const recent = now - (this.soundTouched.get(playback.number) ?? 0) < EFFECT_TOUCH_MS;
+      kept.set(playback.number, mine && recent ? { ...playback, level: mine.level } : playback);
+      if (playback.playing && !mine?.playing) {
+        starts ??= new Map(this.soundStarts());
+        starts.set(playback.number, ++this.soundStartCount);
+      }
+    }
+    this.soundPlaybacks.set(kept);
+    if (starts) this.soundStarts.set(starts);
   }
 
   // ---------------------------------------------------------------- solo
@@ -1311,14 +1686,39 @@ export class DeskStore {
 
   // ---------------------------------------------------------------- the record keys
 
-  pressFunction(name: FunctionName): void {
+  /** A record key; `only`: Copy or Del of the Memories view (looks) or the Sequences view (sequences). */
+  pressFunction(name: FunctionName, only?: MemoryScope): void {
     if (this.live()) return; // a live stack locks what is stored
-    this.follow(pressFunction(this.mode(), name));
+    this.follow(pressFunction(this.mode(), name, only));
+  }
+
+  /**
+   * A memory key of the Memories view or the Sequences view while Copy or Del waits for one: it
+   * works as a memory key of the main view does then. True when it was taken; false when no Copy or
+   * Del waits, and the key chooses the memory to look at as always.
+   */
+  pressViewMemory(memory: number): boolean {
+    const mode = this.mode();
+    if (!itemWaits(mode)) return false;
+    this.follow(pressMemory(mode, memory, this.memoryContent(memory)));
+    return true;
   }
 
   pressMemory(memory: number): void {
     if (this.soloMode() && this.keyIsFree('memory')) return; // the key holds its fader at full while it is held, see holdKey
     this.follow(pressMemory(this.mode(), memory, this.memoryContent(memory)));
+  }
+
+  /**
+   * The key of an effect or a sound: while Copy or Del waits for one it works on it, as on a memory;
+   * otherwise it starts or stops its effect or sound.
+   */
+  pressItem(of: ItemKind, number: number): void {
+    const exists = (of === 'effect' ? this.effectsByNumber() : this.soundsByNumber()).has(number);
+    const step = pressItem(this.mode(), of, number, exists);
+    if (step) this.follow(step);
+    else if (of === 'effect') this.toggleEffect(number);
+    else this.toggleSound(number);
   }
 
   /** The key under a channel fader: its fader to full and back to zero, or a step while a sequence is recorded. */
@@ -1434,16 +1834,48 @@ export class DeskStore {
     return pattern ? stepAfter(pattern, this.stage(), this.channelCount()) : firstStep(0);
   }
 
-  /** Changes a step of the stack. A step without `add` adds no more: the desk sends it only when it is true. */
+  /**
+   * Changes a step of the stack. A step without `add` adds no more, one without `continue` plays on
+   * no more: the desk sends them only when they are true.
+   */
   updateStackStep(id: number, step: TimedStep): void {
     this.stack.update((stack) => ({
-      steps: stack.steps.map((old) => (old.id === id ? { ...old, ...step, add: step.add } : old)),
+      steps: stack.steps.map((old) => (old.id === id ? { ...old, ...step, add: step.add, continue: step.continue } : old)),
     }));
     this.run('UpdateStackStep', id, step);
   }
 
   deleteStackStep(id: number): void {
     this.run('DeleteStackStep', id);
+  }
+
+  /**
+   * Skips a step of the stack or takes it back (Disabled): the stack passes over a skipped step.
+   * This works while the stack is live too; the desk refuses it for the step that is on.
+   */
+  setStackStepDisabled(id: number, disabled: boolean): void {
+    this.stack.update((stack) => ({
+      steps: stack.steps.map((old) => (old.id === id ? { ...old, disabled: disabled || undefined } : old)),
+    }));
+    this.connection.invoke<void>('SetStackStepDisabled', id, disabled).catch((error: Error) => {
+      this.say(error.message);
+      void this.fetchSequencesAndStack();
+    });
+  }
+
+  /**
+   * Skips a step of the sequence of a memory or takes it back (Disabled); `index` counts from 0.
+   * This works while the stack is live too; the desk refuses it for the step that plays just then.
+   */
+  setSequenceStepDisabled(memory: number, index: number, disabled: boolean): void {
+    const old = this.sequences()[memory];
+    if (!old?.steps[index]) return;
+    const steps = old.steps.map((step, at) => (at === index ? { ...step, disabled: disabled || undefined } : step));
+    this.sequences.update((all) => ({ ...all, [memory]: { ...old, steps } }));
+    this.connection.invoke<void>('SetSequenceStepDisabled', memory, index + 1, disabled).catch((error: Error) => {
+      this.say(error.message);
+      void this.fetchSequencesAndStack();
+    });
   }
 
   /** Puts a step right after another one; `null` puts it at the very top. It gets a new number there. */
@@ -1614,6 +2046,14 @@ export class DeskStore {
         this.markStored(command.memory, 'nothing');
         this.run('DeleteMemory', command.memory);
         break;
+      case 'copyItem':
+        if (command.of === 'effect') this.copyEffect(command.from, command.to);
+        else this.copySound(command.from, command.to);
+        break;
+      case 'deleteItem':
+        if (command.of === 'effect') this.deleteEffect(command.number);
+        else this.deleteSound(command.number);
+        break;
       case 'addStep':
         this.addSequenceStep(command.memory, recordedStep(command.target, command.number));
         break;
@@ -1661,6 +2101,11 @@ export class DeskStore {
     this.outbox.clear();
   }
 
+  /** Shows a few words for the owner, as the desk's own notices are shown. */
+  tell(text: string): void {
+    this.say(text);
+  }
+
   private say(text: string, ms = NOTICE_MS): void {
     this.notice.set(text);
     if (this.noticeTimer !== null) clearTimeout(this.noticeTimer);
@@ -1675,6 +2120,8 @@ export class DeskStore {
       this.takeDesk(welcome.desk);
       this.boxes.set(welcome.boxes ?? []);
       this.outputs.set(welcome.outputs ?? []);
+      this.mixer.set(welcome.mixer ?? NO_MIXER);
+      this.listen.set(welcome.listen ?? NO_LISTEN);
       this.project.set(welcome.project);
       this.loaded.set(true);
       void this.fetchLan();
@@ -1793,7 +2240,11 @@ export class DeskStore {
     if (desk.independents) this.independents.set(desk.independents);
     if (desk.memoryIndependents) this.memoryIndependents.set(desk.memoryIndependents);
     if (desk.effectIndependents) this.effectIndependents.set(desk.effectIndependents);
+    if (desk.soundIndependents) this.soundIndependents.set(desk.soundIndependents);
     if (desk.effects) this.takeEffectPlaybacks(desk.effects, true);
+    if (desk.sounds) this.takeSoundPlaybacks(desk.sounds, true);
+    if (desk.soundDecibels !== undefined) this.soundDecibels.set(desk.soundDecibels);
+    if (desk.soundMute !== undefined) this.soundMute.set(desk.soundMute);
     this.master.set(desk.master);
     this.blackout.set(desk.blackout);
     this.bpm.set(desk.bpm ?? DEFAULT_BPM);
@@ -1812,6 +2263,18 @@ export class DeskStore {
     void this.fetchStage();
     void this.fetchNotes();
     void this.fetchEffects();
+    void this.fetchSounds();
+  }
+
+  private async fetchSounds(): Promise<void> {
+    try {
+      this.takeSounds((await this.connection.invoke<Sound[] | undefined>('GetSounds')) ?? []);
+      this.soundsKnown.set(true);
+    } catch {
+      // A desk program from before sounds. The Sounds view says so.
+      this.sounds.set([]);
+      this.soundsKnown.set(false);
+    }
   }
 
   private async fetchEffects(): Promise<void> {
@@ -1897,6 +2360,7 @@ export class DeskStore {
   private takePlayback(playback: Playback): void {
     this.playback.set(playback);
     if (playback.effects) this.takeEffectPlaybacks(playback.effects, true);
+    if (playback.sounds) this.takeSoundPlaybacks(playback.sounds, true);
     // A live stack locks the record keys: whatever was begun with one of them is over.
     if (playback.stack.live) this.mode.set(IDLE);
   }

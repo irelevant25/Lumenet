@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.FileProviders;
@@ -87,6 +88,7 @@ internal static class Program
         // for a test desk.
         builder.Services.AddSingleton(new Simulators(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(passwordFile)) ?? "", "simulators")));
 
+        AddSounds(builder.Services, builder.Configuration, passwordFile);
         AddDesk(builder.Services, builder.Configuration, box);
         AddOutputs(builder.Services, builder.Configuration, passwordFile);
         AddMidi(builder.Services, passwordFile);
@@ -94,6 +96,13 @@ internal static class Program
         AddLan(builder, pc, passwordFile);
 
         WebApplication app = builder.Build();
+
+        // The desk plays its sounds through the engine of this PC; what a hand sets on the mixer's PLAYER
+        // L/R of a Soundcraft Ui mixer (the volume of all sounds, MUTE) every page hears of.
+        Desk soundDesk = app.Services.GetRequiredService<Desk>();
+        soundDesk.UseSoundPlayer(app.Services.GetRequiredService<SoundEngine>());
+        IHubContext<DeskHub, IDeskClient> pages = app.Services.GetRequiredService<IHubContext<DeskHub, IDeskClient>>();
+        soundDesk.SoundMasterHeard += (decibels, mute) => _ = pages.Clients.All.SoundMasterChanged(decibels, mute);
 
         // Work that was not saved when the program stopped comes back before any UI connects.
         app.Services.GetRequiredService<Autosave>().Restore();
@@ -104,8 +113,144 @@ internal static class Program
         app.UseCors();
         ServeUi(app);
         app.MapGet("/api/health", () => new HealthAnswer(AppInfo.Name, AppInfo.Version));
+        MapSoundFiles(app);
         app.MapHub<DeskHub>(DeskHubPath);
         return app;
+    }
+
+    // The sound files: their store (by default %LOCALAPPDATA%\Lumenet\sounds, beside the LAN password,
+    // so that a test desk with a password file of its own has its own), and the engine that plays them
+    // on the device of this PC, whose setup is kept beside the LAN password too (sound.json). The
+    // setting "Sound:Output" at "none" opens no device at all: the tests, a test desk beside the real one.
+    private static void AddSounds(IServiceCollection services, IConfiguration settings, string passwordFile)
+    {
+        string beside = Path.GetDirectoryName(Path.GetFullPath(passwordFile)) ?? "";
+        string folder = Setting(settings, "Sound:Folder", Path.Combine(beside, "sounds"));
+        bool devices = !string.Equals(settings["Sound:Output"], "none", StringComparison.OrdinalIgnoreCase);
+        services.AddSingleton(new SoundStore(folder));
+        services.AddSingleton(provider =>
+        {
+            var engine = new SoundEngine(
+                provider.GetRequiredService<SoundStore>(),
+                Path.Combine(beside, SoundEngine.SetupFileName),
+                devices,
+                provider.GetRequiredService<ILoggerFactory>().CreateLogger<SoundEngine>());
+            IHubContext<DeskHub, IDeskClient> hub = provider.GetRequiredService<IHubContext<DeskHub, IDeskClient>>();
+            engine.Changed += view =>
+            {
+                _ = hub.Clients.Group(LanAccess.PcGroup).SoundOutputChanged(view);
+                _ = hub.Clients.All.SoundListenChanged(new ListenView(view.Listen, view.ListenState));
+            };
+            engine.MixerChanged += mixer => _ = hub.Clients.All.MixerChanged(mixer);
+            return engine;
+        });
+
+        // The same engine: the host starts and stops it, the desk and the hub use it.
+        services.AddHostedService(provider => provider.GetRequiredService<SoundEngine>());
+    }
+
+    // POST /api/sounds?name=thunder.mp3 takes a sound file into the store (a page sends it: the hub's
+    // messages are too small for songs) and answers what it is; GET /api/sounds/{hash} gives it back,
+    // and GET /api/sounds/{hash}/wave its wave. All behind the LAN gate, like everything else.
+    private static void MapSoundFiles(WebApplication app)
+    {
+        app.MapPost("/api/sounds", async (HttpContext context, SoundStore store) =>
+        {
+            if (context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } limit)
+                limit.MaxRequestBodySize = SoundStore.MaxBytes;
+
+            try
+            {
+                return Results.Ok(await store.AddAsync(context.Request.Body, context.Request.Query["name"], context.RequestAborted));
+            }
+            catch (DeskException e)
+            {
+                return Results.BadRequest(new { message = e.Message });
+            }
+        });
+
+        app.MapGet("/api/sounds/{hash}", (string hash, SoundStore store) =>
+            store.PathOf(hash) is { } path
+                ? Results.File(path, SoundContentType(path), enableRangeProcessing: true)
+                : Results.NotFound());
+
+        // GET /api/sounds/{hash}/wave: how loud the file is along its length, for the wave the Sounds
+        // view draws (SoundWave). Reading a whole file takes a moment the first time: not on the hub.
+        app.MapGet("/api/sounds/{hash}/wave", async (string hash, SoundStore store, CancellationToken cancel) =>
+        {
+            try
+            {
+                return await Task.Run(() => store.WaveOf(hash), cancel) is { } wave ? Results.Ok(wave) : Results.NotFound();
+            }
+            catch (DeskException e)
+            {
+                return Results.BadRequest(new { message = e.Message });
+            }
+        });
+
+        // POST /api/export/pack?name=Concert: the text of Export in the body; the answer is a ZIP of it
+        // with the sound files of its project (SoundPack). Made in a file of its own that goes when sent.
+        app.MapPost("/api/export/pack", async (HttpContext context, SoundStore store) =>
+        {
+            if (context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } limit)
+                limit.MaxRequestBodySize = SoundPack.MaxJsonBytes;
+
+            string json;
+            using (var reader = new StreamReader(context.Request.Body, Encoding.UTF8))
+                json = await reader.ReadToEndAsync(context.RequestAborted);
+
+            string name = SoundPack.SafeName(context.Request.Query["name"]);
+            var pack = new FileStream(Path.GetTempFileName(), FileMode.Create, FileAccess.ReadWrite, FileShare.None, 81920, FileOptions.DeleteOnClose);
+            try
+            {
+                string[] missing = await Task.Run(() => SoundPack.Write(pack, name, json, store), context.RequestAborted);
+                if (missing.Length > 0)
+                    context.Response.Headers["X-Missing-Sounds"] = Uri.EscapeDataString(string.Join("\n", missing));
+                pack.Position = 0;
+                return Results.File(pack, "application/zip", name + ".zip");
+            }
+            catch (DeskException e)
+            {
+                await pack.DisposeAsync();
+                return Results.BadRequest(new { message = e.Message });
+            }
+        });
+
+        // POST /api/import/unpack: a ZIP of Export in the body. Its sound files go into the store; the
+        // answer is its file of Export, to be imported as any, and the files that could not be taken.
+        app.MapPost("/api/import/unpack", async (HttpContext context, SoundStore store) =>
+        {
+            if (context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } limit)
+                limit.MaxRequestBodySize = SoundPack.MaxPackBytes;
+
+            await using var pack = new FileStream(Path.GetTempFileName(), FileMode.Create, FileAccess.ReadWrite, FileShare.None, 81920, FileOptions.DeleteOnClose);
+            await context.Request.Body.CopyToAsync(pack, context.RequestAborted);
+            pack.Position = 0;
+            try
+            {
+                (string json, string[] leftOut) = await SoundPack.ReadAsync(pack, store, context.RequestAborted);
+                return Results.Ok(new { text = json, leftOut });
+            }
+            catch (DeskException e)
+            {
+                return Results.BadRequest(new { message = e.Message });
+            }
+        });
+    }
+
+    private static string SoundContentType(string path)
+    {
+        return Path.GetExtension(path).ToLowerInvariant() switch
+        {
+            ".mp3" => "audio/mpeg",
+            ".wav" => "audio/wav",
+            ".aif" or ".aiff" => "audio/aiff",
+            ".flac" => "audio/flac",
+            ".m4a" => "audio/mp4",
+            ".aac" => "audio/aac",
+            ".wma" => "audio/x-ms-wma",
+            _ => "application/octet-stream",
+        };
     }
 
     // The address to listen on ("urls") gets its default here, for the case that no settings
@@ -153,7 +298,8 @@ internal static class Program
         bool discover = settings.GetValue("Box:Discover", true);
 
         services.AddSingleton<Desk>();
-        services.AddSingleton(provider => new ProjectStore(provider.GetRequiredService<Desk>(), projectsFolder, examplesFolder));
+        services.AddSingleton(provider => new ProjectStore(
+            provider.GetRequiredService<Desk>(), projectsFolder, examplesFolder, provider.GetRequiredService<SoundStore>()));
         services.AddSingleton(provider => new UndoHistory(provider.GetRequiredService<Desk>()));
         services.AddSingleton(provider => new Autosave(
             provider.GetRequiredService<Desk>(),

@@ -47,8 +47,20 @@ public sealed record DeskState(
     /// <summary>The effect, 1-64, each of the 32 effect keys of the independents is bound to; key 1 is at index 0.</summary>
     public int[] EffectIndependents { get; init; } = [];
 
+    /// <summary>The sound, 1-64, each of the 32 sound keys of the independents is bound to; key 1 is at index 0.</summary>
+    public int[] SoundIndependents { get; init; } = [];
+
     /// <summary>The playbacks of the effects, see <see cref="Playback.Effects"/>.</summary>
     public EffectPlayback[] Effects { get; init; } = [];
+
+    /// <summary>The playbacks of the sounds, see <see cref="Playback.Sounds"/>.</summary>
+    public SoundPlayback[] Sounds { get; init; } = [];
+
+    /// <summary>The master volume of the sound, -100 dB (nothing) to 0 dB (every sound at its own level).</summary>
+    public double SoundDecibels { get; init; } = Desk.DefaultSoundDecibels;
+
+    /// <summary>True while MUTE is on: no sound goes out.</summary>
+    public bool SoundMute { get; init; }
 }
 
 /// <summary>

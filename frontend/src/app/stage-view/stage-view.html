@@ -102,6 +102,17 @@
         (dblclick)="onLightDouble(item.light)"
         (keydown)="onLightKey($event, item.light)"
       >
+        @if (item.beam; as beam) {
+          <!-- where a moving head points: a sketch, turned by its pan, longer the more it tilts -->
+          <span
+            class="beam"
+            aria-hidden="true"
+            [class.dark]="beam.dark"
+            [style.--beam-turn]="beam.turn + 'deg'"
+            [style.--beam-length]="beam.length"
+            [style.--beam-color]="beam.color"
+          ></span>
+        }
         <div
           class="fixture"
           [style.cursor]="cursorOver(item.light)"

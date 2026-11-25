@@ -15,6 +15,9 @@ Pico that takes what the desk sends over USB to the DMX512 cable of the lights.
   universes as well.
 * **Sequences**, made by hand or from a template (chase, wave, strobe, fire, storm), and a **stack**: the cues
   of a show with their fades and waits, played one after the other.
+* **Effects** worked out live from a shape: circles and swings of moving heads, chases and pulses, rainbows
+  and color chases, and patterns over the cells of LED bars by where they are on the stage. Each has a key and
+  a fader, live speed, size and spread, and a preview; on Main and in the stack too.
 * **Fixtures:** lights by their kind, taken from the Open Fixture Library (666 lights) or the library of QLC+
   (1,781), played by intensity and color, moving heads by pan and tilt too; groups with one fader for all their
   lights.
@@ -23,7 +26,7 @@ Pico that takes what the desk sends over USB to the DMX512 cable of the lights.
   show files of theatre consoles (USITT ASCII).
 * **Phones and tablets** in the same network can use the desk as well, with a password.
 * A keyboard shortcut for every key, and settings for how each device shows the desk.
-* **Six example shows** to start from, from a few memories to a whole concert.
+* **Seven example shows** to start from, from a few memories to a whole concert, and one of effects.
 
 The desk also works without the box, on other DMX hardware or none. The box speaks Art-Net too, so other
 lighting software such as QLC+ can use it.

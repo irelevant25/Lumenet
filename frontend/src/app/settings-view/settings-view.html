@@ -2,8 +2,8 @@
   <h2>Settings</h2>
   <p class="summary">
     The settings and the keyboard shortcuts belong to this device: every project shows them, and
-    Export takes them to another device. The number of universes belongs to the project. LAN and the
-    autosave belong to the desk program, and only the PC can change them.
+    Export takes them to another device. The number of universes and the outputs belong to the
+    project. LAN and the autosave belong to the desk program, and only the PC can change them.
   </p>
 </header>
 
@@ -34,6 +34,13 @@
         @for (count of rowCounts; track count) {
           <option [value]="count" [selected]="count === settings.memoryRows()">{{ rowsName(count) }}</option>
         }
+      </select>
+    </div>
+    <div class="field">
+      <label for="effect-rows">Row of effect faders</label>
+      <select id="effect-rows" (change)="onEffectRows($event)">
+        <option value="0" [selected]="settings.effectRows() === 0">None</option>
+        <option value="1" [selected]="settings.effectRows() === 1">1 row, under the memories</option>
       </select>
     </div>
     <div class="field">
@@ -68,8 +75,20 @@
         (change)="onMemoryKeys($event)"
       />
     </div>
+    <div class="field">
+      <label for="effect-keys">Effect keys of the independents</label>
+      <input
+        id="effect-keys"
+        type="number"
+        min="0"
+        [max]="maxEffectKeys"
+        step="1"
+        [value]="settings.effectKeys()"
+        (change)="onEffectKeys($event)"
+      />
+    </div>
 
-    <!-- the universes belong to the project, the lettering to every view: here, as the owner wants them -->
+    <!-- the universes belong to the project, the zoom to every view: here, as the owner wants them -->
     <h4 id="universes-title">Universes</h4>
     <div class="field">
       <label for="universes">Universes of the project</label>
@@ -82,28 +101,28 @@
       </select>
     </div>
 
-    <h4 id="lettering-title">Lettering</h4>
-    <div class="scale" role="group" aria-label="Size of all lettering">
+    <h4 id="zoom-title">Zoom</h4>
+    <div class="scale" role="group" aria-label="Zoom of the page">
       <button
         type="button"
         class="step"
-        aria-label="Smaller lettering"
-        [disabled]="settings.fontScale() <= smallest"
-        (click)="settings.stepFontScale(-1)"
+        aria-label="Zoom out"
+        [disabled]="settings.zoom() <= smallest"
+        (click)="settings.stepZoom(-1)"
       >
         −
       </button>
-      <output class="value" aria-live="polite">{{ fontScaleSaid() }}</output>
+      <output class="value" aria-live="polite">{{ zoomSaid() }}</output>
       <button
         type="button"
         class="step"
-        aria-label="Bigger lettering"
-        [disabled]="settings.fontScale() >= biggest"
-        (click)="settings.stepFontScale(1)"
+        aria-label="Zoom in"
+        [disabled]="settings.zoom() >= biggest"
+        (click)="settings.stepZoom(1)"
       >
         +
       </button>
-      <button type="button" class="plain" [disabled]="settings.fontScale() === 1" (click)="settings.resetFontScale()">
+      <button type="button" class="plain" [disabled]="settings.zoom() === 1" (click)="settings.resetZoom()">
         Reset
       </button>
     </div>
@@ -276,4 +295,7 @@
 
   <!-- ---------------------------------------------------------------- the keyboard shortcuts -->
   <lm-keyboard-panel />
+
+  <!-- ---------------------------------------------------------------- the outputs, two columns wide -->
+  <lm-outputs-panel />
 </div>

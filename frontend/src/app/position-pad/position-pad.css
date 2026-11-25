@@ -69,7 +69,7 @@ output {
 
 button {
   justify-self: start;
-  height: calc(30px * var(--font-scale));
+  height: 30px;
   padding: 0 10px;
   border: 1px solid var(--edge);
   border-radius: 3px;

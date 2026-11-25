@@ -29,6 +29,7 @@ import {
   TimedStep,
   Welcome,
 } from './desk/desk-types';
+import { Effect } from './desk/effects';
 import { IDLE } from './desk/function-mode';
 import { NOTE_LINE_SEPARATOR } from './desk/notes';
 
@@ -113,6 +114,8 @@ class FakeConnection {
   /** The serial ports and the networks of the PC, as the backend answers "GetSerialPorts" and "GetNetworks". */
   serialPorts = ['COM3', 'COM7'];
   networks: NetworkChoice[] = [{ network: '192.168.1.0/24', address: '192.168.1.20', adapter: 'Wi-Fi', router: true }];
+  /** The effects of the project, as the backend answers "GetEffects": none at first. */
+  effects: Effect[] = [];
 
   start(): void {
     this.online.set(true);
@@ -170,6 +173,8 @@ class FakeConnection {
     if (method === 'FindArtNetNodes') return this.foundNodes;
     if (method === 'GetSerialPorts') return this.serialPorts;
     if (method === 'GetNetworks') return this.networks;
+    if (method === 'GetEffects') return this.effects;
+    if (method === 'PreviewEffect') return null;
     return undefined;
   }
 
@@ -209,6 +214,8 @@ const QUESTIONS = [
   'GetStagePicture',
   'GetSerialPorts',
   'GetNetworks',
+  'GetEffects',
+  'PreviewEffect',
 ];
 
 /** A step on a channel, with all three times at one second unless said otherwise. */
@@ -281,6 +288,16 @@ describe('the desk page', () => {
         (candidate.getAttribute('aria-label') ?? candidate.textContent?.trim()) === label,
     );
     if (!found) throw new Error(`no button "${label}"`);
+    return found;
+  }
+
+  /** A button inside one part of the page, a window for example, by its name or what it says. */
+  function buttonIn(container: string, label: string): HTMLButtonElement {
+    const found = [...page.querySelectorAll<HTMLButtonElement>(`${container} button`)].find(
+      (candidate) =>
+        (candidate.getAttribute('aria-label') ?? candidate.textContent?.trim()) === label,
+    );
+    if (!found) throw new Error(`no button "${label}" in ${container}`);
     return found;
   }
 
@@ -666,7 +683,7 @@ describe('the desk page', () => {
   });
 
   it('edit lets the memory of a memory key be changed', async () => {
-    await press(button('Edit the channels and memories of the independent keys'));
+    await press(button('Edit the channels, memories and effects of the independent keys'));
     const field = page.querySelector<HTMLInputElement>('input[aria-label="Memory of independent key 12"]');
     if (!field) throw new Error('no field for independent key 12');
 
@@ -682,7 +699,7 @@ describe('the desk page', () => {
     expect(store.memoryIndependents()[1]).toBe(77);
     expect(connection.calls).toContainEqual({ method: 'SetMemoryIndependent', args: [2, 77] });
 
-    await press(button('Edit the channels and memories of the independent keys'));
+    await press(button('Edit the channels, memories and effects of the independent keys'));
     await press(button('Independent 12, memory 77'));
     expect(store.memoryLevels()[76]).toBe(255);
   });
@@ -745,7 +762,7 @@ describe('the desk page', () => {
   });
 
   it('edit lets the channel of an independent key be changed', async () => {
-    await press(button('Edit the channels and memories of the independent keys'));
+    await press(button('Edit the channels, memories and effects of the independent keys'));
     const field = page.querySelector<HTMLInputElement>(
       'input[aria-label="Channel of independent key 2"]',
     );
@@ -763,7 +780,7 @@ describe('the desk page', () => {
     expect(store.independents()[1]).toBe(40);
     expect(connection.calls).toContainEqual({ method: 'SetIndependent', args: [2, 40] });
 
-    await press(button('Edit the channels and memories of the independent keys'));
+    await press(button('Edit the channels, memories and effects of the independent keys'));
     await press(button('Independent 2, channel 40 (U1)'));
     expect(store.channels()[39]).toBe(255);
   });
@@ -780,7 +797,8 @@ describe('the desk page', () => {
   it('the outputs, LAN, Undo and Redo stand at the top left; New, Save, Load, Import and Export at the right', () => {
     const labels = (selector: string) =>
       [...page.querySelectorAll(`lm-top-bar ${selector} button`)].map((key) => key.getAttribute('aria-label') ?? key.textContent?.trim());
-    expect(labels('.left')).toEqual(['Outputs connected: 0', 'LAN', 'Undo', 'Redo']);
+    expect(labels('.left')).toEqual(['LAN', 'Undo', 'Redo']);
+    expect(textOf('lm-top-bar .left lm-outputs-status')).toBe('Outputs connected: 0'); // a line of text: Settings has the outputs
     expect(labels('.project')).toEqual(['New project', 'Save project', 'Load project', 'Import', 'Export']);
   });
 
@@ -815,7 +833,7 @@ describe('the desk page', () => {
     expect(page.querySelector('lm-fader[aria-label="Channel 65 (U2)"]')).toBeTruthy();
 
     // a key of the independents takes a channel of U2 as "113 U2"
-    await press(button('Edit the channels and memories of the independent keys'));
+    await press(button('Edit the channels, memories and effects of the independent keys'));
     const field = page.querySelector<HTMLInputElement>('input[aria-label="Channel of independent key 2"]')!;
     expect(field.value).toBe('2 U1');
     field.value = '113 U2';
@@ -835,7 +853,7 @@ describe('the desk page', () => {
     await fixture.whenStable();
     expect(connection.calls.filter((call) => call.method === 'SetIndependent').length).toBe(2);
     expect(field.value).toBe('7 U2');
-    await press(button('Edit the channels and memories of the independent keys'));
+    await press(button('Edit the channels, memories and effects of the independent keys'));
 
     // back to one universe: the U keys go, and the faders show U1 again
     connection.emit('DeskChanged', connection.welcome.desk);
@@ -889,24 +907,32 @@ describe('the desk page', () => {
     expect(number().options[0].text.trim()).toBe('1');
   });
 
-  it('the top left counts the boxes, and the Outputs window says which universe each output of a box plays', async () => {
+  /** Chooses a value of a list in the page and says so, as a person does. */
+  async function choose(selector: string, value: string): Promise<void> {
+    const list = page.querySelector<HTMLSelectElement>(selector);
+    if (!list) throw new Error(`no list ${selector}`);
+    list.value = value;
+    list.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+  }
+
+  it('the top left counts the boxes, and the Outputs panel of Settings says which universe each output of a box plays', async () => {
     const boxes: BoxView[] = [
       { address: '192.168.7.1', connected: true, firmware: '1.0', outputs: 1, universes: [1], kind: 'automatic' },
       { address: '10.1.3.1', connected: true, firmware: '1.0', outputs: 2, universes: [0, 0], kind: 'automatic' },
     ];
     connection.emit('BoxesChanged', boxes);
     await fixture.whenStable();
-    await press(button('Outputs connected: 2'));
-    await fixture.whenStable();
-    expect(page.querySelector('lm-outputs-dialog dialog')?.hasAttribute('open')).toBe(true);
-    expect(textOf('lm-box-outputs tbody tr:nth-child(2) th')).toContain('Switch 3, firmware 1.0');
-    expect(textOf('lm-outputs-dialog .remark')).toBeUndefined(); // U1, the only universe, is played
+    expect(textOf('lm-outputs-status')).toBe('Outputs connected: 2');
+    await show('/settings');
+    const rows = () => [...page.querySelectorAll('lm-outputs-panel tbody tr')];
+    expect(rows().map((row) => row.querySelector('.name')?.textContent?.trim())).toEqual(['dmxbox', 'dmxbox 2', 'dmxbox 2, output 2']);
+    expect(rows()[1].querySelector('th')?.textContent).toContain('10.1.3.1, switch 3, firmware 1.0');
+    expect(rows()[2].textContent).toContain('Output 2');
+    expect(textOf('lm-outputs-panel .remark')).toBeUndefined(); // U1, the only universe, is played
 
     // The second output of the second box plays U1 as well: the boxes become the project's list.
-    const output = page.querySelector<HTMLSelectElement>('select[aria-label="Output 2 of 10.1.3.1"]')!;
-    output.value = '1';
-    output.dispatchEvent(new Event('change'));
-    await fixture.whenStable();
+    await choose('select[aria-label="Universe of output 2 of dmxbox 10.1.3.1"]', '1');
     expect(connection.last('SetBoxes')).toEqual([
       [
         { address: '192.168.7.1', universes: [1] },
@@ -920,9 +946,12 @@ describe('the desk page', () => {
       { ...boxes[1], universes: [0, 1], kind: 'listed' },
     ]);
     await fixture.whenStable();
-    page.querySelector<HTMLInputElement>('#box-address')!.value = '10.1.4.1';
-    page.querySelector('lm-box-outputs form.add')!.dispatchEvent(new Event('submit'));
-    await fixture.whenStable();
+    await choose('#output-kind', 'dmxbox');
+    const address = page.querySelector<HTMLInputElement>('lm-outputs-panel form.add input[aria-label="Address"]')!;
+    address.value = '10.1.4.1';
+    address.dispatchEvent(new Event('input'));
+    page.querySelector('lm-outputs-panel form.add')!.dispatchEvent(new Event('submit'));
+    await until(() => connection.methods().filter((method) => method === 'SetBoxes').length === 2);
     expect(connection.last('SetBoxes')).toEqual([
       [
         { address: '192.168.7.1', universes: [1] },
@@ -931,33 +960,47 @@ describe('the desk page', () => {
       ],
     ]);
 
-    // It does not answer: the top bar counts it, and its light is amber. Automatic empties the list.
+    // It does not answer: the top left counts it, and its light is amber. Auto empties the list.
     connection.emit('BoxesChanged', [
       { ...boxes[0], kind: 'listed' },
       { ...boxes[1], universes: [0, 1], kind: 'listed' },
       { address: '10.1.4.1', connected: false, firmware: null, outputs: 1, universes: [0], kind: 'listed' },
     ]);
     await fixture.whenStable();
-    expect(button('Outputs connected: 2 of 3').className).toContain('missing');
-    expect(textOf('lm-box-outputs tbody tr:nth-child(3) td')).toBe('Not connected');
+    expect(textOf('lm-outputs-status')).toBe('Outputs connected: 2 of 3');
+    expect(page.querySelector('lm-outputs-status p')?.className).toContain('missing');
+    expect(rows()[3].querySelector('.state')?.textContent?.trim()).toBe('Not answering');
+    expect(textOf('lm-outputs-panel .remark')).toBe('⚠ U1 goes out twice, on dmxbox 192.168.7.1 and dmxbox 10.1.3.1, as a splitter would give it.');
     await press(button('Automatic: the boxes play by themselves'));
     expect(connection.last('SetBoxes')).toEqual([[]]);
   });
 
-  it('the Outputs window adds an Art-Net node it found, sACN and a USB interface, and the top left counts them', async () => {
+  it('a page loaded at Settings asks for the networks and the nodes once it is connected, not before', async () => {
+    connection.online.set(false);
+    await show('/settings');
+    const asked = (method: string) => connection.calls.filter((call) => call.method === method).length;
+    expect(asked('FindArtNetNodes')).toBe(0);
+    expect(asked('GetNetworks')).toBe(0);
+
+    connection.online.set(true);
+    await fixture.whenStable();
+    expect(asked('FindArtNetNodes')).toBe(1);
+    expect(asked('GetNetworks')).toBe(1);
+    expect(page.querySelector('lm-outputs-panel .error')).toBeNull();
+  });
+
+  it('the Outputs panel adds an Art-Net node the search found, sACN and a USB interface, and the top left counts them', async () => {
     connection.foundNodes = [
       { ip: '10.0.0.7', shortName: 'Node 2', longName: 'A node', firmware: '1.2', ports: [0, 1], dmxbox: false },
       { ip: '192.168.7.1', shortName: 'dmxbox', longName: 'dmxbox', firmware: '1.0', ports: [0], dmxbox: true },
     ];
-    await press(button('Outputs connected: 0'));
-    await fixture.whenStable();
-    expect(page.querySelector('lm-outputs-dialog dialog')?.hasAttribute('open')).toBe(true);
-    expect(connection.calls.map((call) => call.method)).toContain('GetNetworks');
+    await show('/settings');
+    // the panel asks for the networks, the serial ports and the nodes at once
+    await until(() => page.querySelectorAll('lm-outputs-panel .found li').length === 2);
+    expect(connection.calls.map((call) => call.method)).toEqual(expect.arrayContaining(['GetNetworks', 'GetSerialPorts', 'FindArtNetNodes']));
 
-    // Art-Net: the search lists the nodes; a dmxbox cannot be added, the other one can.
-    await press(button('Find nodes'));
-    await fixture.whenStable();
-    expect(textOf('lm-artnet-outputs .found li:nth-child(2)')).toContain('A dmxbox: it plays in the dmxbox section.');
+    // A dmxbox cannot be added as a node, the other one can.
+    expect(page.querySelectorAll('lm-outputs-panel .found li')[1].textContent).toContain('Already played as a dmxbox');
     await press(button('Add Node 2 at 10.0.0.7'));
     const node = {
       kind: 'artnet',
@@ -975,8 +1018,13 @@ describe('the desk page', () => {
     const outputs: OutputView[] = [{ plan: node as OutputView['plan'], state: 'connected', detail: 'Node 2, firmware 1.2' }];
     connection.emit('OutputsChanged', outputs);
     await fixture.whenStable();
-    expect(textOf('lm-artnet-outputs tbody td')).toContain('Connected');
-    const net = page.querySelector<HTMLInputElement>('input[aria-label="Net of port 1 of 10.0.0.7"]')!;
+    // a line for each port, the node by its name, the kind and the state on its first line
+    const rows = [...page.querySelectorAll('lm-outputs-panel tbody tr')];
+    expect(rows.map((row) => row.querySelector('.name')?.textContent?.trim())).toEqual(['Node 2', 'Node 2, port 2']);
+    expect(rows[0].querySelector('th small')?.textContent?.trim()).toBe('10.0.0.7, Art-Net');
+    expect(rows[0].querySelector('.kind')?.textContent?.trim()).toBe('Art-Net');
+    expect(rows[0].querySelector('.state')?.textContent?.trim()).toBe('Connected');
+    const net = page.querySelector<HTMLInputElement>('input[aria-label="Net of port 1 of Node 2"]')!;
     net.value = '1';
     net.dispatchEvent(new Event('change'));
     await fixture.whenStable();
@@ -986,7 +1034,13 @@ describe('the desk page', () => {
     ]);
 
     // sACN by multicast, and a USB interface at the first free port.
-    await press(button('Add sACN by multicast'));
+    const add = async (kind: string) => {
+      await choose('#output-kind', kind);
+      page.querySelector('lm-outputs-panel form.add')!.dispatchEvent(new Event('submit'));
+      await fixture.whenStable();
+      await wait(0);
+    };
+    await add('multicast');
     expect((connection.last('SetOutputs')?.[0] as unknown[])[1]).toEqual({
       kind: 'sacn',
       target: 'multicast',
@@ -994,7 +1048,7 @@ describe('the desk page', () => {
       network: '',
       priority: 100,
     });
-    await press(button('Add the interface at this port'));
+    await add('usb');
     expect((connection.last('SetOutputs')?.[0] as { target: string }[])[1].target).toBe('COM3');
 
     // The top left counts the outputs that play, and a node that does not answer turns it amber.
@@ -1004,9 +1058,12 @@ describe('the desk page', () => {
       { plan: { kind: 'artnet', target: '10.0.0.9', ports: [{ universe: 1, address: 0 }], network: '', priority: 100 }, state: 'missing', detail: '' },
     ]);
     await fixture.whenStable();
-    expect(button('Outputs connected: 2 of 3').className).toContain('missing');
-    expect(button('Outputs connected: 2 of 3').title).toContain('Art-Net 10.0.0.9: not answering (U1 at 0:0:0)');
-    expect(textOf('lm-outputs-dialog .remark')).toBe('U1 is on more than one output, as with a splitter.');
+    expect(textOf('lm-outputs-status')).toBe('Outputs connected: 2 of 3');
+    expect(page.querySelector('lm-outputs-status p')?.className).toContain('missing');
+    expect(page.querySelector('lm-outputs-status p')?.getAttribute('title')).toContain('Art-Net 10.0.0.9: not answering (U1 at 0:0:0)');
+    expect(textOf('lm-outputs-panel .remark')).toBe(
+      '⚠ U1 goes out 3 times, on Art-Net 10.0.0.7, sACN multicast and Art-Net 10.0.0.9, as a splitter would give it.',
+    );
   });
 
   // ---------------------------------------------------------------- undo, solo, rate, project settings, autosave, colors
@@ -1250,6 +1307,7 @@ describe('the desk page', () => {
       'Stack',
       'Stage',
       'Fixtures',
+      'Effects',
       'Notes',
       'Settings',
     ]); // Keyboard is a panel of Settings
@@ -1259,7 +1317,7 @@ describe('the desk page', () => {
     box('Stage').click();
     box('Main').click();
     await fixture.whenStable();
-    expect(links()).toEqual(['Memories', 'Sequences', 'Stack', 'Fixtures', 'Notes', 'Settings']);
+    expect(links()).toEqual(['Memories', 'Sequences', 'Stack', 'Fixtures', 'Effects', 'Notes', 'Settings']);
     expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY)!)).toMatchObject({ hiddenViews: ['main', 'stage'] }); // kept on this device
 
     box('Stage').click();
@@ -1268,7 +1326,7 @@ describe('the desk page', () => {
 
     // Stage to the front
     for (let place = 0; place < 4; place++) await press(button('Move Stage up'));
-    expect(links()).toEqual(['Stage', 'Memories', 'Sequences', 'Stack', 'Fixtures', 'Notes', 'Settings']);
+    expect(links()).toEqual(['Stage', 'Memories', 'Sequences', 'Stack', 'Fixtures', 'Effects', 'Notes', 'Settings']);
 
     // a desk that starts at Main, while Main is left out, opens on the first view in the top bar
     const router = TestBed.inject(Router);
@@ -1279,7 +1337,7 @@ describe('the desk page', () => {
   });
 
   it('Settings puts the views in another order with ▲ and ▼, and ↺ brings back the usual ones', async () => {
-    const usual = ['Main', 'Memories', 'Sequences', 'Stack', 'Stage', 'Fixtures', 'Notes', 'Settings'];
+    const usual = ['Main', 'Memories', 'Sequences', 'Stack', 'Stage', 'Fixtures', 'Effects', 'Notes', 'Settings'];
     const links = () => [...page.querySelectorAll('nav[aria-label="Views"] a')].map((link) => link.textContent?.trim().split(/\s/)[0]);
     const listed = () => [...page.querySelectorAll('ul.views label')].map((label) => label.textContent?.trim().split(/\s/)[0]);
     await show('/settings');
@@ -1289,7 +1347,7 @@ describe('the desk page', () => {
 
     // One place earlier, in Settings and in the top bar; the keyboard focus goes with it.
     await press(button('Move Settings up'));
-    const moved = ['Main', 'Memories', 'Sequences', 'Stack', 'Stage', 'Fixtures', 'Settings', 'Notes'];
+    const moved = ['Main', 'Memories', 'Sequences', 'Stack', 'Stage', 'Fixtures', 'Effects', 'Settings', 'Notes'];
     expect(listed()).toEqual(moved);
     expect(links()).toEqual(moved);
     expect(document.activeElement).toBe(button('Move Settings up'));
@@ -1319,8 +1377,8 @@ describe('the desk page', () => {
     const rows = page.querySelector<HTMLSelectElement>('#channel-rows')!;
     rows.value = '1';
     rows.dispatchEvent(new Event('change'));
-    await press(button('Bigger lettering'));
-    expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY)!)).toMatchObject({ channelRows: 1, fontScale: 1.1 });
+    await press(button('Zoom in'));
+    expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY)!)).toMatchObject({ channelRows: 1, zoom: 1.1 });
 
     // Nothing of them goes to the desk program, and a project that is loaded leaves them as they are.
     expect(connection.methods().filter((method) => method.includes('Settings'))).toEqual([]);
@@ -1384,7 +1442,7 @@ describe('the desk page', () => {
     await press(pause);
     expect(pause.getAttribute('aria-expanded')).toBe('true');
     const offered = [...page.querySelectorAll('.palette button')].map((swatch) => swatch.getAttribute('aria-label'));
-    expect(offered).toEqual(['Green', 'Red', 'Yellow', 'Amber', 'White', 'Blue']);
+    expect(offered).toEqual(['Green', 'Red', 'Yellow', 'Amber', 'White', 'Blue', 'Violet']);
     expect(button('White').getAttribute('aria-current')).toBe('true'); // the one it has
     await press(button('Red'));
     expect(shown('--key-pause')).toBe('#ff5247');
@@ -2089,7 +2147,7 @@ describe('the desk page', () => {
     expect(textOf('lm-top-bar .name strong')).toBe('Hamlet');
 
     // OK closes the window; Import again starts with nothing checked and no file.
-    await press(button('Close'));
+    await press(buttonIn('lm-import-dialog', 'OK'));
     expect(dialog?.open).toBe(false);
     await press(button('Import'));
     expect(checked('lm-import-dialog', '.ASC')).toBe(false);
@@ -2158,7 +2216,7 @@ describe('the desk page', () => {
     ]);
 
     // The stage of a project file: on its own, in place of the project's.
-    await press(button('Close'));
+    await press(buttonIn('lm-import-dialog', 'OK'));
     await press(button('Import'));
     await check('lm-import-dialog', 'Stage');
     await pick(new File([connection.projectFile], 'Evening.json'));
@@ -2168,7 +2226,7 @@ describe('the desk page', () => {
     expect(textOf('lm-import-dialog .report')).toContain('The stage is that of the file, with 1 light.');
 
     // A project file has no keyboard of this device: nothing is imported.
-    await press(button('Close'));
+    await press(buttonIn('lm-import-dialog', 'OK'));
     await press(button('Import'));
     await check('lm-import-dialog', 'Stage');
     await check('lm-import-dialog', 'Keyboard');
@@ -2211,7 +2269,7 @@ describe('the desk page', () => {
       expect(file.stage.lights[0].name).toBe('Wash');
       expect(file.keyboard.shortcuts['stack.play']).toBe('Space');
       expect(textOf('lm-export-dialog .report')).toContain('Saved as "Untitled - stage, keyboard.json"');
-      await press(button('Close'));
+      await press(buttonIn('lm-export-dialog', 'OK'));
       expect(dialog?.open).toBe(false);
     } finally {
       delete (globalThis as { showSaveFilePicker?: unknown }).showSaveFilePicker;
@@ -2280,6 +2338,31 @@ describe('the desk page', () => {
     expect(connection.last('LoadExample')).toEqual(['6 Concert']);
     expect(connection.methods()).not.toContain('LoadProject');
     expect(textOf('lm-top-bar .name strong')).toBe('6 Concert');
+  });
+
+  it('a window closes with its ✕, and with a press outside it, but not with a drag that ends outside', async () => {
+    const dialog = () => page.querySelector<HTMLDialogElement>('lm-project-dialog dialog')!;
+    const at = (x: number) => ({ bubbles: true, clientX: x, clientY: x });
+
+    await press(button('Load project'));
+    expect(dialog().open).toBe(true);
+    await press(buttonIn('lm-project-dialog', 'Close the window'));
+    expect(dialog().open).toBe(false);
+
+    // a press on the backdrop: the dialog itself is its target, outside the window's box
+    await press(button('Load project'));
+    dialog().dispatchEvent(new MouseEvent('pointerdown', at(900)));
+    dialog().dispatchEvent(new MouseEvent('click', at(900)));
+    await fixture.whenStable();
+    expect(dialog().open).toBe(false);
+
+    // a drag that began inside the window and ends outside it
+    await press(button('Load project'));
+    dialog().querySelector('h2')!.dispatchEvent(new MouseEvent('pointerdown', at(0)));
+    dialog().dispatchEvent(new MouseEvent('click', at(900)));
+    await fixture.whenStable();
+    expect(dialog().open).toBe(true);
+    await press(buttonIn('lm-project-dialog', 'Close the window'));
   });
 
   it('LAN lit shows the address and the password under the box light; off shows neither', async () => {
@@ -2427,6 +2510,7 @@ describe('the desk page', () => {
       'Stack',
       'Stage',
       'Fixtures',
+      'Effects',
       'Notes',
       'Settings',
     ]);
@@ -2912,7 +2996,7 @@ describe('the desk page', () => {
       'New project',
       'Load project',
       'Import',
-      'Edit the channels and memories of the independent keys',
+      'Edit the channels, memories and effects of the independent keys',
     ]) {
       expect(button(key).disabled).toBe(true);
     }
@@ -2973,7 +3057,7 @@ describe('the desk page', () => {
   it('a stack that goes live ends an unfinished recording and the editing of the independent keys', async () => {
     await press(button('Record sequence'));
     await press(memoryKey(9));
-    await press(button('Edit the channels and memories of the independent keys'));
+    await press(button('Edit the channels, memories and effects of the independent keys'));
     expect(store.mode()).toEqual({ kind: 'recording', memory: 9 });
     expect(page.querySelector('input[aria-label="Channel of independent key 2"]')).toBeTruthy();
 
@@ -3071,7 +3155,7 @@ describe('the desk page', () => {
 
   it('a release takes one step of the stack down, chosen from the other steps by their numbers', async () => {
     await show('/stack');
-    const kind = page.querySelector<HTMLSelectElement>('select[aria-label="Step 2.0, channel, memory, fixture, group or release"]');
+    const kind = page.querySelector<HTMLSelectElement>('select[aria-label="Step 2.0, channel, memory, fixture, group, effect or release"]');
     if (!kind) throw new Error('no field for the kind of step 2.0');
     expect([...kind.options].map((option) => option.text)).toContain('Release');
 
@@ -3338,12 +3422,12 @@ describe('the desk page', () => {
     expect(page.querySelectorAll('lm-channel-section lm-fader-strip').length).toBe(16);
   });
 
-  it('Settings has four panels: the main view with the universes, the lettering, the autosave and LAN; the views; the colors; the keyboard', async () => {
+  it('Settings has four panels: the main view with the universes, the zoom, the autosave and LAN; the views; the colors; the keyboard; the outputs under them', async () => {
     await show('/settings');
     const panels = [...page.querySelectorAll('lm-settings-view .panels > *')];
     const titles = (panel: Element, level: string) => [...panel.querySelectorAll(level)].map((title) => title.textContent?.trim());
-    expect(panels.map((panel) => titles(panel, 'h3')[0])).toEqual(['Main view', 'Views in the top bar', 'Colors of the keys', 'Keyboard']);
-    expect(titles(panels[0], 'h4')).toEqual(['Universes', 'Lettering', 'Autosave', 'Network (LAN)']);
+    expect(panels.map((panel) => titles(panel, 'h3')[0])).toEqual(['Main view', 'Views in the top bar', 'Colors of the keys', 'Keyboard', 'Outputs']);
+    expect(titles(panels[0], 'h4')).toEqual(['Universes', 'Zoom', 'Autosave', 'Network (LAN)']);
     expect(page.querySelector('#universes')?.closest('.panel')).toBe(panels[0]);
     // fields only, no sentences about them, until the autosave and LAN, which keep theirs
     const autosave = panels[0].querySelector('#autosave-title')!;
@@ -3406,19 +3490,20 @@ describe('the desk page', () => {
     expect(page.querySelector('lm-main-view')?.classList).toContain('no-independents');
   });
 
-  it('the lettering of the whole page gets bigger and smaller in steps of 0.1', async () => {
+  it('the zoom makes the whole page bigger and smaller in steps of 10 per cent', async () => {
     await show('/settings');
-    const scale = () => document.documentElement.style.getPropertyValue('--font-scale');
-    expect(page.querySelector('.scale output')?.textContent?.trim()).toBe('×1.0');
+    const zoom = () => document.documentElement.style.getPropertyValue('--zoom');
+    expect(page.querySelector('.scale output')?.textContent?.trim()).toBe('100 %');
 
-    await press(button('Bigger lettering'));
-    await press(button('Bigger lettering'));
-    expect(scale()).toBe('1.2');
-    expect(page.querySelector('.scale output')?.textContent?.trim()).toBe('×1.2');
+    await press(button('Zoom in'));
+    await press(button('Zoom in'));
+    expect(zoom()).toBe('1.2');
+    expect(page.querySelector('.scale output')?.textContent?.trim()).toBe('120 %');
 
     await press(button('Reset'));
-    await press(button('Smaller lettering'));
-    expect(scale()).toBe('0.9');
+    await press(button('Zoom out'));
+    expect(zoom()).toBe('0.9');
+    await press(button('Reset'));
   });
 
   /** A kind of keys in the Keyboard panel of Settings: the head that opens it. */
@@ -3683,5 +3768,191 @@ describe('the desk page', () => {
 
     await press(button('New random'));
     expect(connection.methods()).toContain('NewLanPassword');
+  });
+
+  // ---------------------------------------------------------------- effects
+
+  /** An effect of the project, as the desk program keeps it. */
+  function anEffect(number: number, more: Partial<Effect> = {}): Effect {
+    return {
+      number,
+      name: `Effect ${number}`,
+      kind: 'intensity',
+      shape: 'sine',
+      group: null,
+      lights: [],
+      speed: 60,
+      size: 100,
+      spread: 100,
+      direction: 'forward',
+      order: 'address',
+      blocks: 1,
+      wings: 1,
+      fadeIn: 0,
+      fadeOut: 0,
+      duty: 50,
+      colors: [],
+      angle: 0,
+      seed: 0,
+      ...more,
+    };
+  }
+
+  /** Lets the page's own timers run: the store sends changes of an effect together, a moment later. */
+  async function wait(ms: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+    await fixture.whenStable();
+  }
+
+  it('the Effects view makes an effect of a kind, and its editor changes it', async () => {
+    await show('/effects');
+    expect(page.querySelector('lm-effects-view .summary')?.textContent).toContain('Effect 1 is empty');
+
+    // the key of an empty number chooses it, and the kinds to make it are offered
+    await press(page.querySelector<HTMLButtonElement>('button[aria-label="Effect 3 key"]'));
+    expect(page.querySelector('lm-effects-view .summary')?.textContent).toContain('Effect 3 is empty');
+    expect(connection.methods()).not.toContain('SetEffectControl');
+    await press(page.querySelector<HTMLButtonElement>('button[aria-label="Effect 1 key"]'));
+
+    await press(button('Intensity'));
+    expect(store.effects().map((effect) => effect.number)).toEqual([1]);
+    await wait(200);
+    const made = connection.last('SetEffect')?.[0] as Effect;
+    expect(made).toMatchObject({ number: 1, kind: 'intensity', shape: 'sine', name: 'Sine' });
+
+    const speed = page.querySelector<HTMLInputElement>('#effect-speed')!;
+    speed.value = '128';
+    speed.dispatchEvent(new Event('change'));
+    await wait(200);
+    expect((connection.last('SetEffect')?.[0] as Effect).speed).toBe(128);
+
+    // a number out of range is put back as it was
+    speed.value = '9000';
+    speed.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(speed.value).toBe('128');
+  });
+
+  it('a new movement goes around a center of its own, which a press on the preview moves', async () => {
+    await show('/effects');
+    await press(button('Movement'));
+    await wait(200);
+    expect(connection.last('SetEffect')?.[0]).toMatchObject({ kind: 'movement', centerPan: 50, centerTilt: 50 });
+
+    // the square of the heads' range: 200 pixels, 8 from the edges of the preview
+    const canvas = page.querySelector<HTMLCanvasElement>('lm-effect-preview canvas')!;
+    expect(canvas.classList).toContain('movable');
+    const real = canvas.getBoundingClientRect.bind(canvas);
+    canvas.getBoundingClientRect = () => ({ left: 0, top: 0, right: 216, bottom: 216, width: 216, height: 216, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect;
+    canvas.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0, clientX: 58, clientY: 158 }));
+    canvas.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
+    canvas.getBoundingClientRect = real;
+    await wait(200);
+    expect(connection.last('SetEffect')?.[0]).toMatchObject({ kind: 'movement', centerPan: 25, centerTilt: 75 });
+  });
+
+  it('the key of an effect starts and stops it, its fader moves like a fader, and the desk tells how it runs', async () => {
+    connection.emit('EffectsChanged', [anEffect(2, { name: 'Pulse' })]);
+    await show('/effects');
+
+    await press(page.querySelector<HTMLButtonElement>('button[aria-label="Effect 2 key"]'));
+    expect(connection.last('SetEffectControl')).toEqual([2, 'toggle', 0]);
+
+    store.setEffectLevel(2, 128);
+    await wait(40);
+    const [number, control, value] = connection.last('SetEffectControl') as [number, string, number];
+    expect([number, control]).toEqual([2, 'level']);
+    expect(value).toBeCloseTo(50.2, 1);
+
+    connection.emit('EffectPlaybackChanged', {
+      number: 2, running: true, level: 255, speed: 60, size: 100, spread: 100, fading: false, phase: 0.5, bpm: 60, changed: false,
+    });
+    await fixture.whenStable();
+    expect(page.querySelector('button[aria-label="Effect 2 key"]')?.classList).toContain('level-3');
+    // the fader this page moved a moment ago keeps the page's level
+    expect(store.effectPlaybacks().get(2)?.level).toBe(128);
+  });
+
+  it('on the Stage view a light in a running effect shows a change at once and keeps it a sixth of a second', async () => {
+    await planWith(stageLight(1, 'Par', 1, 'D', '#ffffff', 2, 2));
+    connection.emit('EffectsChanged', [anEffect(1, { name: 'Pulse', shape: 'pulse', lights: [1], speed: 120 })]);
+    connection.emit('EffectPlaybackChanged', {
+      number: 1, running: true, level: 255, speed: 120, size: 100, spread: 100, fading: false, phase: 0, bpm: 120, changed: false,
+    });
+    await show('/stage');
+    const start = performance.now() + 1000; // after the looks the plan has shown so far
+    let now = start;
+    const clock = vi.spyOn(performance, 'now').mockImplementation(() => now);
+    // the desk program's playback at a moment, and the lens the plan shows then
+    const at = async (ms: number, level: number): Promise<string> => {
+      now = start + ms;
+      connection.emit('PlaybackChanged', { ...connection.playback, effectLevels: { channels: [1], levels: [level] } });
+      await fixture.whenStable();
+      return lenses(1)[0];
+    };
+    try {
+      const dark = await at(0, 0);
+      expect(await at(200, 0)).toBe(dark);
+      // a short flash comes: it shows at once, whenever it comes ...
+      const lit = await at(300, 255);
+      expect(lit).not.toBe(dark);
+      // ... and stays a sixth of a second on the screen, though it is over sooner
+      expect(await at(390, 0)).toBe(lit);
+      expect(await at(470, 0)).toBe(dark);
+      expect(await at(800, 255)).toBe(lit);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it('a key of an effect that is not there says so and sends nothing', async () => {
+    store.toggleEffect(7);
+    await fixture.whenStable();
+    expect(store.notice()).toContain('There is no effect 7 yet');
+    expect(connection.methods()).not.toContain('SetEffectControl');
+  });
+
+  it('the channels show what the running effects give, as the desk program mixes them', async () => {
+    connection.emit('PlaybackChanged', { ...connection.playback, effectLevels: { channels: [1, 6], levels: [200, 90] } });
+    await fixture.whenStable();
+    expect(store.shownChannels()[0]).toBe(200);
+    expect(store.shownChannels()[5]).toBe(90);
+    expect(store.output()[0]).toBe(200);
+
+    connection.emit('PlaybackChanged', { ...connection.playback, effectLevels: null });
+    await fixture.whenStable();
+    expect(store.shownChannels()[0]).toBe(0);
+  });
+
+  it('Settings shows effect keys in the independents and a row of effect faders on the main view', async () => {
+    connection.emit('EffectsChanged', [anEffect(1, { name: 'Circle' })]);
+    const settings = TestBed.inject(DeskSettings);
+    settings.setEffectKeys(2);
+    settings.setEffectRows(1);
+    await show('/memories');
+    await show('/');
+    await until(() => !!page.querySelector('lm-main-view lm-effect-section'));
+    await fixture.whenStable();
+
+    const key = page.querySelector<HTMLButtonElement>('button[aria-label="Independent 21, effect 1, Circle"]');
+    expect(key).toBeTruthy();
+    await press(key);
+    expect(connection.last('SetEffectControl')).toEqual([1, 'toggle', 0]);
+    expect(page.querySelectorAll('lm-main-view lm-effect-section lm-fader-strip').length).toBeGreaterThan(0);
+
+    // Edit binds an effect key to another effect
+    await press(button('Edit the channels, memories and effects of the independent keys'));
+    const field = page.querySelector<HTMLInputElement>('input[aria-label="Effect of independent key 21"]')!;
+    field.value = '5';
+    field.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(connection.last('SetEffectIndependent')).toEqual([1, 5]);
+  });
+
+  it('every effect key, effect key of the independents and the Effects view has a shortcut', () => {
+    for (const id of ['view.effects', 'effect.1', 'effect.64', 'ind.effect.32', 'page.effect.2', 'effects.keep', 'effects.reset', 'effects.copy', 'effects.delete']) {
+      expect(actionWithId(id)).toBeTruthy();
+    }
+    expect(ACTION_GROUPS).toContain('Effect keys');
   });
 });

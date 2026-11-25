@@ -1,4 +1,4 @@
-<dialog #dialog aria-labelledby="library-dialog-title">
+<dialog #dialog lmDialog aria-labelledby="library-dialog-title" (dismiss)="close()">
   <div class="body">
     <h2 id="library-dialog-title">Fixture library</h2>
 
@@ -86,4 +86,5 @@
       <p class="error" role="alert">{{ error() }}</p>
     }
   </div>
+  <button type="button" class="dialog-close" aria-label="Close the window" title="Close" (click)="close()">✕</button>
 </dialog>

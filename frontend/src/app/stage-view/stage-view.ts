@@ -1,6 +1,6 @@
 import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { DeskStore } from '../desk/desk-store';
-import { MAX_LEVEL, STAGE_BACK_ROOM, STAGE_FRONT_ROOM, STAGE_SIDE_ROOM, StageLight } from '../desk/desk-types';
+import { FixtureType, MAX_LEVEL, STAGE_BACK_ROOM, STAGE_FRONT_ROOM, STAGE_SIDE_ROOM, StageLight } from '../desk/desk-types';
 import {
   LightZone,
   SNAP,
@@ -17,7 +17,17 @@ import {
   withoutLight,
   zoneAt,
 } from '../desk/stage-lights';
-import { shownFlashes, shutterClosed, strobeOf, typeOf, wheelColorOf } from '../desk/fixtures';
+import {
+  MAX_SHOWN_FLASHES,
+  panTiltOf,
+  positionOf,
+  shownFlashes,
+  shutterClosed,
+  strobeOf,
+  typeOf,
+  wheelColorOf,
+} from '../desk/fixtures';
+import { effectLights, flashesPerSecond } from '../desk/effect-shapes';
 import { LampButton } from '../lamp-button/lamp-button';
 import { StagePanel } from '../stage-panel/stage-panel';
 import { StageStack } from '../stage-stack/stage-stack';
@@ -28,6 +38,12 @@ const SQUARE_INSET = 0.08;
 
 /** How near to the edge of a light the pointer resizes it instead of moving it, in pixels (at most a quarter of the light). */
 const EDGE_PIXELS = 9;
+
+/**
+ * A light in a running effect changes its look on the screen at most this often (6 times a second),
+ * so that it never flashes more than 3 times a second there, whatever the effect does.
+ */
+const EFFECT_LOOK_MS = 167;
 
 /** A light as the plan draws it. */
 interface ShownLight {
@@ -57,8 +73,23 @@ interface ShownLight {
    * ("⚡ 12 Hz"); null for steady light.
    */
   readonly strobe: { readonly kind: string; readonly period: string; readonly mark: string } | null;
+  /**
+   * For a light with pan and tilt (a moving head): a beam that sketches where it points, turned by
+   * its pan and longer the more it tilts, in its color; dashed while it gives no light. Null for
+   * others.
+   */
+  readonly beam: { readonly turn: number; readonly length: number; readonly color: string; readonly dark: boolean } | null;
   readonly title: string;
 }
+
+/**
+ * The beam of a moving head on the plan, a sketch: the plan does not know the head's real angles,
+ * so the pan turns it through a usual 540 degrees, the middle of the pan pointing at the audience,
+ * and the tilt makes it longer, from 0.6 squares to 3.
+ */
+const BEAM_PAN_DEGREES = 540;
+const BEAM_SHORTEST = 0.6;
+const BEAM_LONGEST = 3;
 
 /** A light being dragged: where it is and how big, until it is let go. */
 interface Dragged {
@@ -130,17 +161,48 @@ export class StageView {
     this.store.stage().pictureOver === 'plan' ? { left: 0, top: 0, width: 100, height: 100 } : this.stageBox(),
   );
 
+  /**
+   * The lights in a running effect that can flash them, with how many times a second it can: the
+   * screen must not show more than 3 flashes a second (WCAG 2.3.1), see `shown`.
+   */
+  private readonly effectFlashes = computed(() => {
+    const flashing = new Map<number, number>();
+    const plan = this.store.stage();
+    const playbacks = this.store.effectPlaybacks();
+    for (const effect of this.store.effects()) {
+      const playback = playbacks.get(effect.number);
+      if (!playback?.running) continue;
+      const hertz = flashesPerSecond(effect, playback.bpm);
+      if (hertz <= 0) continue;
+      for (const light of effectLights(effect, plan)) flashing.set(light.id, Math.max(hertz, flashing.get(light.id) ?? 0));
+    }
+    return flashing;
+  });
+
+  // The look each light in a flashing effect shows, and since when: it changes at most every
+  // EFFECT_LOOK_MS, or every second while its effect flashes faster than the screen may.
+  private readonly heldLooks = new Map<number, { look: ReturnType<typeof lookOf>; at: number }>();
+
   /** The lights as the plan draws them. */
   protected readonly shown = computed<readonly ShownLight[]>(() => {
     const output = this.store.output();
     const dragged = this.dragged();
     const plan = this.store.stage();
+    const flashing = this.effectFlashes();
+    const now = performance.now();
+    for (const id of this.heldLooks.keys()) if (!flashing.has(id)) this.heldLooks.delete(id);
     return plan.lights.map((light) => {
       const at = dragged?.id === light.id ? dragged : light;
       const type = typeOf(plan, light);
-      const look = lookOf(light, output, type ? { color: wheelColorOf(light, type, output), dark: shutterClosed(light, type, output) } : {});
+      const lookNow = () => lookOf(light, output, type ? { color: wheelColorOf(light, type, output), dark: shutterClosed(light, type, output) } : {});
+      const effectHertz = flashing.get(light.id);
+      const fast = effectHertz !== undefined && effectHertz > MAX_SHOWN_FLASHES;
+      const look = effectHertz === undefined ? lookNow() : this.heldLook(light.id, now, fast ? 1000 : EFFECT_LOOK_MS, lookNow);
       // A strobe shows while the light gives light: at most three flashes a second on the screen.
-      const strobe = look.cells.some((cell) => cell.brightness > 0) ? strobeOf(light, type, output) : null;
+      const lit = look.cells.some((cell) => cell.brightness > 0);
+      const channelStrobe = lit ? strobeOf(light, type, output) : null;
+      const strobe =
+        channelStrobe ?? (fast && lit ? { kind: 'pulse' as const, random: false, hertz: Math.round(effectHertz * 10) / 10, pace: 1, label: 'Effect' } : null);
       const hertz = strobe?.hertz ?? null;
       const square = light.shape === 'square';
       const width = at.width - (square ? SQUARE_INSET : ROUND_INSET);
@@ -168,15 +230,28 @@ export class StageView {
         below: halfHeight + 0.12,
         strobe: strobe && {
           kind: strobe.random ? 'random' : strobe.kind,
-          period: `${(1 / shownFlashes(strobe)).toFixed(3)}s`,
+          // an effect flashes on the screen twice a second at most: its look changes too, once a second
+          period: `${(1 / (channelStrobe ? shownFlashes(strobe) : 2)).toFixed(3)}s`,
           mark: hertz === null ? '⚡' : `⚡ ${hertz} Hz`,
         },
+        beam: beamOf(light, type, output, look.cells[0]?.glow, lit),
         title:
           `${light.name || 'A light'}: ${light.channels.length === 1 ? 'channel' : 'channels'} ${channelRange(light)}` +
           (strobe ? `; ${strobe.label.toLowerCase()}${hertz === null ? '' : `, ${hertz} Hz`}` : ''),
       };
     });
   });
+
+  // The look a light shows: a new one at once, and then for `hold` milliseconds whatever comes in
+  // between. The time starts when the look changes, not every `hold` milliseconds: a short flash
+  // of an effect then always shows, as long as it comes `hold` after the one before.
+  private heldLook(id: number, now: number, hold: number, lookNow: () => ReturnType<typeof lookOf>): ReturnType<typeof lookOf> {
+    const held = this.heldLooks.get(id);
+    if (held && now - held.at < hold) return held.look;
+    const look = lookNow();
+    if (!held || !sameLook(held.look, look)) this.heldLooks.set(id, { look, at: now });
+    return look;
+  }
 
   /** What the plan says about itself, for screen readers. */
   protected readonly planLabel = computed(() => {
@@ -361,4 +436,35 @@ export class StageView {
   private sized(light: StageLight, size: Pick<StageLight, 'x' | 'y' | 'width' | 'depth'>): Omit<Dragged, 'id'> {
     return { ...keptOn(this.store.stage(), size.x, size.y, { ...light, ...size }), width: size.width, depth: size.depth };
   }
+}
+
+/** True when two looks of a light show the same on the plan. */
+function sameLook(a: ReturnType<typeof lookOf>, b: ReturnType<typeof lookOf>): boolean {
+  return (
+    a.level === b.level &&
+    a.cells.length === b.cells.length &&
+    a.cells.every((cell, index) => {
+      const other = b.cells[index];
+      return cell.brightness === other.brightness && cell.glow === other.glow && cell.lens === other.lens;
+    })
+  );
+}
+
+/** The beam of a light with pan and tilt (see ShownLight.beam); null for a light without. */
+function beamOf(
+  light: StageLight,
+  type: FixtureType | undefined,
+  output: readonly number[],
+  glow: string | undefined,
+  lit: boolean,
+): ShownLight['beam'] {
+  const axes = panTiltOf(light, type);
+  if (!axes) return null;
+  const { x: pan, y: tilt } = positionOf(axes, output);
+  return {
+    turn: 90 + (pan - 0.5) * BEAM_PAN_DEGREES,
+    length: BEAM_SHORTEST + tilt * (BEAM_LONGEST - BEAM_SHORTEST),
+    color: lit && glow ? glow : '160 168 180',
+    dark: !lit,
+  };
 }

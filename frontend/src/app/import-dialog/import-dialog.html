@@ -1,4 +1,4 @@
-<dialog #dialog aria-labelledby="import-dialog-title">
+<dialog #dialog lmDialog aria-labelledby="import-dialog-title" (dismiss)="close()">
   <!-- the system's own window for choosing a file, opened by the File key -->
   <input #picker type="file" hidden [accept]="accept()" (change)="onPicked($event)" />
 
@@ -11,7 +11,7 @@
         }
       </div>
       <div class="actions">
-        <button #ok lmLamp type="button" tone="system" [level]="3" aria-label="Close" (click)="close()">OK</button>
+        <button #ok lmLamp type="button" tone="system" [level]="3" (click)="close()">OK</button>
       </div>
     } @else {
       <h2 id="import-dialog-title">Import</h2>
@@ -57,4 +57,5 @@
       </div>
     }
   </form>
+  <button type="button" class="dialog-close" aria-label="Close the window" title="Close" (click)="close()">✕</button>
 </dialog>

@@ -1,0 +1,27 @@
+/* The preview: a dark box in the proportions of a screen, and a line under it when it shows less than the effect. */
+:host {
+  display: grid;
+  gap: 6px;
+}
+
+canvas {
+  box-sizing: border-box; /* its edge inside its width: it never sticks out of its column */
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: var(--well);
+}
+
+/* a movement: a press or a drag on it moves the center the heads go around */
+canvas.movable {
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.note {
+  margin: 0;
+  color: var(--legend-dim);
+  font-size: 13px;
+  line-height: 1.35;
+}

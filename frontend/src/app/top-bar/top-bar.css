@@ -1,6 +1,8 @@
 /* Three parts in a line: the name and its keys, the links to the views in the middle, the
-   project. The left part never gets narrower than it is; the project's name and path give way. */
+   project. The left part never gets narrower than it is; the project's name and path give way.
+   The bar is a container: on a phone its width decides how the links lie (see the end). */
 :host {
+  container-type: inline-size;
   display: grid;
   grid-template-columns: minmax(max-content, 1fr) auto minmax(0, 1fr);
   grid-template-areas: 'left views project';
@@ -58,17 +60,17 @@
 
 h1 {
   margin: 0;
-  font-size: calc(24px * var(--font-scale));
+  font-size: 24px;
   font-weight: 600;
   letter-spacing: 0.02em;
   line-height: 1;
 }
 
-/* the version and the LAN line: small and dim (the outputs under the name look the same, see outputs-button) */
+/* the version and the LAN line: small and dim (the outputs under the name look the same, see outputs-status) */
 .version,
 .lan {
   color: var(--legend-dim);
-  font-size: calc(13px * var(--font-scale));
+  font-size: 13px;
 }
 
 /* the light of LAN: a little round lamp */
@@ -118,10 +120,10 @@ h1 {
 }
 
 .views a {
-  padding: 9px 6px 7px; /* close together: eight links, and the project's name keeps its room */
+  padding: 9px 6px 7px; /* close together: nine links, and the project's name keeps its room */
   border-bottom: 3px solid var(--edge);
   color: var(--legend-dim);
-  font-size: calc(15px * var(--font-scale));
+  font-size: 15px;
   font-stretch: 87.5%;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -149,7 +151,7 @@ h1 {
   background: var(--live);
   box-shadow: 0 0 8px color-mix(in srgb, var(--live) 60%, transparent);
   color: #0b0d10;
-  font-size: calc(11px * var(--font-scale));
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
   line-height: 1;
@@ -186,7 +188,7 @@ h1 {
   justify-content: flex-end;
   gap: 8px;
   min-width: 0; /* a long name is cut short with "…" rather than running under the keys */
-  font-size: calc(16px * var(--font-scale));
+  font-size: 16px;
 }
 
 .name strong {
@@ -199,23 +201,27 @@ h1 {
 .unsaved {
   flex: none;
   color: var(--system);
-  font-size: calc(12px * var(--font-scale));
+  font-size: 12px;
 }
 
 .path {
   overflow: hidden;
   color: var(--legend-dim);
-  font-size: calc(12px * var(--font-scale));
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
   direction: rtl; /* a long path is cut at its start, so the file name stays readable */
 }
 
-/* ---- mobile: still one line, but the groups stand closer and the project gives way first:
-   its name and path are cut short before anything else runs out of room */
+/* ---- mobile: the groups stand closer. A mobile window that is not narrow (a low one) keeps one
+   line, and there the project gives way first: its name and path are cut short before anything
+   else runs out of room. A narrow one keeps the two lines of narrow, the project at the right. */
 :host-context(.mobile) {
-  grid-template-columns: auto auto minmax(0, 1fr);
   gap: 16px;
+}
+
+:host-context(.mobile:not(.narrow)) {
+  grid-template-columns: auto auto minmax(0, 1fr);
 }
 
 :host-context(.mobile) .left {
@@ -241,9 +247,9 @@ h1 {
   justify-self: end;
 }
 
-/* The eight links share the line: narrow lettering, little room around the words, and the line
-   shared out among them. Should bigger lettering (Settings) make them wider than the line, the
-   line scrolls sideways, not the page; its room at the top keeps the "live" tag in sight. */
+/* The nine links share the line: narrow lettering, little room around the words, and the line
+   shared out among them. Should they still be wider than the line, the line scrolls sideways,
+   not the page; its room at the top keeps the "live" tag in sight. */
 :host-context(.phone) .views {
   gap: 0;
   padding-top: 8px;
@@ -257,7 +263,7 @@ h1 {
   position: relative;
   flex: 1 0 auto;
   padding-inline: 2px;
-  font-size: calc(13px * var(--font-scale));
+  font-size: 13px;
   font-stretch: 75%;
   letter-spacing: 0;
   text-align: center;
@@ -270,11 +276,13 @@ h1 {
   margin: 0;
 }
 
-/* eight links do not fit in one line on a narrow phone: two rows of four */
-@media (max-width: 430px) {
+/* Nine links need about 415 pixels in one line: on a narrower phone (a bar of 450 pixels is a
+   window of 470) they stand in two rows of five and four, and in one line only where there is
+   some room to spare between them. */
+@container (max-width: 450px) {
   :host-context(.phone) .views {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     row-gap: 6px;
   }
 }

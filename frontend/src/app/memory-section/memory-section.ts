@@ -2,20 +2,20 @@ import { Component, computed, inject } from '@angular/core';
 import { DeskStore } from '../desk/desk-store';
 import { MEMORY_COUNT, stripNumbers } from '../desk/desk-types';
 import { heldMemory, memoryBlinks } from '../desk/function-mode';
-import { KeyColumns } from '../desk/key-columns';
 import { LampLevel, memoryLamp, memoryPageLamp } from '../desk/lamps';
+import { PressedInSight } from '../desk/pressed-in-sight';
 import { FaderStrip } from '../fader-strip/fader-strip';
 import { LampButton } from '../lamp-button/lamp-button';
 
 /**
  * The memories: one row of faders (or two, as Settings says), and the keys that choose which
- * memories the rows show. Like the channels, the page keys go on in further columns, and the
- * rows scroll sideways when they are wider than the window (on their own, not with the
- * channels). The key under a fader puts it to full and back to zero, or does what the lit
+ * memories the rows show. Like the channels, the page keys stand in one column that scrolls when
+ * needed, and the rows scroll sideways only when Settings makes them wider than the window (on
+ * their own, not with the channels). The key under a fader puts it to full and back to zero, or does what the lit
  * record key wants.
  */
 @Component({
-  imports: [FaderStrip, KeyColumns, LampButton],
+  imports: [FaderStrip, LampButton, PressedInSight],
   selector: 'lm-memory-section',
   styleUrl: './memory-section.css',
   templateUrl: './memory-section.html',

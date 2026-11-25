@@ -24,7 +24,7 @@ h2 {
   flex: none;
   margin: 0;
   color: var(--legend-dim);
-  font-size: calc(12px * var(--font-scale));
+  font-size: 12px;
   font-stretch: 75%;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -35,7 +35,7 @@ h2 {
 .summary {
   margin: 0;
   overflow: hidden;
-  font-size: calc(14px * var(--font-scale));
+  font-size: 14px;
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -71,7 +71,7 @@ table {
   width: 1%;
   padding: 0 8px;
   color: var(--legend-dim);
-  font-size: calc(16px * var(--font-scale));
+  font-size: 16px;
   line-height: 1;
   text-align: center;
   cursor: grab;
@@ -120,7 +120,7 @@ table.locked .grip {
   max-width: 96ch;
   margin: 10px 0 0;
   color: var(--legend-dim);
-  font-size: calc(13px * var(--font-scale));
+  font-size: 13px;
   line-height: 1.35;
 }
 

@@ -1,0 +1,40 @@
+/* In the first column of the top bar's left part, under the name: as small and dim as the version. */
+:host {
+  grid-column: 1;
+  justify-self: start;
+}
+
+/* a line of text, which the pointer can rest on for what each output plays */
+p {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  padding: 2px 0;
+  color: var(--legend-dim);
+  font-size: 13px;
+}
+
+.connected,
+.missing {
+  color: var(--legend);
+}
+
+/* a little round lamp: green while the outputs play, amber while one of the project's does not */
+.light {
+  box-sizing: border-box;
+  width: 9px;
+  height: 9px;
+  border: 1px solid var(--light, var(--legend-dim));
+  border-radius: 50%;
+  background: var(--light, none);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--light, transparent) 60%, transparent);
+}
+
+.connected .light {
+  --light: var(--channel);
+}
+
+.missing .light {
+  --light: var(--system);
+}

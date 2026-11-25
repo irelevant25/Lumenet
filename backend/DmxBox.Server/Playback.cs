@@ -80,13 +80,24 @@ public sealed record Playback(int[] Levels, Dictionary<int, int> SequenceSteps, 
     /// <summary>The stack's crossfade while one runs; left out while none does.</summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public StackCrossfade? Crossfade { get; init; }
+
+    /// <summary>The playbacks of the effects the project has, and of any other whose fader is up.</summary>
+    public EffectPlayback[] Effects { get; init; } = [];
+
+    /// <summary>What the running effects give the channels they touch; left out while none runs.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public EffectLevels? EffectLevels { get; init; }
 }
 
 /// <summary>A fader the stack has moved, to be told to the UIs.</summary>
 /// <param name="Memory">True for the fader of a memory, false for a channel fader.</param>
-/// <param name="Number">The memory (1-128) or the channel (1-512).</param>
+/// <param name="Number">The memory (1-128), the channel (1-512) or the effect (1-64).</param>
 /// <param name="Level">The fader's new level, 0-255.</param>
-internal readonly record struct FaderMoved(bool Memory, int Number, int Level);
+internal readonly record struct FaderMoved(bool Memory, int Number, int Level)
+{
+    /// <summary>True for the fader of an effect.</summary>
+    public bool Effect { get; init; }
+}
 
 /// <summary>A step of the stack with its number, as a project holds it.</summary>
 /// <param name="Cue">The number of the step.</param>

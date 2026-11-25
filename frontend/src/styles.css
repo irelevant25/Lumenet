@@ -20,6 +20,7 @@
   --white-lamp: #f1f3f6;
   --blue-lamp: #4aa3ff;
   --live: #ff5247; /* the stack is live: the red of an "on air" sign, on the Stack key and in the top bar */
+  --effect: #b388ff; /* effects: their keys and faders, violet */
   --previous: var(--blue-lamp); /* the step of the stack before the one that is on: blue */
   --danger: #ff5247; /* a key that takes something out (✕): red */
 
@@ -27,6 +28,7 @@
      these same colors). A key's tone names its variable: tone="play" takes --key-play. */
   --key-channel: var(--channel);
   --key-memory: var(--memory);
+  --key-effect: var(--effect);
   --key-system: var(--system);
   --key-white: var(--white-lamp);
   --key-blue: var(--blue-lamp);
@@ -68,6 +70,10 @@
   --key-stage-add: #ffb020;
   --key-notes-edit: #ffb020;
   --key-notes-tools: #ffb020;
+  --key-effect-copy: #ffb020;
+  --key-effect-delete: #ff5247;
+  --key-effect-keep: #ffb020;
+  --key-effect-reset: #ffb020;
 
   --cap: #d9dde3;
   --focus: #8ab4ff;
@@ -75,15 +81,18 @@
   /* DIN-style lettering, as on equipment panels. Bahnschrift comes with Windows, DIN Alternate with Apple devices. */
   --font: 'Bahnschrift', 'DIN Alternate', 'Roboto Condensed', 'Arial Narrow', system-ui, sans-serif;
 
-  /* The size of all lettering, as chosen in Settings: every font size of the page is multiplied
-     by it. The page sets it on <html> (desk-settings.ts); 1 until then. */
-  --font-scale: 1;
+  /* The zoom of the page, as chosen in Settings (desk-settings.ts sets it on <html>, together
+     with CSS zoom): the sizes of the window (vw, dvh) are not zoomed, and are divided by it to
+     give the zoomed page's own. */
+  --zoom: 1;
 
   /* ---- layout ----
      A wide window shows 32 faders in a row. The width of one fader strip follows the window:
      32 strips, the one column of page keys beside them and the general section's column are
      33.64 strips (a key is 0.82 strips wide); the other 395px are the gaps, the paddings and
-     the two other columns at the right (the master section with record, and the independents). */
+     the two other columns at the right (the master section with record, and the independents).
+     When those take more (the independents in two columns on a low window), the rows of faders
+     make their strips a little narrower (channel-section.css). */
   --gap: 10px;
   --strip-gap: 4px;
   --strips: 32; /* faders in one row */
@@ -93,7 +102,7 @@
      page sets it on <html>), the strips keep the width they have here, and a row that is too
      wide for the window scrolls sideways. */
   --fit-line: var(--strips);
-  --strip: clamp(28px, calc((100vw - 395px) / 33.64), 60px);
+  --strip: clamp(28px, calc((100vw / var(--zoom) - 395px) / 33.64), 60px);
 
   /* A column of keys that is too high for its place first gets flatter keys, down to this
      height, and after that it scrolls. */
@@ -104,20 +113,16 @@
   --key-w: min(var(--strip), max(32px, calc(var(--strip) * 0.82)));
   --key-h: calc(var(--key-w) * 0.86);
 
-  /* Lettering sizes that grow with the keys, and with the size of all lettering (Settings).
-     Numbers follow it all the way: a channel number or a range (on two lines, broken after the
-     dash) still fits into a key at x1.5. The keys keep their size, so words grow by 15 % at most:
-     more would not fit two lines into a key. Smaller they follow all the way. */
-  --key-scale: min(var(--font-scale), 1.15);
-  --key-number: calc(max(11px, var(--key-w) * 0.36) * var(--font-scale));
-  --key-word: calc(max(10px, var(--key-w) * 0.3) * var(--key-scale));
-  --key-range: calc(max(9px, var(--key-w) * 0.26) * var(--font-scale));
-  --readout: calc(max(11px, var(--key-w) * 0.31) * var(--font-scale));
+  /* Lettering sizes that grow with the keys. */
+  --key-number: max(11px, var(--key-w) * 0.36);
+  --key-word: max(10px, var(--key-w) * 0.3);
+  --key-range: max(9px, var(--key-w) * 0.26);
+  --readout: max(11px, var(--key-w) * 0.31);
 
   /* The wheel of the stack on the main view: a place for each step, numbers about half as high
-     as a key is wide (a cue such as 102.5 still fits), that follow the size of all lettering
-     fully. The main view sizes its side column with them. */
-  --wheel-number: calc(clamp(15px, var(--key-w) * 0.5, 22px) * var(--font-scale));
+     as a key is wide (a cue such as 102.5 still fits). The main view sizes its side column with
+     them. */
+  --wheel-number: clamp(15px, var(--key-w) * 0.5, 22px);
   --place-h: calc(var(--wheel-number) * 1.4);
 }
 
@@ -128,7 +133,7 @@
 /* medium: 16 faders in a row, and twice as many page keys */
 html.medium {
   --strips: 16;
-  --strip: clamp(28px, calc((100vw - 331px) / 17.64), 60px);
+  --strip: clamp(28px, calc((100vw / var(--zoom) - 331px) / 17.64), 60px);
 }
 
 /* mobile: a small screen, or a window too narrow or too low for the whole desk. The sections
@@ -142,7 +147,7 @@ html.mobile {
     60px
   );
   --key-w: min(var(--strip), 48px); /* as wide as a strip: a finger needs the room */
-  --fader-h: clamp(150px, 24svh, 220px); /* the faders no longer share the window's height */
+  --fader-h: clamp(150px, calc(24svh / var(--zoom)), 220px); /* the faders no longer share the window's height */
 
   overscroll-behavior-y: none; /* pulling the page down must not reload it */
 }
@@ -167,7 +172,7 @@ body {
   background: var(--panel);
   color: var(--legend);
   font-family: var(--font);
-  font-size: calc(14px * var(--font-scale));
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent; /* the keys show a press themselves */
@@ -274,10 +279,31 @@ lm-stage-view .strobe-mark {
   bottom: calc(var(--sq) * var(--below));
   translate: -50% 0;
   color: var(--legend);
-  font-size: calc(clamp(9px, var(--sq) * 0.3, 13px) * var(--font-scale));
+  font-size: clamp(9px, var(--sq) * 0.3, 13px);
   text-shadow: 0 0 3px #000;
   white-space: nowrap;
   pointer-events: none;
+}
+
+/* The beam of a moving head on the Stage view (stage-view.ts, beamOf): from the middle of the head,
+   turned by its pan, longer the more it tilts, in its color, fading out; dashed while the head gives
+   no light, so that a movement shows also then. Under the head's body. */
+lm-stage-view .beam {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(var(--sq) * var(--beam-length));
+  height: max(2px, calc(var(--sq) * 0.06));
+  translate: 0 -50%;
+  rotate: var(--beam-turn);
+  transform-origin: 0 50%;
+  border-radius: 1px;
+  background: linear-gradient(to right, rgb(var(--beam-color) / 0.9), rgb(var(--beam-color) / 0.15));
+  pointer-events: none;
+}
+
+lm-stage-view .beam.dark {
+  background: repeating-linear-gradient(to right, rgb(var(--beam-color) / 0.75) 0 4px, transparent 4px 8px);
 }
 
 /* With less motion asked for, the mark alone says it. */
@@ -293,7 +319,7 @@ table.steps {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0 3px;
-  font-size: calc(14px * var(--font-scale));
+  font-size: 14px;
 }
 
 /* for screen readers only */
@@ -309,7 +335,7 @@ table.steps caption {
 table.steps thead th {
   padding: 0 6px 2px;
   color: var(--legend-dim);
-  font-size: calc(12px * var(--font-scale));
+  font-size: 12px;
   font-stretch: 75%;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -330,7 +356,7 @@ table.steps td {
 table.steps tbody th {
   width: 1%;
   padding: 0 10px;
-  font-size: calc(15px * var(--font-scale));
+  font-size: 15px;
   font-weight: 600;
   text-align: right;
   white-space: nowrap;
@@ -391,7 +417,7 @@ table.steps select {
   background: var(--panel);
   color: var(--legend);
   font: inherit;
-  font-size: calc(14px * var(--font-scale));
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -443,7 +469,7 @@ table.steps .row-keys button {
   background: var(--panel);
   color: var(--legend);
   font: inherit;
-  font-size: calc(13px * var(--font-scale));
+  font-size: 13px;
   line-height: 1;
   cursor: pointer;
 }
@@ -473,4 +499,31 @@ table.steps td.empty {
   border-radius: 4px;
   background: none;
   color: var(--legend-dim);
+}
+
+/* ---- windows (<dialog>) ----
+   The ✕ at the top right of every window, which closes it as Cancel and Esc do (a press outside the
+   window does the same, see desk/dialog-dismiss.ts). A window is placed by the browser, so the ✕
+   stands in its corner. */
+.dialog-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  box-sizing: border-box;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--legend);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dialog-close:hover {
+  border-color: var(--legend-dim);
+  color: #fff;
 }

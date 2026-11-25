@@ -1,0 +1,41 @@
+<h2>Effects</h2>
+
+<div class="body">
+  <div class="rows big-scrollbar">
+    <div class="row">
+      @for (number of numbers(); track number) {
+        <lm-fader-strip
+          kind="effect"
+          [number]="number"
+          [value]="levelOf(number)"
+          [lampLevel]="lamp(number)"
+          [blink]="fading(number)"
+          [note]="nameOf(number)"
+          [choosable]="choosing()"
+          [chosen]="choosing() && store.chosenEffect() === number"
+          (valueChange)="store.setEffectLevel(number, $event)"
+          (keyPress)="press(number)"
+          (choose)="store.chosenEffect.set(number)"
+        />
+      }
+    </div>
+  </div>
+
+  <nav class="rail" aria-label="Effect pages" [lmPressedInSight]="first()">
+    @for (item of pages(); track item.first) {
+      <button
+        lmLamp
+        type="button"
+        class="range"
+        tone="effect"
+        [level]="item.lamp"
+        [attr.aria-pressed]="item.shown"
+        [attr.aria-label]="'Effects ' + item.first + ' to ' + item.last"
+        [attr.data-action]="'page.effect.' + ($index + 1)"
+        (click)="store.showEffectPage(item.first)"
+      >
+        {{ item.first }}-<wbr />{{ item.last }}
+      </button>
+    }
+  </nav>
+</div>

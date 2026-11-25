@@ -5,7 +5,8 @@ namespace DmxBox.Server;
 // the first. The stack moves the real faders: going to a step moves the fader of its channel or
 // memory to the step's value over the step's "up" time, and leaving a step moves that fader to
 // zero over its "down" time. A step of a fixture or a group moves the channel faders of its
-// lights the same way (see FixtureLooks). Everything else follows from the faders, but for one
+// lights the same way (see FixtureLooks), and a step of an effect the effect's fader, which starts
+// the effect when it leaves zero and stops it at zero (Desk.Effects.cs). Everything else follows from the faders, but for one
 // thing: while the faders of two looks cross, their light fades from the one look to the other
 // channel by channel, so that a light both give stays up (see _crossfade).
 //
@@ -63,7 +64,7 @@ internal sealed partial class Desk
 
     /// <summary>
     /// True while something on the desk changes by itself: the stack moves a fader or counts
-    /// down a wait, or a sequence runs.
+    /// down a wait, a sequence runs, or an effect.
     /// </summary>
     public bool Animating
     {
@@ -72,7 +73,7 @@ internal sealed partial class Desk
             lock (_lock)
             {
                 bool stackMoves = !_paused && (_moves.Count > 0 || _crossfade is not null || _phase is Fading or Waiting);
-                return stackMoves || SequencesMove(Now);
+                return stackMoves || SequencesMove(Now) || EffectsRun();
             }
         }
     }
@@ -88,7 +89,8 @@ internal sealed partial class Desk
         {
             double now = Now;
             AdvanceStack(now);
-            if (_moved.Count > 0 || (_crossfade is not null && !_paused) || SequencesMove(now))
+            bool effects = SettleEffects(now);
+            if (_moved.Count > 0 || (_crossfade is not null && !_paused) || SequencesMove(now) || effects)
                 _outputChanges++;
 
             FaderMoved[] moved = [.. _moved];
@@ -124,7 +126,12 @@ internal sealed partial class Desk
             {
                 On = [.. _on],
             };
-            return new Playback(Array.ConvertAll(levels, level => (int)level), stepsOn, stack) { Crossfade = CrossfadeForUi() };
+            return new Playback(Array.ConvertAll(levels, level => (int)level), stepsOn, stack)
+            {
+                Crossfade = CrossfadeForUi(),
+                Effects = EffectPlaybacksNow(now),
+                EffectLevels = EffectLevelsForUi(now),
+            };
         }
     }
 
@@ -141,7 +148,7 @@ internal sealed partial class Desk
 
         Fader[] faders = [.. cross.Faders.Keys.OrderBy(fader => fader.Number)];
         return new StackCrossfade(
-            [.. faders.Where(fader => !fader.Memory).Select(fader => fader.Number)],
+            [.. faders.Where(fader => fader.Channel).Select(fader => fader.Number)],
             [.. faders.Where(fader => fader.Memory).Select(fader => fader.Number)],
             levels);
     }
@@ -641,16 +648,19 @@ internal sealed partial class Desk
     }
 
     // A channel fader, or the fader of a memory that holds a look. A memory with a sequence gives
-    // what its sequence gives at each moment, which is no look to fade from or to.
+    // what its sequence gives at each moment, which is no look to fade from or to; nor does an effect.
     private bool GivesLook(Fader fader)
     {
+        if (fader.Effect)
+            return false;
+
         return fader.Memory ? _memories[fader.Number - 1] is not null : fader.Number - 1 < Channels;
     }
 
     // Raises "look" by what a fader gives at "level", highest wins.
     private void Contribute(byte[] look, Fader fader, byte level)
     {
-        if (level == 0)
+        if (level == 0 || fader.Effect)
             return;
 
         if (!fader.Memory)
@@ -693,12 +703,15 @@ internal sealed partial class Desk
     }
 
     // Call with the lock held. The faders a step of the stack moves, and to what: the fader of its
-    // channel or memory; for a fixture or a group, the channel faders of its lights, an
+    // channel, memory or effect; for a fixture or a group, the channel faders of its lights, an
     // attribute to be set at once ("jump").
     private (Fader Fader, int Level, bool Jump)[] StackTargets(Step step)
     {
         if (step.IsRelease)
             return [];   // it takes a step down, and moves no fader of its own
+
+        if (step.IsEffect)
+            return [(new Fader(Memory: false, step.Number, Effect: true), step.Value, false)];
 
         if (!step.IsLights)
             return [(new Fader(step.IsMemory, step.Number), step.Value, false)];
@@ -711,7 +724,7 @@ internal sealed partial class Desk
         _moves[fader] = new FaderMove(now, seconds, LevelOf(fader), to);
 
         // A channel fader the stack starts to move takes its channel, like one moved by hand.
-        if (!fader.Memory)
+        if (fader.Channel)
             ClaimChannel(fader.Number);
     }
 
@@ -783,18 +796,23 @@ internal sealed partial class Desk
         if (LevelOf(fader) == level)
             return;
 
-        if (fader.Memory)
+        if (fader.Effect)
+            MoveEffectFader(fader.Number, level, Now);
+        else if (fader.Memory)
             MoveMemoryFader(fader.Number, level);
         else
             _channels[fader.Number - 1] = level;
 
         // Only the newest level of a fader is of interest to the UIs.
-        _moved.RemoveAll(moved => moved.Memory == fader.Memory && moved.Number == fader.Number);
-        _moved.Add(new FaderMoved(fader.Memory, fader.Number, level));
+        _moved.RemoveAll(moved => moved.Memory == fader.Memory && moved.Effect == fader.Effect && moved.Number == fader.Number);
+        _moved.Add(new FaderMoved(fader.Memory, fader.Number, level) { Effect = fader.Effect });
     }
 
     private byte LevelOf(Fader fader)
     {
+        if (fader.Effect)
+            return _runs[fader.Number - 1].Level;
+
         return fader.Memory ? _memoryLevels[fader.Number - 1] : _channels[fader.Number - 1];
     }
 
@@ -861,8 +879,12 @@ internal sealed partial class Desk
             throw new DeskException("The stack is not live. Press Stack first.");
     }
 
-    // A fader on the desk: of a channel or of a memory.
-    private readonly record struct Fader(bool Memory, int Number);
+    // A fader on the desk: of a channel, of a memory, or of an effect ("Effect"; see Desk.Effects.cs).
+    private readonly record struct Fader(bool Memory, int Number, bool Effect = false)
+    {
+        // True for the fader of a channel.
+        public bool Channel => !Memory && !Effect;
+    }
 
     // A fader on its way: from one level to another, over some seconds.
     private readonly record struct FaderMove(double Start, double Seconds, int From, int To);

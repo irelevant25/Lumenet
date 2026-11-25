@@ -1,0 +1,136 @@
+/* One section over the whole view: the title with a sentence about the chosen effect, the row of
+   effects, and under it the chosen effect: its live values, the editor and the preview. */
+:host {
+  display: grid;
+  grid-template-rows: auto clamp(190px, calc(30vh / var(--zoom)), 280px) minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: var(--panel-raised);
+}
+
+header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  min-width: 0;
+}
+
+h2,
+h3 {
+  flex: none;
+  margin: 0;
+  color: var(--legend-dim);
+  font-size: 12px;
+  font-stretch: 75%;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.summary {
+  margin: 0;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* the row of effects: a section of its own, inside this one */
+lm-effect-section {
+  min-height: 0;
+}
+
+.work {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  align-content: start;
+  gap: 10px;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+/* the editor at the left, the preview right beside it, each as wide as it needs (the preview up to
+   560 pixels): on a big screen the room that is left stays at the right, not between them */
+.edit {
+  display: grid;
+  grid-template-columns: fit-content(640px) minmax(240px, 560px);
+  justify-content: start;
+  align-items: start;
+  gap: 16px 28px;
+  min-height: 0;
+}
+
+.make {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.make p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.make .hint {
+  flex-basis: 100%;
+  color: var(--legend-dim);
+}
+
+.make-kind {
+  min-height: 34px;
+  padding: 4px 14px;
+  border: 1px solid var(--effect);
+  border-radius: 4px;
+  background: var(--well);
+  color: var(--legend);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.make-kind:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--effect) 18%, var(--well));
+}
+
+.make-kind:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ---- mobile: everything under each other, the page scrolls */
+:host-context(.mobile) {
+  grid-template-rows: none;
+}
+
+:host-context(.mobile) header {
+  display: block;
+}
+
+:host-context(.mobile) .summary {
+  margin-top: 6px;
+  white-space: normal;
+}
+
+/* the row of effects without a frame of its own: the strips of a small screen are made for the
+   width inside one frame (styles.css), and this row is already in the view's */
+:host-context(.mobile) lm-effect-section {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+:host-context(.mobile) .work {
+  overflow: visible;
+}
+
+:host-context(.mobile) .edit {
+  grid-template-columns: minmax(0, 1fr);
+}

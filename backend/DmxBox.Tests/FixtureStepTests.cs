@@ -135,7 +135,7 @@ public sealed class FixtureStepTests
         DeskException error = Assert.Throws<DeskException>(() => Lights("fixture", 1, 255, "red").Checked());
         Assert.Equal("\"red\" is no color like #ff2000.", error.Message);
         error = Assert.Throws<DeskException>(() => Lights("light", 1, 255, null).Checked());
-        Assert.Equal("A step stands for a channel, a memory, a fixture or a group, not for \"light\".", error.Message);
+        Assert.Equal("A step stands for a channel, a memory, a fixture, a group or an effect, not for \"light\".", error.Message);
         error = Assert.Throws<DeskException>(() => Lights("group", -1, 255, null).Checked());
         Assert.Equal("The group of a step must be one of the stage plan, not -1.", error.Message);
     }

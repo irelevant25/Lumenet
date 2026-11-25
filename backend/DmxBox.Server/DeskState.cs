@@ -43,6 +43,12 @@ public sealed record DeskState(
 {
     /// <summary>How many universes the project has, 1 to 8: the channels are 512 for each.</summary>
     public int Universes { get; init; } = 1;
+
+    /// <summary>The effect, 1-64, each of the 32 effect keys of the independents is bound to; key 1 is at index 0.</summary>
+    public int[] EffectIndependents { get; init; } = [];
+
+    /// <summary>The playbacks of the effects, see <see cref="Playback.Effects"/>.</summary>
+    public EffectPlayback[] Effects { get; init; } = [];
 }
 
 /// <summary>

@@ -1,0 +1,69 @@
+<div class="live" role="group" [attr.aria-label]="'Live values of effect ' + number()">
+  <span class="name" aria-hidden="true">Speed</span>
+  <lm-fader
+    orientation="horizontal"
+    tone="effect"
+    [label]="'Live speed of effect ' + number()"
+    [max]="speedPlaces"
+    [step]="10"
+    [value]="speedPlace()"
+    [valueText]="speedText()"
+    (valueChange)="onSpeed($event)"
+  />
+  <span class="value" aria-hidden="true">{{ speedText() }}</span>
+
+  <span class="name" aria-hidden="true">Size</span>
+  <lm-fader
+    orientation="horizontal"
+    tone="effect"
+    [label]="'Live size of effect ' + number()"
+    [max]="100"
+    [value]="size()"
+    [valueText]="size() + ' per cent'"
+    (valueChange)="onSize($event)"
+  />
+  <span class="value" aria-hidden="true">{{ size() }} %</span>
+
+  <span class="name" aria-hidden="true">Spread</span>
+  <lm-fader
+    orientation="horizontal"
+    tone="effect"
+    [class.off]="spreadless()"
+    [inert]="spreadless()"
+    [label]="'Live spread of effect ' + number()"
+    [max]="100"
+    [value]="spread()"
+    [valueText]="spread() + ' per cent'"
+    (valueChange)="onSpread($event)"
+  />
+  <span class="value" [class.off]="spreadless()" aria-hidden="true">{{ spread() }} %</span>
+
+  <div class="keys">
+    <button
+      lmLamp
+      type="button"
+      tone="effect-reset"
+      aria-label="The effect's own speed, size and spread again"
+      data-action="effects.reset"
+      [disabled]="!changed()"
+      (click)="reset()"
+    >
+      ↺
+    </button>
+    <button
+      lmLamp
+      type="button"
+      tone="effect-keep"
+      aria-label="Keep these speed, size and spread in the effect"
+      data-action="effects.keep"
+      [disabled]="!changed() || store.live()"
+      (click)="keep()"
+    >
+      Keep
+    </button>
+  </div>
+</div>
+<p class="explain">
+  Live: these change this run only, also while the stack is live. ↺ takes the effect's own values
+  again, Keep stores these in the effect. {{ runsAt() }}
+</p>

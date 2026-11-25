@@ -1,0 +1,64 @@
+/* The three live values side by side: name, a lying fader, the value; then ↺ and Keep. With less
+   room (a window under about 1500 pixels) they go under each other, the faders up to 520 pixels
+   long. */
+:host {
+  container-type: inline-size;
+  display: grid;
+  gap: 6px;
+}
+
+/* each name right beside its fader: the columns as wide as they need, the room left at the right */
+.live {
+  display: grid;
+  grid-template-columns: repeat(3, auto minmax(120px, 220px) 7ch) auto;
+  justify-content: start;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.name {
+  color: var(--legend-dim);
+  font-size: 12px;
+  font-stretch: 75%;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+lm-fader {
+  height: calc(var(--key-h) * 0.8);
+}
+
+.value {
+  color: #fff;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.off {
+  opacity: 0.45;
+}
+
+.keys {
+  display: flex;
+  gap: var(--strip-gap);
+}
+
+.explain {
+  max-width: 90ch;
+  margin: 0;
+  color: var(--legend-dim);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+@container (max-width: 1460px) {
+  .live {
+    grid-template-columns: auto minmax(120px, 520px) 7ch;
+  }
+
+  .keys {
+    grid-column: 1 / -1;
+  }
+}

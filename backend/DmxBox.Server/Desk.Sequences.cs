@@ -127,8 +127,9 @@ internal sealed partial class Desk
     /// Sets the rate, a tempo for all sequences: while it is lit, every sequence takes one step
     /// per beat, its steps keeping their proportions (on average a step and its wait last one
     /// beat), and a sequence's own speed counts the steps of a beat (2: two steps per beat). Dark,
-    /// every sequence plays its own times. Every sequence goes on from where it is. It is no part
-    /// of the project, so it can be changed while the stack is live.
+    /// every sequence plays its own times. Effects run at their speed times the tempo over 120 BPM
+    /// while it is lit. Every sequence and effect goes on from where it is. It is no part of the
+    /// project, so it can be changed while the stack is live.
     /// </summary>
     /// <param name="on">True: the rate counts.</param>
     /// <param name="bpm">The tempo, from 30 to 300 beats per minute.</param>
@@ -145,14 +146,17 @@ internal sealed partial class Desk
             if (on == _rateOn && bpm == _bpm)
                 return;
 
-            // Every sequence stands where it stands; from here on its time runs at the new speed.
+            // Every sequence and every effect stands where it stands; from here on its time runs at the new speed.
             double now = Now;
             double[] elapsed = new double[MemoryCount];
             for (int index = 0; index < MemoryCount; index++)
                 elapsed[index] = SequenceTime(index, now);
 
-            _rateOn = on;
-            _bpm = bpm;
+            RebaseEffects(now, () =>
+            {
+                _rateOn = on;
+                _bpm = bpm;
+            });
             for (int index = 0; index < MemoryCount; index++)
                 _sequenceStarts[index] = now - elapsed[index] / SpeedOf(index);
 

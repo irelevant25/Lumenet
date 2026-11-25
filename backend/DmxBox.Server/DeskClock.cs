@@ -12,7 +12,9 @@ internal sealed class DeskClock : BackgroundService
 {
     private static readonly TimeSpan Round = TimeSpan.FromMilliseconds(33);
 
-    // The UIs get the playback state on every third round: about 10 times a second.
+    // The UIs get the playback state on every third round: about 10 times a second. While an effect
+    // runs, on every round: the Stage view shows the effects from it, and 10 a second would scramble a
+    // fast chase there (a light of it on and off again between two of them).
     private const int RoundsPerPlayback = 3;
 
     private readonly Desk _desk;
@@ -40,13 +42,15 @@ internal sealed class DeskClock : BackgroundService
     {
         foreach (FaderMoved moved in _desk.Tick())
         {
-            await (moved.Memory
-                ? _everyUi.MemoryLevelChanged(moved.Number, moved.Level)
-                : _everyUi.ChannelChanged(moved.Number, moved.Level));
+            await (moved.Effect
+                ? _everyUi.EffectPlaybackChanged(_desk.GetEffectPlayback(moved.Number))
+                : moved.Memory
+                    ? _everyUi.MemoryLevelChanged(moved.Number, moved.Level)
+                    : _everyUi.ChannelChanged(moved.Number, moved.Level));
         }
 
         bool moving = _desk.Animating;
-        bool itsTurn = ++_round % RoundsPerPlayback == 0;
+        bool itsTurn = ++_round % (_desk.PlaysEffects ? 1 : RoundsPerPlayback) == 0;
         if ((moving && itsTurn) || (_wasMoving && !moving))
             await _everyUi.PlaybackChanged(_desk.GetPlayback());
 

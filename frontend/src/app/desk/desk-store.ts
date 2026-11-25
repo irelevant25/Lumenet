@@ -1,4 +1,4 @@
-import { Service, computed, inject, signal } from '@angular/core';
+import { Service, computed, effect, inject, signal } from '@angular/core';
 import { DeskConnection } from './desk-connection';
 import { DeskSettings } from './desk-settings';
 import { enterFullscreen, leaveFullscreen } from './fullscreen';
@@ -85,6 +85,15 @@ import {
 } from './fixtures';
 import { noteInOneLine } from './notes';
 import { channelLabel, universeOf, universeStart } from './universes';
+import {
+  EFFECT_INDEPENDENT_COUNT,
+  Effect,
+  EffectControl,
+  EffectPlayback,
+  EffectPreview,
+  MAX_EFFECTS,
+  withEffectLevels,
+} from './effects';
 
 /**
  * While a sequence is recorded: for every channel, memory, fixture and group it uses, the
@@ -112,6 +121,12 @@ const NOTICE_MS = 5000;
 
 /** How long the notice stays that unsaved work was brought back: longer, it matters. */
 const RECOVERED_NOTICE_MS = 15000;
+
+/** Changes of one effect in the editor are collected for this long and then stored together. */
+const EFFECT_SEND_DELAY_MS = 150;
+
+/** A fader or live value of an effect that the page moved keeps the page's value for this long. */
+const EFFECT_TOUCH_MS = 600;
 
 /** Nothing runs: no sequence gives anything, and no step of the stack is on. */
 const NO_PLAYBACK: Playback = {
@@ -159,6 +174,16 @@ export class DeskStore {
   readonly independents = signal<readonly number[]>(oneToCount(CHANNEL_INDEPENDENT_COUNT));
   /** The memory each of the 10 memory keys of the independents switches: 1 to 10 until the owner changes them. */
   readonly memoryIndependents = signal<readonly number[]>(oneToCount(MEMORY_INDEPENDENT_COUNT));
+  /** The effect each of the 32 effect keys of the independents starts and stops: 1 to 32 until the owner changes them. */
+  readonly effectIndependents = signal<readonly number[]>(oneToCount(EFFECT_INDEPENDENT_COUNT));
+  /** The effects of the project, in the order of their numbers. */
+  readonly effects = signal<readonly Effect[]>([]);
+  /** False while the effects could not be fetched: a desk program from before effects. */
+  readonly effectsKnown = signal(false);
+  /** The effects by their numbers. */
+  readonly effectsByNumber = computed(() => new Map(this.effects().map((effect) => [effect.number, effect])));
+  /** The playbacks of the effects by their numbers: whether each runs, its fader and its live values. */
+  readonly effectPlaybacks = signal<ReadonlyMap<number, EffectPlayback>>(new Map());
   readonly master = signal(MAX_LEVEL);
   readonly blackout = signal(false);
   /**
@@ -221,11 +246,15 @@ export class DeskStore {
         shown[index] = running[index];
       }
     }
-    if (this.roles().attributeLights.length === 0) return shown ?? own;
+
+    // The running effects: the desk program mixes them with all of the above, so their channels
+    // show what it reports (Desk.Effects.cs).
+    const effects = this.playback().effectLevels;
+    if (this.roles().attributeLights.length === 0) return effects ? withEffectLevels(shown ?? own.slice(), effects) : (shown ?? own);
 
     shown ??= own.slice();
     this.attributesTaken(shown);
-    return shown;
+    return withEffectLevels(shown, effects);
   });
 
   /**
@@ -424,6 +453,12 @@ export class DeskStore {
   readonly firstMemory = computed(() => pageStart(this.wantedMemory(), this.memoriesPerPage()));
   /** The first memory of the page that is shown on the Memories and Sequences views. */
   readonly viewFirstMemory = computed(() => pageStart(this.wantedMemory(), this.viewMemoriesPerPage()));
+  /** An effect that must be on the page of effects shown: on the main view a row as long as the memories', on the Effects view the window's. */
+  private readonly wantedEffect = signal(1);
+  readonly firstEffect = computed(() => pageStart(this.wantedEffect(), this.stripsPerRow()));
+  readonly viewFirstEffect = computed(() => pageStart(this.wantedEffect(), this.viewMemoriesPerPage()));
+  /** The effect the editor of the Effects view works on. */
+  readonly chosenEffect = signal(1);
   /** Where a record key (save or edit a memory, record a sequence, copy, delete) stands. */
   readonly mode = signal<FunctionMode>(IDLE);
   /** The steps of the sequence that is being recorded, by what they use; null while none is recorded. */
@@ -433,7 +468,7 @@ export class DeskStore {
 
     const used = { channel: new Map<number, number[]>(), memory: new Map<number, number[]>(), fixture: new Map<number, number[]>(), group: new Map<number, number[]>() };
     (this.sequences()[mode.memory]?.steps ?? []).forEach((step, index) => {
-      if (step.target === 'release') return; // only the stack has releases
+      if (step.target === 'release' || step.target === 'effect') return; // only the stack has these
       const users = used[step.target];
       const numbers = users.get(step.number);
       if (numbers) numbers.push(index + 1);
@@ -486,6 +521,10 @@ export class DeskStore {
 
   /** Fader moves waiting to be sent: one entry per fader, so only its newest value goes out. */
   private readonly outbox = new Map<string, { method: string; args: unknown[] }>();
+  // Effects waiting to be stored, by number; and when this page last moved a fader or live value of
+  // an effect, by "3 level", "3 speed" and so on.
+  private readonly effectTimers = new Map<number, ReturnType<typeof setTimeout>>();
+  private readonly effectTouched = new Map<string, number>();
   private outboxTimer: ReturnType<typeof setTimeout> | null = null;
   private noticeTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -532,6 +571,11 @@ export class DeskStore {
     connection.on<[string]>('NotesChanged', (notes) => this.notes.set(notes ?? ''));
     connection.on<[number, number]>('SequenceSpeedChanged', (memory, speed) =>
       this.sequences.update((all) => (all[memory] ? { ...all, [memory]: { ...all[memory], speed } } : all)),
+    );
+    connection.on<[Effect[]]>('EffectsChanged', (effects) => this.effects.set(effects ?? []));
+    connection.on<[EffectPlayback]>('EffectPlaybackChanged', (playback) => this.takeEffectPlaybacks([playback], false));
+    connection.on<[number, number]>('EffectIndependentChanged', (key, effect) =>
+      this.effectIndependents.update((effects) => withItem(effects, key - 1, effect)),
     );
 
     connection.whenConnected(() => void this.refresh());
@@ -665,6 +709,7 @@ export class DeskStore {
   stepName(step: TimedStep): string {
     if (step.target === 'channel') return `Channel ${channelLabel(step.number)}`;
     if (step.target === 'memory') return `Memory ${step.number}`;
+    if (step.target === 'effect') return `Effect ${step.number}`;
     if (step.target === 'release') {
       const released = this.releasedBy(step);
       return released ? `Release of step ${released.cue}` : 'Release of no step';
@@ -691,6 +736,8 @@ export class DeskStore {
         return this.stage().lights.find((light) => light.id === step.number)?.name ?? 'A light that is gone';
       case 'group':
         return this.stage().groups.find((group) => group.id === step.number)?.name ?? 'A group that is gone';
+      case 'effect':
+        return this.effectsByNumber().get(step.number)?.name ?? 'No such effect yet';
       case 'release': {
         const released = this.releasedBy(step);
         return released ? this.stepWithNote(released) : 'No step to take down: choose one';
@@ -834,6 +881,149 @@ export class DeskStore {
     if (this.soloMode()) return;
     const memory = this.memoryIndependents()[key - 1];
     this.setMemoryLevel(memory, this.memoryLevels()[memory - 1] > 0 ? 0 : MAX_LEVEL);
+  }
+
+  /** An effect key of the independents starts or stops its effect, as the key of the effect does. Solo leaves it alone. */
+  toggleEffectIndependent(key: number): void {
+    this.toggleEffect(this.effectIndependents()[key - 1]);
+  }
+
+  /** Binds an effect key of the independents to another effect. */
+  setEffectIndependent(key: number, effect: number): void {
+    if (key < 1 || key > EFFECT_INDEPENDENT_COUNT || effect < 1 || effect > MAX_EFFECTS) return;
+    this.effectIndependents.update((effects) => withItem(effects, key - 1, effect));
+    this.run('SetEffectIndependent', key, effect);
+  }
+
+  // ---------------------------------------------------------------- effects
+
+  /** Shows the page of effects that starts at `first`, on the main view and the Effects view. */
+  showEffectPage(first: number): void {
+    this.wantedEffect.set(first);
+  }
+
+  /**
+   * Stores an effect, new or changed. The page shows it at once; changes of one effect that follow
+   * each other quickly (a number typed, a list gone through) go out together.
+   */
+  setEffect(effect: Effect): void {
+    this.effects.update((all) => [...all.filter((item) => item.number !== effect.number), effect].sort((a, b) => a.number - b.number));
+    const waiting = this.effectTimers.get(effect.number);
+    if (waiting !== undefined) clearTimeout(waiting);
+    this.effectTimers.set(
+      effect.number,
+      setTimeout(() => {
+        this.effectTimers.delete(effect.number);
+        this.connection.invoke<Effect>('SetEffect', effect).catch((error: Error) => {
+          this.say(error.message);
+          void this.fetchEffects();
+        });
+      }, EFFECT_SEND_DELAY_MS),
+    );
+  }
+
+  /** Takes an effect out of the project; it stops. */
+  deleteEffect(number: number): void {
+    this.effects.update((all) => all.filter((item) => item.number !== number));
+    this.run('DeleteEffect', number);
+  }
+
+  /** Stores a copy of an effect under another number. */
+  copyEffect(from: number, to: number): void {
+    this.run('CopyEffect', from, to);
+  }
+
+  /** Stores the live speed, size and spread of an effect's playback in the effect (Keep). */
+  keepEffect(number: number): void {
+    this.run('KeepEffect', number);
+  }
+
+  /**
+   * The key of an effect: moves its fader up to full in the effect's fade-in time, which starts it,
+   * or down to zero in its fade-out time, which stops it.
+   */
+  toggleEffect(number: number): void {
+    if (!this.effectsByNumber().has(number)) {
+      this.say(`There is no effect ${number} yet. On the Effects view, its key offers the kinds to make it.`);
+      return;
+    }
+    this.effectControl(number, 'toggle');
+  }
+
+  /** The fader of an effect, 0 to 255: from zero it starts the effect, at zero it stops it. */
+  setEffectLevel(number: number, level: number): void {
+    this.effectControl(number, 'level', (level / MAX_LEVEL) * 100);
+  }
+
+  /**
+   * Works the playback of an effect (SetEffectControl in the desk program): "go", "toggle" and
+   * "reset" are answered with the playback; "level" (per cent), "speed" (BPM), "size" and "spread"
+   * (per cent) move like faders: the page shows them at once and sends the newest only.
+   */
+  effectControl(number: number, control: EffectControl, value = 0): void {
+    if (control === 'level' || control === 'speed' || control === 'size' || control === 'spread') {
+      this.touchEffect(number, control, value);
+      this.sendSoon(`effect ${number} ${control}`, 'SetEffectControl', number, control, value);
+      return;
+    }
+    this.connection
+      .invoke<EffectPlayback | undefined>('SetEffectControl', number, control, value)
+      .then((playback) => {
+        if (playback) this.takeEffectPlaybacks([playback], false);
+      })
+      .catch((error: Error) => this.say(error.message));
+  }
+
+  /** One cycle of an effect as the desk program would play it, for the preview; null if it cannot be had. */
+  async previewEffect(effect: Effect): Promise<EffectPreview | null> {
+    try {
+      return (await this.connection.invoke<EffectPreview | undefined>('PreviewEffect', effect)) ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  // The playback shows a moved fader or live value at once; a fader that leaves zero starts the
+  // effect and one that comes to zero stops it, as the desk program does.
+  private touchEffect(number: number, control: 'level' | 'speed' | 'size' | 'spread', value: number): void {
+    this.effectTouched.set(`${number} ${control}`, Date.now());
+    const old = this.effectPlaybacks().get(number) ?? emptyPlayback(number);
+    const exists = this.effectsByNumber().has(number);
+    let changed: EffectPlayback;
+    if (control === 'level') {
+      const level = Math.round((value * MAX_LEVEL) / 100);
+      const running = exists && level > 0;
+      changed = { ...old, level, running, fading: false };
+    } else {
+      changed = { ...old, [control]: control === 'speed' ? value : Math.round(value) };
+    }
+    this.effectPlaybacks.update((all) => new Map(all).set(number, changed));
+  }
+
+  // Playbacks from the desk program. A fader or live value this page moved a moment ago keeps the
+  // page's value: the desk program's may still be the one from before. "whole": the list of every
+  // playback (Playback, DeskChanged); else only these change.
+  private takeEffectPlaybacks(playbacks: readonly EffectPlayback[], whole: boolean): void {
+    const now = Date.now();
+    const old = this.effectPlaybacks();
+    const kept = whole ? new Map<number, EffectPlayback>() : new Map(old);
+    for (const playback of playbacks) {
+      const mine = old.get(playback.number);
+      const recent = (control: string) => now - (this.effectTouched.get(`${playback.number} ${control}`) ?? 0) < EFFECT_TOUCH_MS;
+      kept.set(
+        playback.number,
+        mine
+          ? {
+              ...playback,
+              level: recent('level') ? mine.level : playback.level,
+              speed: recent('speed') ? mine.speed : playback.speed,
+              size: recent('size') ? mine.size : playback.size,
+              spread: recent('spread') ? mine.spread : playback.spread,
+            }
+          : playback,
+      );
+    }
+    this.effectPlaybacks.set(kept);
   }
 
   // ---------------------------------------------------------------- solo
@@ -1539,32 +1729,52 @@ export class DeskStore {
 
   /**
    * Keeps the layout in step with the size of the window: the number of faders in a row, and
-   * the classes on <html> ("medium", "narrow", "mobile", "phone") that the style sheets go by.
+   * the classes on <html> ("medium", "narrow", "mobile", "phone") that the style sheets go by. The
+   * limits are the page's pixels: a page zoomed to 120 % (Settings) has fewer of them in the
+   * window, and the browser's media queries count the window's, so they are zoomed with it.
    */
   private followWindowSize(): void {
     if (typeof matchMedia !== 'function') return; // not in a browser, for example in the tests
 
-    const below = (pixels: number): number => pixels - 0.02; // "narrower than", also for half pixels
-    const medium = matchMedia(`(max-width: ${below(MEDIUM_BELOW_PX)}px)`);
-    const narrow = matchMedia(`(max-width: ${below(NARROW_BELOW_PX)}px)`);
-    const mobile = matchMedia(
-      `(max-width: ${below(MOBILE_BELOW_WIDTH_PX)}px), (max-height: ${below(MOBILE_BELOW_HEIGHT_PX)}px)`,
-    );
-    const phone = matchMedia(`(max-width: ${below(PHONE_BELOW_PX)}px)`);
-
     const classes = document.documentElement.classList;
-    const update = (): void => {
-      this.windowStripsPerRow.set(medium.matches ? STRIPS_PER_ROW_MEDIUM : STRIPS_PER_ROW_WIDE);
-      this.mobile.set(mobile.matches);
-      this.phone.set(phone.matches);
-      classes.toggle('medium', medium.matches);
-      classes.toggle('narrow', narrow.matches);
-      classes.toggle('mobile', mobile.matches);
-      classes.toggle('phone', phone.matches);
+    let forget = (): void => undefined;
+    const follow = (zoom: number): void => {
+      const below = (pixels: number): number => pixels * zoom - 0.02; // "narrower than", also for half pixels
+      const medium = matchMedia(`(max-width: ${below(MEDIUM_BELOW_PX)}px)`);
+      const narrow = matchMedia(`(max-width: ${below(NARROW_BELOW_PX)}px)`);
+      const mobile = matchMedia(
+        `(max-width: ${below(MOBILE_BELOW_WIDTH_PX)}px), (max-height: ${below(MOBILE_BELOW_HEIGHT_PX)}px)`,
+      );
+      const phone = matchMedia(`(max-width: ${below(PHONE_BELOW_PX)}px)`);
+      const queries = [medium, narrow, mobile, phone];
+
+      const update = (): void => {
+        this.windowStripsPerRow.set(medium.matches ? STRIPS_PER_ROW_MEDIUM : STRIPS_PER_ROW_WIDE);
+        this.mobile.set(mobile.matches);
+        this.phone.set(phone.matches);
+        classes.toggle('medium', medium.matches);
+        classes.toggle('narrow', narrow.matches);
+        classes.toggle('mobile', mobile.matches);
+        classes.toggle('phone', phone.matches);
+      };
+
+      forget();
+      update();
+      for (const query of queries) query.addEventListener('change', update);
+      forget = () => {
+        for (const query of queries) query.removeEventListener('change', update);
+      };
     };
 
-    update();
-    for (const query of [medium, narrow, mobile, phone]) query.addEventListener('change', update);
+    // At once for the page as it starts, and again whenever the zoom changes.
+    let followed = this.settings.zoom();
+    follow(followed);
+    effect(() => {
+      const zoom = this.settings.zoom();
+      if (zoom === followed) return;
+      followed = zoom;
+      follow(zoom);
+    });
   }
 
   private takeDesk(desk: DeskState): void {
@@ -1579,6 +1789,8 @@ export class DeskStore {
     if (desk.memoryNotes) this.memoryNotes.set(desk.memoryNotes);
     if (desk.independents) this.independents.set(desk.independents);
     if (desk.memoryIndependents) this.memoryIndependents.set(desk.memoryIndependents);
+    if (desk.effectIndependents) this.effectIndependents.set(desk.effectIndependents);
+    if (desk.effects) this.takeEffectPlaybacks(desk.effects, true);
     this.master.set(desk.master);
     this.blackout.set(desk.blackout);
     this.bpm.set(desk.bpm ?? DEFAULT_BPM);
@@ -1596,6 +1808,18 @@ export class DeskStore {
     void this.fetchSequencesAndStack();
     void this.fetchStage();
     void this.fetchNotes();
+    void this.fetchEffects();
+  }
+
+  private async fetchEffects(): Promise<void> {
+    try {
+      this.effects.set((await this.connection.invoke<Effect[] | undefined>('GetEffects')) ?? []);
+      this.effectsKnown.set(true);
+    } catch {
+      // A desk program from before effects. The Effects view says so.
+      this.effects.set([]);
+      this.effectsKnown.set(false);
+    }
   }
 
   private async fetchNotes(): Promise<void> {
@@ -1669,6 +1893,7 @@ export class DeskStore {
 
   private takePlayback(playback: Playback): void {
     this.playback.set(playback);
+    if (playback.effects) this.takeEffectPlaybacks(playback.effects, true);
     // A live stack locks the record keys: whatever was begun with one of them is over.
     if (playback.stack.live) this.mode.set(IDLE);
   }
@@ -1683,6 +1908,11 @@ export class DeskStore {
       this.memoryLooksKnown.set(false);
     }
   }
+}
+
+/** The playback of an effect that has never run: out, its fader at zero. */
+function emptyPlayback(number: number): EffectPlayback {
+  return { number, running: false, level: 0, speed: 30, size: 100, spread: 100, fading: false, phase: 0, bpm: 30, changed: false };
 }
 
 function zeros(count: number): number[] {

@@ -35,7 +35,7 @@ input:focus {
 
 /* the level as in the cell; the browser's arrows would leave no room for three digits */
 .level {
-  height: calc(18px * var(--font-scale));
+  height: 18px;
   font-size: var(--readout);
   font-stretch: 87.5%;
   font-weight: 600;
@@ -56,8 +56,8 @@ input:focus {
 }
 
 .line {
-  height: calc(15px * var(--font-scale));
-  font-size: calc(10px * var(--font-scale));
+  height: 15px;
+  font-size: 10px;
   font-stretch: 75%;
 }
 

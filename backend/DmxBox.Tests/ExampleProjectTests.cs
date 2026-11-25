@@ -55,7 +55,7 @@ public sealed class ExampleProjectTests : IDisposable
     public void TheExamplesGoFromOneThingToAllOfIt()
     {
         Assert.Equal(
-            ["1 Memories and the stack", "2 Sequences", "3 Fixtures and the stage", "4 Moving heads", "5 Theatre show", "6 Concert"],
+            ["1 Memories and the stack", "2 Sequences", "3 Fixtures and the stage", "4 Moving heads", "5 Theatre show", "6 Concert", "7 Effects"],
             _store.List().Examples);
     }
 
@@ -104,7 +104,19 @@ public sealed class ExampleProjectTests : IDisposable
                 case Step.Group:
                     Assert.Contains(stage.Groups, group => group.Id == step.Number && group.Lights.Length > 0);
                     break;
+                case Step.EffectTarget:
+                    Assert.True(content.Effects[step.Number - 1] is not null, $"effect {step.Number} is used but not there");
+                    break;
             }
+        }
+
+        // Every effect works on lights that are there: a group with lights, or lights of the plan.
+        foreach (Effect effect in content.Effects.OfType<Effect>())
+        {
+            if (effect.Group is int group)
+                Assert.Contains(stage.Groups, other => other.Id == group && other.Lights.Length > 0);
+            else
+                Assert.All(effect.Lights, light => Assert.Contains(stage.Lights, other => other.Id == light));
         }
 
         // The memory keys of the independents the example chose (not those where a new desk has them).
@@ -184,6 +196,31 @@ public sealed class ExampleProjectTests : IDisposable
         Assert.Contains(content.Sequences.OfType<Sequence>(), sequence => sequence.Steps.Any(step => step.Target == Step.Memory));
         Assert.NotEmpty(_desk.Stage.Types);
         Assert.True(_desk.Stage.Groups.Length >= 4, "groups of lights");
+    }
+
+    [Fact]
+    public void TheEffectsExampleHasAnEffectOfEveryKindAndAStackThatPlaysThem()
+    {
+        _store.OpenExample("7 Effects");
+        Effect[] effects = _desk.GetEffects();
+        StackStep[] stack = _desk.GetStack().Steps;
+
+        Assert.Equal(
+            [Effect.ColorKind, Effect.IntensityKind, Effect.MovementKind, Effect.PixelKind],
+            effects.Select(effect => effect.Kind).Distinct().Order(StringComparer.Ordinal));
+        Assert.Contains(stack, step => step.Target == Step.EffectTarget && step.Add);
+        Assert.Contains(stack, step => step.Target == Step.Release && step.Number > 0);
+        Assert.Contains(_desk.Stage.Lights, light => light.Channels.Length == 24);   // a bar of eight cells, for the patterns
+
+        // Every effect starts from its fader, and once it is out the output is as it was.
+        foreach (Effect effect in effects)
+        {
+            byte[] before = _desk.GetOutput();
+            _desk.SetEffectControl(effect.Number, "level", 100);
+            Assert.True(_desk.GetEffectPlayback(effect.Number).Running);
+            _desk.SetEffectControl(effect.Number, "level", 0);
+            Assert.Equal(before, _desk.GetOutput());
+        }
     }
 
     private static string WithoutCarriageReturns(string text) => text.Replace("\r\n", "\n", StringComparison.Ordinal);

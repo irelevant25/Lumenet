@@ -1,5 +1,6 @@
 import { Service, computed, effect, signal } from '@angular/core';
 import { CHANNEL_INDEPENDENT_COUNT, MEMORY_INDEPENDENT_COUNT } from './desk-types';
+import { EFFECT_INDEPENDENT_COUNT } from './effects';
 import { KEY_COLORS, isColor, keyColorWithId } from './key-colors';
 import { ALWAYS_SHOWN, DEFAULT_VIEW_ORDER, ViewName, hiddenViewsOf, viewOrderOf } from './views';
 
@@ -19,6 +20,10 @@ export const CHANNEL_SIZES: readonly ChannelSize[] = ['auto', 8, 16, 32, 64, 128
 export type RowCount = 1 | 2;
 export const ROW_COUNTS: readonly RowCount[] = [1, 2];
 
+/** The row of effect faders on the main view: none at first, or one, under the memories. */
+export type EffectRowCount = 0 | 1;
+export const EFFECT_ROW_COUNTS: readonly EffectRowCount[] = [0, 1];
+
 /** How many steps the stack wheel on the main view shows: the current one in the middle. */
 export type WheelSize = 1 | 3 | 5 | 7 | 9;
 export const WHEEL_SIZES: readonly WheelSize[] = [1, 3, 5, 7, 9];
@@ -26,10 +31,10 @@ export const WHEEL_SIZES: readonly WheelSize[] = [1, 3, 5, 7, 9];
 /** The independent keys a desk shows of each kind, unless its owner chose another number. */
 export const DEFAULT_SHOWN_KEYS = 10;
 
-/** The size of all lettering: from 0.7 to 1.5 times, in steps of 0.1. */
-export const FONT_SCALE_MIN = 0.7;
-export const FONT_SCALE_MAX = 1.5;
-export const FONT_SCALE_STEP = 0.1;
+/** The zoom of the whole page: from 50 to 200 per cent, in steps of 10. */
+export const ZOOM_MIN = 0.5;
+export const ZOOM_MAX = 2;
+export const ZOOM_STEP = 0.1;
 
 /**
  * Shortcuts every desk has until its owner changes them: undo and redo, as everywhere. A key
@@ -57,8 +62,12 @@ export interface DeskSettingsData {
   readonly channelKeys: number;
   /** How many of the 32 memory keys of the independents are shown, 0 to 32. With both 0 there are no independents. */
   readonly memoryKeys: number;
-  /** Every font size is multiplied by this. */
-  readonly fontScale: number;
+  /** How many of the 32 effect keys of the independents are shown, 0 to 32; none at first. */
+  readonly effectKeys: number;
+  /** The row of effect faders under the memories on the main view: 0 (none, at first) or 1. */
+  readonly effectRows: EffectRowCount;
+  /** The zoom of the whole page, 1 as it is: as the browser's own zoom does, on this page only. */
+  readonly zoom: number;
   /** The keyboard shortcuts: for each key of the desk that has one, by its name (see desk-actions.ts), the keys that press it. */
   readonly shortcuts: Readonly<Record<string, string>>;
   /** The colors that differ from the usual ones, by their name (see key-colors.ts): "#3ddc84". */
@@ -76,7 +85,9 @@ export const DEFAULT_SETTINGS: DeskSettingsData = {
   wheelSize: 7,
   channelKeys: DEFAULT_SHOWN_KEYS,
   memoryKeys: DEFAULT_SHOWN_KEYS,
-  fontScale: 1,
+  effectKeys: 0,
+  effectRows: 0,
+  zoom: 1,
   shortcuts: DEFAULT_SHORTCUTS,
   colors: {},
   hiddenViews: [],
@@ -95,7 +106,9 @@ export function settingsPart(settings: DeskSettingsData): SettingsPart {
     wheelSize: settings.wheelSize,
     channelKeys: settings.channelKeys,
     memoryKeys: settings.memoryKeys,
-    fontScale: settings.fontScale,
+    effectKeys: settings.effectKeys,
+    effectRows: settings.effectRows,
+    zoom: settings.zoom,
     colors: settings.colors,
     hiddenViews: settings.hiddenViews,
     viewOrder: settings.viewOrder,
@@ -131,7 +144,10 @@ export function settingsOf(raw: unknown): DeskSettingsData {
     wheelSize: oneOf(kept['wheelSize'], WHEEL_SIZES, DEFAULT_SETTINGS.wheelSize),
     channelKeys: keyCount(kept['channelKeys'], CHANNEL_INDEPENDENT_COUNT),
     memoryKeys: keyCount(kept['memoryKeys'], MEMORY_INDEPENDENT_COUNT),
-    fontScale: fontScale(kept['fontScale']),
+    effectKeys: keyCount(kept['effectKeys'], EFFECT_INDEPENDENT_COUNT, DEFAULT_SETTINGS.effectKeys),
+    effectRows: oneOf(kept['effectRows'], EFFECT_ROW_COUNTS, DEFAULT_SETTINGS.effectRows),
+    // settings kept before the zoom (2026-11-24) have a size of the lettering, "fontScale": passed over
+    zoom: zoomOf(kept['zoom']),
     shortcuts: shortcuts(kept['shortcuts']),
     // settings kept before 2026-11-21 name the colors in the British spelling: read, never written
     colors: colors(kept['colors'] ?? kept['colours']),
@@ -150,18 +166,18 @@ function colors(value: unknown): Record<string, string> {
   return kept;
 }
 
-/** A font scale as the Settings view offers it: within the range, on a step of 0.1. */
-export function fontScale(value: unknown): number {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return DEFAULT_SETTINGS.fontScale;
-  const stepped = Math.round(value / FONT_SCALE_STEP) * FONT_SCALE_STEP;
-  return Math.round(Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, stepped)) * 10) / 10;
+/** A zoom as the Settings view offers it: within the range, on a step of 0.1. */
+export function zoomOf(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return DEFAULT_SETTINGS.zoom;
+  const stepped = Math.round(value / ZOOM_STEP) * ZOOM_STEP;
+  return Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, stepped)) * 10) / 10;
 }
 
-/** A number of independent keys: a whole number from 0 to `highest`, or the default. */
-export function keyCount(value: unknown, highest: number): number {
+/** A number of independent keys: a whole number from 0 to `highest`, or the default (10, or `otherwise`). */
+export function keyCount(value: unknown, highest: number, otherwise = DEFAULT_SHOWN_KEYS): number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= highest
     ? value
-    : DEFAULT_SHOWN_KEYS;
+    : otherwise;
 }
 
 /** The value if it is one of the choices, otherwise the default. */
@@ -192,7 +208,8 @@ export function shortcuts(value: unknown): Record<string, string> {
 
 /**
  * The settings of this device, kept in the browser's local storage. A change is kept at once. The
- * font scale goes onto the page straight away, as the variable --font-scale on <html>.
+ * zoom goes onto the page straight away: as CSS zoom on <html>, and as the variable --zoom, by
+ * which the style sheets turn the sizes of the window (vw, dvh) into the zoomed page's own.
  */
 @Service()
 export class DeskSettings {
@@ -204,7 +221,9 @@ export class DeskSettings {
   readonly wheelSize = computed(() => this.data().wheelSize);
   readonly channelKeys = computed(() => this.data().channelKeys);
   readonly memoryKeys = computed(() => this.data().memoryKeys);
-  readonly fontScale = computed(() => this.data().fontScale);
+  readonly effectKeys = computed(() => this.data().effectKeys);
+  readonly effectRows = computed(() => this.data().effectRows);
+  readonly zoom = computed(() => this.data().zoom);
   readonly shortcuts = computed(() => this.data().shortcuts);
   readonly colors = computed(() => this.data().colors);
   readonly hiddenViews = computed(() => this.data().hiddenViews);
@@ -214,8 +233,11 @@ export class DeskSettings {
 
   constructor() {
     effect(() => {
-      const scale = this.data().fontScale;
-      if (typeof document !== 'undefined') document.documentElement.style.setProperty('--font-scale', String(scale));
+      const zoom = this.data().zoom;
+      if (typeof document === 'undefined') return;
+      const style = document.documentElement.style;
+      style.setProperty('zoom', zoom === 1 ? '' : String(zoom));
+      style.setProperty('--zoom', String(zoom));
     });
 
     // The colors that differ from the usual ones go onto <html>, in place of those of styles.css.
@@ -298,13 +320,21 @@ export class DeskSettings {
     this.change({ memoryKeys: keyCount(count, MEMORY_INDEPENDENT_COUNT) });
   }
 
-  /** One step bigger (+1) or smaller (-1), within the range. */
-  stepFontScale(direction: 1 | -1): void {
-    this.change({ fontScale: fontScale(this.data().fontScale + direction * FONT_SCALE_STEP) });
+  setEffectKeys(count: number): void {
+    this.change({ effectKeys: keyCount(count, EFFECT_INDEPENDENT_COUNT, this.data().effectKeys) });
   }
 
-  resetFontScale(): void {
-    this.change({ fontScale: DEFAULT_SETTINGS.fontScale });
+  setEffectRows(rows: EffectRowCount): void {
+    this.change({ effectRows: oneOf(rows, EFFECT_ROW_COUNTS, this.data().effectRows) });
+  }
+
+  /** The zoom one step bigger (+1) or smaller (-1), within the range. */
+  stepZoom(direction: 1 | -1): void {
+    this.change({ zoom: zoomOf(this.data().zoom + direction * ZOOM_STEP) });
+  }
+
+  resetZoom(): void {
+    this.change({ zoom: DEFAULT_SETTINGS.zoom });
   }
 
   /** All keyboard shortcuts at once: for each key of the desk that has one, the keys that press it. */

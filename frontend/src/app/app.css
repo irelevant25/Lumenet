@@ -1,6 +1,6 @@
 :host {
   display: block;
-  height: 100dvh;
+  height: calc(100dvh / var(--zoom));
 }
 
 .desk {
@@ -41,7 +41,7 @@ router-outlet {
   position: fixed;
   top: 50%;
   left: 50%;
-  width: min(440px, calc(100vw - 40px));
+  width: min(440px, calc(100vw / var(--zoom) - 40px));
   padding: 24px 28px;
   translate: -50% -50%;
   border: 1px solid var(--system);
@@ -52,7 +52,7 @@ router-outlet {
 
 .offline h2 {
   margin: 0 0 8px;
-  font-size: calc(20px * var(--font-scale));
+  font-size: 20px;
   font-weight: 600;
 }
 
@@ -67,7 +67,7 @@ router-outlet {
   border-radius: 4px;
   background: var(--well);
   font-family: Consolas, 'Cascadia Mono', monospace;
-  font-size: calc(14px * var(--font-scale));
+  font-size: 14px;
 }
 
 /* While Settings listens for a key to be clicked: an amber band at the bottom of the window,
@@ -80,7 +80,7 @@ router-outlet {
   display: flex;
   align-items: center;
   gap: 14px;
-  max-width: calc(100vw - 40px);
+  max-width: calc(100vw / var(--zoom) - 40px);
   margin: 0;
   padding: 10px 12px 10px 16px;
   translate: -50% 0;
@@ -88,7 +88,7 @@ router-outlet {
   border-radius: 6px;
   background: color-mix(in srgb, var(--system) 18%, var(--panel-raised));
   box-shadow: 0 6px 24px rgb(0 0 0 / 50%);
-  font-size: calc(15px * var(--font-scale));
+  font-size: 15px;
 }
 
 .listening button {
@@ -107,7 +107,7 @@ router-outlet {
   position: fixed;
   bottom: 18px;
   left: 50%;
-  max-width: min(640px, calc(100vw - 40px));
+  max-width: min(640px, calc(100vw / var(--zoom) - 40px));
   margin: 0;
   padding: 10px 16px;
   translate: -50% 0;
@@ -115,5 +115,5 @@ router-outlet {
   border-radius: 6px;
   background: var(--panel-raised);
   box-shadow: 0 6px 24px rgb(0 0 0 / 50%);
-  font-size: calc(15px * var(--font-scale));
+  font-size: 15px;
 }

@@ -7,7 +7,7 @@
   border: 1px solid var(--edge);
   border-radius: 4px;
   background: var(--well);
-  font-size: calc(14px * var(--font-scale));
+  font-size: 14px;
 }
 
 .head {
@@ -29,7 +29,7 @@ h3,
 h4 {
   margin: 0 0 10px;
   color: var(--legend-dim);
-  font-size: calc(12px * var(--font-scale));
+  font-size: 12px;
   font-stretch: 75%;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -49,7 +49,7 @@ h4 {
 }
 
 .hint {
-  font-size: calc(13px * var(--font-scale));
+  font-size: 13px;
 }
 
 /* each field in one row: the label at the left, the field at the right */
@@ -65,7 +65,7 @@ input,
 select,
 button {
   box-sizing: border-box;
-  height: calc(30px * var(--font-scale));
+  height: 30px;
   padding: 0 8px;
   border: 1px solid var(--edge);
   border-radius: 3px;
@@ -96,7 +96,7 @@ button:disabled {
 
 .close {
   flex: none;
-  width: calc(30px * var(--font-scale));
+  width: 30px;
   padding: 0;
 }
 

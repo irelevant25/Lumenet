@@ -700,7 +700,7 @@ sim.cmd enttec                 # an Enttec DMX USB Pro (--serial 12345678)
   small file each, `DmxBox.SimulatorRegistry`), and says there when its device is plugged in or pulled out.
   The desk reads that folder (`Simulators`, beside its LAN password, so a test desk with its own
   `--Lan:PasswordFile` has its own; `sim.cmd ... --folder` points a simulator there). A simulated box is
-  looked for like a box on a USB cable; a simulated node answers Find nodes; a simulated USB interface is a
+  looked for like a box on a USB cable; a simulated node answers the search of the Outputs panel; a simulated USB interface is a
   serial port "SIM1" in the list. A simulator that was killed is passed over once its process is gone.
 * **Where they are:** every box at 127.0.0.1 on two free ports (its DX port is its address, "127.0.0.1:52011");
   the node and the receiver at an address of their own, 127.0.0.2, 127.0.0.3 and on, at the usual ports
@@ -723,9 +723,10 @@ run.cmd            # starts the backend and the frontend; then open http://local
 Ctrl+C stops both. The desk also works without a box: it shows "Outputs connected: 0" and sends the whole
 state as soon as a box answers.
 
-* `backend/DmxBox.Server` is the desk itself. It holds the state (levels, memories, sequences, the stack,
-  notes, the project), works out the output and sends it to the boxes through the `DmxBox` library. A small
-  clock in it lets time pass about 30 times a second, for the sequences and the stack. Its settings are in
+* `backend/DmxBox.Server` is the desk itself. It holds the state (levels, memories, sequences, effects, the
+  stack, notes, the project), works out the output and sends it to the boxes through the `DmxBox` library. A
+  small clock in it lets time pass about 30 times a second, for the sequences, the stack and the fades of
+  the effects. Its settings are in
   `appsettings.json`: the address of the box with the Pico (`Box:Host`, at first 192.168.7.1), whether it
   looks for the boxes on the PC's network adapters (`Box:Discover`, at first true), the projects folder
   (`Projects:Folder`), the folder of the examples (`Projects:Examples`, at first `examples` beside the
@@ -754,7 +755,11 @@ state as soon as a box answers.
   locked while the stack is live, kept by New like the boxes): Art-Net nodes, sACN and DMX USB interfaces,
   each with ports that play a universe at an address (the 15-bit Port-Address of Art-Net, the universe of
   sACN). `OutputNetwork` (a hosted service, beside `BoxNetwork`) plays them and keeps their states
-  (`OutputsChanged`; `GetOutputs`, `SetOutputs`, `FindArtNetNodes`, `GetSerialPorts`, `GetNetworks`); the
+  (`OutputsChanged`; `GetOutputs`, `SetOutputs`, `FindArtNetNodes`, `GetSerialPorts`, `GetNetworks`). The page
+  shows the boxes and these outputs in one table, the Outputs panel of Settings (`outputs-panel`: a line for
+  each output of a box and each port of the others, two columns of the panels wide, as its table needs
+  about 650 pixels; it asks for the networks, the serial ports and the nodes only once the page is
+  connected; the top left, `outputs-status`, only counts them). The
   packets are in [section 6](#6-art-net-sacn-and-the-dmx-usb-pro):
   * `NetworkOutputs`, one thread of 40 rounds a second for Art-Net and sACN: a port sends when its 512 levels
     change, twice more in the next rounds (a lost packet is made up), and every 0.8 s while they stay the
@@ -780,12 +785,106 @@ state as soon as a box answers.
     send to pretend receivers. The tests use these.
 * `frontend/` is an Angular app. It only shows the desk and passes on what you do, over SignalR (`/hub/desk`).
   Because the state lives in the backend, reloading the page loses nothing.
+  * **Zoom** (Settings, per device, 50 % to 200 %) is CSS `zoom` on `<html>` (`DeskSettings`), and the same
+    number as `--zoom`. The style sheets have plain sizes; what zoom does not reach is made up for: window
+    units are divided by it (`calc(100dvh / var(--zoom))`), the window classes "medium", "narrow", "mobile" and
+    "phone" are worked out from the limits of `desk-types.ts` times the zoom (`DeskStore.followWindowSize`),
+    two parts that go by their own width use container queries (the top bar, the live values of an
+    effect), and code that turns rectangles (window pixels) into lengths of the page divides by `pageZoom()`
+    (`desk/zoom.ts`). The pointer and the rectangles agree in every zoom, so faders and drags need nothing.
+  * **Windows** are `<dialog>`s opened with `showModal`. Each has `lmDialog` (`desk/dialog-dismiss.ts`),
+    which asks the component to close it (`dismiss`) on a press that begins and ends outside the window, and
+    a ✕ of the class `dialog-close` (styles.css) at its top right; Esc closes it as the browser does.
 * The backend listens on every network card (`Urls` is `http://*:5080`), but serves another device only while
   LAN is on and only with the password; while LAN is off it closes such a connection before reading it. Two
   more rules keep other websites that are open in a browser from operating the desk: the backend answers only
   to the names of this PC (`AllowedHosts`, plus this PC's own addresses and computer name), and the hub only
   to the pages listed in `Server:AllowedOrigins`, plus the page the backend hands out itself. With `Urls` set
   to `http://localhost:5080` the desk stays on this PC for good.
+
+### Effects
+
+An effect is no list of steps: the desk program works it out anew for every frame, from its shape and the
+time. The rules of how it mixes with the rest stand at the top of `Desk.Effects.cs`.
+
+* **Where:** `Effect.cs` is an effect as the project keeps it (number 1 to 64, kind, shape, its lights or a
+  group, speed, size, spread, direction, order, blocks, wings, fades, colors, a center or a point) and its
+  check. `EffectRig.cs` finds its lights in the stage plan, the channels it plays on each (the dimmers and
+  the colors of every cell, pan and tilt with their fine channels, a shutter, a color wheel) and each
+  light's place in the run. `EffectEngine.cs` holds the shapes, waves, colors and patterns, as plain
+  functions of the phase. `Desk.Effects.cs` plays the effects and mixes them in; `EffectPlayback.cs` is what
+  the pages get.
+* **Time:** the phase counts cycles since the start, at the effect's speed in cycles a minute (BPM), times
+  the tempo / 120 while Rate is lit. A change of the speed or of the tempo goes on from where the effect is.
+  Each light runs the phase moved on by the spread times its place in the run (order, blocks, wings,
+  direction). The random shapes take a hash of the effect's seed, the light and the cycle (`Random01`), so
+  that every output gets the same value at the same moment.
+* **A frame:** `GetOutput` first gives the light of the faders, memories, sequences and the stack, highest
+  wins, as before. Then the intensity, color and pixel effects (`EffectFrame.PutLight`): each light is read
+  once from that output (`LightState`: its dimmers, or else the strongest color of each cell, as its
+  brightness, and its colors as shares), changed, and written back once. Then solo, the limits, the master
+  and Black out, on light only. Then the attributes, the latest taking precedence, and on them the
+  movement effects (`PutAttributes`): pan and tilt from where the head points, in 16 bits where its kind
+  has fine channels. An intensity effect opens the closed shutter of a head from a library; a color effect
+  turns a color wheel to its nearest slot. A color effect lights a light the rest leaves dark (under 16 of
+  255, `DarkBelow`) up to its fader, blending smoothly into the brightness of a light just above that
+  (`LiftOver`), opens its shutter where it gives the light, and leaves the brightness of a lit light alone;
+  a light an intensity effect plays (`Pulsed`, also at the bottom of its wave) it only colors. Every output
+  works the frame out at its own rate, a box 40 times a second.
+* **Playback:** each effect has a run (`EffectRun`): whether it runs, its fader (and the move of it its key
+  started), its live speed, size and spread. Like the faders it is no part of the project: not saved and no
+  step of Undo. The fader from 0 starts the effect at once, at 0 it stops; it says how much of the effect
+  there is, and for a movement around a center of its own also how far the heads have gone there. The key
+  moves the fader up to full in the fade-in time and down to 0 in the fade-out time (from half way in half
+  the time); `SettleEffects` moves it on every tick of the clock, and the pages hear of every move as of a
+  fader the stack moves. The live values hold for this run; Reset takes the stored ones again, and Keep
+  stores them (a change of the effect, one step of Undo). The effects cannot be changed while the stack is
+  live; their playback can.
+* **The stack:** a step of the kind effect moves the effect's fader as a memory step moves a memory's: up in
+  its up time, which starts the effect, and down in the down time of the step that takes it off, which stops
+  it at 0. The stack's fader of an effect is `Fader(Memory: false, Number, Effect: true)`: it gives no light
+  to the crossfade, and Add and Release work for it as for the others. A sequence cannot play an effect.
+* **The pages** get the playback of each effect in `Playback.Effects` (about 30 times a second while one
+  runs: `DeskClock` then sends the playback every round instead of every third, `Desk.PlaysEffects`),
+  and in `Playback.EffectLevels` the channels the effects change, at what the effects make of them before
+  solo, the limits, the master and Black out. The page lays these over the faders it shows; the Stage view
+  takes them for the lights. `PreviewEffect` gives one cycle in 48 frames (where the heads point, the level
+  and color of every light or cell) for the preview of the Effects view, which shows it at no more than 2.5
+  flashes a second. On the Stage view a change of a light in an effect shows at once and then stays at least
+  167 ms (the time starts at a change, so that a short flash is never lost between two looks); while the
+  effect flashes more than 3 times a second, once a second, with "⚡" and its real rate over it. A head with
+  pan and tilt shows a beam there (`beamOf` in `stage-view.ts`): turned 90° + (pan - 0.5) × 540° (the middle
+  of the pan faces the audience), 0.6 to 3 squares long by its tilt, in its color, dashed while it is dark.
+  The plan knows neither how a head hangs nor its real ranges, so the beam is a sketch.
+* **The page's parts:** `desk/effects.ts` (the types, in the first download), `desk/effect-shapes.ts` (the
+  shapes, speeds and new effects, loaded only by the views that come later), `effects-view`,
+  `effect-editor`, `effect-live`, `effect-preview`, and `effect-section`, the row of effect faders that the
+  Effects view and Main share. On Main it is deferred, so that the first download stays under its warning
+  limit of 520 kB (`angular.json`).
+* **Project file version 7:** `effects` (the lights and the group of each by their places in the plan's
+  lists, like the steps), `effectIndependents`, and steps with `"target": "effect"`. Only a project with
+  any of them says version 7; others stay version 5 or 6, which older desks read.
+
+### Effects from outside
+
+For a MIDI controller or another program later: the hub's `SetEffectControl(effect, control, value)` works
+one effect's playback, as the page's keys and faders do. "Effect 3 speed = 120 BPM" is
+`SetEffectControl(3, "speed", 120)`; over SignalR from a script,
+`connection.invoke('SetEffectControl', 3, 'speed', 120)`.
+
+| Control | Value |
+|---|---|
+| `go` | 1 brings the fader up to full in the fade-in time, which starts the effect; 0 down to 0 in the fade-out time, which stops it |
+| `toggle` | Any: down when the effect runs and is not already on its way down, else up |
+| `level` | Its fader, 0 to 100 per cent: from 0 it starts the effect, at 0 it stops it |
+| `speed` | 0.5 to 600 BPM (cycles a minute) |
+| `size`, `spread` | 0 to 100 per cent |
+| `reset` | Any: the stored speed, size and spread again |
+
+It returns the effect's playback after the change, and the pages hear of it (`EffectPlaybackChanged`). It
+changes this run only, like the faders: no Undo, nothing saved, and it works while the stack is live. A
+value out of its range is refused with the reason ("The speed of an effect goes from 0.5 to 600 BPM.").
+A mapping of MIDI notes and controllers to addresses such as `effect/3/speed` would call it.
 
 ### Lumenet.exe and its releases
 
@@ -811,15 +910,17 @@ publish.cmd        # builds the page, then publish\Lumenet.exe
 
 ### Tests
 
-`dotnet test backend/DmxBox.sln` (649 tests: the client, also against the simulator with two outputs, the
+`dotnet test backend/DmxBox.sln` (704 tests: the client, also against the simulator with two outputs, the
 desk, solo, sequences and the stack with a clock the tests set by hand, the rate and its tempo, undo and the autosave, the
 stage plan and its picture, fixtures, their attributes, their steps and their notes, the notes, the
 universes, project files with Export and Import, the examples, the import of show files, the links to the
 boxes and their wiring with the blackout button, the hub, LAN with a pretend PC and a pretend phone, the
 crossfades of sequences and the stack, steps of the stack that add and releases, a level of a memory changed
 from the Memories view, and the outputs besides the boxes: the packets of Art-Net, sACN and the DMX USB Pro
-byte by byte, and Art-Net and sACN on 127.0.0.1 with a pretend node and receiver, a pretend USB interface; the simulated devices of sim.cmd, the four box simulators among them, and the desk finding them),
-and in `frontend/`: `npm test -- --watch=false` (230 tests of the page).
+byte by byte, and Art-Net and sACN on 127.0.0.1 with a pretend node and receiver, a pretend USB interface; the simulated devices of sim.cmd, the four box simulators among them, and the desk finding them;
+the effects: their rules frame by frame, their playback and the stack with the clock set by hand, the
+shapes, the places in the run and the pixels, and project files of version 7),
+and in `frontend/`: `npm test -- --watch=false` (249 tests of the page).
 
 On Windows the first packets of a new UDP flow (a socket and a receiver) can be held back for a moment while
 the firewall looks at the flow, and what follows meanwhile is dropped. The tests of the network outputs
@@ -905,7 +1006,7 @@ Net, Sub-Net and Universe together are the 15-bit Port-Address of a node's port 
 
 * **ArtPoll** (OpCode 0x2000) is 14 bytes, which every node answers: the header, the version, Flags 0 and
   DiagPriority 0. The desk sends it to each node it plays every 2 seconds, and to the broadcast of every
-  network of the PC for Find nodes.
+  network of the PC for the search of the Outputs panel (Settings).
 * **ArtPollReply** (OpCode 0x2100): the desk reads the node's address (offset 10), firmware (16 and 17),
   NetSwitch (18), SubSwitch (19), short name (26, 18 bytes), long name (44, 64 bytes), the number of ports
   (173), each port's type (174 to 177; bit 7: it puts out DMX) and the low four bits of its universe (SwOut,
@@ -974,7 +1075,7 @@ show what the desk sends without any hardware. Free tools that do it as other pr
   address, or by multicast, reaches it.
 * **QLC+** (Windows, macOS, Linux) takes Art-Net and sACN in: in Inputs/Outputs, choose Art-Net or E1.31 as
   the input of a universe and tick Passthrough, and its DMX Monitor shows the levels. It answers the poll, so
-  Find nodes lists it. It also drives an Enttec DMX USB Pro, which tells whether the interface itself works.
+  the search of the Outputs panel lists it. It also drives an Enttec DMX USB Pro, which tells whether the interface itself works.
 * **DMX-Workshop** (Artistic Licence, Windows) lists the Art-Net nodes of a network and shows the frames each
   Port-Address gets.
 * **Wireshark** shows every packet with its fields: Art-Net, and sACN through its ACN decoder. Capturing needs
@@ -1005,6 +1106,11 @@ receivers listen at 5568 and the desk sends from a port of its own.
 * **More universes from one box:** the desk plays up to 8 universes on several boxes; the box with the Pico
   sends one, [dmxbox 2](#dmxbox-2-the-pic32-box) two. Its board is ready for **RDM**: with RDM in the firmware
   and the desk, the desk could find the fixtures on a line and set their addresses.
+* **More for the effects:** a running text or a picture over the cells of LED bars (the pixel effects
+  already work out each cell by where it is on the stage, so either would be one more pattern); MIDI notes
+  and controllers on `SetEffectControl` (see [Effects from outside](#effects-from-outside)); a cycle given in
+  beats of the tempo rather than in BPM of its own; where the heads point in degrees in the preview, for
+  kinds of lights whose pan and tilt ranges are known.
 * **A boot loader for dmxbox 2,** so that a new firmware goes on over USB without the programmer.
 * **Pushed state:** a "subscribe" message, so the box sends live output to your UI.
 * **Fabrication files for the carrier board**, so it can be ordered instead of hand-wired.
@@ -1363,6 +1469,84 @@ receivers listen at 5568 and the desk sends from a port of its own.
   receiver showed universe 1 from "Lumenet"; SIM1 was listed and connected; channel 1 at full reached all
   four as 255; the box and the interface pulled out left "Outputs connected: 2 of 3", plugged in again "4 of
   4"; Q left no file and no process behind. Not tried yet in a terminal of its own, by hand.
+* **Effects (2026-11-24):** the backend passes 703 tests and the page 243. In the tests, frame by frame with
+  the clock set by hand: an intensity effect is a fader that moves by itself and the higher wins, its fader
+  scales the wave and its size says how deep it goes, and a light without a dimmer keeps the mix of its
+  colors; a color effect takes over the color, mixes with the color of the rest by its fader, leaves a dark
+  light dark, mixes white and amber as the Fixtures view does and leaves ultraviolet out, and the one
+  started last takes the light; a pixel pattern paints only where it is bright and lights dark cells itself;
+  a movement moves a head from where it points with its fader scaling the shape, in 16 bits on a head from
+  the library, or around a center of its own that it reaches in its fade-in, and of two the one started
+  last takes each axis it uses; Black out, the master, a solo and a light's limit dim the light of effects
+  and leave the heads moving; an intensity effect opens a closed shutter and a color effect turns a color
+  wheel; a hazer takes no part. The key fades an effect in and out in its times, the fader starts it from 0
+  and stops it at 0, Clear stops them all, with Rate lit an effect runs at its speed times the tempo / 120
+  without a jump, live values hold until Keep or Reset, the stack moves an effect's fader in its step times
+  with Add and Release, a sequence cannot play an effect, and while the stack is live the effects cannot be
+  changed but play. The places in the run (by address, from the left, from the middle, at random and the
+  same every time, blocks, wings), the shapes, the cells of a bar as pixels turned with it and the patterns
+  over the plan; project files of version 7 read back whole, a file without effects still version 5, a bad
+  effect in a file refused with the reason, an effect key bound elsewhere kept without effects; Undo, New
+  and Load; the hub. On the page: an effect made of each kind and changed in the editor, keys, faders and
+  live controls, the levels the desk program reports laid over the channels, the effect keys and the row
+  from Settings, and a shortcut for every new key. On a test copy without a box, in Chrome: with the example
+  "6 Concert" an effect of each kind was made and started; the live speed went to 31 BPM and Reset took it
+  back to 15; on the Stage view the LED bar showed bars, the front lights a white wave, and the back lights
+  stayed dark under the rainbow (a color effect leaves a dark light dark); on Main the effect row and the
+  effect keys of the independents showed effect 1 running, and its key there stopped it, blinking through
+  the fade-out. With the example "7 Effects" the pictures of the manual: the preview of the circle, the
+  PARs in a rainbow over their blue, bars on both LED bars, the stack with its effect steps, the ticks of
+  Add and the release named "Effect 3 (Chase)". The top bar with nine links at 20 sizes from 360 × 780 to
+  1920 × 1080: two rows of five and four up to 470 pixels, one line from 471, two lines below 1366 pixels
+  (before, below 1300), nothing outside the window and no sideways scrolling; Main at 1365 × 768 under the
+  bar of two lines as at 1280 × 768, every key 20 pixels or more. No error on the page. AXE was not run, as
+  axe-core is not installed; the labels, the roles and the contrast of the violet were checked by hand. Not
+  yet tried with a light, a moving head or an LED bar.
+* **The effect key, the layouts of small screens, zoom, windows, and the outputs in Settings (2026-11-24,
+  evening):** the backend passes 703 tests and the page 244. In the tests: the key of an effect moves its
+  fader up in the fade-in time (half way after half of it) and down in the fade-out time, turns back from
+  where it is when pressed on the way, and the UIs hear of every move; a movement around a center of its own
+  goes half way there with its fader at half; on the Effects view the key of an empty number chooses it and
+  sends nothing; the zoom goes from 50 % to 200 % in steps of 10 %, and the size of the lettering of before
+  is passed over; a window closes with its ✕ and with a press outside it, not with a drag that began inside
+  it; the Outputs panel lists the outputs of the boxes and the ports of the others, adds a node the search
+  found, sACN by multicast, a USB interface and a box by its address, and says what goes out twice. On a test
+  copy, in Chrome: at 1100 pixels (mobile now) the project stands at the right of the top bar, the stack's
+  keys in a column beside its wheel, Edit and the Record keys at the left; at 600 the stack's keys in a row
+  over the wheel; on Memories and Sequences a line between the page keys and the memory keys. At 120 % a
+  window of 1600 × 900 was laid out as one of 1333 × 750 (narrow, 16 faders a row) and Main filled exactly
+  900 pixels; at 80 % it showed 32 faders a row; the same drag on a fader gave the same level from 80 % to
+  150 %. The Load window closed with a press beside it and with its ✕, and stayed open after a drag out of
+  it; the Export window on a phone has its ✕. The key of effect 1 of "7 Effects" (1 s in and out) moved its
+  fader 0, 64, 132, 199, 255 in quarter seconds, and back down; the key of effect 12, empty, offered the
+  kinds. With the simulators of sim.cmd (two boxes, a node, an sACN receiver, a DMX USB Pro) the panel found
+  the node and added it, sACN and SIM1, and said that U1 goes out three times; no sideways scrolling at 390
+  pixels, and no error on the page. AXE was not run. Seen on the way, older than this round: at 1366 × 768,
+  and below 1366 pixels where the top bar takes two lines, the channel page keys go into a second column and
+  the rows of channel faders get wider than their room by up to a fader (they scroll).
+* **Effects on the Stage view, the color rule, page keys in one column (2026-11-24, night):** the backend
+  passes 704 tests and the page 249. In the tests: a color effect lights a dark light up to its fader (with
+  0, 4, 8, 12 and 16 of 255 under it, 255, 191, 128, 64 and 16 at full) and leaves the brightness of a lit
+  one, under an intensity effect it gives only the color, a color wheel turns with it; while an effect runs,
+  every round of the clock carries the playback; a new movement goes around a center of its own, which a
+  press on the preview moves; the Stage view shows a short flash of an effect at once and keeps it 167 ms.
+  On a test copy, in Chrome, with "7 Effects" and the effect row on Main: no sideways scrolling on any view at
+  1920 × 1080, 1849 × 1000, 1536 × 864, 1400 × 800, 1366 × 768, 1280 × 720, 1210 × 650, 1000 × 800,
+  850 × 900 and 390 × 844, but for the Stack view's table on a small screen, which scrolls by design. At
+  1366 × 768 the independents take two columns and the strips are 57.5 pixels instead of 58.7 (before, the
+  rows scrolled by 19 pixels); the page keys stand in one column that scrolls. On the Effects view at 1920
+  the fields end 28 pixels before the preview. The rainbow alone lit the PARs in its colors, over memory 2
+  they kept its level; the beams of the heads turned with the circle, dashed while dark; the live size grew
+  the preview's circle; a press on the preview put the center at 25/75, a drag at 70/30; the pulse at 120 BPM
+  lit PAR 1 every 483 to 513 ms with none lost (before the Stage's fix, one lost in three seconds). Then
+  every page key got the size of all keys (41.4 pixels high at 1366 × 768, as a Record key), and a page
+  chosen while its key was out of sight brought the key into sight (`desk/pressed-in-sight.ts`, tested with
+  the scrolling of `bringIntoBox`). The Outputs panel stands among the other panels of Settings, two
+  columns wide: at 1920 × 1080 under them (934 pixels), at 1366 × 768 beside Keyboard (880), with sim.cmd's
+  simulators its table never scrolls sideways but on a phone, and #outputs brings it to the top. A page
+  loaded at Settings showed "Cannot send data if the connection is not in the 'Connected' State." there:
+  the panel now asks the desk program once the page is connected (a test holds the page offline first). No
+  error on the page. AXE was not run.
 * **dmxbox 2 on paper (2026-11-23):** both versions (two outputs and one) are drawn from their `circuit.py`,
   and each drawing passed its check against it: the schematic, the breadboard plan, the perfboard plan (38 and
   26 insulated wires, with SW1 at the cut left edge and the holes around the four screws kept empty;

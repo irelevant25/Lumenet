@@ -1,0 +1,358 @@
+<div class="form">
+  <label for="effect-name">Name</label>
+  <input
+    id="effect-name"
+    type="text"
+    autocomplete="off"
+    [attr.maxlength]="nameLength"
+    [value]="effect().name"
+    [disabled]="locked()"
+    (change)="onName($event)"
+    (keydown.enter)="leave($event)"
+  />
+
+  <label for="effect-kind">Kind</label>
+  <select id="effect-kind" [disabled]="locked()" (change)="onKind($event)">
+    @for (item of kinds; track item.kind) {
+      <option [value]="item.kind" [selected]="item.kind === effect().kind">{{ item.label }}</option>
+    }
+  </select>
+
+  <label for="effect-shape">Shape</label>
+  <select id="effect-shape" [disabled]="locked()" (change)="onShape($event)">
+    @for (item of shapes(); track item.shape) {
+      <option [value]="item.shape" [selected]="item.shape === effect().shape">
+        {{ item.label }}
+      </option>
+    }
+  </select>
+
+  <span class="label" id="effect-on">Lights</span>
+  <div class="lights" role="group" aria-labelledby="effect-on">
+    <div class="choices">
+      <label
+        ><input
+          type="radio"
+          name="effect-on"
+          [checked]="!usesGroup()"
+          [disabled]="locked()"
+          (change)="useLights()"
+        />
+        These</label
+      >
+      <label>
+        <input
+          type="radio"
+          name="effect-on"
+          [checked]="usesGroup()"
+          [disabled]="locked() || groups().length === 0"
+          (change)="useGroup()"
+        />
+        A group
+      </label>
+    </div>
+    @if (usesGroup()) {
+      <select aria-label="The group" [disabled]="locked()" (change)="onGroup($event)">
+        @for (group of groups(); track group.id) {
+          <option [value]="group.id" [selected]="group.id === effect().group">
+            {{ group.name || 'Group' }}
+          </option>
+        }
+      </select>
+    } @else {
+      <div class="list">
+        @for (light of fitting(); track light.id) {
+          <label>
+            <input
+              type="checkbox"
+              [checked]="effect().lights.includes(light.id)"
+              [disabled]="locked()"
+              (change)="toggleLight(light.id, $event)"
+            />
+            {{ light.name || 'Light' }} <span class="dim">{{ address(light) }}</span>
+          </label>
+        } @empty {
+          <p class="dim">
+            No light of the stage plan can do this. Lights are added on the Stage view.
+          </p>
+        }
+      </div>
+      <div class="choices">
+        <button type="button" class="text" [disabled]="locked()" (click)="allLights()">All</button>
+        <button type="button" class="text" [disabled]="locked()" (click)="noLights()">None</button>
+      </div>
+    }
+  </div>
+
+  <label for="effect-speed">Speed (BPM)</label>
+  <input
+    id="effect-speed"
+    type="number"
+    min="0.5"
+    max="600"
+    step="0.5"
+    [value]="effect().speed"
+    [disabled]="locked()"
+    (change)="onNumber('speed', $event, 0.5, 600, 1)"
+  />
+
+  <label for="effect-size">Size (%)</label>
+  <input
+    id="effect-size"
+    type="number"
+    min="0"
+    max="100"
+    [value]="effect().size"
+    [disabled]="locked()"
+    (change)="onNumber('size', $event, 0, 100)"
+  />
+
+  @if (inRun()) {
+    <label for="effect-spread">Spread (%)</label>
+    <input
+      id="effect-spread"
+      type="number"
+      min="0"
+      max="100"
+      [value]="effect().spread"
+      [disabled]="locked()"
+      (change)="onNumber('spread', $event, 0, 100)"
+    />
+
+    <label for="effect-order">Order</label>
+    <select id="effect-order" [disabled]="locked()" (change)="onOrder($event)">
+      @for (item of orders; track item.order) {
+        <option [value]="item.order" [selected]="item.order === effect().order">
+          {{ item.label }}
+        </option>
+      }
+    </select>
+
+    <label for="effect-blocks">Blocks</label>
+    <input
+      id="effect-blocks"
+      type="number"
+      min="1"
+      max="64"
+      [value]="effect().blocks"
+      [disabled]="locked()"
+      (change)="onNumber('blocks', $event, 1, 64)"
+    />
+
+    <label for="effect-wings">Wings</label>
+    <input
+      id="effect-wings"
+      type="number"
+      min="1"
+      max="8"
+      [value]="effect().wings"
+      [disabled]="locked()"
+      (change)="onNumber('wings', $event, 1, 8)"
+    />
+  }
+
+  <label for="effect-direction">Direction</label>
+  <select id="effect-direction" [disabled]="locked()" (change)="onDirection($event)">
+    <option value="forward" [selected]="effect().direction === 'forward'">Forward</option>
+    <option value="back" [selected]="effect().direction === 'back'">Back</option>
+  </select>
+
+  <label for="effect-fade-in">Fade in (s)</label>
+  <input
+    id="effect-fade-in"
+    type="number"
+    min="0"
+    max="999.9"
+    step="0.1"
+    [value]="effect().fadeIn"
+    [disabled]="locked()"
+    (change)="onNumber('fadeIn', $event, 0, 999.9, 1)"
+  />
+
+  <label for="effect-fade-out">Fade out (s)</label>
+  <input
+    id="effect-fade-out"
+    type="number"
+    min="0"
+    max="999.9"
+    step="0.1"
+    [value]="effect().fadeOut"
+    [disabled]="locked()"
+    (change)="onNumber('fadeOut', $event, 0, 999.9, 1)"
+  />
+
+  @if (dutyShown()) {
+    <label for="effect-duty">{{
+      effect().shape === 'bars' ? 'Bar width (%)' : 'On for (%)'
+    }}</label>
+    <input
+      id="effect-duty"
+      type="number"
+      min="1"
+      max="99"
+      [value]="effect().duty"
+      [disabled]="locked()"
+      (change)="onNumber('duty', $event, 1, 99)"
+    />
+  }
+
+  @if (angleShown()) {
+    <label for="effect-angle">Angle (°)</label>
+    <input
+      id="effect-angle"
+      type="number"
+      min="0"
+      max="359"
+      [value]="effect().angle"
+      [disabled]="locked()"
+      (change)="onNumber('angle', $event, 0, 359)"
+    />
+  }
+
+  @if (centerShown()) {
+    <span class="label">Center</span>
+    <div class="pair">
+      <label
+        ><input
+          type="checkbox"
+          [checked]="effect().centerPan != null"
+          [disabled]="locked()"
+          (change)="onCenter($event)"
+        />
+        Its own</label
+      >
+      @if (effect().centerPan != null) {
+        <label
+          >Pan
+          <input
+            type="number"
+            min="0"
+            max="100"
+            aria-label="Pan of the center, per cent"
+            [value]="effect().centerPan"
+            [disabled]="locked()"
+            (change)="onNumber('centerPan', $event, 0, 100, 1)"
+        /></label>
+        <label
+          >Tilt
+          <input
+            type="number"
+            min="0"
+            max="100"
+            aria-label="Tilt of the center, per cent"
+            [value]="effect().centerTilt"
+            [disabled]="locked()"
+            (change)="onNumber('centerTilt', $event, 0, 100, 1)"
+        /></label>
+      }
+    </div>
+  }
+
+  @if (pointShown()) {
+    <span class="label">From</span>
+    <div class="pair">
+      <label
+        ><input
+          type="checkbox"
+          [checked]="effect().pointX != null"
+          [disabled]="locked()"
+          (change)="onPoint($event)"
+        />
+        A point</label
+      >
+      @if (effect().pointX != null) {
+        <label
+          >Across
+          <input
+            type="number"
+            step="0.5"
+            aria-label="Squares from the left of the stage"
+            [value]="effect().pointX"
+            [disabled]="locked()"
+            (change)="onNumber('pointX', $event, -100, 100, 2)"
+        /></label>
+        <label
+          >Back
+          <input
+            type="number"
+            step="0.5"
+            aria-label="Squares from the back of the stage"
+            [value]="effect().pointY"
+            [disabled]="locked()"
+            (change)="onNumber('pointY', $event, -100, 100, 2)"
+        /></label>
+      }
+    </div>
+  }
+
+  @if (colorsShown()) {
+    <span class="label" id="effect-colors">Colors</span>
+    <div class="colors" role="group" aria-labelledby="effect-colors">
+      @for (color of effect().colors; track $index) {
+        <span class="color">
+          <input
+            type="color"
+            [attr.aria-label]="'Color ' + ($index + 1)"
+            [value]="color"
+            [disabled]="locked()"
+            (change)="onColor($index, $event)"
+          />
+          <button
+            type="button"
+            class="delete"
+            [attr.aria-label]="'Take color ' + ($index + 1) + ' out'"
+            [disabled]="locked()"
+            (click)="removeColor($index)"
+          >
+            ✕
+          </button>
+        </span>
+      } @empty {
+        <span class="dim">The usual ones</span>
+      }
+      <button
+        type="button"
+        class="text"
+        [disabled]="locked() || effect().colors.length >= maxColors"
+        (click)="addColor()"
+      >
+        + Color
+      </button>
+    </div>
+  }
+
+  @if (randomShown()) {
+    <span class="label">Random</span>
+    <div>
+      <button type="button" class="text" [disabled]="locked()" (click)="newSeed()">
+        Choose anew
+      </button>
+    </div>
+  }
+</div>
+
+<div class="keys">
+  <button
+    lmLamp
+    type="button"
+    tone="effect-copy"
+    aria-label="Copy the effect to the next free number"
+    data-action="effects.copy"
+    [disabled]="locked()"
+    (click)="copy()"
+  >
+    Copy
+  </button>
+  <button
+    lmLamp
+    type="button"
+    tone="effect-delete"
+    aria-label="Take the effect out"
+    data-action="effects.delete"
+    [disabled]="locked()"
+    (click)="remove()"
+  >
+    Del
+  </button>
+</div>
+<p class="explain">{{ explain() }}</p>

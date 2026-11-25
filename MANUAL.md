@@ -46,14 +46,16 @@ page and the examples are inside it, and so is .NET. Every release on the [Relea
 
 ## What is on the page
 
-The top bar has eight links: **Main**, **Memories**, **Sequences**, **Stack**, **Stage**, **Fixtures**,
-**Notes** and **Settings** (in this order until Settings gives them another). Main is the desk itself. Memories shows what is stored, and changes it with a double click. Sequences and Stack
-are for the two things that run by themselves (see below), Stage shows the lights of the rig in their colors,
+The top bar has nine links: **Main**, **Memories**, **Sequences**, **Stack**, **Stage**, **Fixtures**,
+**Effects**, **Notes** and **Settings** (in this order until Settings gives them another). Main is the desk itself. Memories shows what is stored, and changes it with a double click. Sequences, Effects and Stack
+are for the things that run by themselves (see below), Stage shows the lights of the rig in their colors,
 Fixtures plays them as fixtures, Notes holds the instructions for the show, Settings is
 for how this device shows the desk and for its keyboard shortcuts (see [Settings](#settings) and
 [Keyboard](#keyboard)). Under the name the
-top bar says how many outputs play (a click opens their window, see [Universes and outputs](#universes-and-outputs));
-beside it stand **LAN**, **Undo** and **Redo**, at the right the keys of the project. At the right of Main the
+top bar says how many outputs play (Settings shows them, see [Universes and outputs](#universes-and-outputs));
+beside it stand **LAN**, **Undo** and **Redo**, at the right the keys of the project. Every window of the page
+(Load, Save, Import, Export and the others) closes with **✕** at its top right, with a press outside it, or
+with Esc; a drag that begins inside it and ends outside leaves it open. At the right of Main the
 **Stack** lies across the top, and under it stand three columns: the **Master** section (Black out and the
 master fader with its level) over **Record**; the **General** section (Clear, Solo up, Solo down, Rate, the
 tempo fader with the tempo on top, and Tempo under it); and at the right edge the **Independents** (unless Settings shows none of
@@ -63,8 +65,8 @@ each.
 ![The Main view on a PC: channel and memory faders, the master, general, record and stack sections, and the independents](docs/screenshots/main.png)
 
 * **Channels:** two rows of faders (or one, as Settings says). The keys at the right choose which of the 512
-  channels of a universe they show. When they do not fit into one column, they get flatter, and then they go
-  on in another column beside it. In a project of several universes a key for each, U1, U2 and on, stands
+  channels of a universe they show, in one column, as big as every key. When they do not fit into it, the
+  column scrolls (with the wheel, a finger or the keyboard) and keeps the lit key in sight. In a project of several universes a key for each, U1, U2 and on, stands
   above the faders and chooses the universe (see [Universes and outputs](#universes-and-outputs)).
 * **Memories:** one row of faders (or two), with page keys for the 128 memories. A memory holds a look:
   the levels the channel faders were set to at the moment it was saved. Its fader plays that look at the
@@ -101,7 +103,8 @@ each.
   * **Copy:** press the memory to copy from, then the memory to copy to. A sequence is copied like a look.
   * **Del:** press the memory to empty, whatever it holds.
   * Pressing the lit function again cancels it.
-* **Clear** cancels an unfinished function and brings every channel fader and memory fader to zero.
+* **Clear** cancels an unfinished function and brings every channel fader, memory fader and effect fader to
+  zero, so every effect stops too.
 * **Black out** darkens every light but leaves the desk as it is; the key blinks while it is active. The
   attributes of the fixtures of the stage plan (a pan, a tilt, a wheel) stay as they are, so no moving head
   moves. It is the same on every output: a box, an Art-Net node, sACN, a USB interface. The blackout button on
@@ -135,10 +138,11 @@ each.
   tap on, the tempo is the beat of the taps, the average of the last four beats, and the fader moves to it.
   A pause of more than two seconds starts the count afresh. Its shortcut taps as well.
 * **Undo** and **Redo** (top left) take back the last change of what the project holds, and make it again:
-  storing, copying and emptying memories, sequences and their speed, the steps of the stack, notes and the
-  channels and memories of the independent keys. Their tooltip says what they would do, for example "Undo
-  storing memory 5", and the top bar says what they did. The faders, Clear, the master and the settings are
-  no steps; changes of one kind in quick succession (the moves of a speed fader) are one.
+  storing, copying and emptying memories, sequences and their speed, the effects, the steps of the stack,
+  notes and the channels, memories and effects of the independent keys. Their tooltip says what they would
+  do, for example "Undo storing memory 5", and the top bar says what they did. The faders, Clear, the
+  master, the playbacks of the effects and the settings are no steps; changes of one kind in quick
+  succession (the moves of a speed fader) are one.
   Up to 100 steps are kept, for the whole desk, whichever device made a change. Loading a project, a new
   one and an import start afresh, and while the stack is live they are locked. Ctrl + Z and Ctrl + Y are
   their shortcuts until the Keyboard panel of Settings gives them others.
@@ -149,7 +153,7 @@ each.
   name of its fixture or group, or for a step without one what it is, "Channel 5 (U1)"): the one that is on
   in the middle (green, with an arrow beside it, at the height of Play), the step before it above (blue),
   the one Play goes to below (yellow), the others grey, their numbers about half as high as a key is wide
-  (15 to 22 pixels, times the lettering of Settings). It shows 3 steps, or 1, 5, 7 or 9 as Settings says,
+  (15 to 22 pixels). It shows 7 steps, or 1, 3, 5 or 9 as Settings says,
   and rolls on when another step comes on. The stack goes round, and so does the wheel, but a step stands in
   it once only. While no step is on, the middle is empty and the step Play goes to stands under it. On a low
   window the keys of the column get flatter and the wheel shows fewer steps, always the one that is on.
@@ -157,15 +161,23 @@ each.
   device, and pressed again to switch it off, takes it back (also on the Stack and Stage views, and with its
   shortcut). Esc leaves the whole screen at any time; the stack stays live. A stack switched on or off on
   another device leaves this screen as it is.
-* **Independents:** keys in a column at the right edge, under the stack: green ones for channels and
-  red ones for memories, ten of each unless Settings says otherwise (0 to 32 of each; with none of either
-  the column is left out). A green key switches
+* **Independents:** keys in a column at the right edge, under the stack: green ones for channels, red ones
+  for memories and violet ones for effects; ten green and ten red and no violet ones unless Settings says
+  otherwise (0 to 32 of each; with none of any the column is left out). A green key switches
   its channel between zero and full, and that channel's fader follows; a red key does the same with the fader
-  of its memory. The keys start on channels 1, 2, 3 ... and memories 1, 2, 3 ... Press Edit there, type
-  other numbers onto the keys (a channel of another universe as 113 U2), and press Edit again. In a
+  of its memory; a violet key starts and stops its effect, as the effect's own key does (see
+  [Effects](#effects)). The keys start on channels 1, 2, 3 ..., memories 1, 2, 3 ... and effects 1, 2, 3 ...
+  Press Edit there, type other numbers onto the keys (a channel of another universe as 113 U2), and press
+  Edit again. In a
   project of several universes a green key shows its channel's universe under the number. A green key is lit when its channel's own fader is up (a
   memory that holds the channel does not light it); a red key is lit like the key under its memory's fader,
-  and runs from red to yellow for a sequence. Keys that do not fit into the column go on in another one.
+  and runs from red to yellow for a sequence; a violet key is half lit for an effect that is there, fully
+  lit while it runs, and blinks while it fades in or out. Keys that do not fit into the column go on in
+  another one.
+* **Effects:** when Settings shows it, a row of effect faders under the memories, with page keys for the
+  64 effects: the fader, the key under it and the effect's name under the key, as on the Effects view.
+
+![The Main view with the row of effects under the memories and six effect keys among the independents](docs/screenshots/main-effects.png)
 
 ![The Memories view: the levels of memory 3 for every channel](docs/screenshots/memories.png)
 
@@ -321,10 +333,11 @@ each.
   the stack is live. The page shows only those marks, whatever a file holds: anything else (a script, a
   picture, a link) is taken out, and its text stays.
 * **Project:** New, Save, Load, Import and Export at the top right. A project is one JSON file in
-  `Documents\Lumenet`. It holds the memories (looks and sequences), the stack, the notes under the faders
-  and of the Notes view, the stage plan and what the independent keys are bound to, not the fader
-  positions, so loading a project never switches a light on by itself. New empties the desk; it asks first.
-  A project keeps 32 channel keys and 32 memory keys of the independents, however many the page shows. An
+  `Documents\Lumenet`. It holds the memories (looks and sequences), the effects, the stack, the notes under
+  the faders and of the Notes view, the stage plan and what the independent keys are bound to, not the fader
+  positions or what runs, so loading a project never switches a light on by itself. New empties the desk; it asks first.
+  A project keeps 32 channel keys, 32 memory keys and 32 effect keys of the independents, however many the
+  page shows. A project with effects is a file of a newer version, which an older Lumenet does not open. An
   older project keeps the keys it has (10 of each, or 16 channel keys from before there were memory keys);
   the others are where they are on a new desk. The layout, the colors of the keys and the shortcuts belong
   to each device, not to the project (see [Settings](#settings)); a project file of an earlier version that
@@ -339,7 +352,7 @@ each.
 * **Examples:** the Load window lists them under the projects. One opens as a project of its name, without a
   file: the example itself stays as it is, and Save asks for a name. Each has notes on what it shows and how
   to use it (the Notes view), and none brings settings or shortcuts. The first four show one thing each, the
-  last two all of it together:
+  next two all of it together, and the seventh the effects:
   * **1 Memories and the stack:** eight lamps of a small theatre, six looks in memories and a stack of nine
     cues, one of which goes on by itself.
   * **2 Sequences:** a row of six lamps, two washes and a blinder: a chase, a bounce, a random sparkle at
@@ -359,6 +372,10 @@ each.
   * **6 Concert:** two moving heads, front and back pars, an LED bar, blinders, a hazer and the house light,
     in five groups: looks and positions in memories, sequences of lights and of memories, and a stack that
     mixes memories, groups, a light and a channel.
+  * **7 Effects:** four moving heads, eight RGBW pars and two LED bars of eight cells, with ten effects: a
+    circle and a fan of the heads, a chase and a pulse of the pars, a rainbow and red and blue, and bars, a
+    ripple, sparkle and plasma over the cells of the bars. Memories point the heads and light the pars, and a
+    stack plays the effects with Add and a release.
 
   They are the files in `examples/`; the desk program takes them along when it is built, and the setting
   `Projects:Examples` names another folder for them.
@@ -454,13 +471,27 @@ same levels on every kind of output, and so does a box: its own master stays at 
 * The top left says how many outputs play: "Outputs connected: 2", or "Outputs connected: 2 of 4" once the
   project lists boxes or has outputs besides them. A box counts while it answers, an Art-Net node or a USB
   interface while it answers, sACN and an Art-Net broadcast while they go out. Its light is green while they
-  play, amber while one of the project's does not. The pointer on it says what each plays. A click opens the
-  **Outputs window**, with a section for each kind, one under the other.
+  play, amber while one of the project's does not. The pointer on it says what each plays. The outputs
+  themselves are in **Settings**, in the **Outputs** panel after the others; the shortcut of Outputs opens
+  Settings there.
 
-![The Outputs window with the simulated devices of sim.cmd: a box, an Art-Net node found by Find nodes, sACN to a receiver and a USB interface at SIM1, each playing U1](docs/screenshots/outputs.png)
+![The Outputs panel of Settings with the simulated devices of sim.cmd: two boxes, an Art-Net node found by the search, sACN to a receiver and a USB interface at SIM1](docs/screenshots/outputs.png)
 
-* Over the sections the window says when a universe of the project reaches no cable (no output that answers
-  or sends plays it), when a universe is on more than one output, and when an output would reach a dmxbox.
+* **The table** has a line for every output of a box and every port of the other outputs: the output (its
+  name, and under it its address), its **kind** (dmxbox, Art-Net, sACN, USB DMX), its **state** (with what it
+  said, or why it does not answer), what it **plays** (U1 to the project's last universe, or Off, which sends
+  nothing) and where that goes **on the cable**: an output of a box, the Port-Address of an Art-Net port, the
+  sACN universe of a port, the DMX socket of a USB interface. ✕ takes a port out, or an output with one port;
+  **+ Port** gives an Art-Net or sACN output another port.
+* **Found on the network (Art-Net poll):** the Art-Net nodes that answered the search, which starts when
+  Settings opens; **Search again** asks once more. **Add** puts a node into the table with a port for each of
+  its own.
+* **Add an output:** an Art-Net node by its address, an Art-Net broadcast, sACN by multicast or to the address
+  of a receiver, a USB DMX interface at a free serial port, or a dmxbox by its address; with how many ports
+  it has (a box: how many outputs). The sentence under it says what the kind asks for.
+* Under them, marked ⚠: a universe of the project that reaches no cable (and which of the outputs that
+  would play it do not answer), a universe that goes out more than once, as a splitter would give it, and an
+  Art-Net node that is a dmxbox.
 * The outputs are part of the project and their changes go into Undo; New keeps them, like the universes and
   the boxes, since they belong to the rig. While the stack is live they cannot be changed. Nothing goes out on
   the network until an output is added here.
@@ -472,26 +503,25 @@ the number n on its switch, and the desk finds it by itself on the PC's network 
 * **Automatic:** while the project lists no boxes, every box that answers plays by itself: the box with the
   Pico first, then the others in the order of the numbers on their switches, each output the next universe
   (U1, U2 and on). Outputs beyond the project's universes play none.
-* **The project's list:** the first change in the section (another universe on an output, a box added or
-  taken off) makes the boxes that answer the project's list, with what they play then and the change on top.
-  From then on the project keeps which box plays which universe, also on another PC. Each output has a list:
-  U1 to the project's last universe, or Off.
-* **Add a box** by its address (10.1.2.1) and its number of outputs, also before it is there: it shows as not
-  connected until it answers. A box that answers but is not on the list is **new**: it plays nothing (its
-  outputs send zeros) until **Add** puts it on the list. ✕ takes a box off the list. **Auto** empties the
-  list: the boxes play by themselves again.
+* **The project's list:** the first change of a box (another universe on an output, a box added or taken
+  off) makes the boxes that answer the project's list, with what they play then and the change on top. From
+  then on the project keeps which box plays which universe, also on another PC.
+* A box can be added by its address (10.1.2.1) and its number of outputs, also before it is there: it shows
+  as not answering until it answers. A box that answers but is not on the list is **new**: it plays nothing
+  (its outputs send zeros) until **Add** in its line puts it on the list. ✕ takes a box off the list.
+  **Auto**, at the top right of the panel, empties the list: the boxes play by themselves again.
 
 **Art-Net.** Art-Net 4 to a node at its address, on UDP port 6454.
 
-* **Find nodes** asks every node on the networks of this PC to answer, and lists those that did, with their
-  ports; **Add** puts one on the list with a port for each of its own. A dmxbox answers too, but cannot be
-  added: it plays in the dmxbox section. **Add a node** takes a node by its address, also one in another
-  network that a router reaches.
+* The search asks every node on the networks of this PC to answer. A dmxbox answers too, but cannot be
+  added: it plays as a dmxbox already, and Art-Net as well would drive it twice. A node in another network,
+  which the search does not reach but a router does, is added by its address.
 * **Ports:** each plays a universe of the project (or Off, which sends nothing) at a Port-Address: the Net
   (0 to 127), Sub-Net (0 to 15) and Universe (0 to 15) set on the node, which most nodes show as 0:0:0 for
-  their first port. **+ Port** adds one, ✕ beside a port takes it out.
-* **+ Broadcast** sends to every node of a network instead, for older gear; its list chooses the network
-  (Automatic is the one that leads to the router). The networks of the boxes' cables are never in it.
+  their first port.
+* **A broadcast** sends to every node of a network instead, for older gear; the list under its name chooses
+  the network (Automatic is the one that leads to the router). The networks of the boxes' cables are never in
+  it.
 * **States:** a node is asked every 2 seconds whether it is there. **Connected** shows its name and
   firmware, and says when no port of the node listens to a Port-Address it gets. **Not answering**: no answer
   came; the frames go out anyway (a firewall on the PC may hold the answers back). A broadcast says
@@ -500,11 +530,12 @@ the number n on its switch, and the desk finds it by itself on the PC's network 
 
 **sACN.** Streaming ACN (E1.31) on UDP port 5568, from the source "Lumenet".
 
-* **+ Multicast** sends each universe to its own multicast address (239.255.0.1 for sACN universe 1), which
-  every receiver in the network can take; its list chooses the network. **Add** with an address sends to one
-  receiver instead.
+* **Multicast** sends each universe to its own multicast address (239.255.0.1 for sACN universe 1), which
+  every receiver in the network can take; the list under its name chooses the network. sACN to a receiver
+  goes to its address only.
 * **Ports:** each plays a universe of the project as an sACN universe, 1 to 63999. **Priority**, 0 to 200
-  (100 unless changed): of two sources of one universe, a receiver takes the one with the higher priority.
+  (100 unless changed), on the first line of the output: of two sources of one universe, a receiver takes the
+  one with the higher priority.
 * A receiver cannot answer, so sACN says **Sending** while it goes out. A universe that stops (its port set to
   Off, its output taken out, the desk program ending) is ended with the packets that say so, and its
   receivers let go of it at once. The desk is the same source every time it runs: its CID is kept in
@@ -513,8 +544,9 @@ the number n on its switch, and the desk finds it by itself on the PC's network 
 **USB interfaces.** An Enttec DMX USB Pro, or an interface that speaks its protocol (DMXking ultraDMX Micro
 and others), at a serial port of this PC: each plays one universe, or Off, which keeps its cable dark.
 
-* **Add an interface at** lists the serial ports of the PC that no interface has; the list follows what is
-  plugged in while the window is open. A simulated interface of `sim.cmd` is at SIM1 (SIM2 and on).
+* **Add an output** with **USB DMX interface** lists the serial ports of the PC that no interface has; the
+  list follows what is plugged in while Settings is open. A simulated interface of `sim.cmd` is at SIM1
+  (SIM2 and on).
 * **Connected** shows its serial number and firmware. An interface pulled out shows **Not answering**, and
   plays again on its own once it is plugged back in. A port that another program holds, or a device that does
   not answer as a DMX USB Pro does, says so.
@@ -614,9 +646,10 @@ back to zero. A memory that holds a sequence starts running, because its fader g
   faders stay where they are. While the stack is live, the link to the Stack view in the top bar carries a
   red **Live** tag, in every view.
 * **While the stack is live, nothing that is stored can be changed:** not the steps of the stack, not a
-  memory (Save mem, Edit mem, Rec seq, Copy and Del are locked), not a sequence, not a note, not the channels
-  of the independent keys, and New and Load are locked too. The faders, the independent keys themselves,
-  Clear, Black out, the master and saving the project work as always.
+  memory (Save mem, Edit mem, Rec seq, Copy and Del are locked), not a sequence, not an effect, not a note,
+  not the channels of the independent keys, and New and Load are locked too. The faders, the independent
+  keys themselves, the playbacks of the effects (their keys, faders and live values), Clear, Black out, the
+  master and saving the project work as always.
 * While the stack is not live it does not run: Play, Pause, Next and Prev are dark. That is the time to
   change the steps.
 * **Play** goes to the next step, or goes on after Pause. **Pause** holds a fade or a wait where it is.
@@ -644,6 +677,11 @@ back to zero. A memory that holds a sequence starts running, because its fader g
   the special light is a sequence. A release of a step that is not on does nothing, and when the step it
   names is taken out of the stack, it names none. Where two steps that are on use the same fader, the later
   one's value counts; when it goes, the earlier one's counts again.
+* **Effect** is a kind of step of the stack too (not of a sequence): its number is an effect, chosen from
+  the 64 (`3: Chase`). Going to it brings the effect's fader up to the step's value in its up time, which
+  starts the effect; leaving it brings the fader back to zero in its down time, which stops the effect. Add
+  and a release work on it as on any step. The stack uses the step's times, not the effect's own fade times,
+  and moves the effect's real fader, so the Effects view and the row on Main show it.
 * **Prev** sets up the steps that are on as if the stack had come to that step from the top: from the last
   step before it without Add, through the steps that add. Round from the last step, the first one starts
   afresh, with nothing on under it.
@@ -657,24 +695,173 @@ back to zero. A memory that holds a sequence starts running, because its fader g
   (the next channel, memory, fixture or group, with the same times), numbered to fit there. After 2.0, with
   3.0 behind it, it becomes 2.1; if 2.1 is there already, that one gives way to 2.2.
 
+## Effects
+
+An effect is a shape the desk works out anew all the time, on lights of the stage plan, instead of steps
+that are stored: the heads go round in a circle, a sine runs through a row of lights, the lights go through a
+rainbow, bars move over the cells of LED bars. It works on the lights of a group or on lights chosen on the
+plan; a pixel effect works on every cell of its lights, by where the cell is on the stage. A project has up to
+64 effects. The desk program plays them, so every output, every device and the Stage view get the same.
+
+![The Effects view: the effects of the example 7 Effects, four of them running, and effect 1, a circle of the heads, in the editor with its preview](docs/screenshots/effects.png)
+
+### The Effects view
+
+* **The row of effects** at the top: a fader for each effect, its key under it and its name under the key,
+  as many as the window has room for, with page keys at the right (1-16, 17-32 and on).
+  * **The fader** says how much of the effect there is: how big a movement, how deep an intensity, how much
+    of a color (for a movement around a center of its own, also how far the heads have gone there). Raised
+    from zero, it starts the effect at once; down at zero, the effect stops.
+  * **The key** moves the fader: up to full in the effect's fade-in time, which starts it, and pressed again
+    down to zero in its fade-out time, which stops it. Pressed while the fader is on its way, it turns back
+    from where it is. It is faint where there is no effect, half lit for an effect that is out, fully lit
+    while it runs, and blinks while it moves the fader.
+  * **The name** under a key chooses the effect for the editor; the chosen one is framed. A number without an
+    effect shows a dash.
+* **To make an effect,** press the key (or the dash) of a number without one: the view offers Movement,
+  Intensity, Color and Pixel, and the effect is made with the first shape of its kind, on every light of the
+  plan that can do it, at a speed that suits it. (On Main, the key of a number without an effect only says
+  so.)
+* **Live** (over the editor): the speed, size and spread of this run, on lying faders. They change the run
+  only, not the effect, and work also while the stack is live; nothing of it is saved or undone. **↺**
+  takes the effect's own values again, **Keep** stores these in the effect. The speed fader goes in
+  octaves: twice as fast is always the same way further. While Rate is lit, a line says how fast the effect
+  really runs.
+* **The editor** changes the effect itself: its name, kind and shape; its lights (**These**: a list of the
+  lights of the plan that can do what it does, with All and None; or **A group**); its speed, size, spread,
+  order, blocks, wings, direction and fade times; and what its shape needs besides: how long a pulse is on,
+  how wide bars are, an angle, a center, a point, colors. Every change is stored at once, and is a step of
+  Undo. An effect still called after its shape takes the name of a shape chosen next. **Copy** puts a copy
+  under the next free number and shows it; **Del** takes the effect out (Undo brings it back). While the
+  stack is live the editor is locked.
+* **The preview** (at the right) is one cycle of the effect as the desk program plays it: a movement as the
+  path of each head over its pan (across) and tilt (down) with a dot where it is now; an intensity as a bar
+  for each light; a color as a swatch for each light; a pattern as the cells of its lights where they are on
+  the plan. While the effect runs, the preview goes with it, at the live speed, size and spread. For a
+  movement around a center of its own a cross shows the center, and a press or a drag on the preview puts it
+  there (not while the stack is live). It never flashes more than 3 times a second: a faster effect is shown
+  slower, and the line under it says so. With reduced motion (a setting of the device) it stands still.
+
+### Kinds and shapes
+
+* **Movement** (heads, lights with a pan or a tilt): circle, figure 8, pan swing, tilt swing, line (at an
+  angle: 0 pans only, 90 tilts only) and random. **Size** is how big, as a share of each head's own range
+  (10 % of a pan of 540° is 54°). It moves around where the head points, or with **Center: its own** around
+  a pan and a tilt of its own, in per cent of the range: a new movement goes around the middle (50 and 50),
+  and a press or a drag on its preview moves the center. In 16 bits where the head's kind from the fixture
+  library has fine channels.
+* **Intensity** (every light that gives light): sine, ramp up, ramp down, pulse (on for a share of each
+  cycle) and flicker (a new random level every cycle). **Size** is how deep the wave goes: 100 from dark to
+  full, 20 from 80 % to full.
+* **Color** (lights with color channels, or with a color wheel): rainbow (round the color circle), chase
+  (from one color of its list to the next at once) and fade (from one to the next, gently). **Size** is how
+  deep the colors are: 100 full colors, 0 white. Without colors of its own a chase or a fade goes between
+  red and blue.
+* **Pixel** (the cells of LED bars and of any light, by where they are on the plan): gradient, ripple (rings
+  from the middle of its lights, or **From: a point** of its own), plasma, rainbow, bars and sparkle.
+  **Size** is how big the pattern is, as a share of the lights it covers; for sparkle, how many cells
+  flash. An **angle** says which way a gradient, bars and a rainbow run: 0 to the right, 90 to the front.
+  The first color is the pattern's, the second what lies under it: bars of the first color on the second,
+  or on black with one color only.
+* A device such as a hazer takes no part in effects.
+
+### Speed, spread and order
+
+* **Speed** in BPM, cycles a minute: 0.5 to 600 (60 is one cycle a second).
+* **Spread:** 0 % all lights together, 100 % spread evenly over one cycle: a chase.
+* **Order** of the lights: by address, from the left of the stage, from the middle outwards (lights as far
+  out go together), or at random (the same order every time; **Choose anew** picks another, and other random
+  shapes).
+* **Blocks:** lights next to each other in the order that move as one; 2 makes pairs.
+* **Wings:** the lights split into parts, every second one the other way round; 2 runs from both ends to the
+  middle, or out from it.
+* **Direction:** forward, or back: the other way through the lights, the other way round a circle.
+* **Fade in** and **Fade out:** the seconds the key takes to move the fader from zero to full and back. A
+  movement grows from where the heads point, and shrinks back to it.
+* **Rate** (Main, General): while it is lit, every effect runs at its speed times the tempo over 120 BPM. At
+  120 BPM nothing changes; an effect of 120 BPM then makes one cycle per beat, one of 60 BPM one every two
+  beats. An effect goes on from where it is when the tempo changes; the fade times stay.
+
+A pixel effect has no spread, order, blocks or wings: its pattern lies on the plan.
+
+### How an effect mixes with the rest
+
+The desk works out what goes out in this order, many times a second:
+
+1. The faders, the memories, the sequences and the stack give their light, as always: the highest wins.
+2. The effects work on that light, light by light (cell by cell for a pattern):
+   * **An intensity effect: the highest wins.** A light gives what the rest gives it or what the effect gives
+     it, whichever is higher, like one more fader that moves by itself. Over a look at 60 % a sine at full
+     goes from 60 % up to full and back; on a dark light from dark to full. A light's intensity is its
+     dimmer, or for a light without one its colors together, which keep their mix; a light that has no color
+     yet comes up white. The closed shutter of a head opens while the effect lights it. Of two intensity
+     effects on one light, the higher wins.
+   * **A color effect takes over the color.** Its fader goes from the color the rest gives (at zero) to the
+     effect's color (at full), mixing the two in between. A light that nothing else lights, the effect
+     lights itself, as bright as its fader: a rainbow alone lights its pars, at full with its fader at full.
+     A light the rest lights keeps its brightness and changes only its color (one that is nearly dark comes
+     up to the fader smoothly, without a jump). On a light an intensity effect plays, it gives only the
+     color: the intensity effect gives the brightness, so a chase under a rainbow runs in the rainbow's
+     colors. The closed shutter of a head opens where the effect gives the light. The colors are mixed as on
+     the Fixtures view: a white channel takes the white part, an amber one the warm
+     part, ultraviolet none, so UV goes out as the effect takes over; a color wheel turns to its nearest slot.
+     Of two color effects on one light, the one started last takes it.
+   * **A pixel effect** gives every cell a color and a brightness: the brightness like an intensity effect,
+     so it lights dark cells itself, and the color like a color effect, but only as much as the pattern is
+     bright there. Where the pattern is black, a cell stays as the rest has it: red bars over a blue look are
+     red bars on blue.
+3. A solo, each light's limit, the master and Black out act on the result, on light only. With SOLO UP held
+   only those keys' lights shine, so every effect elsewhere is dark; a channel held with SOLO DOWN is dark,
+   effects included.
+4. Pan, tilt and the wheels come from whatever took them last (see the Fixtures view above), and **a movement
+   effect moves a head from there**, its fader scaling the size. Of two movements on one head, the one
+   started last takes each axis it uses: a tilt swing started after a circle takes the tilt, the circle
+   keeps the pan.
+
+Black out, the master and a solo never stop a head or make it jump, and an effect runs on under them, so it
+comes back in step. The effect keys are not solo keys: a solo leaves them as they are.
+
+### Effects on the Stage view
+
+![The Stage view with effects: the pars in a rainbow over the blue of memory 2, red bars on both LED bars, the heads lit by memory 1 going round in a circle, with their beams](docs/screenshots/effects-stage.png)
+
+The Stage view shows what the effects give, as for any light, about 30 times a second while an effect runs.
+A head with pan and tilt shows a short beam: turned by its pan (with the pan in the middle it points to the
+audience, and the 540° of a usual head turn it round one and a half times) and longer the more it tilts, in
+the color of its light, dashed while the light is dark. It is a sketch, not the real beam (the plan does not
+know how a head hangs): the preview of the Effects view shows a movement exactly. A change of a light in a
+running effect shows at once and then stays at least a sixth of a second, so a light never flashes more than
+3 times a second there; a light whose effect flashes faster gets the mark ⚡ with how many times a second it
+really does, and flashes on the screen at most twice a second, as a strobe does.
+
+### From another program
+
+The playback of every effect can also be worked from outside the page, for a MIDI controller later: start
+and stop, the fader, the speed, the size and the spread, as "effect 3 speed = 120 BPM". How: see
+[DEV.md](DEV.md#effects-from-outside).
+
 ## Screens, phones and tablets
 
 ### Window width
 
 A window at least 1850 pixels wide shows 32 faders in a row, so 64 channels and 32 memories
 at a time. A narrower window shows 16 in a row (32 channels and 16 memories) and twice as many page keys.
-Settings can fix another number, and the rows, for Main. The page keys stand in a column at the right; when
-they are too many for the height, they get flatter and then go on in another column.
+Settings can fix another number, and the rows, for Main. The page keys stand in one column at the right, as big
+as every key; when they are too many for the height, the column scrolls. The rows of faders fit the
+window and never scroll sideways (on a low window, where the independents take two columns, the faders get
+a little narrower), unless a channel size chosen in Settings makes them wider than it.
 
 ### Small screens
 
-In a window narrower than 900 pixels or lower than 600 pixels (a phone, a tablet held
-upright) the sections stand under each other and the page scrolls. The page keys lie under the section titles,
-in as many lines as they need. Narrower than 720 pixels, a row of 16 faders is shown as two lines of 8 and the
-top bar as three lines (narrower than 430 pixels, its eight links stand in two rows of four). The numbering
-does not change: a page is still 32 channels or 16 memories. Narrower
-than 1300 pixels the top bar takes two lines, the links to the views under the rest. The limits are in
-`frontend/src/app/desk/desk-types.ts`, and only there.
+In a window narrower than 1200 pixels or lower than 600 pixels (a phone, a tablet) the sections stand under
+each other and the page scrolls. The page keys lie under the section titles, in as many lines as they need;
+on the Memories and Sequences views a line parts them from the memory keys under them. The stack keeps its
+five keys in a column beside its wheel, also on a phone, and the independents and Record lie down, their
+keys at the left under the title (Edit first). Narrower than 800 pixels (a phone), a row of 16 faders is
+shown as two lines of 8, and the top bar takes three lines (up to 470 pixels, its nine links stand in two
+rows of five and four). The numbering does not change: a page is still 32 channels or 16 memories. Narrower than 1366 pixels the top bar takes two lines, the links to the views under the rest.
+The limits are in `frontend/src/app/desk/desk-types.ts`, and only there; the two rows of links are the top
+bar's own. They count the page's pixels: at a zoom of 120 % (Settings) a window of 1440 pixels has 1200.
 
 <img src="docs/screenshots/main-phone.png" alt="The Main view on a phone: the sections under each other" width="260">
 
@@ -725,10 +912,11 @@ LAN to the desk program.
 
 ![The Settings view](docs/screenshots/settings.png)
 
-Settings has four panels side by side, as many as the window has room for, each as high as the window
-lets it be and scrolling where it holds more: **Main view** (with the universes, the lettering, the
-autosave and the network under it), **Views in the top bar**, **Colors of the keys** (one under the other)
-and **Keyboard** (see [Keyboard](#keyboard)).
+Settings has five panels side by side, as many as the window has room for, each as high as the window
+lets it be and scrolling where it holds more: **Main view** (with the universes, the zoom, the autosave and
+the network under it), **Views in the top bar**, **Colors of the keys** (one under the other),
+**Keyboard** (see [Keyboard](#keyboard)) and the **Outputs** of the project (see
+[The outputs](#the-outputs)), which is two columns wide for its table.
 
 * **Channels on a page** (Main): Auto (a row of 32 or 16 by the window, as above), or 8, 16, 32, 64 or 128.
 * **Rows of channel faders** and **rows of memory faders** (Main): 1 or 2 of each, at first 2 and 1. A
@@ -739,15 +927,17 @@ and **Keyboard** (see [Keyboard](#keyboard)).
   each on their own, with a big scrollbar. The Memories and Sequences views keep the rows of the window.
 * **Steps the stack wheel shows** (Main): 1, 3, 5, 7 or 9; at first 7. (A browser that kept its settings
   before 7 was the first keeps the 3 it had; choose 7 here once.)
-* **Keys of the independents:** how many green keys and how many red keys the column shows, 0 to 32 of each;
-  with 0 of both, Main has no independents.
+* **Row of effect faders** (Main): none (at first), or 1 row under the memories, as high as a row of
+  memories (see [Effects](#effects)).
+* **Keys of the independents:** how many green, red and violet keys the column shows, 0 to 32 of each (at
+  first 10, 10 and none); with 0 of all, Main has no independents.
 * **Universes of the project:** 1 to 8, of 512 channels each (see [Universes and outputs](#universes-and-outputs)).
   The project keeps it, and the list shows the project's number until the desk program has taken a new one.
   Locked while the stack is live.
-* **Lettering:** the minus and plus keys make all lettering of the page smaller or bigger, from ×0.7 to ×1.5
-  in steps of 0.1, numbers on keys too. The keys keep their size, so words on them grow by 15 % at most; a
-  word too long for its key goes on in a second line, and so does a page range, after its dash (flat page
-  keys then go on in another column sooner, so that the two lines fit).
+* **Zoom:** the minus and plus keys make the whole page smaller or bigger, from 50 % to 200 % in steps of
+  10 %, as the browser's own zoom does, on this device only; Reset goes back to 100 %. A zoomed page has
+  fewer of its pixels in the window, and lays itself out for that: at 120 % a window of 1440 pixels is
+  laid out as one of 1200 (see [Small screens](#small-screens)).
 * **Autosave:** On or Off, and how often: every 5 seconds (at first), 30 seconds, 1 minute or 5 minutes. Off,
   the desk program keeps nothing and takes away the file it kept. The desk program keeps the choice in
   `autosave-options.json` beside the autosave file. On the PC only.
@@ -756,17 +946,18 @@ and **Keyboard** (see [Keyboard](#keyboard)).
   ticked leaves the top bar (its keyboard shortcut still opens it). Settings is always ticked, so that the
   others can come back. ▲ and ▼ move a view one place to the left or right in the top bar (the keyboard focus
   stays on the arrow), and ↺ beside the title brings every view back in the usual order. A desk without Main
-  in its top bar opens on the first view that is. A view that came later than the order kept (Notes) stands
-  after the view it follows in the usual order.
-* **Colors of the keys:** a color for each kind (channels, memories, and the color a memory with a
-  sequence runs into), which is that of all its keys, page keys and faders, and one for each other key, group
+  in its top bar opens on the first view that is. A view that came later than the order kept (Notes,
+  Effects) stands after the view it follows in the usual order.
+* **Colors of the keys:** a color for each kind (channels, memories, the color a memory with a
+  sequence runs into, and effects), which is that of all its keys, page keys and faders, and one for each other key, group
   by group: Black out; Clear, Solo up, Solo down, Rate (with its fader) and Tempo; Stack, Prev, Play, Pause, Next and Add step (Play also colors the
   step that is on, Next the step Play goes to); the keys of Record, of the top bar, Edit of the independents,
-  the keys of the Sequences view, of the Stage view and of the Notes view. A press on a color opens the colors the keys have at
-  first (green, red, yellow, amber, white and blue, the one it has ringed) to take one of them, and Other for
+  the keys of the Sequences view, of the Effects view, of the Stage view and of the Notes view. A press on a color opens the colors the keys have at
+  first (green, red, yellow, amber, white, blue and violet, the one it has ringed) to take one of them, and Other for
   any color; while that one is picked, the desk shows it at once. A press anywhere else, or Esc, closes them.
   Each has a key back to its usual color, and ↺ beside the title takes all of them back. At first Clear, Solo
-  and Pause are white, Black out blue, Play green, Stack red and the others amber.
+  and Pause are white, Black out blue, Play green, Stack and Del of the Effects view red, the effects violet
+  and the others amber.
 
 The keys that take something out, ✕ at the end of a step in the Sequences and Stack views and of a shortcut
 in the Keyboard panel, are red.
@@ -775,8 +966,9 @@ in the Keyboard panel, are red.
 
 The Keyboard panel of Settings gives a shortcut to any key of the desk: the view links, New, Save, Load,
 Import, Export, LAN, the boxes, Clear, Solo up, Solo down, Black out, Rate, Tempo, the keys of the stack and of
-Record, those of the Sequences view and of the Stage view, Edit of the Notes view, Edit and every key of the
-independents, every page key and U key, the key under every channel and memory fader, Undo and Redo. It lists
+Record, those of the Sequences view, of the Effects view and of the Stage view, Edit of the Notes view, Edit
+and every key of the independents, every page key and U key, the key under every channel, memory and effect
+fader, Undo and Redo. It lists
 the channel keys and U keys of the project's universes; the shortcuts of the others are kept for a project
 that has them. The shortcuts belong to this device, as the settings do. Undo and Redo have Ctrl + Z and
 Ctrl + Y until they get others (or none: then they stay without). (Until 2026-11-24 the shortcuts had a view of
@@ -785,8 +977,9 @@ their own, Keyboard, with tabs; its address now opens Settings.)
 ![The Keyboard panel of Settings: the keys of the project and LAN open, Undo and Redo with their shortcuts](docs/screenshots/keyboard.png)
 
 * The kinds of keys stand one under the other (Views, Project and LAN, Master, General, Stack, Record,
-  Sequences view, Stage view, Notes view, Independents, Channel pages, Memory pages, Channel keys, Memory
-  keys), each with the number of its keys and, in brackets, how many of them have a shortcut, in green:
+  Sequences view, Effects view, Stage view, Notes view, Independents, Channel pages, Memory pages, Effect
+  pages, Channel keys, Memory keys, Effect keys), each with the number of its keys and, in brackets, how many
+  of them have a shortcut, in green:
   Stack 6 (4). A press on a kind opens its keys under it and closes any other: one is open at a time, and
   none at first; pressed again, it closes. The arrow keys up and down, Home and End go from kind to kind.
   The search field searches all of them: then each kind also shows how many of its keys it finds, in yellow,
@@ -811,5 +1004,6 @@ their own, Keyboard, with tabs; its address now opens Settings.)
 * A shortcut is the physical key, whatever letter the keyboard's language puts on it. It presses its key on
   the page as a click would, and a locked key stays locked; when the key is not on the view that is shown (a
   page of faders that is not shown, another view), it does what that key does, except the keys of the
-  Sequences view and of the Stage view and Edit of the independents, which work only where they are. Shortcuts rest while a note
+  Sequences view and of the Stage view, Copy and Del of the Effects view and Edit of the independents, which
+  work only where they are (Keep and ↺ work on the effect the Effects view shows). Shortcuts rest while a note
   or another field is typed into and while a window such as Load is open.

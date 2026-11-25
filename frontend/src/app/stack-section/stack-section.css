@@ -23,7 +23,7 @@ h2 {
   justify-self: start;
   margin: 0;
   color: var(--legend-dim);
-  font-size: calc(12px * var(--font-scale));
+  font-size: 12px;
   font-stretch: 75%;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -130,7 +130,7 @@ h2 {
 
 .note {
   overflow: hidden;
-  font-size: calc(14px * var(--font-scale));
+  font-size: 14px;
   font-weight: 400;
   text-overflow: ellipsis;
 }
@@ -157,8 +157,9 @@ h2 {
   color: var(--key-next);
 }
 
-/* ---- mobile: one line. The title over it, then the five keys in the columns of the faders,
-   and the wheel over the columns after them. */
+/* ---- mobile, a phone too: in the columns of the faders. The title over all of them; the five keys
+   in a column at the left, in the first column, as on a big screen; the wheel beside them over the
+   others. */
 :host-context(.mobile) {
   grid-template-columns: repeat(var(--fit-line), var(--strip));
   grid-template-rows: none;
@@ -169,7 +170,8 @@ h2 {
 }
 
 :host-context(.mobile) .keys {
-  display: contents; /* the keys take their places in the section's own columns */
+  grid-template-rows: repeat(5, var(--key-h));
+  margin-right: 0;
 }
 
 :host-context(.mobile) .keys [lmLamp] {
@@ -177,6 +179,6 @@ h2 {
 }
 
 :host-context(.mobile) .wheel {
-  grid-column: 6 / -1;
+  grid-column: 2 / -1;
   height: calc(var(--wheel-size, 7) * var(--place-h) + 2px);
 }

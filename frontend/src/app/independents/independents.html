@@ -5,7 +5,7 @@
     lmLamp
     type="button"
     tone="ind-edit"
-    aria-label="Edit the channels and memories of the independent keys"
+    aria-label="Edit the channels, memories and effects of the independent keys"
     data-action="ind.edit"
     [level]="editing() ? 3 : 1"
     [blink]="editing()"
@@ -92,6 +92,47 @@
         (keyup)="holdByKey('memory', item.number, $event, false)"
       >
         {{ item.memory }}
+      </button>
+    }
+  }
+
+  <!-- the violet keys for effects: each starts and stops its effect -->
+  @for (item of effectKeys(); track item.number) {
+    @if (editing()) {
+      <input
+        class="field effect"
+        type="text"
+        inputmode="numeric"
+        maxlength="2"
+        autocomplete="off"
+        [class.first-effect]="$first"
+        [value]="item.effect"
+        [attr.aria-label]="'Effect of independent key ' + item.name"
+        (change)="onEffectTyped(item.number, $event)"
+        (keydown.enter)="leaveField($event)"
+      />
+    } @else {
+      <button
+        lmLamp
+        type="button"
+        class="number"
+        tone="effect"
+        [class.first-effect]="$first"
+        [level]="item.lamp"
+        [blink]="item.fading"
+        [attr.aria-pressed]="item.on"
+        [attr.aria-label]="
+          'Independent ' +
+          item.name +
+          ', effect ' +
+          item.effect +
+          (item.called ? ', ' + item.called : '')
+        "
+        [attr.data-action]="'ind.effect.' + item.number"
+        [title]="item.called || null"
+        (click)="store.toggleEffectIndependent(item.number)"
+      >
+        {{ item.effect }}
       </button>
     }
   }

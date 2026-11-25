@@ -1,0 +1,14 @@
+<canvas
+  #canvas
+  role="img"
+  [class.movable]="movable()"
+  [attr.aria-label]="description()"
+  [attr.title]="movable() ? 'A press or a drag here moves the center the heads go around' : null"
+  (pointerdown)="onDown($event)"
+  (pointermove)="onMove($event)"
+  (pointerup)="onUp($event)"
+  (pointercancel)="onUp($event)"
+></canvas>
+@if (note()) {
+  <p class="note">{{ note() }}</p>
+}

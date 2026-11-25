@@ -1,7 +1,8 @@
 import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { DeskStore } from '../desk/desk-store';
 import { StackStep, TimedStep } from '../desk/desk-types';
-import { StepChoices, channelChoices, lightChoices, stepChoices } from '../desk/step-choices';
+import { MAX_EFFECTS } from '../desk/effects';
+import { StepChoices, channelChoices, effectChoices, lightChoices, stepChoices } from '../desk/step-choices';
 import { LampButton } from '../lamp-button/lamp-button';
 import { StackCards } from '../stack-cards/stack-cards';
 import { StackKeys } from '../stack-keys/stack-keys';
@@ -62,6 +63,7 @@ export class StackView {
     channel: channelChoices(this.store.channelNames()),
     memory: stepChoices(this.store.memoryNotes(), (memory) => this.store.memoryStored()[memory - 1]),
     ...lightChoices(this.store.stage()),
+    effect: effectChoices(this.store.effects(), MAX_EFFECTS),
     release: this.steps()
       .filter((step) => step.target !== 'release')
       .map((step) => ({ number: step.id, text: `${step.cue}: ${this.store.stepWithNote(step)}`, short: step.cue })),

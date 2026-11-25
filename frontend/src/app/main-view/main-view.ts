@@ -2,6 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { ChannelSection } from '../channel-section/channel-section';
 import { DeskSettings } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
+import { EffectSection } from '../effect-section/effect-section';
 import { Independents } from '../independents/independents';
 import { GeneralSection } from '../general-section/general-section';
 import { MasterSection } from '../master-section/master-section';
@@ -10,9 +11,10 @@ import { RecordSection } from '../record-section/record-section';
 import { StackSection } from '../stack-section/stack-section';
 
 /**
- * The main view: the channels, the memories, and at the right the stack across the top of three
- * columns: the master section over the record keys, the general section, and at the right edge
- * the independents (none when Settings shows no keys).
+ * The main view: the channels, the memories (and under them a row of effect faders, when Settings
+ * shows it), and at the right the stack across the top of three columns: the master section over
+ * the record keys, the general section, and at the right edge the independents (none when Settings
+ * shows no keys).
  *
  * What Settings says about the main view goes onto its element as variables, so that it holds
  * for the main view only: --line (faders side by side, for a channel size chosen in Settings;
@@ -26,8 +28,9 @@ import { StackSection } from '../stack-section/stack-section';
     '[style.--memory-share]': 'memoryShare()',
     '[style.--wheel-size]': 'wheelSize()',
     '[class.no-independents]': '!independents()',
+    '[class.with-effects]': 'effectRow()',
   },
-  imports: [ChannelSection, GeneralSection, Independents, MasterSection, MemorySection, RecordSection, StackSection],
+  imports: [ChannelSection, EffectSection, GeneralSection, Independents, MasterSection, MemorySection, RecordSection, StackSection],
   selector: 'lm-main-view',
   styleUrl: './main-view.css',
   templateUrl: './main-view.html',
@@ -45,8 +48,11 @@ export class MainView {
   protected readonly memoryShare = computed(() => `${this.settings.memoryRows()}fr`);
   protected readonly wheelSize = this.settings.wheelSize;
 
-  /** False when Settings shows no independent key of either kind: then the section is left out. */
+  /** False when Settings shows no independent key of any kind: then the section is left out. */
   protected readonly independents = computed(
-    () => this.settings.channelKeys() + this.settings.memoryKeys() > 0,
+    () => this.settings.channelKeys() + this.settings.memoryKeys() + this.settings.effectKeys() > 0,
   );
+
+  /** True when Settings shows the row of effect faders, under the memories. */
+  protected readonly effectRow = computed(() => this.settings.effectRows() > 0);
 }

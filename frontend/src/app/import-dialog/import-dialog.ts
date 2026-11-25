@@ -4,6 +4,7 @@ import { DeskStore } from '../desk/desk-store';
 import { IMPORT_LIMIT_BYTES } from '../desk/desk-types';
 import { readShowFile } from '../desk/show-file';
 import { TRANSFER_PARTS, TransferPart, missingParts, readImportFile } from '../desk/transfer';
+import { DialogDismiss } from '../desk/dialog-dismiss';
 import { LampButton } from '../lamp-button/lamp-button';
 
 /**
@@ -14,7 +15,7 @@ import { LampButton } from '../lamp-button/lamp-button';
  * window says what became of the file.
  */
 @Component({
-  imports: [LampButton],
+  imports: [DialogDismiss, LampButton],
   selector: 'lm-import-dialog',
   styleUrl: './import-dialog.css',
   templateUrl: './import-dialog.html',

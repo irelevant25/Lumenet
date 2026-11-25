@@ -16,8 +16,8 @@ export interface StepChoice {
 }
 
 /**
- * The lists for the kinds of step. `release` only in the stack: the steps a release can take
- * down, by their ids; a table without it offers no release.
+ * The lists for the kinds of step. `release` and `effect` only in the stack: the steps a release
+ * can take down, by their ids, and the effects; a table without them offers neither.
  */
 export interface StepChoices {
   readonly channel: readonly StepChoice[];
@@ -25,6 +25,15 @@ export interface StepChoices {
   readonly fixture: readonly StepChoice[];
   readonly group: readonly StepChoice[];
   readonly release?: readonly StepChoice[];
+  readonly effect?: readonly StepChoice[];
+}
+
+/** The choices for the effects: every number, "3: Circle" for one the project has, the number alone for one it has not. */
+export function effectChoices(effects: readonly { number: number; name: string }[], count: number): StepChoice[] {
+  return Array.from({ length: count }, (_, index) => {
+    const name = effects.find((effect) => effect.number === index + 1)?.name;
+    return { number: index + 1, text: name ? `${index + 1}: ${name}` : String(index + 1) };
+  });
 }
 
 /**

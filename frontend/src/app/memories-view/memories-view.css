@@ -31,7 +31,7 @@ h2 {
   flex: none;
   margin: 0;
   color: var(--legend-dim);
-  font-size: calc(12px * var(--font-scale));
+  font-size: 12px;
   font-stretch: 75%;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -42,7 +42,7 @@ h2 {
 .summary {
   margin: 0;
   overflow: hidden;
-  font-size: calc(14px * var(--font-scale));
+  font-size: 14px;
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -141,7 +141,7 @@ caption {
   top: 2px;
   left: 3px;
   color: var(--legend-dim);
-  font-size: calc(11px * var(--font-scale));
+  font-size: 11px;
   font-weight: 400;
   line-height: 1;
 }
@@ -166,7 +166,7 @@ caption {
   margin-top: 2px;
   overflow: hidden;
   color: var(--legend);
-  font-size: calc(10px * var(--font-scale));
+  font-size: 10px;
   font-stretch: 75%;
   font-weight: 400;
   line-height: 1.1;
@@ -178,20 +178,17 @@ caption {
   color: #fff;
 }
 
-/* The page keys in ONE column, from the top, as in the main view. */
+/* The page keys in ONE column, from the top, as in the main view: each as big as every key, and
+   the column scrolls when they do not fit. */
 .rail {
   display: grid;
   grid-template-columns: var(--key-w);
-  grid-auto-rows: minmax(var(--key-min-h), var(--key-h));
+  grid-auto-rows: var(--key-h);
   align-content: start;
   gap: var(--strip-gap);
   min-height: 0;
   overflow-y: auto;
   scrollbar-width: thin;
-}
-
-.rail [lmLamp] {
-  height: auto;
 }
 
 /* ---- mobile: the page keys lie under the title, the table is as long as it needs to be */
@@ -212,13 +209,16 @@ caption {
   grid-template-columns: minmax(0, 1fr);
 }
 
+/* the page keys over the memory keys, apart from them: a line between */
 :host-context(.mobile) .rail {
   order: -1;
   grid-template-columns: repeat(var(--line), var(--strip));
   grid-auto-rows: var(--key-h);
   justify-content: space-between;
   justify-items: center;
+  padding-bottom: 10px;
   overflow: visible;
+  border-bottom: 1px solid var(--edge);
 }
 
 :host-context(.mobile) .table-box {

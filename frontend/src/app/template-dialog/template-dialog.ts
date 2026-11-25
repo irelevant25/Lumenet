@@ -5,6 +5,7 @@ import { MAX_LEVEL, MAX_SEQUENCE_STEPS, MEMORY_COUNT, UNIVERSE_SIZE } from '../d
 import { hexOf } from '../desk/fixtures';
 import { TEMPLATES, TemplateInfo, TemplateName, makeSequence, readNumbers, stepsNeeded } from '../desk/sequence-templates';
 import { universeStart } from '../desk/universes';
+import { DialogDismiss } from '../desk/dialog-dismiss';
 import { LampButton } from '../lamp-button/lamp-button';
 
 /** What a template goes through: channels or memories by their numbers, or the fixtures of a group. */
@@ -19,7 +20,7 @@ type TemplateLights = 'channel' | 'memory' | 'group';
  * through the universes, they are numbers like 625.
  */
 @Component({
-  imports: [ColorPicker, LampButton],
+  imports: [ColorPicker, DialogDismiss, LampButton],
   selector: 'lm-template-dialog',
   styleUrl: './template-dialog.css',
   templateUrl: './template-dialog.html',

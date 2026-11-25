@@ -1,6 +1,7 @@
 import { Component, ElementRef, signal, viewChild } from '@angular/core';
 import { ColorPick, ColorPicker } from '../color-picker/color-picker';
 import { hexOf } from '../desk/fixtures';
+import { DialogDismiss } from '../desk/dialog-dismiss';
 import { LampButton } from '../lamp-button/lamp-button';
 
 /**
@@ -10,7 +11,7 @@ import { LampButton } from '../lamp-button/lamp-button';
  * leave the step as it was. A moving head with a color wheel turns it to the slot nearest the color.
  */
 @Component({
-  imports: [ColorPicker, LampButton],
+  imports: [ColorPicker, DialogDismiss, LampButton],
   selector: 'lm-step-color-dialog',
   styleUrl: './step-color-dialog.css',
   templateUrl: './step-color-dialog.html',

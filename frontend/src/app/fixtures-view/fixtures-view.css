@@ -28,7 +28,7 @@ h3 {
   flex: none;
   margin: 0;
   color: var(--legend-dim);
-  font-size: calc(12px * var(--font-scale));
+  font-size: 12px;
   font-stretch: 75%;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -40,7 +40,7 @@ h3 {
   flex: 1;
   margin: 0;
   color: var(--legend-dim);
-  font-size: calc(14px * var(--font-scale));
+  font-size: 14px;
   line-height: 1.3;
 }
 

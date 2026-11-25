@@ -12,6 +12,7 @@ import {
 import { LampLevel } from '../desk/lamps';
 import { storedMemoryPages } from '../desk/memory-pages';
 import { noteInOneLine } from '../desk/notes';
+import { PressedInSight } from '../desk/pressed-in-sight';
 import { SPEED_KEY_STEP, SPEED_POSITIONS, speedAt, speedPosition, speedText } from '../desk/speed';
 import { StepChoices, channelChoices, lightChoices, stepChoices } from '../desk/step-choices';
 import { Fader } from '../fader/fader';
@@ -46,7 +47,7 @@ const PLAY_MODES: readonly { mode: PlayMode; lines: readonly string[]; name: str
  * While the stack is live the view only shows: nothing that is stored can be changed then.
  */
 @Component({
-  imports: [Fader, LampButton, NoteLines, StepColorDialog, StepRow, TemplateDialog],
+  imports: [Fader, LampButton, NoteLines, PressedInSight, StepColorDialog, StepRow, TemplateDialog],
   selector: 'lm-sequences-view',
   styleUrl: './sequences-view.css',
   templateUrl: './sequences-view.html',

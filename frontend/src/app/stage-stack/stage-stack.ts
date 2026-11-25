@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { DeskStore } from '../desk/desk-store';
 import { TimedStep } from '../desk/desk-types';
+import { pageZoom } from '../desk/zoom';
 import { StackCards } from '../stack-cards/stack-cards';
 import { StackKeys } from '../stack-keys/stack-keys';
 
@@ -62,9 +63,13 @@ function followStack(box: HTMLElement): void {
   const row = box.querySelector<HTMLElement>('tr.current');
   if (!row) return;
 
-  const frame = box.getBoundingClientRect().top - box.scrollTop;
-  const top = (element: Element) => element.getBoundingClientRect().top - frame;
-  const bottom = (element: Element) => element.getBoundingClientRect().bottom - frame;
+  // places in the list's own pixels, from its top; the rectangles are in the window's (see zoom.ts)
+  const zoom = pageZoom();
+  const origin = box.getBoundingClientRect().top;
+  const top = (element: Element) =>
+    (element.getBoundingClientRect().top - origin) / zoom + box.scrollTop;
+  const bottom = (element: Element) =>
+    (element.getBoundingClientRect().bottom - origin) / zoom + box.scrollTop;
 
   // the next step counts only where it comes after this one: from the last, the list starts again
   const next = row.nextElementSibling?.classList.contains('next') ? row.nextElementSibling : row;

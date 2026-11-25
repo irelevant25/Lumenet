@@ -20,7 +20,7 @@
 h3 {
   margin: 0 0 6px;
   color: var(--legend-dim);
-  font-size: calc(12px * var(--font-scale));
+  font-size: 12px;
   font-stretch: 75%;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -32,7 +32,7 @@ h3 {
 .done {
   max-width: 70ch;
   margin: 2px 0 10px;
-  font-size: calc(13px * var(--font-scale));
+  font-size: 13px;
   line-height: 1.35;
 }
 
@@ -61,7 +61,7 @@ h3 {
 input,
 button {
   box-sizing: border-box;
-  height: calc(30px * var(--font-scale));
+  height: 30px;
   margin: 0;
   padding: 0 8px;
   border: 1px solid var(--edge);
@@ -69,7 +69,7 @@ button {
   background: var(--panel);
   color: var(--legend);
   font: inherit;
-  font-size: calc(14px * var(--font-scale));
+  font-size: 14px;
 }
 
 button {
@@ -195,7 +195,7 @@ table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0 2px;
-  font-size: calc(14px * var(--font-scale));
+  font-size: 14px;
 }
 
 th,
@@ -228,9 +228,9 @@ td.row-keys {
 }
 
 td.row-keys button {
-  height: calc(26px * var(--font-scale));
+  height: 26px;
   margin-left: 4px;
-  font-size: calc(13px * var(--font-scale));
+  font-size: 13px;
 }
 
 /* ✕, which takes the shortcut away: red */

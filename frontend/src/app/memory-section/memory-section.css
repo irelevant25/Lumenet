@@ -13,7 +13,7 @@
 h2 {
   margin: 0;
   color: var(--legend-dim);
-  font-size: calc(12px * var(--font-scale));
+  font-size: 12px;
   font-stretch: 75%;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -40,14 +40,19 @@ h2 {
 }
 
 /* One row of memory faders: 32 on a wide window, 16 on a narrower one, or as many as a row of
-   channels has with the channel size of Settings. */
+   channels has with the channel size of Settings. The strips get narrower as those of the
+   channels do (channel-section.css). */
 .row {
   display: grid;
-  grid-template-columns: repeat(var(--line), var(--strip));
+  grid-template-columns: repeat(var(--line), minmax(var(--key-w), var(--strip)));
   /* On a wide window the strips keep their width and the room between them grows. */
   justify-content: space-between;
   gap: var(--strip-gap);
   min-height: 0;
+}
+
+.row > lm-fader-strip {
+  width: auto; /* as wide as its column */
 }
 
 /* a thin line between two rows */
@@ -56,20 +61,18 @@ h2 {
   border-top: 1px solid var(--edge);
 }
 
-/* The page keys in a column, from the top. When they are too many for the height, they first
-   get flatter, and then they go on in another column beside it (key-columns.ts). */
+/* The page keys in one column, from the top, each as big as every key; when they are too many for
+   the height, the column scrolls and keeps the lit key in sight, its scrollbar hidden, as for the
+   channels (channel-section.css). */
 .rail {
   display: grid;
-  grid-auto-flow: column;
-  grid-template-columns: repeat(var(--key-columns, 1), var(--key-w));
-  grid-template-rows: repeat(var(--key-rows, 1), minmax(0, var(--key-h)));
+  grid-template-columns: var(--key-w);
+  grid-auto-rows: var(--key-h);
   align-content: start;
   gap: var(--strip-gap);
   min-height: 0;
-}
-
-.rail [lmLamp] {
-  height: auto;
+  overflow: hidden auto;
+  scrollbar-width: none;
 }
 
 /* ---- mobile: the page keys lie under the title, in the columns of the faders, and go on in

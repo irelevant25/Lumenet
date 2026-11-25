@@ -25,7 +25,7 @@
     }
   </div>
 
-  <nav class="rail" aria-label="Memory pages" [lmKeyColumns]="pages().length" lmKeyLines="2">
+  <nav class="rail" aria-label="Memory pages" [lmPressedInSight]="store.firstMemory()">
     @for (item of pages(); track item.first) {
       <button
         lmLamp

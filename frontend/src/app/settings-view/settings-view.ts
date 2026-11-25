@@ -3,14 +3,15 @@ import {
   CHANNEL_SIZES,
   ChannelSize,
   DeskSettings,
-  FONT_SCALE_MAX,
-  FONT_SCALE_MIN,
   ROW_COUNTS,
   RowCount,
   WHEEL_SIZES,
   WheelSize,
+  ZOOM_MAX,
+  ZOOM_MIN,
 } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
+import { EFFECT_INDEPENDENT_COUNT } from '../desk/effects';
 import {
   CHANNEL_INDEPENDENT_COUNT,
   MAX_UNIVERSES,
@@ -21,6 +22,7 @@ import {
 import { ALWAYS_SHOWN, DEFAULT_VIEW_ORDER, ViewName, viewNamed } from '../desk/views';
 import { KeyColorsPanel } from '../key-colors-panel/key-colors-panel';
 import { KeyboardPanel } from '../keyboard-panel/keyboard-panel';
+import { OutputsPanel } from '../outputs-panel/outputs-panel';
 
 /** How often the autosave can keep the work, in seconds: as the desk program offers it. */
 const AUTOSAVE_INTERVALS: readonly number[] = [5, 30, 60, 300];
@@ -32,18 +34,21 @@ const AUTOSAVE_INTERVALS: readonly number[] = [5, 30, 60, 300];
  *   rows of faders, and one or two rows of memory faders; rows wider than the window scroll
  *   sideways. How many steps the stack wheel shows, and how many keys of each kind the
  *   independents show (0 to 32; none of either: no independents at all). Under them the
- *   universes of the project (1 to 8; the project keeps the number), the size of all lettering,
- *   the autosave (on or off, and how often) and, while LAN is on, the address of this PC that
- *   phones use and the password; the autosave and LAN on the PC only.
+ *   universes of the project (1 to 8; the project keeps the number), the zoom of the page (50 to
+ *   200 per cent), the autosave (on or off, and how often) and, while LAN is on, the address of
+ *   this PC that phones use and the password; the autosave and LAN on the PC only.
  * - Which views have a link in the top bar, and in which order: all but Settings can be left out.
  * - The colors of the keys (key-colors-panel), one under the other in a list that scrolls.
  * - The keyboard shortcuts (keyboard-panel), the kinds of keys one under the other.
  *
- * The universes belong to the project, the autosave and LAN to the desk program; the rest is kept
- * as desk-settings.ts says.
+ * Under them, across the whole width, the outputs of the project (outputs-panel): the dmxboxes,
+ * Art-Net nodes, sACN and DMX USB interfaces, and the universe each plays.
+ *
+ * The universes and the outputs belong to the project, the autosave and LAN to the desk program;
+ * the rest is kept as desk-settings.ts says.
  */
 @Component({
-  imports: [KeyColorsPanel, KeyboardPanel],
+  imports: [KeyColorsPanel, KeyboardPanel, OutputsPanel],
   selector: 'lm-settings-view',
   styleUrl: './settings-view.css',
   templateUrl: './settings-view.html',
@@ -54,15 +59,15 @@ export class SettingsView {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
 
-  // ---------------------------------------------------------------- layout and lettering
+  // ---------------------------------------------------------------- layout and zoom
 
   protected readonly sizes = CHANNEL_SIZES;
   protected readonly rowCounts = ROW_COUNTS;
   protected readonly wheelSizes = WHEEL_SIZES;
   protected readonly maxChannelKeys = CHANNEL_INDEPENDENT_COUNT;
   protected readonly maxMemoryKeys = MEMORY_INDEPENDENT_COUNT;
-  protected readonly smallest = FONT_SCALE_MIN;
-  protected readonly biggest = FONT_SCALE_MAX;
+  protected readonly smallest = ZOOM_MIN;
+  protected readonly biggest = ZOOM_MAX;
 
   // ---------------------------------------------------------------- the views in the top bar
 
@@ -139,7 +144,19 @@ export class SettingsView {
     field.value = String(this.settings.memoryKeys());
   }
 
-  protected readonly fontScaleSaid = computed(() => `×${this.settings.fontScale().toFixed(1)}`);
+  protected readonly maxEffectKeys = EFFECT_INDEPENDENT_COUNT;
+
+  protected onEffectKeys(event: Event): void {
+    const field = event.target as HTMLInputElement;
+    this.settings.setEffectKeys(Number(field.value));
+    field.value = String(this.settings.effectKeys());
+  }
+
+  protected onEffectRows(event: Event): void {
+    this.settings.setEffectRows((event.target as HTMLSelectElement).value === '1' ? 1 : 0);
+  }
+
+  protected readonly zoomSaid = computed(() => `${Math.round(this.settings.zoom() * 100)} %`);
 
   // ---------------------------------------------------------------- universes
 

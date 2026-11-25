@@ -5,11 +5,12 @@ namespace DmxBox.Server;
 /// of the stage plan, the value it is brought to, and three times in seconds. In the stack a step
 /// can also release another step of the stack, see <see cref="Release"/>.
 /// </summary>
-/// <param name="Target">What the step stands for: "channel", "memory", "fixture", "group", or in the stack "release".</param>
+/// <param name="Target">What the step stands for: "channel", "memory", "fixture", "group", or in the stack "release" and "effect".</param>
 /// <param name="Number">
 /// The channel (1-512) or the memory (1-128); for a fixture or a group its number in the stage
 /// plan (<see cref="StageLight.Id"/>, <see cref="LightGroup.Id"/>), 0 for one that is gone; for a
-/// release the name of the step of the stack it takes down (<see cref="StackStep.Id"/>), 0 for none.
+/// release the name of the step of the stack it takes down (<see cref="StackStep.Id"/>), 0 for none;
+/// for an effect its number (1-64).
 /// </param>
 /// <param name="Value">The level the step brings it to, 0-255; for a fixture or a group the intensity of its lights.</param>
 /// <param name="Up">Seconds for the way from zero to the value.</param>
@@ -40,6 +41,13 @@ public sealed record Step(string Target, int Number, int Value, double Up, doubl
     /// </summary>
     public const string Release = "release";
 
+    /// <summary>
+    /// The <see cref="Target"/> of a step of the stack that plays an effect: it brings the effect's
+    /// fader to its value in its up time, which starts the effect, and back to zero in its down
+    /// time when the stack leaves it, which stops it. <see cref="Number"/> names the effect.
+    /// </summary>
+    public const string EffectTarget = "effect";
+
     /// <summary>The longest any of the three times can be.</summary>
     public const double MaxSeconds = 999.9;
 
@@ -68,6 +76,9 @@ public sealed record Step(string Target, int Number, int Value, double Up, doubl
     /// <summary>True for a step of the stack that releases another one.</summary>
     internal bool IsRelease => Target == Release;
 
+    /// <summary>True for a step of the stack that plays an effect.</summary>
+    internal bool IsEffect => Target == EffectTarget;
+
     /// <summary>
     /// Checks a step that came from a UI or a file, and rounds its times to tenths of a second.
     /// </summary>
@@ -75,10 +86,15 @@ public sealed record Step(string Target, int Number, int Value, double Up, doubl
     /// <exception cref="DeskException">Something about the step is out of range. The message says what.</exception>
     internal Step Checked()
     {
-        if (Target is not (Channel or Memory or Fixture or Group or Release))
-            throw new DeskException($"A step stands for a channel, a memory, a fixture or a group, not for \"{Target}\".");
+        if (Target is not (Channel or Memory or Fixture or Group or Release or EffectTarget))
+            throw new DeskException($"A step stands for a channel, a memory, a fixture, a group or an effect, not for \"{Target}\".");
 
-        if (IsLights)
+        if (IsEffect)
+        {
+            if (Number < 1 || Number > Effect.MaxEffects)
+                throw new DeskException($"The effect of a step must be from 1 to {Effect.MaxEffects}, not {Number}.");
+        }
+        else if (IsLights)
         {
             if (Number < 0)
                 throw new DeskException($"The {Target} of a step must be one of the stage plan, not {Number}.");
@@ -120,6 +136,8 @@ public sealed record Step(string Target, int Number, int Value, double Up, doubl
     {
         if (IsRelease)
             throw new DeskException("A step of a sequence cannot release anything; only a step of the stack can.");
+        if (IsEffect)
+            throw new DeskException("A step of a sequence cannot play an effect; a step of the stack can.");
 
         return Checked() with { Add = false };
     }

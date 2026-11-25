@@ -195,7 +195,7 @@
     }
   </div>
 
-  <nav class="rail" aria-label="Memory pages">
+  <nav class="rail" aria-label="Memory pages" [lmPressedInSight]="store.viewFirstMemory()">
     @for (item of pages(); track item.first) {
       <button
         lmLamp

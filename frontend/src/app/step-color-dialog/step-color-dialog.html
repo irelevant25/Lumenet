@@ -1,4 +1,4 @@
-<dialog #dialog aria-labelledby="step-color-title">
+<dialog #dialog lmDialog aria-labelledby="step-color-title" (dismiss)="close()">
   <form class="body" (submit)="use($event)">
     <h2 id="step-color-title">{{ title() }}</h2>
     <lm-color-picker [mixes]="true" [color]="chosen()" (pick)="onPick($event)" />
@@ -25,4 +25,5 @@
       <button lmLamp type="submit" tone="system" [level]="3" aria-label="Use this color">Use</button>
     </div>
   </form>
+  <button type="button" class="dialog-close" aria-label="Close the window" title="Close" (click)="close()">✕</button>
 </dialog>

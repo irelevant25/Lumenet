@@ -141,4 +141,13 @@ internal sealed class RecordingClient : IDeskClient
 
     /// <inheritdoc />
     public Task SoloChanged(SoloState solo) => throw new NotSupportedException();
+
+    /// <inheritdoc />
+    public Task EffectsChanged(Effect[] effects) => throw new NotSupportedException();
+
+    /// <inheritdoc />
+    public Task EffectPlaybackChanged(EffectPlayback playback) => throw new NotSupportedException();
+
+    /// <inheritdoc />
+    public Task EffectIndependentChanged(int index, int effect) => throw new NotSupportedException();
 }

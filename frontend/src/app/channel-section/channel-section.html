@@ -49,7 +49,7 @@
     }
   </div>
 
-  <nav class="rail" aria-label="Channel pages" [lmKeyColumns]="pages().length" lmKeyLines="2">
+  <nav class="rail" aria-label="Channel pages" [lmPressedInSight]="store.firstChannel()">
     @for (item of pages(); track item.first) {
       <button
         lmLamp

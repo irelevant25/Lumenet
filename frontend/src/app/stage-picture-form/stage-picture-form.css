@@ -9,7 +9,7 @@
 h3 {
   margin: 0 0 12px;
   color: var(--legend-dim);
-  font-size: calc(12px * var(--font-scale));
+  font-size: 12px;
   font-stretch: 75%;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -42,7 +42,7 @@ h3 {
 select,
 button {
   box-sizing: border-box;
-  height: calc(30px * var(--font-scale));
+  height: 30px;
   padding: 0 8px;
   border: 1px solid var(--edge);
   border-radius: 3px;
@@ -76,7 +76,7 @@ output {
 .hint,
 .problem {
   margin: 4px 0 10px;
-  font-size: calc(13px * var(--font-scale));
+  font-size: 13px;
   line-height: 1.35;
 }
 

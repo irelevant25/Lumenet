@@ -10,11 +10,28 @@ export const VIEWS = [
   { name: 'stack', label: 'Stack', url: '/stack' },
   { name: 'stage', label: 'Stage', url: '/stage' },
   { name: 'fixtures', label: 'Fixtures', url: '/fixtures' },
+  { name: 'effects', label: 'Effects', url: '/effects' },
   { name: 'notes', label: 'Notes', url: '/notes' },
   { name: 'settings', label: 'Settings', url: '/settings' },
 ] as const;
 // (Keyboard was a view after Settings until 2026-11-24; its shortcuts are a panel of Settings now.
 // A kept order or a kept list of hidden views that names it is read without it.)
+
+/**
+ * The usual order of the views while Effects stood after Sequences (2026-11-24, for a day): a kept
+ * order that is just this was never chosen, and is read as the usual order of now.
+ */
+const ORDER_WITH_EFFECTS_AFTER_SEQUENCES: readonly string[] = [
+  'main',
+  'memories',
+  'sequences',
+  'effects',
+  'stack',
+  'stage',
+  'fixtures',
+  'notes',
+  'settings',
+];
 
 export type ViewName = (typeof VIEWS)[number]['name'];
 
@@ -33,9 +50,10 @@ export function hiddenViewsOf(value: unknown): ViewName[] {
 /**
  * An order of the views: the known ones of the list as they come, each once. A view the list lacks,
  * like one that came after the list was kept, goes right after the view it follows in the usual
- * order (the first view goes first).
+ * order (the first view goes first). The usual order of before is the usual order of now.
  */
 export function viewOrderOf(value: unknown): ViewName[] {
+  if (Array.isArray(value) && value.join() === ORDER_WITH_EFFECTS_AFTER_SEQUENCES.join()) return [...DEFAULT_VIEW_ORDER];
   const listed = Array.isArray(value) ? value.filter((name): name is ViewName => DEFAULT_VIEW_ORDER.includes(name)) : [];
   const order = [...new Set(listed)];
   DEFAULT_VIEW_ORDER.forEach((name, at) => {

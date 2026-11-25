@@ -136,4 +136,23 @@ public interface IDeskClient
     /// <summary>A key was held for a solo, or let go, on some UI, see <see cref="SoloState"/>.</summary>
     /// <param name="solo">The keys held for a solo now.</param>
     Task SoloChanged(SoloState solo);
+
+    /// <summary>
+    /// An effect was stored, copied, kept or taken out. (After undo, redo, a load, a new project or
+    /// an import the UIs get the whole desk instead, and ask for the effects with it.)
+    /// </summary>
+    /// <param name="effects">The effects of the project now, in the order of their numbers.</param>
+    Task EffectsChanged(Effect[] effects);
+
+    /// <summary>
+    /// The playback of an effect changed: its key, its fader, its live speed, size or spread, by a
+    /// UI, the stack or from outside. The playbacks also come with every <see cref="Playback"/>.
+    /// </summary>
+    /// <param name="playback">The playback now.</param>
+    Task EffectPlaybackChanged(EffectPlayback playback);
+
+    /// <summary>An effect key of the independents was bound to another effect.</summary>
+    /// <param name="index">Number of the key, 1-32.</param>
+    /// <param name="effect">The effect the key starts and stops now, 1-64.</param>
+    Task EffectIndependentChanged(int index, int effect);
 }

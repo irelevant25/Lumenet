@@ -92,48 +92,69 @@ internal static class FixtureLooks
     {
         foreach ((List<int> offsets, _) in cells)
         {
-            bool Has(char letter) => offsets.Any(offset => letters[offset] == letter);
-            (double red, double green, double blue) = color;
-            double white = 0;
-            double amber = 0;
-            if (Has('W'))
+            double[] mix = MixCell(letters, offsets, color);
+            for (int index = 0; index < offsets.Count; index++)
             {
-                white = Math.Min(red, Math.Min(green, blue));
-                red -= white;
-                green -= white;
-                blue -= white;
-            }
-
-            if (Has('A') && red > 0 && green > 0 && blue == 0)
-            {
-                // amber is red with about a third of green: the part of the color that is amber goes to it
-                amber = Math.Min(red, green / 0.35);
-                red -= amber;
-                green -= amber * 0.35;
-            }
-
-            double Wanted(char letter) => letter switch
-            {
-                'R' => red,
-                'G' => green,
-                'B' => blue,
-                'W' => white,
-                'A' => amber,
-                _ => 0,
-            };
-
-            double strongest = offsets.Max(offset => Wanted(letters[offset]));
-            double scale = strongest > 0 ? intensity / strongest : 0;
-            foreach (int offset in offsets)
-            {
-                double value = Math.Max(0, Wanted(letters[offset])) * scale;
-                parts.Add(new Part(first + offset, (byte)Math.Round(value, MidpointRounding.AwayFromZero), Attribute: false));
+                double value = mix[index] * intensity;
+                parts.Add(new Part(first + offsets[index], (byte)Math.Round(value, MidpointRounding.AwayFromZero), Attribute: false));
             }
         }
     }
 
-    // The slot of a color wheel whose color is nearest to the color wanted.
-    private static FixtureRange Nearest(FixtureRange[] ranges, (double R, double G, double B) wanted)
+    /// <summary>
+    /// How the color channels of one cell mix a color, as the Fixtures view mixes it: a white
+    /// channel takes the white part of the color, an amber one the warm part that is left, an
+    /// ultraviolet one nothing. The effects mix their colors the same way.
+    /// </summary>
+    /// <param name="letters">The letters of the light's channels.</param>
+    /// <param name="offsets">The places of the cell's color channels among them.</param>
+    /// <param name="color">The color: red, green and blue, 0 to 255 (or 0 to 1: only the proportions count).</param>
+    /// <returns>For each channel of the cell, in the order of <paramref name="offsets"/>: its share, the strongest at 1; all 0 for black.</returns>
+    internal static double[] MixCell(string letters, IReadOnlyList<int> offsets, (double R, double G, double B) color)
+    {
+        bool Has(char letter) => offsets.Any(offset => letters[offset] == letter);
+        (double red, double green, double blue) = color;
+        double white = 0;
+        double amber = 0;
+        if (Has('W'))
+        {
+            white = Math.Min(red, Math.Min(green, blue));
+            red -= white;
+            green -= white;
+            blue -= white;
+        }
+
+        if (Has('A') && red > 0 && green > 0 && blue == 0)
+        {
+            // amber is red with about a third of green: the part of the color that is amber goes to it
+            amber = Math.Min(red, green / 0.35);
+            red -= amber;
+            green -= amber * 0.35;
+        }
+
+        double Wanted(char letter) => letter switch
+        {
+            'R' => red,
+            'G' => green,
+            'B' => blue,
+            'W' => white,
+            'A' => amber,
+            _ => 0,
+        };
+
+        double[] shares = new double[offsets.Count];
+        double strongest = offsets.Count == 0 ? 0 : offsets.Max(offset => Wanted(letters[offset]));
+        if (strongest <= 0)
+            return shares;
+
+        for (int index = 0; index < offsets.Count; index++)
+            shares[index] = Math.Max(0, Wanted(letters[offsets[index]])) / strongest;
+
+        return shares;
+    }
+
+    /// <summary>The slot of a color wheel whose color is nearest to the color wanted (red, green and blue, 0 to 255).</summary>
+    internal static FixtureRange Nearest(FixtureRange[] ranges, (double R, double G, double B) wanted)
     {
         return ranges
             .Where(range => range.Color is not null)
@@ -144,8 +165,8 @@ internal static class FixtureLooks
             })!;
     }
 
-    // "#ff2000" as red, green and blue, 0 to 255.
-    private static (double R, double G, double B) RgbOf(string hex)
+    /// <summary>"#ff2000" as red, green and blue, 0 to 255.</summary>
+    internal static (double R, double G, double B) RgbOf(string hex)
     {
         int Part(int start) => Convert.ToInt32(hex.Substring(start, 2), 16);
         return (Part(1), Part(3), Part(5));

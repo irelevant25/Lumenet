@@ -20,6 +20,7 @@ import { DeskSettings } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
 import { MEMORY_COUNT, UNIVERSE_SIZE } from '../desk/desk-types';
 import { Keyboard } from '../desk/keyboard';
+import { bringToMiddle } from '../desk/scroll';
 import { channelLabel } from '../desk/universes';
 
 /** One kind of keys: how many there are, how many have a shortcut, and how many the search finds. */
@@ -223,34 +224,4 @@ export class KeyboardPanel {
       (keys !== undefined && shortcutName(keys).toLowerCase().includes(words))
     );
   }
-}
-
-/**
- * Scrolls the box the element scrolls in, and only that one, so that the element stands in its
- * middle. (The browser's scrollIntoView moves every box around it, the page itself as well, and
- * the desk's page cannot be scrolled back by hand: the top bar would stay out of sight.)
- */
-function bringToMiddle(element: HTMLElement): void {
-  const box = scrollingBox(element);
-  if (!box) return;
-
-  const page = box === document.scrollingElement;
-  const top = page ? 0 : box.getBoundingClientRect().top;
-  const height = page ? window.innerHeight : box.clientHeight;
-  const place = element.getBoundingClientRect();
-  box.scrollTop += place.top - top - (height - place.height) / 2;
-}
-
-/**
- * The nearest box around the element that the owner can scroll: the list of keys, the panels of
- * Settings, or on a small screen the page. Null when nothing can be scrolled by hand.
- */
-function scrollingBox(element: HTMLElement): Element | null {
-  for (let box = element.parentElement; box && box !== document.body; box = box.parentElement) {
-    const overflow = getComputedStyle(box).overflowY;
-    if ((overflow === 'auto' || overflow === 'scroll') && box.scrollHeight > box.clientHeight)
-      return box;
-  }
-  const pageScrolls = getComputedStyle(document.body).overflowY !== 'hidden';
-  return pageScrolls ? document.scrollingElement : null;
 }

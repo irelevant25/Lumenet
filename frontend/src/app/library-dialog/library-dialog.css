@@ -5,8 +5,8 @@
 }
 
 dialog {
-  width: min(560px, calc(100vw - 40px));
-  max-height: calc(100vh - 40px);
+  width: min(560px, calc(100vw / var(--zoom) - 40px));
+  max-height: calc(100vh / var(--zoom) - 40px);
   padding: 0;
   border: 1px solid var(--edge);
   border-radius: 8px;
@@ -27,13 +27,13 @@ dialog::backdrop {
 
 h2 {
   margin: 0;
-  font-size: calc(20px * var(--font-scale));
+  font-size: 20px;
   font-weight: 600;
 }
 
 .model {
   margin: 0;
-  font-size: calc(17px * var(--font-scale));
+  font-size: 17px;
 }
 
 .maker {
@@ -43,7 +43,7 @@ h2 {
 .hint {
   margin: 0;
   color: var(--legend-dim);
-  font-size: calc(13px * var(--font-scale));
+  font-size: 13px;
   line-height: 1.35;
 }
 
@@ -56,7 +56,7 @@ h2 {
 
 label {
   color: var(--legend-dim);
-  font-size: calc(13px * var(--font-scale));
+  font-size: 13px;
 }
 
 input,
@@ -70,13 +70,13 @@ select {
   background: var(--well);
   color: var(--legend);
   font: inherit;
-  font-size: calc(15px * var(--font-scale));
+  font-size: 15px;
 }
 
 /* the lights found, each a line to click; the list scrolls when there are many */
 .found,
 .channels {
-  max-height: min(320px, 40vh);
+  max-height: min(320px, calc(40vh / var(--zoom)));
   margin: 0;
   padding: 0;
   overflow: auto;
@@ -111,13 +111,13 @@ select {
 .from {
   flex: none;
   color: var(--legend-dim);
-  font-size: calc(12px * var(--font-scale));
+  font-size: 12px;
 }
 
 .channels li {
   padding: 4px 10px;
   border-bottom: 1px solid var(--edge);
-  font-size: calc(14px * var(--font-scale));
+  font-size: 14px;
 }
 
 .code {
@@ -129,7 +129,7 @@ select {
 
 .ranges {
   color: var(--legend-dim);
-  font-size: calc(12px * var(--font-scale));
+  font-size: 12px;
 }
 
 .link {

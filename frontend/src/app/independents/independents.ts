@@ -2,6 +2,7 @@ import { Component, computed, inject, linkedSignal } from '@angular/core';
 import { DeskSettings } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
 import { MEMORY_COUNT, StepTarget } from '../desk/desk-types';
+import { MAX_EFFECTS, effectLamp } from '../desk/effects';
 import { KeyColumns } from '../desk/key-columns';
 import { memoryLamp } from '../desk/lamps';
 import { channelField, channelFromText, channelLabel, channelNumber, universeOf } from '../desk/universes';
@@ -9,10 +10,11 @@ import { LampButton, LampTone } from '../lamp-button/lamp-button';
 
 /**
  * The independents: a column at the right edge. The green keys each switch a channel between
- * zero and full, the red ones each switch the fader of a memory; Settings says how many of each
- * are shown (0 to 32, 10 at first; with none of either the main view leaves the section out).
- * The channel or memory a key switches is printed on it; Edit lets the owner change those
- * numbers. Keys that do not fit into one column go on in another.
+ * zero and full, the red ones each switch the fader of a memory, the violet ones each start and
+ * stop an effect (with its fade times, at its fader's level); Settings says how many of each are
+ * shown (0 to 32: 10 green and 10 red at first, no violet; with none of any the main view leaves
+ * the section out). The channel, memory or effect a key works is printed on it; Edit lets the
+ * owner change those numbers. Keys that do not fit into one column go on in another.
  */
 @Component({
   imports: [KeyColumns, LampButton],
@@ -24,8 +26,10 @@ export class Independents {
   protected readonly store = inject(DeskStore);
   private readonly settings = inject(DeskSettings);
 
-  /** Edit, and the keys of both kinds that are shown. */
-  protected readonly keyCount = computed(() => 1 + this.settings.channelKeys() + this.settings.memoryKeys());
+  /** Edit, and the keys of every kind that are shown. */
+  protected readonly keyCount = computed(
+    () => 1 + this.settings.channelKeys() + this.settings.memoryKeys() + this.settings.effectKeys(),
+  );
 
   /**
    * True while the numbers on the keys can be changed. A stack that goes live ends the
@@ -81,8 +85,38 @@ export class Independents {
       }));
   });
 
+  /**
+   * The effect keys that are shown: which effect each one starts and stops, and how lit it is, like
+   * the key of that effect. Their numbers for screen readers follow those of the other keys.
+   */
+  protected readonly effectKeys = computed(() => {
+    const effects = this.store.effectsByNumber();
+    const playbacks = this.store.effectPlaybacks();
+    const before = this.settings.channelKeys() + this.settings.memoryKeys();
+    return this.store
+      .effectIndependents()
+      .slice(0, this.settings.effectKeys())
+      .map((effect, index) => ({
+        number: index + 1,
+        name: before + index + 1,
+        effect,
+        called: effects.get(effect)?.name ?? '',
+        on: playbacks.get(effect)?.running ?? false,
+        fading: playbacks.get(effect)?.fading ?? false,
+        lamp: effectLamp(effects.get(effect), playbacks.get(effect)),
+      }));
+  });
+
   protected toggleEditing(): void {
     this.editing.update((on) => !on);
+  }
+
+  /** A new effect number was typed onto an effect key. */
+  protected onEffectTyped(key: number, event: Event): void {
+    const field = event.target as HTMLInputElement;
+    const effect = wholeNumber(field.value, MAX_EFFECTS);
+    if (effect !== null) this.store.setEffectIndependent(key, effect);
+    field.value = String(this.store.effectIndependents()[key - 1]);
   }
 
   /**

@@ -10,7 +10,7 @@
  *   "name": "Concert",
  *   "project": { "format": "lumenet-project", "version": 4, ... },
  *   "stage": { "width": 16, "depth": 10, "lights": [ ... ] },
- *   "settings": { "channelSize": "auto", "fontScale": 1, "colors": {}, ... },
+ *   "settings": { "channelSize": "auto", "zoom": 1, "colors": {}, ... },
  *   "keyboard": { "shortcuts": { "stack.play": "Space" } }
  * }
  * ```
@@ -26,7 +26,7 @@ export type TransferPart = 'project' | 'stage' | 'settings' | 'keyboard';
 export const TRANSFER_PARTS: readonly { readonly part: TransferPart; readonly label: string; readonly hint: string }[] = [
   { part: 'project', label: 'Project', hint: 'everything the project holds: memories, sequences, the stack, the stage and the notes' },
   { part: 'stage', label: 'Stage', hint: 'the stage alone: its lights, their kinds, the groups and the picture' },
-  { part: 'settings', label: 'Settings', hint: 'the settings of this device: layout, lettering, colors of the keys, views' },
+  { part: 'settings', label: 'Settings', hint: 'the settings of this device: layout, zoom, colors of the keys, views' },
   { part: 'keyboard', label: 'Keyboard', hint: 'the keyboard shortcuts of this device' },
 ];
 

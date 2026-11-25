@@ -1,5 +1,11 @@
 <lm-channel-section />
 <lm-memory-section />
+@if (effectRow()) {
+  <!-- fetched the first time Settings shows the row -->
+  @defer (on immediate) {
+    <lm-effect-section />
+  }
+}
 <!-- At the right: the stack across the top, and under it the master over the record keys, the
      general section and the independents, each in a column of its own. -->
 <div class="side">

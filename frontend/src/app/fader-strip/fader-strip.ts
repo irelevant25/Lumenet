@@ -1,13 +1,16 @@
 import { Component, computed, input, model, output } from '@angular/core';
 import { LampLevel } from '../desk/lamps';
-import { NOTE_LINE_LENGTH, joinNote, splitNote } from '../desk/notes';
+import { NOTE_LINE_LENGTH, inTwoLines, joinNote, splitNote } from '../desk/notes';
 import { Fader } from '../fader/fader';
 import { LampButton, LampTone } from '../lamp-button/lamp-button';
 
 /** A key that is used in no step. One shared list, so that the keys have nothing to redraw. */
 const NO_STEPS: readonly number[] = [];
 
-/** One fader with its level number above it, its numbered key below it, and a note under the key. */
+/**
+ * One fader with its level number above it, its numbered key below it, and a note under the key.
+ * The fader of an effect has the effect's name there instead, in two lines, as lettering.
+ */
 @Component({
   host: {
     '[class.up]': 'value() > 0',
@@ -18,8 +21,8 @@ const NO_STEPS: readonly number[] = [];
   templateUrl: './fader-strip.html',
 })
 export class FaderStrip {
-  readonly kind = input.required<'channel' | 'memory'>();
-  /** The channel or memory number: the key's name for the shortcuts ("channel.625"), and what it prints unless `caption` says otherwise. */
+  readonly kind = input.required<'channel' | 'memory' | 'effect'>();
+  /** The channel, memory or effect number: the key's name for the shortcuts ("channel.625"), and what it prints unless `caption` says otherwise. */
   readonly number = input.required<number>();
   /** What the key prints in place of the number: a channel's number in its universe, 113 for channel 625. */
   readonly caption = input<number | null>(null);
@@ -73,8 +76,18 @@ export class FaderStrip {
   readonly locked = input(false);
 
   protected readonly name = computed(
-    () => this.called() ?? `${this.kind() === 'channel' ? 'Channel' : 'Memory'} ${this.number()}`,
+    () =>
+      this.called() ??
+      `${this.kind() === 'channel' ? 'Channel' : this.kind() === 'memory' ? 'Memory' : 'Effect'} ${this.number()}`,
   );
+
+  /** An effect's name in two lines, as it stands under its key. */
+  protected readonly nameLines = computed(() => inTwoLines(this.note()));
+  /** An effect on the Effects view: its name is a button that chooses it for the editor. */
+  readonly choosable = input(false);
+  /** The effect the editor works on. */
+  readonly chosen = input(false);
+  readonly choose = output<void>();
 
   /** What a screen reader calls the key: "Channel 5 key", and the steps it is used in. */
   protected readonly keyName = computed(() => {

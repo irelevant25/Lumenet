@@ -101,7 +101,7 @@ export class StepRow {
   /** The steps of the stack a release of this row can take down: all but itself. Undefined outside the stack. */
   private readonly releasable = computed(() => this.choices().release?.filter((choice) => choice.number !== this.self()));
 
-  /** The lines of the field for the kind: a channel of each universe, then memory, fixture, group (and in the stack release). */
+  /** The lines of the field for the kind: a channel of each universe, then memory, fixture, group (and in the stack effect and release). */
   protected readonly kinds = computed<KindChoice[]>(() => [
     ...Array.from({ length: this.universes() }, (_, index) => ({
       value: `channel:${index + 1}`,
@@ -110,12 +110,15 @@ export class StepRow {
     { value: 'memory', text: 'Memory' },
     { value: 'fixture', text: 'Fixture' },
     { value: 'group', text: 'Group' },
+    ...(this.choices().effect ? [{ value: 'effect', text: 'Effect' }] : []),
     ...(this.releasable() ? [{ value: 'release', text: 'Release' }] : []),
   ]);
 
   /** What a screen reader calls the field for the kind. */
   protected readonly kindLabel = computed(
-    () => `${this.label()}, channel, memory, fixture${this.releasable() ? ', group or release' : ' or group'}`,
+    () =>
+      `${this.label()}, channel, memory, fixture` +
+      (this.releasable() ? `, group${this.choices().effect ? ', effect' : ''} or release` : ' or group'),
   );
 
   /** What a screen reader calls the field for the number. */
@@ -138,7 +141,7 @@ export class StepRow {
       return number === 0 ? [{ number: 0, text: 'None', short: 'None' }, ...offered] : withCurrent(offered, number, true);
     }
     const offered: readonly StepChoice[] =
-      target === 'channel' ? channelsOf(this.choices().channel, universeOf(number)) : this.choices()[target];
+      target === 'channel' ? channelsOf(this.choices().channel, universeOf(number)) : (this.choices()[target] ?? []);
     return withCurrent(offered, number, this.lights());
   });
 
@@ -222,7 +225,7 @@ export class StepRow {
    */
   private numberFor(target: Exclude<StepKind, 'release'>): number {
     const old = this.release() ? 0 : this.step().number; // the id of a step is no channel or memory
-    const offered = this.choices()[target];
+    const offered = this.choices()[target] ?? [];
     if (offered.some((choice) => choice.number === old)) return old;
     if (offered[0]) return offered[0].number;
     return isLights(target) ? 0 : Math.min(Math.max(1, old), MEMORY_COUNT);

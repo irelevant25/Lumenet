@@ -28,7 +28,7 @@
 /* every hue across, white at the bottom */
 .field {
   position: relative;
-  height: calc(96px * var(--font-scale));
+  height: 96px;
   border: 1px solid var(--edge);
   border-radius: 4px;
   background:

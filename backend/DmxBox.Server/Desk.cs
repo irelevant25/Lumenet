@@ -528,6 +528,7 @@ internal sealed partial class Desk
             Array.Fill(_memoryNotes, "");
             DefaultIndependents().CopyTo(_independents, 0);
             DefaultMemoryIndependents().CopyTo(_memoryIndependents, 0);
+            PutEffects([], DefaultEffectIndependents());
             PutStage(StagePlan.Empty);
             _stagePicture = null;
             _notes = "";
@@ -555,6 +556,7 @@ internal sealed partial class Desk
             RequireUnlocked();
             PutProject(project);
             Array.Clear(_memoryLevels);
+            StopEffects();
             CountLookChange();
             return _projectChanges;
         }
@@ -600,6 +602,8 @@ internal sealed partial class Desk
                 Outputs = _outputs,
                 MemoryIndependents = Copy(_memoryIndependents),
                 Sequences = Copy(_sequences),
+                Effects = Copy(_effects),
+                EffectIndependents = Copy(_effectIndependents),
                 Stack = _stack.Select(entry => new ProjectStep(entry.Cue, entry.Step) { Releases = ReleasedCue(entry.Step) }).ToArray(),
                 Stage = _stage,
                 StagePicture = _stagePicture,
@@ -641,6 +645,8 @@ internal sealed partial class Desk
                 MemoryClaims: Copy(_memoryClaims))
             {
                 Universes = _universes,
+                EffectIndependents = Copy(_effectIndependents),
+                Effects = EffectPlaybacksNow(Now),
             };
         }
     }
@@ -672,10 +678,11 @@ internal sealed partial class Desk
     /// steps give their light through its crossfade instead (Desk.Stack.cs), which is the highest
     /// of the rest too. A memory with a sequence gives what its sequence gives right now. A solo
     /// changes that (see Desk.Solo.cs): with keys held with SOLO UP only their faders count, at
-    /// full; with keys held with SOLO DOWN their faders give nothing. Then each light is held to
-    /// its limit, the master scales the result, and blackout makes it dark. The attributes of the
-    /// lights (a pan, a tilt) come from the fader that took them last, untouched by all of
-    /// that, see Desk.Attributes.cs.
+    /// full; with keys held with SOLO DOWN their faders give nothing. The running effects work on
+    /// that light (Desk.Effects.cs). Then each light is held to its limit, the master scales the
+    /// result, and blackout makes it dark. The attributes of the lights (a pan, a tilt) come from
+    /// the fader that took them last, untouched by all of that, see Desk.Attributes.cs; a movement
+    /// effect moves a head from there.
     /// </summary>
     /// <returns>A level for every channel of the project's universes; channel 1 is at index 0.</returns>
     public byte[] GetOutput()
@@ -684,39 +691,20 @@ internal sealed partial class Desk
         {
             double now = Now;
             (HashSet<Fader> up, HashSet<Fader> down) = SoloFaders();
+            EffectFrame? effects = EffectFrameAt(now);
             byte[] output;
             if (up.Count > 0)
             {
+                // Only the held keys shine: the effects give no light, but heads still move.
                 output = SoloUpOutput(up, now);
             }
             else
             {
-                // While the stack crossfades, the faders taking part give their light through the
-                // crossfade (Desk.Stack.cs), not each on its own. A key held with SOLO DOWN on one of
-                // them stops that: then every fader counts on its own again.
-                Crossfade? cross = _crossfade is { } running && !running.Faders.Keys.Any(down.Contains) ? running : null;
-                output = _channels[..Channels];
-                foreach (Fader fader in cross?.Faders.Keys.Where(fader => !fader.Memory && fader.Number - 1 < Channels) ?? [])
-                    output[fader.Number - 1] = 0;
+                output = FadersOutput(now, down);
+                effects?.PutLight(output, touched: null);
 
-                for (int index = 0; index < MemoryCount; index++)
-                {
-                    // A memory whose fader is down adds nothing, like an empty one.
-                    var fader = new Fader(true, index + 1);
-                    if (_memories[index] is { } look && _memoryLevels[index] > 0 && !down.Contains(fader)
-                        && cross?.Faders.ContainsKey(fader) != true)
-                    {
-                        RaiseTo(output, look, _memoryLevels[index]);
-                    }
-                }
-
-                for (int channel = 0; cross is not null && channel < output.Length && channel < cross.From.Length; channel++)
-                    output[channel] = Math.Max(output[channel], cross.ValueAt(channel));
-
-                AddSequences(output, now, stepsOn: null, leftOut: down);
-
-                // A channel held with SOLO DOWN is dark, whatever holds it up.
-                foreach (Fader fader in down.Where(fader => !fader.Memory))
+                // A channel held with SOLO DOWN is dark, whatever holds it up, an effect too.
+                foreach (Fader fader in down.Where(fader => fader.Channel))
                     output[fader.Number - 1] = 0;
             }
 
@@ -724,8 +712,40 @@ internal sealed partial class Desk
             if (_roles.AttributeLights.Length > 0)
                 PutAttributes(output, now, down);
 
+            effects?.PutAttributes(output, touched: null);
             return output;
         }
+    }
+
+    // Call with the lock held. The light the faders give, highest wins: the channel faders, the
+    // memories, the stack's crossfade and the sequences; the memories in "down" (held with SOLO
+    // DOWN) give nothing.
+    private byte[] FadersOutput(double now, HashSet<Fader> down)
+    {
+        // While the stack crossfades, the faders taking part give their light through the
+        // crossfade (Desk.Stack.cs), not each on its own. A key held with SOLO DOWN on one of
+        // them stops that: then every fader counts on its own again.
+        Crossfade? cross = _crossfade is { } running && !running.Faders.Keys.Any(down.Contains) ? running : null;
+        byte[] output = _channels[..Channels];
+        foreach (Fader fader in cross?.Faders.Keys.Where(fader => fader.Channel && fader.Number - 1 < Channels) ?? [])
+            output[fader.Number - 1] = 0;
+
+        for (int index = 0; index < MemoryCount; index++)
+        {
+            // A memory whose fader is down adds nothing, like an empty one.
+            var fader = new Fader(true, index + 1);
+            if (_memories[index] is { } look && _memoryLevels[index] > 0 && !down.Contains(fader)
+                && cross?.Faders.ContainsKey(fader) != true)
+            {
+                RaiseTo(output, look, _memoryLevels[index]);
+            }
+        }
+
+        for (int channel = 0; cross is not null && channel < output.Length && channel < cross.From.Length; channel++)
+            output[channel] = Math.Max(output[channel], cross.ValueAt(channel));
+
+        AddSequences(output, now, stepsOn: null, leftOut: down);
+        return output;
     }
 
     // Highest takes precedence: a memory can raise a channel, never lower it. As far as the output goes.
@@ -805,6 +825,7 @@ internal sealed partial class Desk
         project.MemoryNotes.CopyTo(_memoryNotes, 0);
         project.Independents.CopyTo(_independents, 0);
         project.MemoryIndependents.CopyTo(_memoryIndependents, 0);
+        PutEffects(project.Effects, project.EffectIndependents);
         ClearAbove(Channels);
     }
 
@@ -925,13 +946,14 @@ internal sealed partial class Desk
         }
     }
 
-    // Call with the lock held. Every channel fader and memory fader goes to 0. The UIs are sent
-    // the whole desk after this, so the fader moves of the stack they have not heard of yet
-    // are no news any more.
+    // Call with the lock held. Every channel fader, memory fader and effect fader goes to 0, so
+    // every effect stops. The UIs are sent the whole desk after this, so the fader moves of the
+    // stack they have not heard of yet are no news any more.
     private void ZeroFaders()
     {
         Array.Clear(_channels);
         Array.Clear(_memoryLevels);
+        StopEffects();
         _moved.Clear();
         _crossfade = null;
     }
@@ -978,6 +1000,10 @@ internal sealed partial class Desk
             throw new ArgumentException($"There must be {ChannelIndependentCount} channel independents.", nameof(project));
         if (project.MemoryIndependents.Length != MemoryIndependentCount)
             throw new ArgumentException($"There must be {MemoryIndependentCount} memory independents.", nameof(project));
+        if (project.Effects.Length != Effect.MaxEffects)
+            throw new ArgumentException($"There must be {Effect.MaxEffects} entries for effects, one per number.", nameof(project));
+        if (project.EffectIndependents.Length != EffectIndependentCount)
+            throw new ArgumentException($"There must be {EffectIndependentCount} effect independents.", nameof(project));
         if (project.Sequences.Length != MemoryCount)
             throw new ArgumentException($"There must be {MemoryCount} entries for sequences, one per memory.", nameof(project));
         for (int index = 0; index < MemoryCount; index++)

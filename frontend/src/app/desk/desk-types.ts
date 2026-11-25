@@ -1,3 +1,5 @@
+import type { EffectLevels, EffectPlayback } from './effects';
+
 /**
  * Sizes of the desk. A universe is the 512 channels one DMX cable carries; a project has 1 to 8
  * of them (Settings). Inside, its channels are numbered on through all of them: universe 2 starts
@@ -22,25 +24,26 @@ export const STRIPS_PER_ROW_MEDIUM = 16;
 export const STRIPS_PER_LINE_PHONE = 8;
 
 /*
- * The limits of the window sizes, in pixels. They stand only here: the page marks <html> with
- * the classes "medium", "mobile" and "phone" (see desk-store.ts), and the style sheets go by
- * those classes.
+ * The limits of the window sizes, in pixels of the page (at a zoom of 120 % a window of 1440
+ * pixels holds 1200). They stand only here: the page marks <html> with the classes "medium",
+ * "narrow", "mobile" and "phone" (see desk-store.ts), and the style sheets go by those classes.
  */
 /** Narrower than this is "medium": 16 faders in a row instead of 32, and twice as many page keys. */
 export const MEDIUM_BELOW_PX = 1850;
 /**
  * Narrower than this is "narrow": the top bar takes two lines, the links to the views under the
- * name, the keys and the project, which no longer fit beside them.
+ * name, the keys and the project, which no longer fit beside them. At 1366 pixels, a usual laptop,
+ * the nine links still leave the project's name about 60 pixels in one line.
  */
-export const NARROW_BELOW_PX = 1300;
+export const NARROW_BELOW_PX = 1366;
 /**
  * Narrower or lower than this is "mobile": the sections stand under each other, the page keys
  * lie under the section titles, and the page scrolls.
  */
-export const MOBILE_BELOW_WIDTH_PX = 900;
+export const MOBILE_BELOW_WIDTH_PX = 1200;
 export const MOBILE_BELOW_HEIGHT_PX = 600;
 /** Narrower than this is "phone": a row of 16 faders breaks into two lines of 8, and the top bar into three lines. */
-export const PHONE_BELOW_PX = 720;
+export const PHONE_BELOW_PX = 800;
 
 /** The numbers of one row of faders, for example 33, 34, ... 64. */
 export function stripNumbers(first: number, count: number): number[] {
@@ -91,6 +94,10 @@ export interface DeskState {
   channelClaims?: number[];
   /** For each memory fader, when it last left zero and took the lights its memory holds, on the same count. */
   memoryClaims?: number[];
+  /** The effect each effect key of the independents starts and stops. Missing from a desk program from before effects. */
+  effectIndependents?: number[];
+  /** The playbacks of the effects (of every effect the project has, and of any other whose fader is up). */
+  effects?: EffectPlayback[];
 }
 
 /** A key of a channel or a memory held for a solo. */
@@ -262,9 +269,10 @@ export type StepTarget = 'channel' | 'memory';
 /**
  * What a step of a sequence or of the stack stands for: a fader, or a fixture or a group of
  * fixtures of the stage plan. In the stack also "release": a step that takes another step of the
- * stack down (its number is that step's id).
+ * stack down (its number is that step's id); and "effect": a step that brings the fader of an
+ * effect up (its number is the effect's).
  */
-export type StepKind = StepTarget | 'fixture' | 'group' | 'release';
+export type StepKind = StepTarget | 'fixture' | 'group' | 'release' | 'effect';
 
 /** The longest time a step can have, in seconds. */
 export const MAX_STEP_SECONDS = 999.9;
@@ -380,6 +388,10 @@ export interface Playback {
   stack: StackPlayback;
   /** The stack's crossfade while one runs; missing while none does. */
   crossfade?: StackCrossfade | null;
+  /** The playbacks of the effects. Missing from a desk program from before effects. */
+  effects?: EffectPlayback[];
+  /** What the running effects give the channels they touch; missing while none runs. */
+  effectLevels?: EffectLevels | null;
 }
 
 /** The first step of a new list, and the pattern for the next ones. */

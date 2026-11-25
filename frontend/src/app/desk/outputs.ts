@@ -1,3 +1,4 @@
+import { switchNumber } from './boxes';
 import {
   BoxView,
   DEFAULT_PRIORITY,
@@ -9,10 +10,10 @@ import {
 } from './desk-types';
 
 /**
- * The outputs as the Outputs window and the top bar work with them: the dmxboxes (see boxes.ts)
- * and the outputs besides them, Art-Net nodes, sACN and DMX USB interfaces. The desk program
- * sends the outputs as views (each with its state); the window sends back the project's whole
- * list as plans.
+ * The outputs as the Outputs panel of Settings and the top bar work with them: the dmxboxes (see
+ * boxes.ts) and the outputs besides them, Art-Net nodes, sACN and DMX USB interfaces. The desk
+ * program sends the outputs as views (each with its state); the panel sends back the project's
+ * whole list as plans.
  */
 
 /** What the top bar says about the outputs: how many play, of how many the project has. */
@@ -159,7 +160,7 @@ export function portAddressText(address: number): string {
   return `${net}:${subNet}:${universe}`;
 }
 
-/** What the window and the top bar call an output: "Art-Net 192.168.1.50", "sACN multicast", "USB COM3". */
+/** What the panel and the top bar call an output: "Art-Net 192.168.1.50", "sACN multicast", "USB COM3". */
 export function outputName(plan: OutputPlan): string {
   const kind = plan.kind === 'artnet' ? 'Art-Net' : plan.kind === 'sacn' ? 'sACN' : 'USB';
   return `${kind} ${plan.target}`;
@@ -251,4 +252,116 @@ function freeUniverses(
   return Array.from({ length: universes }, (_, index) => index + 1).filter(
     (universe) => !played.has(universe),
   );
+}
+
+/** What the table of outputs calls a dmxbox: "dmxbox 2" at the address of a switch (10.1.n.1), else "dmxbox". */
+export function boxName(box: BoxView): string {
+  return switchNumber(box.address) === null ? 'dmxbox' : 'dmxbox 2';
+}
+
+/** The line under a dmxbox's name: "10.1.3.1, switch 3, firmware 1.0". */
+export function boxAbout(box: BoxView): string {
+  const number = switchNumber(box.address);
+  return [
+    box.address,
+    number === null ? '' : `switch ${number}`,
+    box.firmware ? `firmware ${box.firmware}` : '',
+  ]
+    .filter((part) => part !== '')
+    .join(', ');
+}
+
+/**
+ * The name of an Art-Net node: as it answered the search, or as it answers the desk's poll (its
+ * state then says "Node 2, firmware 1.2"); empty while it has not answered.
+ */
+export function nodeName(view: OutputView, found: readonly FoundNode[]): string {
+  const answered = found.find((node) => node.ip === view.plan.target);
+  if (answered) return answered.shortName || answered.longName;
+  if (view.state === 'connected') {
+    const at = view.detail.indexOf(', firmware ');
+    if (at > 0) return view.detail.slice(0, at);
+  }
+  return '';
+}
+
+/** The multicast address of an sACN universe: 239.255.0.4 for universe 4. */
+export function multicastAddress(universe: number): string {
+  return `239.255.${universe >> 8}.${universe & 0xff}`;
+}
+
+/** A new output with as many ports as asked for: those newPlan gives, cut short, or with more after them. */
+export function newPlanWithPorts(
+  kind: OutputKind,
+  target: string,
+  boxes: readonly BoxView[],
+  outputs: readonly OutputView[],
+  universes: number,
+  count: number,
+): OutputPlan {
+  let plan = newPlan(kind, target, boxes, outputs, universes);
+  if (plan.ports.length > count) plan = { ...plan, ports: plan.ports.slice(0, count) };
+  while (plan.ports.length < count) plan = withNewPort(plan, universes);
+  return plan;
+}
+
+/**
+ * What needs saying about all outputs together: a universe that reaches no cable (with the outputs
+ * that would play it but do not answer), a universe played more than once, as a splitter would
+ * give it, and an Art-Net node that is a dmxbox.
+ */
+export function outputRemarks(
+  boxes: readonly BoxView[],
+  outputs: readonly OutputView[],
+  universes: number,
+): string[] {
+  const players = (universe: number) => [
+    ...boxes
+      .filter((box) => box.kind !== 'new')
+      .flatMap((box) =>
+        box.universes
+          .filter((played) => played === universe)
+          .map(() => ({ name: `dmxbox ${box.address}`, working: box.connected })),
+      ),
+    ...outputs.flatMap((output) =>
+      output.plan.ports
+        .filter((port) => port.universe === universe)
+        .map(() => ({ name: outputName(output.plan), working: isWorking(output) })),
+    ),
+  ];
+  const remarks: string[] = [];
+  for (const universe of unplayedUniverses(boxes, outputs, universes)) {
+    const silent = [
+      ...new Set(
+        players(universe)
+          .filter((item) => !item.working)
+          .map((item) => item.name),
+      ),
+    ];
+    remarks.push(
+      silent.length === 0
+        ? `U${universe} reaches no cable: no output plays it.`
+        : `U${universe} reaches no cable while ${namesOf(silent)} ${silent.length === 1 ? 'does' : 'do'} not answer.`,
+    );
+  }
+  for (const universe of sharedUniverses(boxes, outputs)) {
+    const all = players(universe);
+    const times = all.length === 2 ? 'twice' : `${all.length} times`;
+    remarks.push(
+      `U${universe} goes out ${times}, on ${namesOf([...new Set(all.map((item) => item.name))])}, as a splitter would give it.`,
+    );
+  }
+  for (const output of outputs.filter((item) => item.state === 'conflict')) {
+    remarks.push(
+      `${outputName(output.plan)} is a dmxbox, and plays as one: nothing goes out to it as Art-Net.`,
+    );
+  }
+  return remarks;
+}
+
+// "a", "a and b", "a, b and c"
+function namesOf(names: readonly string[]): string {
+  return names.length <= 1
+    ? (names[0] ?? '')
+    : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }

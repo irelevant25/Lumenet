@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { DeskStore } from '../desk/desk-store';
 import { NEW_PROJECT_NAME, ProjectFile } from '../desk/desk-types';
+import { DialogDismiss } from '../desk/dialog-dismiss';
 import { LampButton } from '../lamp-button/lamp-button';
 
 /** What the window is asked to do. */
@@ -12,7 +13,7 @@ export type ProjectTask = 'save' | 'load' | 'new';
  * or for confirming that a new, empty project is wanted.
  */
 @Component({
-  imports: [DatePipe, LampButton],
+  imports: [DatePipe, DialogDismiss, LampButton],
   selector: 'lm-project-dialog',
   styleUrl: './project-dialog.css',
   templateUrl: './project-dialog.html',

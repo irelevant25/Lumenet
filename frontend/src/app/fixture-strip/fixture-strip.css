@@ -2,7 +2,7 @@
    centred above each other */
 :host {
   display: grid;
-  grid-template-rows: auto auto clamp(calc(150px * var(--font-scale)), 30vh, 320px) auto auto;
+  grid-template-rows: auto auto clamp(150px, calc(30vh / var(--zoom)), 320px) auto auto;
   justify-items: center;
   gap: 4px;
   width: var(--strip);
@@ -12,7 +12,7 @@
 .swatch {
   box-sizing: border-box;
   width: 100%;
-  height: calc(20px * var(--font-scale));
+  height: 20px;
   padding: 0;
   border: 1px solid var(--edge);
   border-radius: 3px;
@@ -51,7 +51,7 @@ lm-fader {
   border-radius: 2px;
   background: rgb(11 13 16 / 85%);
   color: var(--sequence-end);
-  font-size: calc(9px * var(--font-scale));
+  font-size: 9px;
   font-weight: 700;
   line-height: 10px;
   text-overflow: ellipsis;
@@ -89,7 +89,7 @@ lm-fader {
   background: none;
   color: var(--legend);
   font: inherit;
-  font-size: calc(13px * var(--font-scale));
+  font-size: 13px;
   font-stretch: 75%;
   line-height: 15px;
   text-align: center;

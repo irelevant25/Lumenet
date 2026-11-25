@@ -19,6 +19,11 @@ export const routes: Routes = [
     title: 'Lumenet: sequences',
   },
   {
+    path: 'effects',
+    loadComponent: () => import('./effects-view/effects-view').then((file) => file.EffectsView),
+    title: 'Lumenet: effects',
+  },
+  {
     path: 'stack',
     loadComponent: () => import('./stack-view/stack-view').then((file) => file.StackView),
     title: 'Lumenet: stack',

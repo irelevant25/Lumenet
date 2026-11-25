@@ -176,7 +176,7 @@ public sealed class PlaybackHubTests
         await using HubClient ui = await server.ConnectAsync();
 
         JsonElement idle = await ui.InvokeAsync("GetPlayback");
-        Assert.Equal(["levels", "sequenceSteps", "stack"], idle.EnumerateObject().Select(property => property.Name));
+        Assert.Equal(["levels", "sequenceSteps", "stack", "effects"], idle.EnumerateObject().Select(property => property.Name));
         Assert.Equal(512, idle.GetProperty("levels").GetArrayLength());
         Assert.Equal(
             """{"currentId":null,"nextId":null,"state":"idle","paused":false,"remaining":0,"live":false,"on":[]}""",
@@ -302,6 +302,25 @@ public sealed class PlaybackHubTests
         await clock.StepAsync();
         Assert.Contains("MemoryLevelChanged 3 100", uis.Messages);
         Assert.Contains("ChannelChanged 7 0", uis.Messages);
+    }
+
+    [Fact]
+    public async Task WhileAnEffectRunsEveryRoundOfTheClockCarriesThePlayback()
+    {
+        var time = new ManualTime();
+        var desk = new Desk(time);
+        var uis = new Listener();
+        var clock = new DeskClock(desk, uis, Microsoft.Extensions.Logging.Abstractions.NullLogger<DeskClock>.Instance);
+        desk.SetEffect(new Effect(1, "Pulse", Effect.IntensityKind, "pulse"));
+        desk.SetEffectControl(1, "go", 1);
+
+        for (int round = 0; round < 3; round++)
+        {
+            time.Pass(0.033);
+            await clock.StepAsync();
+        }
+
+        Assert.Equal(3, uis.Messages.Count(message => message.StartsWith("PlaybackChanged", StringComparison.Ordinal)));
     }
 
     [Fact]
@@ -432,6 +451,13 @@ public sealed class PlaybackHubTests
         public Task StageChanged(StagePlan plan) => throw new NotSupportedException();
 
         public Task SoloChanged(SoloState solo) => throw new NotSupportedException();
+
+        public Task EffectsChanged(Effect[] effects) => throw new NotSupportedException();
+
+        public Task EffectPlaybackChanged(EffectPlayback playback) =>
+            Note($"EffectPlaybackChanged {playback.Number} {playback.Level} {(playback.Running ? "running" : "out")}");
+
+        public Task EffectIndependentChanged(int index, int effect) => throw new NotSupportedException();
 
         private Task Note(string message)
         {

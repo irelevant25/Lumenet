@@ -1,4 +1,4 @@
-<dialog #dialog aria-labelledby="project-dialog-title">
+<dialog #dialog lmDialog aria-labelledby="project-dialog-title" (dismiss)="close()">
   <form (submit)="confirm($event)">
     <h2 id="project-dialog-title">{{ title() }}</h2>
 
@@ -98,4 +98,5 @@
       </button>
     </div>
   </form>
+  <button type="button" class="dialog-close" aria-label="Close the window" title="Close" (click)="close()">✕</button>
 </dialog>

@@ -21,6 +21,7 @@ public sealed class HubTests
     [
         "channels", "memoryLevels", "memoryStored", "master", "blackout", "channelNotes", "memoryNotes", "independents",
         "memorySequence", "memoryIndependents", "bpm", "rateOn", "solo", "channelClaims", "memoryClaims", "universes",
+        "effectIndependents", "effects",
     ];
 
     [Fact]
@@ -46,6 +47,8 @@ public sealed class HubTests
         Assert.Equal(Enumerable.Range(1, 32), Numbers(desk.GetProperty("independents")));
         Assert.Equal(Enumerable.Range(1, 32), Numbers(desk.GetProperty("memoryIndependents")));
         Assert.Equal(1, desk.GetProperty("universes").GetInt32());
+        Assert.Equal(Enumerable.Range(1, 32), Numbers(desk.GetProperty("effectIndependents")));
+        Assert.Equal("[]", desk.GetProperty("effects").GetRawText());   // no effects, no playbacks
 
         // The pretend box does not answer, and the project lists no boxes: there are none to show.
         Assert.Equal("[]", hello.GetProperty("boxes").GetRawText());

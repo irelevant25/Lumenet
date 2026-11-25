@@ -2,6 +2,7 @@ import { Component, ElementRef, afterRenderEffect, computed, inject, viewChild }
 import { DeskSettings } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
 import { WheelPlace, wheelPlaces, wheelRoll } from '../desk/stack-wheel';
+import { pageZoom } from '../desk/zoom';
 import { LampButton } from '../lamp-button/lamp-button';
 
 /** Places made beyond those seen, on each side, for the wheel to roll in from. */
@@ -68,7 +69,8 @@ export class StackSection {
       const roll = Math.max(-reach, Math.min(reach, wheelRoll(before.current, current, count)));
       if (roll === 0 || typeof roller.animate !== 'function' || lessMotion()) return;
 
-      const placeHeight = roller.firstElementChild?.getBoundingClientRect().height ?? 0;
+      // in the page's pixels, as the move is (see zoom.ts)
+      const placeHeight = (roller.firstElementChild?.getBoundingClientRect().height ?? 0) / pageZoom();
       roller.animate([{ transform: `translateY(${roll * placeHeight}px)` }, { transform: 'none' }], {
         duration: ROLL_MS,
         easing: 'cubic-bezier(0.2, 0.8, 0.3, 1)',

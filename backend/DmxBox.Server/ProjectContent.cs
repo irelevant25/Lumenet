@@ -40,6 +40,12 @@ internal sealed record ProjectContent(byte[]?[] Looks, string[] ChannelNotes, st
     /// </summary>
     public Sequence?[] Sequences { get; init; } = new Sequence?[Desk.MemoryCount];
 
+    /// <summary>One entry per effect number, effect 1 first: the effect, or null where there is none.</summary>
+    public Effect?[] Effects { get; init; } = new Effect?[Effect.MaxEffects];
+
+    /// <summary>The effect number, 1-64, of each of the 32 effect keys of the independents; key 1 first.</summary>
+    public int[] EffectIndependents { get; init; } = Desk.DefaultEffectIndependents();
+
     /// <summary>The steps of the stack, in the order of their numbers.</summary>
     public ProjectStep[] Stack { get; init; } = [];
 

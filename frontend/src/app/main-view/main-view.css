@@ -12,6 +12,13 @@
   min-height: 0;
 }
 
+/* the row of effect faders under the memories, as high as one row of memories */
+:host(.with-effects) {
+  grid-template-rows:
+    minmax(0, var(--channel-share, 2fr)) minmax(0, var(--memory-share, 1fr))
+    minmax(0, 1fr);
+}
+
 /* The stack (its title, and its five keys or the wheel of steps, --wheel-size of them, whichever
    is higher) and the record keys get the height they need, and the sections with faders the
    rest. On a low window the keys above get flatter (down to --master-key-min) and the faders keep
@@ -19,14 +26,14 @@
    steps shows fewer, at least the one that is on. Lower still, the side scrolls. */
 .side {
   /* a section's title, its gap and its frame */
-  --frame: calc(12px * var(--font-scale) + 8px + 18px);
+  --frame: calc(12px + 8px + 18px);
   --keys-min: calc(5 * var(--key-min-h) + 4 * var(--strip-gap));
   --keys-max: calc(5 * var(--key-h) + 4 * var(--strip-gap));
   --wheel-max: calc(var(--wheel-size, 7) * var(--place-h) + 2px);
   --master-key-min: 26px;
   /* a section of keys over a fader at its lowest: the title, the keys, the level, 50 pixels of
      fader, the gaps and the frame */
-  --fader-section: calc(12px * var(--font-scale) + 4px + var(--readout) + 6px + 50px + 18px);
+  --fader-section: calc(12px + 4px + var(--readout) + 6px + 50px + 18px);
   /* the least the columns under the stack need: the master over the record keys, the general
      section (four keys over its fader, Tempo under it) */
   --master-min: calc(var(--fader-section) + var(--master-key-min) + 3 * var(--strip-gap));
@@ -34,7 +41,7 @@
   --general-min: calc(var(--fader-section) + 5 * var(--master-key-min) + 7 * var(--strip-gap));
 
   display: grid;
-  grid-row: 1 / span 2;
+  grid-row: 1 / -1;
   grid-column: 2;
   grid-template-columns: auto auto auto;
   grid-template-rows:

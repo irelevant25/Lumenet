@@ -1,4 +1,4 @@
-<dialog #dialog aria-labelledby="template-dialog-title">
+<dialog #dialog lmDialog aria-labelledby="template-dialog-title" (dismiss)="close()">
   <form (submit)="make($event)">
     <h2 id="template-dialog-title">Template for memory {{ memory() }}</h2>
 
@@ -114,4 +114,5 @@
       <button lmLamp type="submit" tone="system" aria-label="Make the steps" [level]="3">Make</button>
     </div>
   </form>
+  <button type="button" class="dialog-close" aria-label="Close the window" title="Close" (click)="close()">✕</button>
 </dialog>

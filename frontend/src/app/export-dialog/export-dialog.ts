@@ -3,6 +3,7 @@ import { DeskSettings } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
 import { saveTextFile } from '../desk/save-file';
 import { TRANSFER_PARTS, TransferPart, exportFileName, exportText } from '../desk/transfer';
+import { DialogDismiss } from '../desk/dialog-dismiss';
 import { LampButton } from '../lamp-button/lamp-button';
 
 /**
@@ -11,7 +12,7 @@ import { LampButton } from '../lamp-button/lamp-button';
  * keyboard shortcuts. Import (in its own window) takes them back, here or on another device.
  */
 @Component({
-  imports: [LampButton],
+  imports: [DialogDismiss, LampButton],
   selector: 'lm-export-dialog',
   styleUrl: './export-dialog.css',
   templateUrl: './export-dialog.html',

@@ -39,6 +39,7 @@ internal sealed partial class Desk
         _stage = plan;
         _roles = new PlanRoles(plan);
         _lightLooks.Clear();
+        ForgetEffectRigs();
         _outputChanges++;
     }
 

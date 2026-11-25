@@ -53,7 +53,7 @@ lm-fader {
   border-radius: 2px;
   background: rgb(11 13 16 / 85%);
   color: var(--sequence-end);
-  font-size: calc(9px * var(--font-scale));
+  font-size: 9px;
   font-stretch: 75%;
   font-weight: 700;
   line-height: 10px;
@@ -82,7 +82,7 @@ lm-fader {
   background: none;
   color: var(--legend);
   font: inherit;
-  font-size: calc(13px * var(--font-scale));
+  font-size: 13px;
   font-stretch: 75%;
   line-height: 15px;
   text-align: center;
@@ -110,4 +110,38 @@ lm-fader {
   border-bottom-color: transparent;
   background: none;
   cursor: default;
+}
+
+/* On the Effects view the name of an effect chooses it for the editor; the chosen one is framed. */
+.chooser {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.chooser:hover {
+  border-color: var(--legend-dim);
+}
+
+.chooser.chosen {
+  border-color: var(--effect);
+  background: color-mix(in srgb, var(--effect) 14%, transparent);
+}
+
+/* an effect has its name there, in two lines, as lettering */
+.note span {
+  height: 16px;
+  overflow: hidden;
+  color: var(--legend);
+  font-size: 13px;
+  font-stretch: 75%;
+  line-height: 15px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

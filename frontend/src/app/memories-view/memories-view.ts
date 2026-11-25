@@ -5,7 +5,9 @@ import { STRIPS_PER_LINE_PHONE, UNIVERSE_SIZE, stripNumbers } from '../desk/desk
 import { LampLevel } from '../desk/lamps';
 import { storedMemoryPages } from '../desk/memory-pages';
 import { splitNote } from '../desk/notes';
+import { PressedInSight } from '../desk/pressed-in-sight';
 import { channelLabel, channelNumber, universeStart } from '../desk/universes';
+import { pageZoom } from '../desk/zoom';
 import { LampButton, LampTone } from '../lamp-button/lamp-button';
 import { NoteLines } from '../note-lines/note-lines';
 
@@ -52,7 +54,7 @@ const EDITOR_MIN_WIDTH = 64;
  * stack is live, which locks everything that is stored.
  */
 @Component({
-  imports: [CellEditor, LampButton, NoteLines],
+  imports: [CellEditor, LampButton, NoteLines, PressedInSight],
   selector: 'lm-memories-view',
   styleUrl: './memories-view.css',
   templateUrl: './memories-view.html',
@@ -175,9 +177,10 @@ export class MemoriesView {
     const memory = this.store.inspectedMemory();
     const channel = universeStart(this.universe()) - 1 + Number(cell.dataset['channel']);
     const box = this.tableBox().nativeElement;
+    const zoom = pageZoom(); // the rectangles are in the window's pixels, the editor's place in the page's
     const frame = box.getBoundingClientRect();
     const place = cell.getBoundingClientRect();
-    const width = Math.max(place.width, EDITOR_MIN_WIDTH);
+    const width = Math.max(place.width / zoom, EDITOR_MIN_WIDTH);
 
     const underLevel = this.withNotes() && event.clientY > levelBottom(cell);
 
@@ -190,10 +193,10 @@ export class MemoriesView {
       fixture: this.store.fixtureLabels()[channel - 1] ?? '',
       sequence: this.store.memorySequence()[memory - 1],
       start: underLevel ? 'note' : 'level',
-      left: Math.max(0, Math.min(place.left - frame.left + box.scrollLeft, box.clientWidth - width)),
-      top: place.top - frame.top + box.scrollTop,
+      left: Math.max(0, Math.min((place.left - frame.left) / zoom + box.scrollLeft, box.clientWidth - width)),
+      top: (place.top - frame.top) / zoom + box.scrollTop,
       width,
-      height: place.height,
+      height: place.height / zoom,
     });
   }
 

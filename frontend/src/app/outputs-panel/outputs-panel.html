@@ -1,0 +1,339 @@
+<div class="head">
+  <h3 id="outputs-title">Outputs</h3>
+  @if (listedBoxes()) {
+    <button
+      type="button"
+      class="plain"
+      aria-label="Automatic: the boxes play by themselves"
+      title="The dmxboxes play by themselves again: each output the next universe"
+      [disabled]="locked()"
+      (click)="automatic()"
+    >
+      Auto
+    </button>
+  }
+</div>
+<p class="hint">
+  Each output plays a universe of the project. dmxboxes are found by themselves; Art-Net, sACN and
+  USB interfaces send nothing until they are added here. The project keeps this list.
+</p>
+@if (store.live()) {
+  <p class="hint" role="status">
+    The stack is live: the outputs cannot be changed until Stack is switched off.
+  </p>
+}
+
+@if (rows().length > 0) {
+  <div class="table-box">
+    <table>
+      <caption>
+        The outputs of the project, and the universe each plays
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Output</th>
+          <th scope="col">Kind</th>
+          <th scope="col">State</th>
+          <th scope="col">Plays</th>
+          <th scope="col">On the cable as</th>
+          <th scope="col"><span class="hidden">Add or remove</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.key) {
+          <tr [class.first]="row.first">
+            <th scope="row">
+              <span class="name">{{ row.name }}</span>
+              @if (row.first) {
+                <small>{{ row.about }}</small>
+                @if (networked(row)) {
+                  <select
+                    class="network"
+                    [disabled]="locked()"
+                    [attr.aria-label]="'Network of the ' + row.name.toLowerCase()"
+                    (change)="onNetwork(row, $event)"
+                  >
+                    <option value="" [selected]="row.view?.plan?.network === ''">
+                      Network: automatic
+                    </option>
+                    @for (choice of networks(); track choice.network) {
+                      <option
+                        [value]="choice.network"
+                        [selected]="choice.network === row.view?.plan?.network"
+                      >
+                        {{ networkLabel(choice) }}
+                      </option>
+                    }
+                    @if (networkGone(row)) {
+                      <option [value]="row.view?.plan?.network" selected>
+                        {{ row.view?.plan?.network }} (not on this PC)
+                      </option>
+                    }
+                  </select>
+                }
+              }
+            </th>
+            <td>
+              @if (row.first) {
+                <span class="kind" [class]="row.kind">{{ kindLabel(row.kind) }}</span>
+              }
+            </td>
+            <td>
+              @if (row.first) {
+                <span class="state" [class]="row.state"
+                  ><span class="light" aria-hidden="true"></span>{{ row.stateText }}</span
+                >
+                @if (row.detail) {
+                  <small>{{ row.detail }}</small>
+                }
+              }
+            </td>
+            <td>
+              <select
+                [disabled]="locked() || row.state === 'new'"
+                [attr.aria-label]="'Universe of ' + row.label"
+                (change)="onUniverse(row, $event)"
+              >
+                <option value="0" [selected]="row.universe === 0">Off</option>
+                @for (choice of universeChoices(); track choice) {
+                  <option [value]="choice" [selected]="choice === row.universe">
+                    U{{ choice }}
+                  </option>
+                }
+                @if (beyond(row.universe)) {
+                  <option [value]="row.universe" selected>
+                    U{{ row.universe }} (not in the project)
+                  </option>
+                }
+              </select>
+            </td>
+            <td>
+              <div class="cable">
+                @switch (row.kind) {
+                  @case ('dmxbox') {
+                    Output {{ row.part + 1 }}
+                  }
+                  @case ('artnet') {
+                    <span>Port-Address</span>
+                    <!-- the three parts stay together: in a narrow column they go under the word, not apart -->
+                    <span class="together">
+                      <input
+                        type="number"
+                        min="0"
+                        [max]="partMax('net')"
+                        [value]="part(row, 'net')"
+                        [disabled]="locked()"
+                        [attr.aria-label]="'Net of ' + row.label"
+                        (change)="onPart(row, 'net', $event)"
+                      />:<input
+                        type="number"
+                        min="0"
+                        [max]="partMax('subNet')"
+                        [value]="part(row, 'subNet')"
+                        [disabled]="locked()"
+                        [attr.aria-label]="'Sub-Net of ' + row.label"
+                        (change)="onPart(row, 'subNet', $event)"
+                      />:<input
+                        type="number"
+                        min="0"
+                        [max]="partMax('universe')"
+                        [value]="part(row, 'universe')"
+                        [disabled]="locked()"
+                        [attr.aria-label]="'Universe of the Port-Address of ' + row.label"
+                        (change)="onPart(row, 'universe', $event)"
+                      />
+                    </span>
+                  }
+                  @case ('sacn') {
+                    <span class="together">
+                      Universe
+                      <input
+                        class="wide"
+                        type="number"
+                        min="1"
+                        [max]="maxUniverse"
+                        [value]="address(row)"
+                        [disabled]="locked()"
+                        [attr.aria-label]="'sACN universe of ' + row.label"
+                        (change)="onSacnUniverse(row, $event)"
+                      />
+                    </span>
+                    @if (row.first) {
+                      <span class="together">
+                        priority
+                        <input
+                          class="wide"
+                          type="number"
+                          min="0"
+                          [max]="maxPriority"
+                          [value]="row.view?.plan?.priority"
+                          [disabled]="locked()"
+                          [attr.aria-label]="'Priority of ' + row.name"
+                          (change)="onPriority(row, $event)"
+                        />
+                      </span>
+                    }
+                  }
+                  @default {
+                    Its DMX socket
+                  }
+                }
+                @if (morePorts(row)) {
+                  <button
+                    type="button"
+                    class="more"
+                    [disabled]="locked()"
+                    [attr.aria-label]="'Another port for ' + row.name.split(',')[0]"
+                    (click)="morePort(row)"
+                  >
+                    + Port
+                  </button>
+                }
+              </div>
+            </td>
+            <td class="act">
+              @if (row.box?.kind === 'new') {
+                @if (row.first) {
+                  <button
+                    lmLamp
+                    type="button"
+                    tone="system"
+                    [disabled]="locked()"
+                    [attr.aria-label]="'Add dmxbox ' + row.box?.address"
+                    (click)="addBox(row.box!)"
+                  >
+                    Add
+                  </button>
+                }
+              } @else if (!row.box || (row.first && row.box.kind === 'listed')) {
+                <button
+                  type="button"
+                  class="remove"
+                  [disabled]="locked()"
+                  [attr.aria-label]="'Remove ' + row.label"
+                  title="Remove"
+                  (click)="remove(row)"
+                >
+                  ✕
+                </button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+} @else {
+  <p class="hint" role="status">
+    No dmxbox answers, and the project has no other output. The desk works without one.
+  </p>
+}
+
+<section class="found" aria-labelledby="found-title">
+  <div class="head">
+    <h4 id="found-title">Found on the network (Art-Net poll)</h4>
+    <button
+      lmLamp
+      type="button"
+      tone="system"
+      [disabled]="locked() || finding()"
+      (click)="search()"
+    >
+      {{ finding() ? 'Looking…' : 'Search again' }}
+    </button>
+  </div>
+  @if (found(); as list) {
+    @if (list.length === 0) {
+      <p class="hint" role="status">
+        No node answered. A node in another network can be added by its address.
+      </p>
+    } @else {
+      <ul aria-label="The Art-Net nodes that answered">
+        @for (node of list; track node.ip) {
+          <li [class.dim]="foundAs(node) === 'dmxbox'">
+            <span class="name">{{ node.shortName || node.ip }}</span>
+            <span>{{ node.ip }}</span>
+            @switch (foundAs(node)) {
+              @case ('dmxbox') {
+                <small
+                  >Already played as a dmxbox. Adding it for Art-Net too would drive it
+                  twice.</small
+                >
+              }
+              @case ('listed') {
+                <span>{{ portsOf(node) }}</span>
+                <small>In the list</small>
+              }
+              @default {
+                <span>{{ portsOf(node) }}</span>
+                <button
+                  lmLamp
+                  type="button"
+                  tone="system"
+                  [disabled]="locked()"
+                  [attr.aria-label]="'Add ' + (node.shortName || node.ip) + ' at ' + node.ip"
+                  (click)="addFound(node)"
+                >
+                  Add
+                </button>
+              }
+            }
+          </li>
+        }
+      </ul>
+    }
+  }
+</section>
+
+<form class="add" (submit)="add($event)">
+  <label for="output-kind">Add an output</label>
+  <select id="output-kind" [disabled]="locked()" (change)="onAddKind($event)">
+    @for (choice of addKinds; track choice.kind) {
+      <option [value]="choice.kind" [selected]="choice.kind === addKind()">
+        {{ choice.label }}
+      </option>
+    }
+  </select>
+  @if (addChoice().address) {
+    <input
+      type="text"
+      autocomplete="off"
+      spellcheck="false"
+      maxlength="64"
+      aria-label="Address"
+      [placeholder]="addChoice().address"
+      [value]="addAddress()"
+      [disabled]="locked()"
+      (input)="onAddAddress($event)"
+    />
+  }
+  @if (addKind() === 'usb') {
+    <select
+      aria-label="Serial port"
+      [disabled]="locked() || freePorts().length === 0"
+      (change)="onAddPort($event)"
+    >
+      @for (port of freePorts(); track port) {
+        <option [value]="port" [selected]="port === addPort()">{{ port }}</option>
+      } @empty {
+        <option value="">no free serial port</option>
+      }
+    </select>
+  } @else {
+    <label for="output-count">{{ addKind() === 'dmxbox' ? 'Outputs' : 'Ports' }}</label>
+    <select id="output-count" [disabled]="locked()" (change)="onAddCount($event)">
+      @for (count of portCounts; track count) {
+        <option [value]="count" [selected]="count === addCount()">{{ count }}</option>
+      }
+    </select>
+  }
+  <button lmLamp type="submit" tone="system" [disabled]="locked()">Add</button>
+</form>
+<p class="hint">{{ addChoice().hint }}</p>
+
+@for (remark of remarks(); track remark) {
+  <p class="remark"><span aria-hidden="true">⚠</span> {{ remark }}</p>
+}
+@if (error()) {
+  <p class="error" role="alert">{{ error() }}</p>
+}

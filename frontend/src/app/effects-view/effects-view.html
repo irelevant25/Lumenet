@@ -1,0 +1,30 @@
+<header>
+  <h2>Effects</h2>
+  <p class="summary" role="status">{{ summary() }}</p>
+</header>
+
+<lm-effect-section [choosing]="true" />
+
+<section class="work" aria-labelledby="effect-title">
+  <h3 id="effect-title">Effect {{ chosen() }}</h3>
+
+  @if (effect(); as current) {
+    <lm-effect-live [effect]="current" [playback]="playback()" />
+    <div class="edit">
+      <lm-effect-editor [effect]="current" />
+      <lm-effect-preview [effect]="current" [playback]="playback()" />
+    </div>
+  } @else {
+    <div class="make" role="group" [attr.aria-label]="'Make effect ' + chosen()">
+      <p>Make effect {{ chosen() }} as</p>
+      @for (item of kinds; track item.kind) {
+        <button type="button" class="make-kind" [disabled]="store.live()" (click)="make(item.kind)">
+          {{ item.label }}
+        </button>
+      }
+      @if (store.live()) {
+        <p class="hint">The stack is live: switch Stack off to make an effect.</p>
+      }
+    </div>
+  }
+</section>

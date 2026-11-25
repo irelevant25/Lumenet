@@ -26,7 +26,7 @@ h2 {
   justify-self: start;
   margin: 0 0 4px;
   color: var(--legend-dim);
-  font-size: calc(12px * var(--font-scale));
+  font-size: 12px;
   font-stretch: 75%;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -66,7 +66,7 @@ lm-fader {
 :host-context(.mobile) h2 {
   order: 1;
   margin: 0 6px 0 14px;
-  font-size: calc(13px * var(--font-scale));
+  font-size: 13px;
 }
 
 :host-context(.mobile) lm-fader {

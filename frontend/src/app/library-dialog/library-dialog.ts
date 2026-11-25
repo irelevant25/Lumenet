@@ -10,6 +10,7 @@ import {
   searchLibrary,
   withLibraryType,
 } from '../desk/fixture-library';
+import { DialogDismiss } from '../desk/dialog-dismiss';
 import { LampButton } from '../lamp-button/lamp-button';
 
 /**
@@ -19,7 +20,7 @@ import { LampButton } from '../lamp-button/lamp-button';
  * with its name and what it does at its values.
  */
 @Component({
-  imports: [LampButton],
+  imports: [DialogDismiss, LampButton],
   selector: 'lm-library-dialog',
   styleUrl: './library-dialog.css',
   templateUrl: './library-dialog.html',

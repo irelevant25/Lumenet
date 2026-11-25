@@ -24,6 +24,7 @@ export const KEY_COLOR_GROUPS = [
   'Top bar',
   'Independents',
   'Sequences view',
+  'Effects view',
   'Stage view',
   'Notes view',
 ] as const;
@@ -37,6 +38,7 @@ export const KEY_COLORS: readonly KeyColor[] = [
   color('channel', 'Kinds', 'Channels: their keys, pages, independent keys and faders', '--channel', '#3ddc84'),
   color('memory', 'Kinds', 'Memories: their keys, pages, independent keys and faders', '--memory', '#ff5247'),
   color('sequence', 'Kinds', 'Sequences: the color a memory that holds one runs into', '--sequence-end', '#ffd426'),
+  color('effect', 'Kinds', 'Effects: their keys, pages, independent keys and faders', '--effect', '#b388ff'),
 
   key('blackout', 'Master', 'Blackout', '#4aa3ff'),
 
@@ -77,6 +79,11 @@ export const KEY_COLORS: readonly KeyColor[] = [
   key('template', 'Sequences view', 'Template', AMBER),
   key('normal-speed', 'Sequences view', '1x (normal speed)', AMBER),
 
+  key('effect-copy', 'Effects view', 'Copy', AMBER),
+  key('effect-delete', 'Effects view', 'Del (take the effect out)', '#ff5247'),
+  key('effect-keep', 'Effects view', 'Keep (the live values)', AMBER),
+  key('effect-reset', 'Effects view', '↺ (the effect\'s own values again)', AMBER),
+
   key('stage-clear', 'Stage view', 'Clear', WHITE),
   key('stage-edit', 'Stage view', 'Edit', AMBER),
   key('stage-add', 'Stage view', 'Add light', AMBER),
@@ -93,6 +100,7 @@ export const STANDARD_KEY_COLORS: readonly { readonly color: string; readonly na
   { color: AMBER, name: 'Amber' },
   { color: WHITE, name: 'White' },
   { color: '#4aa3ff', name: 'Blue' },
+  { color: '#b388ff', name: 'Violet' },
 ];
 
 const BY_ID = new Map(KEY_COLORS.map((entry) => [entry.id, entry]));

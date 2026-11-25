@@ -1,10 +1,10 @@
-<dialog #dialog aria-labelledby="export-dialog-title">
+<dialog #dialog lmDialog aria-labelledby="export-dialog-title" (dismiss)="close()">
   <form (submit)="confirm($event)">
     @if (saved(); as name) {
       <h2 id="export-dialog-title">Exported</h2>
       <p class="report" role="status">Saved as "{{ name }}". Import takes it back, here or on another device.</p>
       <div class="actions">
-        <button #ok lmLamp type="button" tone="system" [level]="3" aria-label="Close" (click)="close()">OK</button>
+        <button #ok lmLamp type="button" tone="system" [level]="3" (click)="close()">OK</button>
       </div>
     } @else {
       <h2 id="export-dialog-title">Export</h2>
@@ -33,4 +33,5 @@
       </div>
     }
   </form>
+  <button type="button" class="dialog-close" aria-label="Close the window" title="Close" (click)="close()">✕</button>
 </dialog>

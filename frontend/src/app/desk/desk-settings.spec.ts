@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, fontScale, keyCount, parseSettings, settingsPart } from './desk-settings';
+import { DEFAULT_SETTINGS, keyCount, parseSettings, settingsPart, zoomOf } from './desk-settings';
 
 describe('the settings this browser keeps', () => {
   it('are the defaults when there are none, or when they cannot be read', () => {
@@ -12,11 +12,13 @@ describe('the settings this browser keeps', () => {
       wheelSize: 7,
       channelKeys: 10,
       memoryKeys: 10,
-      fontScale: 1,
+      effectKeys: 0,
+      effectRows: 0,
+      zoom: 1,
       shortcuts: { 'project.undo': 'Ctrl+KeyZ', 'project.redo': 'Ctrl+KeyY' },
       colors: {},
       hiddenViews: [],
-      viewOrder: ['main', 'memories', 'sequences', 'stack', 'stage', 'fixtures', 'notes', 'settings'],
+      viewOrder: ['main', 'memories', 'sequences', 'stack', 'stage', 'fixtures', 'effects', 'notes', 'settings'],
     });
   });
 
@@ -34,7 +36,7 @@ describe('the settings this browser keeps', () => {
 
   it('go into a file of Export as the settings of the Settings view, the shortcuts apart', () => {
     expect(settingsPart(DEFAULT_SETTINGS)).not.toHaveProperty('shortcuts');
-    expect(settingsPart({ ...DEFAULT_SETTINGS, fontScale: 1.2 }).fontScale).toBe(1.2);
+    expect(settingsPart({ ...DEFAULT_SETTINGS, zoom: 1.2 }).zoom).toBe(1.2);
     expect(settingsPart({ ...DEFAULT_SETTINGS, channelSize: 8 }).channelSize).toBe(8);
     expect(settingsPart({ ...DEFAULT_SETTINGS, colors: { pause: '#ffffff' } }).colors).toEqual({ pause: '#ffffff' });
     expect(settingsPart({ ...DEFAULT_SETTINGS, hiddenViews: ['stage'] }).hiddenViews).toEqual(['stage']);
@@ -49,22 +51,19 @@ describe('the settings this browser keeps', () => {
 
   it('put every view in the top bar once: the known ones in their order, the others after the view they follow', () => {
     const order = parseSettings(JSON.stringify({ viewOrder: ['notes', 'stage', 'nothing', 'notes', 3, 'main'] })).viewOrder;
-    expect(order).toEqual(['notes', 'settings', 'stage', 'fixtures', 'main', 'memories', 'sequences', 'stack']);
+    expect(order).toEqual(['notes', 'settings', 'stage', 'fixtures', 'effects', 'main', 'memories', 'sequences', 'stack']);
     expect(parseSettings(JSON.stringify({ viewOrder: 'stage' })).viewOrder).toEqual(DEFAULT_SETTINGS.viewOrder);
 
-    // An order kept before there were notes: Notes comes after Fixtures, where it usually is. One
-    // kept while Keyboard was a view (until 2026-11-24, now a panel of Settings) is read without it.
+    // An order kept before there were notes and effects: Effects comes after Fixtures and Notes after
+    // Effects, where they usually are. One kept while Keyboard was a view (until 2026-11-24, now a
+    // panel of Settings) is read without it.
+    const usual = ['main', 'memories', 'sequences', 'stack', 'stage', 'fixtures', 'effects', 'notes', 'settings'];
     const before = ['main', 'memories', 'sequences', 'stack', 'stage', 'fixtures', 'keyboard', 'settings'];
-    expect(parseSettings(JSON.stringify({ viewOrder: before })).viewOrder).toEqual([
-      'main',
-      'memories',
-      'sequences',
-      'stack',
-      'stage',
-      'fixtures',
-      'notes',
-      'settings',
-    ]);
+    expect(parseSettings(JSON.stringify({ viewOrder: before })).viewOrder).toEqual(usual);
+
+    // The usual order of the day Effects stood after Sequences was never chosen: it is the usual order of now.
+    const thatDay = ['main', 'memories', 'sequences', 'effects', 'stack', 'stage', 'fixtures', 'notes', 'settings'];
+    expect(parseSettings(JSON.stringify({ viewOrder: thatDay })).viewOrder).toEqual(usual);
     expect(parseSettings(JSON.stringify({ hiddenViews: ['keyboard', 'stage'] })).hiddenViews).toEqual(['stage']);
   });
 
@@ -85,7 +84,11 @@ describe('the settings this browser keeps', () => {
         wheelSize: 4, // an odd number from 1 to 9
         channelKeys: 32,
         memoryKeys: 33, // there are 32
-        fontScale: 1.24,
+        effectKeys: 8,
+        effectRows: 2, // none or one
+        zoom: 1.24,
+        // the size of the lettering, before there was the zoom: passed over
+        fontScale: 1.5,
         shortcuts: { 'master.clear': 'Ctrl+KeyC', 'stack.play': 5, 'stack.next': '' },
         // a known key and a color as #rrggbb, kept in small letters
         colors: { pause: '#FFAA00', play: 'green', nothing: '#000000', channel: '#00ff00' },
@@ -100,7 +103,9 @@ describe('the settings this browser keeps', () => {
       wheelSize: 7,
       channelKeys: 32,
       memoryKeys: 10,
-      fontScale: 1.2,
+      effectKeys: 8,
+      effectRows: 0,
+      zoom: 1.2,
       shortcuts: { 'master.clear': 'Ctrl+KeyC', 'project.undo': 'Ctrl+KeyZ', 'project.redo': 'Ctrl+KeyY' },
       colors: { pause: '#ffaa00', channel: '#00ff00' },
       hiddenViews: [],
@@ -110,12 +115,12 @@ describe('the settings this browser keeps', () => {
     expect(parseSettings(JSON.stringify({ wheelSize: 9 })).wheelSize).toBe(9);
   });
 
-  it('keep the lettering between 0.7 and 1.5 times, in steps of 0.1', () => {
-    expect(fontScale(1.1)).toBe(1.1);
-    expect(fontScale(1.0 + 0.1 + 0.1)).toBe(1.2); // not 1.2000000000000002
-    expect(fontScale(3)).toBe(1.5);
-    expect(fontScale(0.2)).toBe(0.7);
-    expect(fontScale('big')).toBe(1);
+  it('keep the zoom between 50 and 200 per cent, in steps of 10', () => {
+    expect(zoomOf(1.1)).toBe(1.1);
+    expect(zoomOf(1.0 + 0.1 + 0.1)).toBe(1.2); // not 1.2000000000000002
+    expect(zoomOf(3)).toBe(2);
+    expect(zoomOf(0.2)).toBe(0.5);
+    expect(zoomOf('big')).toBe(1);
   });
 
   it('show 0 to 32 keys of each kind of the independents', () => {

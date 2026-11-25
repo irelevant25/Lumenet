@@ -7,6 +7,7 @@ import {
   MEMORY_INDEPENDENT_COUNT,
   UNIVERSE_SIZE,
 } from './desk-types';
+import { EFFECT_INDEPENDENT_COUNT, MAX_EFFECTS } from './effects';
 import type { FunctionName } from './function-mode';
 import { universeStart } from './universes';
 
@@ -45,13 +46,16 @@ export const ACTION_GROUPS = [
   'Stack',
   'Record',
   'Sequences view',
+  'Effects view',
   'Stage view',
   'Notes view',
   'Independents',
   'Channel pages',
   'Memory pages',
+  'Effect pages',
   'Channel keys',
   'Memory keys',
+  'Effect keys',
 ] as const;
 
 export type ActionGroup = (typeof ACTION_GROUPS)[number];
@@ -62,6 +66,8 @@ export type ActionGroup = (typeof ACTION_GROUPS)[number];
  */
 export const MAX_CHANNEL_PAGES = UNIVERSE_SIZE / 8;
 export const MAX_MEMORY_PAGES = MEMORY_COUNT / 4;
+/** With 4 effects in a row (a channel size of 8 in two rows), 16 pages of effects. */
+export const MAX_EFFECT_PAGES = MAX_EFFECTS / 4;
 
 const RECORD_KEYS: readonly { function: FunctionName; label: string }[] = [
   { function: 'save', label: 'Save mem' },
@@ -76,6 +82,7 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
   view('main', 'Main view', '/'),
   view('memories', 'Memories view', '/memories'),
   view('sequences', 'Sequences view', '/sequences'),
+  view('effects', 'Effects view', '/effects'),
   view('stack', 'Stack view', '/stack'),
   view('stage', 'Stage view', '/stage'),
   view('fixtures', 'Fixtures view', '/fixtures'),
@@ -95,7 +102,8 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
     label: 'LAN',
     run: ({ store }) => store.setLan(!store.lan()?.on),
   },
-  { id: 'boxes', group: 'Project and LAN', label: 'Outputs (the window of the boxes and other outputs)', run: null },
+  // the outputs had a window of their own until 2026-11-24: the shortcut leads to their part of Settings
+  { id: 'boxes', group: 'Project and LAN', label: 'Outputs (in Settings)', run: ({ navigate }) => navigate('/settings#outputs') },
 
   // Clear, Solo and Rate stood in the master section once: their names say so, and the shortcuts
   // that projects keep under these names go on working.
@@ -137,6 +145,22 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
   { id: 'sequence.template', group: 'Sequences view', label: 'Template', run: null },
   { id: 'sequence.speed', group: 'Sequences view', label: 'Normal speed (1x)', run: null },
 
+  // The keys of the editor work on the effect it shows.
+  { id: 'effects.copy', group: 'Effects view', label: 'Copy (the effect, to the next free number)', run: null },
+  { id: 'effects.delete', group: 'Effects view', label: 'Del (take the effect out)', run: null },
+  {
+    id: 'effects.keep',
+    group: 'Effects view',
+    label: 'Keep (the live values in the effect)',
+    run: ({ store }) => store.keepEffect(store.chosenEffect()),
+  },
+  {
+    id: 'effects.reset',
+    group: 'Effects view',
+    label: '↺ (the effect\'s own values again)',
+    run: ({ store }) => store.effectControl(store.chosenEffect(), 'reset'),
+  },
+
   { id: 'stage.edit', group: 'Stage view', label: 'Edit (stage plan)', run: null },
   { id: 'stage.add', group: 'Stage view', label: 'Add light', run: null },
   // (The Stage view's Clear is the Clear of General: master.clear.)
@@ -158,6 +182,12 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
     label: `Memory key ${key} of the independents`,
     run: ({ store }) => store.toggleMemoryIndependent(key),
     hold: ({ store }, down) => store.holdIndependent('memory', key, down),
+  })),
+  ...numbered(EFFECT_INDEPENDENT_COUNT, (key) => ({
+    id: `ind.effect.${key}`,
+    group: 'Independents',
+    label: `Effect key ${key} of the independents`,
+    run: ({ store }) => store.toggleEffectIndependent(key),
   })),
 
   // The U keys above the channel faders, of a project with more than one universe.
@@ -185,6 +215,15 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
       if (first <= MEMORY_COUNT) store.showMemoryPage(first);
     },
   })),
+  ...numbered(MAX_EFFECT_PAGES, (page) => ({
+    id: `page.effect.${page}`,
+    group: 'Effect pages',
+    label: `Effect page ${page}`,
+    run: ({ store }) => {
+      const first = (page - 1) * store.stripsPerRow() + 1;
+      if (first <= MAX_EFFECTS) store.showEffectPage(first);
+    },
+  })),
 
   // All 4096; the Keyboard panel lists those of the project's universes, and a key of a universe
   // the project does not have does nothing.
@@ -205,6 +244,12 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
     label: `Memory key ${memory}`,
     run: ({ store }) => store.pressMemory(memory),
     hold: ({ store }, down) => store.holdKey('memory', memory, down),
+  })),
+  ...numbered(MAX_EFFECTS, (effect) => ({
+    id: `effect.${effect}`,
+    group: 'Effect keys',
+    label: `Effect key ${effect} (start and stop)`,
+    run: ({ store }) => store.toggleEffect(effect),
   })),
 ];
 

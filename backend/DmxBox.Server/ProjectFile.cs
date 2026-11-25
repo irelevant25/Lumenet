@@ -79,6 +79,14 @@ internal sealed class ProjectFile
     /// <summary>The steps of the stack. Files of version 1 do not have the property.</summary>
     public List<ProjectFileStep?>? Stack { get; set; }
 
+    /// <summary>The effects, see <see cref="Effect"/>. Written only for a project that has some (version 7).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<ProjectFileEffect?>? Effects { get; set; }
+
+    /// <summary>The effect number (1-64) of each of the 32 effect keys of the independents, key 1 first. Written with the effects.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<int>? EffectIndependents { get; set; }
+
     /// <summary>
     /// The stage plan: the size of the stage and the lights of the rig on it. Files from before
     /// there were plans do not have the property, nor do imported shows.
@@ -275,6 +283,89 @@ internal sealed class ProjectFileLight
     public int? Limit { get; set; }
 }
 
+/// <summary>
+/// An effect, as it stands in a project file, see <see cref="Effect"/>. What is as an effect has
+/// it unless it says otherwise is left out, and a file that leaves it out means that.
+/// </summary>
+internal sealed class ProjectFileEffect
+{
+    /// <summary>Its number, 1-64.</summary>
+    public int? Number { get; set; }
+
+    public string? Name { get; set; }
+
+    /// <summary>"movement", "intensity", "color" or "pixel".</summary>
+    public string? Kind { get; set; }
+
+    /// <summary>Its shape, like "circle".</summary>
+    public string? Shape { get; set; }
+
+    /// <summary>The group it works on, by its place in the file's list of groups, counted from 1; none when it names lights.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Group { get; set; }
+
+    /// <summary>The lights it works on, by their place in the file's list of lights, counted from 1.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<int>? Lights { get; set; }
+
+    /// <summary>Cycles a minute. A file that does not say means 30.</summary>
+    public double? Speed { get; set; }
+
+    /// <summary>Per cent. A file that does not say means 100.</summary>
+    public int? Size { get; set; }
+
+    /// <summary>Per cent. A file that does not say means 100.</summary>
+    public int? Spread { get; set; }
+
+    /// <summary>"forward" or "back"; none for forward.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Direction { get; set; }
+
+    /// <summary>"address", "left", "center" or "random"; none for address.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Order { get; set; }
+
+    /// <summary>Lights in a block; none for 1.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Blocks { get; set; }
+
+    /// <summary>Wings; none for 1.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Wings { get; set; }
+
+    /// <summary>Seconds; none for 0.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? FadeIn { get; set; }
+
+    /// <summary>Seconds; none for 0.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? FadeOut { get; set; }
+
+    /// <summary>Per cent of a cycle; none for 50.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Duty { get; set; }
+
+    /// <summary>Colors like "#ff2000"; none for the usual ones.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<string?>? Colors { get; set; }
+
+    /// <summary>A movement around a center of its own: pan and tilt in per cent; none to move around where the head points.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<double>? Center { get; set; }
+
+    /// <summary>Degrees; none for 0.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Angle { get; set; }
+
+    /// <summary>Where a ripple starts, squares across and from the back; none for the middle of its lights.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<double>? Point { get; set; }
+
+    /// <summary>Chooses the random order and shapes; none for 0.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Seed { get; set; }
+}
+
 /// <summary>A memory that holds a sequence, as it stands in a project file.</summary>
 internal sealed class ProjectFileSequence
 {
@@ -301,13 +392,13 @@ internal sealed class ProjectFileStep
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Cue { get; set; }
 
-    /// <summary>"channel", "memory", "fixture" or "group"; in the stack also "release".</summary>
+    /// <summary>"channel", "memory", "fixture" or "group"; in the stack also "release" and "effect".</summary>
     public string? Target { get; set; }
 
     /// <summary>
     /// The channel (1-512) or the memory (1-128); a fixture or a group by its place in the file's
     /// list of lights or groups, counted from 1 (0 for one that is gone). 0 for a release, which
-    /// names its step with <see cref="Releases"/>.
+    /// names its step with <see cref="Releases"/>. The effect (1-64) of a step of an effect.
     /// </summary>
     public int? Number { get; set; }
 

@@ -6,8 +6,8 @@
         <span class="version">v{{ store.version() }}</span>
       }
     </div>
-    <!-- how many outputs play; a press opens their window: which output plays which universe -->
-    <lm-outputs-button (open)="openOutputs()" />
+    <!-- how many outputs play; Settings shows which output plays which universe -->
+    <lm-outputs-status />
     @if (lanLine(); as line) {
       <!-- Only while LAN is lit, and only on the PC: what to open on a phone, and the password. -->
       <span class="lan" [attr.title]="line.hint">
@@ -153,6 +153,3 @@
 <lm-project-dialog />
 <lm-import-dialog />
 <lm-export-dialog />
-@defer (on idle; when outputsWanted()) {
-  <lm-outputs-dialog #outputsWindow />
-}

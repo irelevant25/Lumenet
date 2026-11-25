@@ -4,7 +4,7 @@ import type { MidiMonitorLine } from '../desk/midi';
 import { resultText } from '../desk/midi-targets';
 
 /** How many of the last messages the list shows. */
-const SHOWN = 12;
+const SHOWN = 40;
 
 /**
  * The messages that came in from the devices the desk uses, the newest first, each with what it did:

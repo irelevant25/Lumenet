@@ -356,7 +356,7 @@
       const plugged = message.pluggedIn
         ? message.desk
           ? '<strong>The desk uses it.</strong>'
-          : '<strong class="away">Plugged in; the desk does not use it yet</strong> (Settings, MIDI: tick it).'
+          : '<strong class="away">Plugged in; the desk does not use it yet</strong> (the MIDI view of the desk: tick it).'
         : '<strong class="away">Pulled out</strong> (U in the simulator plugs it in again).';
       const last = message.fromDesk > 0 ? ` From the desk: ${message.fromDesk} messages, the last ${message.last}.` : '';
       status.innerHTML = plugged + last;

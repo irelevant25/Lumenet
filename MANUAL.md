@@ -46,10 +46,11 @@ page and the examples are inside it, and so is .NET. Every release on the [Relea
 
 ## What is on the page
 
-The top bar has nine links: **Main**, **Memories**, **Sequences**, **Stack**, **Stage**, **Fixtures**,
-**Effects**, **Notes** and **Settings** (in this order until Settings gives them another). Main is the desk itself. Memories shows what is stored, and changes it with a double click. Sequences, Effects and Stack
+The top bar has ten links: **Main**, **Memories**, **Sequences**, **Stack**, **Stage**, **Fixtures**,
+**Effects**, **Notes**, **MIDI** and **Settings** (in this order until Settings gives them another). Main is the desk itself. Memories shows what is stored, and changes it with a double click. Sequences, Effects and Stack
 are for the things that run by themselves (see below), Stage shows the lights of the rig in their colors,
-Fixtures plays them as fixtures, Notes holds the instructions for the show, Settings is
+Fixtures plays them as fixtures, Notes holds the instructions for the show, MIDI sets up the MIDI controllers
+of the PC (see [MIDI controllers](#midi-controllers)), Settings is
 for how this device shows the desk and for its keyboard shortcuts (see [Settings](#settings) and
 [Keyboard](#keyboard)). Under the name the
 top bar says how many outputs play (Settings shows them, see [Universes and outputs](#universes-and-outputs));
@@ -860,8 +861,8 @@ each other and the page scrolls. The page keys lie under the section titles, in 
 on the Memories and Sequences views a line parts them from the memory keys under them. The stack keeps its
 five keys in a column beside its wheel, also on a phone, and the independents and Record lie down, their
 keys at the left under the title (Edit first). Narrower than 800 pixels (a phone), a row of 16 faders is
-shown as two lines of 8, and the top bar takes three lines (up to 470 pixels, its nine links stand in two
-rows of five and four). The numbering does not change: a page is still 32 channels or 16 memories. Narrower than 1366 pixels the top bar takes two lines, the links to the views under the rest.
+shown as two lines of 8, and the top bar takes three lines (up to 470 pixels, its ten links stand in two
+rows of five). The numbering does not change: a page is still 32 channels or 16 memories. Narrower than 1366 pixels the top bar takes two lines, the links to the views under the rest.
 The limits are in `frontend/src/app/desk/desk-types.ts`, and only there; the two rows of links are the top
 bar's own. They count the page's pixels: at a zoom of 120 % (Settings) a window of 1440 pixels has 1200.
 
@@ -914,12 +915,12 @@ LAN to the desk program.
 
 ![The Settings view](docs/screenshots/settings.png)
 
-Settings has six panels side by side, as many as the window has room for, each as high as the window
+Settings has five panels side by side, as many as the window has room for, each as high as the window
 lets it be and scrolling where it holds more: **Main view** (with the universes, the zoom, the autosave and
 the network under it), **Views in the top bar**, **Colors of the keys** (one under the other),
-**Keyboard** (see [Keyboard](#keyboard)), **MIDI** (see [MIDI controllers](#midi-controllers)) and the
-**Outputs** of the project (see [The outputs](#the-outputs)); MIDI and Outputs are two columns wide for their
-tables.
+**Keyboard** (see [Keyboard](#keyboard)) and the **Outputs** of the project (see
+[The outputs](#the-outputs)), which is two columns wide for its table. The MIDI controllers have a view of
+their own (see [MIDI controllers](#midi-controllers)).
 
 * **Channels on a page** (Main): Auto (a row of 32 or 16 by the window, as above), or 8, 16, 32, 64 or 128.
 * **Rows of channel faders** and **rows of memory faders** (Main): 1 or 2 of each, at first 2 and 1. A
@@ -950,7 +951,7 @@ tables.
   others can come back. ▲ and ▼ move a view one place to the left or right in the top bar (the keyboard focus
   stays on the arrow), and ↺ beside the title brings every view back in the usual order. A desk without Main
   in its top bar opens on the first view that is. A view that came later than the order kept (Notes,
-  Effects) stands after the view it follows in the usual order.
+  Effects, MIDI) stands after the view it follows in the usual order.
 * **Colors of the keys:** a color for each kind (channels, memories, the color a memory with a
   sequence runs into, and effects), which is that of all its keys, page keys and faders, and one for each other key, group
   by group: Black out; Clear, Solo up, Solo down, Rate (with its fader) and Tempo; Stack, Prev, Play, Pause, Next and Add step (Play also colors the
@@ -1018,9 +1019,10 @@ others) plays the desk: its keys press the desk's keys, its faders and knobs mov
 lights its keys and moves its motorized faders back. The desk program takes the controller, not the page, so it
 works whichever pages are open, on Windows and macOS (on Linux only the simulators below).
 
-![The MIDI panel of Settings: two simulated controllers in use, the messages that came in, and the faders of the pages shown with their controls](docs/screenshots/midi.png)
+![The MIDI view: two simulated controllers in use and the messages that came in at the left, the faders of the pages shown with their controls at the right](docs/screenshots/midi.png)
 
-The **MIDI** panel of Settings, two columns wide, sets it up; only the PC can, as the controllers belong to it.
+The **MIDI** view (**MIDI** in the top bar) sets it up; only the PC can, as the controllers belong to it. At
+its left stand the controllers and the messages that came in, at its right every key and fader of the desk.
 
 * **Devices:** the MIDI devices of the PC. A ticked one the desk uses: it opens it, and on Windows no other
   program can have it meanwhile. A device that is pulled out shows "Not plugged in"; when it is back the
@@ -1031,11 +1033,13 @@ The **MIDI** panel of Settings, two columns wide, sets it up; only the PC can, a
   "Memory key 5 pressed", "Channel fader 1 of the page shown to 128". In amber when it did nothing: no
   mapping, no page of the desk open on the PC, a fader waiting until the control reaches the desk's value, or
   a refusal with its reason.
-* Under them every key and fader of the desk, kind by kind, as the Keyboard panel lists the keys, each with
-  the controls that work it, **Learn** and **✕**. **Learn**, then press or move a control: from now on it
-  works that key or fader, and nothing else. Learn again, Stop or Esc stops waiting. **Listen** shows the
-  desk, and the key double-clicked there is learned. ✕ takes all controls of that key or fader away. The
-  search finds keys and faders by their names, and controls by what they are ("cc 48").
+* **Keys and faders:** every key and fader of the desk, kind by kind, as the Keyboard panel lists the keys,
+  each with the controls that work it, **Learn** and **✕**. **Learn**, then press or move a control: from now
+  on it works that key or fader, and nothing else. Learn again, Stop or Esc stops waiting. **Listen** shows
+  the desk, as Listen of the Keyboard panel does: the key or fader double-clicked there is not pressed or
+  moved but shown here, its kind open, its line marked and its Learn ready (a fader does not move at all
+  while Listen waits). ✕ takes all controls of that key or fader away. The search finds keys and faders by
+  their names, and controls by what they are ("cc 48").
 * A key takes a note, a controller (CC, pressed above 0) or a program change. A fader takes a controller, a
   pair of controllers for 14 bits (when the fine one, 32 above, follows at once while learning) or the pitch
   bend (the faders of Mackie controllers). Under a fader's control stand how it moves the fader (a fader or
@@ -1098,7 +1102,7 @@ their manuals do not say. They were tried with the simulators below, not yet wit
 ### Without a controller
 
 `sim.cmd` in the source code starts a simulated controller, as if it were plugged into the PC: `sim.cmd
-apc-mini-mk2`, `nanokontrol2`, `x-touch-mini` or `x-touch-compact`. The MIDI panel lists it as "APC mini mk2
+apc-mini-mk2`, `nanokontrol2`, `x-touch-mini` or `x-touch-compact`. The MIDI view lists it as "APC mini mk2
 (simulator)", and the browser opens its page: pads and keys held with the mouse, faders and knobs moved, lit
 and moved by the desk as the real one would be. U pulls it out and plugs it in again, Q ends it (see
 [DEV.md](DEV.md#simulated-devices-simcmd)).

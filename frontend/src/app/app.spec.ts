@@ -1363,15 +1363,16 @@ describe('the desk page', () => {
       'Fixtures',
       'Effects',
       'Notes',
+      'MIDI',
       'Settings',
-    ]); // Keyboard is a panel of Settings
+    ]); // Keyboard is a panel of Settings; MIDI a view of its own
     expect(box('Settings').checked).toBe(true);
     expect(box('Settings').disabled).toBe(true);
 
     box('Stage').click();
     box('Main').click();
     await fixture.whenStable();
-    expect(links()).toEqual(['Memories', 'Sequences', 'Stack', 'Fixtures', 'Effects', 'Notes', 'Settings']);
+    expect(links()).toEqual(['Memories', 'Sequences', 'Stack', 'Fixtures', 'Effects', 'Notes', 'MIDI', 'Settings']);
     expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY)!)).toMatchObject({ hiddenViews: ['main', 'stage'] }); // kept on this device
 
     box('Stage').click();
@@ -1380,7 +1381,7 @@ describe('the desk page', () => {
 
     // Stage to the front
     for (let place = 0; place < 4; place++) await press(button('Move Stage up'));
-    expect(links()).toEqual(['Stage', 'Memories', 'Sequences', 'Stack', 'Fixtures', 'Effects', 'Notes', 'Settings']);
+    expect(links()).toEqual(['Stage', 'Memories', 'Sequences', 'Stack', 'Fixtures', 'Effects', 'Notes', 'MIDI', 'Settings']);
 
     // a desk that starts at Main, while Main is left out, opens on the first view in the top bar
     const router = TestBed.inject(Router);
@@ -1391,7 +1392,7 @@ describe('the desk page', () => {
   });
 
   it('Settings puts the views in another order with ▲ and ▼, and ↺ brings back the usual ones', async () => {
-    const usual = ['Main', 'Memories', 'Sequences', 'Stack', 'Stage', 'Fixtures', 'Effects', 'Notes', 'Settings'];
+    const usual = ['Main', 'Memories', 'Sequences', 'Stack', 'Stage', 'Fixtures', 'Effects', 'Notes', 'MIDI', 'Settings'];
     const links = () => [...page.querySelectorAll('nav[aria-label="Views"] a')].map((link) => link.textContent?.trim().split(/\s/)[0]);
     const listed = () => [...page.querySelectorAll('ul.views label')].map((label) => label.textContent?.trim().split(/\s/)[0]);
     await show('/settings');
@@ -1401,7 +1402,7 @@ describe('the desk page', () => {
 
     // One place earlier, in Settings and in the top bar; the keyboard focus goes with it.
     await press(button('Move Settings up'));
-    const moved = ['Main', 'Memories', 'Sequences', 'Stack', 'Stage', 'Fixtures', 'Effects', 'Settings', 'Notes'];
+    const moved = ['Main', 'Memories', 'Sequences', 'Stack', 'Stage', 'Fixtures', 'Effects', 'Notes', 'Settings', 'MIDI'];
     expect(listed()).toEqual(moved);
     expect(links()).toEqual(moved);
     expect(document.activeElement).toBe(button('Move Settings up'));
@@ -2566,6 +2567,7 @@ describe('the desk page', () => {
       'Fixtures',
       'Effects',
       'Notes',
+      'MIDI',
       'Settings',
     ]);
     expect(links[0].getAttribute('aria-current')).toBe('page');
@@ -3476,11 +3478,11 @@ describe('the desk page', () => {
     expect(page.querySelectorAll('lm-channel-section lm-fader-strip').length).toBe(16);
   });
 
-  it('Settings has its panels: the main view with the universes, the zoom, the autosave and LAN; the views; the colors; the keyboard; MIDI and the outputs after them', async () => {
+  it('Settings has five panels: the main view with the universes, the zoom, the autosave and LAN; the views; the colors; the keyboard; the outputs after them', async () => {
     await show('/settings');
     const panels = [...page.querySelectorAll('lm-settings-view .panels > *')];
     const titles = (panel: Element, level: string) => [...panel.querySelectorAll(level)].map((title) => title.textContent?.trim());
-    expect(panels.map((panel) => titles(panel, 'h3')[0])).toEqual(['Main view', 'Views in the top bar', 'Colors of the keys', 'Keyboard', 'MIDI', 'Outputs']);
+    expect(panels.map((panel) => titles(panel, 'h3')[0])).toEqual(['Main view', 'Views in the top bar', 'Colors of the keys', 'Keyboard', 'Outputs']);
     expect(titles(panels[0], 'h4')).toEqual(['Universes', 'Zoom', 'Autosave', 'Network (LAN)']);
     expect(page.querySelector('#universes')?.closest('.panel')).toBe(panels[0]);
     // fields only, no sentences about them, until the autosave and LAN, which keep theirs
@@ -3782,7 +3784,7 @@ describe('the desk page', () => {
   });
 
   it('every key on the page that is marked for shortcuts is one the list of the Keyboard panel knows', async () => {
-    for (const view of ['/', '/stack', '/sequences', '/memories', '/stage', '/fixtures', '/notes', '/settings']) {
+    for (const view of ['/', '/stack', '/sequences', '/memories', '/stage', '/fixtures', '/notes', '/midi', '/settings']) {
       await show(view);
       for (const element of page.querySelectorAll('[data-action]')) {
         expect(actionWithId(element.getAttribute('data-action') ?? ''), element.getAttribute('data-action') ?? '').toBeTruthy();
@@ -4120,9 +4122,9 @@ describe('the desk page', () => {
     expect(connection.calls.slice(told).map((call) => call.method)).not.toContain('ReportMidiLamps');
   });
 
-  it('the MIDI panel of Settings lists the devices, the messages that came in, and every key and fader with its controls', async () => {
-    await show('/settings');
-    const panel = page.querySelector<HTMLElement>('lm-midi-panel')!;
+  it('the MIDI view lists the devices, the messages that came in, and every key and fader with its controls', async () => {
+    await show('/midi');
+    const panel = page.querySelector<HTMLElement>('lm-midi-view')!;
     expect(panel.textContent).toContain('The desk program is older than this page and knows no MIDI.');
 
     await withMidi();
@@ -4187,24 +4189,47 @@ describe('the desk page', () => {
     ]);
   });
 
-  it('Listen in the MIDI panel learns the key double-clicked on the desk', async () => {
+  it('Listen in the MIDI view shows the key or fader double-clicked on the desk, as Listen of the Keyboard panel does', async () => {
     const router = TestBed.inject(Router);
+    const twice = async (element: Element) => {
+      for (let press = 0; press < 2; press++) {
+        element.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, cancelable: true }));
+        (element as HTMLElement).click();
+      }
+      element.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }));
+      await fixture.whenStable();
+    };
+    const picked = async (id: string) => {
+      await until(() => page.querySelector(`lm-midi-targets tr[data-row="${id}"]`) !== null);
+      const row = page.querySelector<HTMLElement>(`lm-midi-targets tr[data-row="${id}"]`)!;
+      await until(() => document.activeElement === row.querySelector('button.learn'));
+      return row;
+    };
     await withMidi();
-    await show('/settings');
-    await press(button('Listen for a key of the desk to learn'));
-    expect(router.url).toBe('/');
+    await show('/midi');
 
-    const clear = page.querySelector('[data-action="master.clear"]')!;
-    for (let twice = 0; twice < 2; twice++) {
-      clear.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, cancelable: true }));
-      (clear as HTMLElement).click();
-    }
-    await fixture.whenStable();
-    expect(router.url).toBe('/settings#midi');
-    await until(() => connection.last('LearnMidi')?.[0] === 'master.clear');
-    expect(connection.last('LearnMidi')).toEqual(['master.clear']);
-    expect(page.querySelector('lm-midi-targets tr[data-row="master.clear"]')).toBeTruthy(); // its kind is open
-    expect(connection.methods()).not.toContain('Clear'); // the key picked is not pressed
+    // a key: its kind opens, its row is marked and its Learn has the focus; nothing is learned or pressed
+    const sent = connection.methods().length;
+    await press(button('Listen for a key or a fader of the desk'));
+    expect(router.url).toBe('/');
+    await twice(page.querySelector('[data-action="master.clear"]')!);
+    expect(router.url).toBe('/midi');
+    const clear = await picked('master.clear');
+    expect(clear.classList).toContain('picked');
+    expect(connection.calls.map((call) => call.method)).not.toContain('LearnMidi');
+    expect(connection.methods().slice(sent)).toEqual([]); // not Clear, nor anything else
+
+    // a fader: two presses pick it and do not move it; the double click of the rate fader does not
+    // put the tempo back to 120 either
+    await press(button('Listen for a key or a fader of the desk'));
+    await twice(page.querySelector('[data-fader="fader.master"]')!);
+    expect(router.url).toBe('/midi');
+    expect((await picked('fader.master')).classList).toContain('picked');
+    await press(button('Listen for a key or a fader of the desk'));
+    await twice(page.querySelector('[data-fader="fader.rate"]')!);
+    await picked('fader.rate');
+    expect(connection.methods().slice(sent)).toEqual([]);
+    expect(connection.calls.map((call) => call.method)).not.toContain('LearnMidi');
   });
 
   it('Export and Import take the MIDI of the PC along; a phone cannot, and its MIDI panel says so', async () => {
@@ -4243,8 +4268,8 @@ describe('the desk page', () => {
     expect(box.querySelector('input')!.disabled).toBe(true);
     expect(box.textContent).toContain('only the PC');
     await press(buttonIn('lm-export-dialog', 'Cancel'));
-    await show('/settings');
-    expect(page.querySelector('lm-midi-panel')?.textContent).toContain('only the PC sets them');
+    await show('/midi');
+    expect(page.querySelector('lm-midi-view')?.textContent).toContain('only the PC sets them');
     expect(page.querySelector('lm-midi-targets')).toBeNull();
   });
 });

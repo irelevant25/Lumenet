@@ -4,6 +4,7 @@
       <span class="level" aria-hidden="true" [class.up]="fader.level > 0">{{ fader.level }}</span>
       <lm-fader
         [label]="fader.label"
+        [attr.data-fader]="'fader.channel.' + fader.channel"
         [value]="fader.level"
         [ownLevel]="fader.own"
         [valueText]="fader.valueText"

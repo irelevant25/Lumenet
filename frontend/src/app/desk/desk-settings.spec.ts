@@ -18,7 +18,7 @@ describe('the settings this browser keeps', () => {
       shortcuts: { 'project.undo': 'Ctrl+KeyZ', 'project.redo': 'Ctrl+KeyY' },
       colors: {},
       hiddenViews: [],
-      viewOrder: ['main', 'memories', 'sequences', 'stack', 'stage', 'fixtures', 'effects', 'notes', 'settings'],
+      viewOrder: ['main', 'memories', 'sequences', 'stack', 'stage', 'fixtures', 'effects', 'notes', 'midi', 'settings'],
     });
   });
 
@@ -51,13 +51,13 @@ describe('the settings this browser keeps', () => {
 
   it('put every view in the top bar once: the known ones in their order, the others after the view they follow', () => {
     const order = parseSettings(JSON.stringify({ viewOrder: ['notes', 'stage', 'nothing', 'notes', 3, 'main'] })).viewOrder;
-    expect(order).toEqual(['notes', 'settings', 'stage', 'fixtures', 'effects', 'main', 'memories', 'sequences', 'stack']);
+    expect(order).toEqual(['notes', 'midi', 'settings', 'stage', 'fixtures', 'effects', 'main', 'memories', 'sequences', 'stack']);
     expect(parseSettings(JSON.stringify({ viewOrder: 'stage' })).viewOrder).toEqual(DEFAULT_SETTINGS.viewOrder);
 
-    // An order kept before there were notes and effects: Effects comes after Fixtures and Notes after
-    // Effects, where they usually are. One kept while Keyboard was a view (until 2026-11-24, now a
-    // panel of Settings) is read without it.
-    const usual = ['main', 'memories', 'sequences', 'stack', 'stage', 'fixtures', 'effects', 'notes', 'settings'];
+    // An order kept before there were notes, effects and MIDI: Effects comes after Fixtures, Notes
+    // after Effects and MIDI after Notes, where they usually are. One kept while Keyboard was a view
+    // (until 2026-11-24, now a panel of Settings) is read without it.
+    const usual = ['main', 'memories', 'sequences', 'stack', 'stage', 'fixtures', 'effects', 'notes', 'midi', 'settings'];
     const before = ['main', 'memories', 'sequences', 'stack', 'stage', 'fixtures', 'keyboard', 'settings'];
     expect(parseSettings(JSON.stringify({ viewOrder: before })).viewOrder).toEqual(usual);
 

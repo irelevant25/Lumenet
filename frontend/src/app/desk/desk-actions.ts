@@ -87,6 +87,7 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
   view('stage', 'Stage view', '/stage'),
   view('fixtures', 'Fixtures view', '/fixtures'),
   view('notes', 'Notes view', '/notes'),
+  view('midi', 'MIDI view', '/midi'),
   view('settings', 'Settings view', '/settings'),
 
   { id: 'project.undo', group: 'Project and LAN', label: 'Undo', run: ({ store }) => store.undo() },

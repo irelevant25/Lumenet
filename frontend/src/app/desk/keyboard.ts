@@ -7,8 +7,14 @@ import { DeskStore } from './desk-store';
 /** Where the keyboard shortcuts are (the Keyboard panel of Settings); listening comes back to them. */
 const KEYBOARD_URL = '/settings';
 
+/** Where the MIDI controllers are set; listening for them comes back there. */
+const MIDI_URL = '/midi';
+
 /** Two presses on the same key within this many milliseconds are a double click. */
 const DOUBLE_PRESS_MS = 250;
+
+/** How long after a key or fader was picked the browser's double click of that pick is passed over (ms). */
+const PICKED_DOUBLE_CLICK_MS = 600;
 
 /**
  * The keyboard: the shortcuts of the Keyboard panel of Settings press the keys of the desk, a shortcut can be
@@ -30,7 +36,9 @@ const DOUBLE_PRESS_MS = 250;
  *   picks it, and Settings comes back with that key chosen in its Keyboard panel. A single click
  *   does what it always does, a moment later (when no second click has come): it opens another
  *   view, another page of faders, or presses a key, so that the key to pick can be found first.
- *   Enter on a key picks it at once. Esc stops listening.
+ *   Enter on a key picks it at once. Esc stops listening. Listening for the MIDI view, a fader can
+ *   be picked too (a press on it does not move it then), and the MIDI view comes back with the key
+ *   or fader shown in its list.
  */
 @Service()
 export class Keyboard {
@@ -42,8 +50,10 @@ export class Keyboard {
   readonly listening = signal(false);
   /** The key of the desk chosen in the Keyboard panel: by listening, or in its list. */
   readonly picked = signal<string | null>(null);
-  /** Which panel listened for the key picked: the Keyboard panel, or the MIDI panel (it learns the key then). */
+  /** Who listens: the Keyboard panel for a key, or the MIDI view for a key or a fader. */
   readonly pickedFor = signal<'keyboard' | 'midi'>('keyboard');
+  /** The key or fader of the desk picked by listening for the MIDI view ("memory.5", "fader.channel.12"). */
+  readonly midiPicked = signal<string | null>(null);
   /** The key whose shortcut is being recorded; null while none is. */
   readonly recording = signal<string | null>(null);
   /** What the last recording did besides, like "Ctrl + 1 was the shortcut of Clear before." */
@@ -60,6 +70,10 @@ export class Keyboard {
 
   // True while the click of a single press is made, a moment after the press: it is let through.
   private replaying = false;
+
+  // When a key or fader was last picked by listening (performance.now()): the double click of that
+  // pick, which the browser sends after it, is passed over.
+  private pickedAt = Number.NEGATIVE_INFINITY;
 
   // While a solo is lit: the keys of the keyboard held down now that hold a key of the desk, by the
   // physical key (KeyboardEvent.code), with the name of that key of the desk.
@@ -92,6 +106,7 @@ export class Keyboard {
       if (this.swallowClick) setTimeout(() => (this.swallowClick = false));
     };
     const click = (event: MouseEvent): void => this.onClick(event);
+    const doubleClick = (event: MouseEvent): void => this.onDoubleClick(event);
     // A key let go while the window had no focus says nothing: when it comes back, none is held.
     const away = (): void => this.sides.clear();
     document.addEventListener('keydown', keyDown, true);
@@ -102,6 +117,7 @@ export class Keyboard {
     document.addEventListener('pointerdown', pointerDown, true);
     document.addEventListener('pointerup', pointerUp, true);
     document.addEventListener('click', click, true);
+    document.addEventListener('dblclick', doubleClick, true);
     window.addEventListener('blur', away);
     this.destroyRef.onDestroy(() => {
       document.removeEventListener('keydown', keyDown, true);
@@ -109,6 +125,7 @@ export class Keyboard {
       document.removeEventListener('pointerdown', pointerDown, true);
       document.removeEventListener('pointerup', pointerUp, true);
       document.removeEventListener('click', click, true);
+      document.removeEventListener('dblclick', doubleClick, true);
       window.removeEventListener('blur', away);
     });
   }
@@ -279,12 +296,13 @@ export class Keyboard {
   }
 
   // While listening, a press on a key of the desk does not reach it. A second press on the same
-  // key soon after picks the key; otherwise the key gets its click a moment later.
+  // key soon after picks the key; otherwise the key gets its click a moment later. Listening for
+  // the MIDI view, a fader is held back the same way (it does not move), and two presses pick it.
   private onPointerDown(event: PointerEvent): void {
     this.swallowClick = false; // a press that was held back and then never became a click
     if (!this.listening() || event.button !== 0) return;
 
-    const element = keyElementUnder(event);
+    const element = keyElementUnder(event, this.fadersToo());
     const id = element ? keyOf(element) : null;
     if (element === null || id === null) return; // not a key of the desk: it works as always
 
@@ -307,7 +325,7 @@ export class Keyboard {
     if (this.replaying) return; // the click of a single press, made a moment after it
 
     // The click of a press that was held back, or one made without a pointer (Enter on a key).
-    const picked = this.swallowClick || (this.listening() && keyUnder(event) !== null);
+    const picked = this.swallowClick || (this.listening() && keyUnder(event, this.fadersToo()) !== null);
     if (!picked) return;
 
     event.preventDefault();
@@ -318,19 +336,39 @@ export class Keyboard {
     }
 
     this.dropPending();
-    this.pick(keyUnder(event));
+    this.pick(keyUnder(event, this.fadersToo()));
   }
 
-  // A key is picked: Settings comes back with it chosen in its Keyboard panel (or learned in its MIDI panel).
+  // The browser's double click after two presses: while listening it is a pick, and so is the one
+  // that comes just after a pick. Neither does what a double click on the key or fader would do
+  // (the rate fader goes back to 120 BPM).
+  private onDoubleClick(event: MouseEvent): void {
+    const pick = this.listening()
+      ? keyElementUnder(event, this.fadersToo()) !== null
+      : performance.now() - this.pickedAt < PICKED_DOUBLE_CLICK_MS;
+    if (!pick) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }
+
+  // A key is picked: Settings comes back with it chosen in its Keyboard panel, or the MIDI view with
+  // the key or fader shown in its list.
   private pick(id: string | null): void {
-    this.picked.set(id);
+    if (this.pickedFor() === 'midi') this.midiPicked.set(id);
+    else this.picked.set(id);
     this.listening.set(false);
+    this.pickedAt = performance.now();
     void this.router.navigateByUrl(this.backUrl());
   }
 
-  // Where listening comes back to: the Keyboard panel, or the MIDI panel of Settings.
+  // Where listening comes back to: the Keyboard panel of Settings, or the MIDI view.
   private backUrl(): string {
-    return this.pickedFor() === 'midi' ? `${KEYBOARD_URL}#midi` : KEYBOARD_URL;
+    return this.pickedFor() === 'midi' ? MIDI_URL : KEYBOARD_URL;
+  }
+
+  // True while listening for the MIDI view: its faders can be picked as well as its keys.
+  private fadersToo(): boolean {
+    return this.pickedFor() === 'midi';
   }
 
   // A single press on a key while listening, with no second one after it: the key gets its click
@@ -341,9 +379,10 @@ export class Keyboard {
     this.dropPending();
     if (!pending || !this.listening()) return;
 
+    const id = CSS.escape(pending.id);
     const element = pending.element.isConnected
       ? pending.element
-      : document.querySelector<HTMLElement>(`[data-action="${CSS.escape(pending.id)}"]`);
+      : document.querySelector<HTMLElement>(`[data-action="${id}"], [data-fader="${id}"]`);
     if (!element || (element instanceof HTMLButtonElement && element.disabled)) return;
 
     this.replaying = true;
@@ -367,19 +406,25 @@ function takeAway(shortcuts: Record<string, string>, id: string): void {
   else delete shortcuts[id];
 }
 
-/** The name of the key of the desk an event happened on, or null. */
-function keyUnder(event: Event): string | null {
-  const element = keyElementUnder(event);
+/** The name of the key of the desk an event happened on (or of the fader, with `faders`), or null. */
+function keyUnder(event: Event, faders = false): string | null {
+  const element = keyElementUnder(event, faders);
   return element ? keyOf(element) : null;
 }
 
-/** The element of the key of the desk an event happened on, or null. */
-function keyElementUnder(event: Event): HTMLElement | null {
-  return (event.target as Element | null)?.closest?.<HTMLElement>('[data-action]') ?? null;
+/**
+ * The element of the key of the desk an event happened on, or null. With `faders`, a fader that
+ * says its name for MIDI (`data-fader`, "fader.channel.12") counts as well.
+ */
+function keyElementUnder(event: Event, faders = false): HTMLElement | null {
+  const marked = faders ? '[data-action], [data-fader]' : '[data-action]';
+  return (event.target as Element | null)?.closest?.<HTMLElement>(marked) ?? null;
 }
 
-/** The name of a key of the desk, if the desk knows it. */
+/** The name of a key of the desk, if the desk knows it, or of a fader ("fader.master"). */
 function keyOf(element: Element): string | null {
+  const fader = element.getAttribute('data-fader');
+  if (fader !== null) return /^fader\.[a-z]+[a-z.-]*[a-z0-9]$/.test(fader) ? fader : null;
   const id = element.getAttribute('data-action');
   return id !== null && actionWithId(id) ? id : null;
 }

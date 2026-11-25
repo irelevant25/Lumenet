@@ -52,9 +52,8 @@ h2 {
   user-select: text;
 }
 
-/* The MIDI and Outputs panels are two columns wide: their tables need about 650 pixels, a column
-   has 340 or more. They stand where the others leave room, after the Keyboard. */
-lm-midi-panel,
+/* The Outputs panel is two columns wide: its table needs about 650 pixels, a column has 340 or
+   more. It stands where the others leave room, after the Keyboard. */
 lm-outputs-panel {
   grid-column: span 2;
 }
@@ -279,7 +278,7 @@ button:hover:not(:disabled) {
   overflow: visible;
 }
 
-/* on a phone, with one column (or two narrow ones), MIDI and Outputs are as wide as the others */
-:host-context(.phone) :is(lm-midi-panel, lm-outputs-panel) {
+/* on a phone, with one column (or two narrow ones), Outputs is as wide as the others */
+:host-context(.phone) lm-outputs-panel {
   grid-column: auto;
 }

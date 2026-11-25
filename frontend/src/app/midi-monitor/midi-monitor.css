@@ -1,4 +1,10 @@
-/* The incoming messages: a small table that scrolls, the newest at the top. */
+/* The incoming messages: a table that takes the room it is given and scrolls, the newest at the top. */
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 h4 {
   margin: 4px 0 6px;
   color: var(--legend-dim);
@@ -18,7 +24,8 @@ h4 {
 }
 
 .box {
-  max-height: 136px;
+  flex: 1;
+  min-height: 0;
   margin-bottom: 10px;
   overflow: auto;
   border: 1px solid var(--edge);
@@ -60,4 +67,10 @@ td {
 /* a control that does nothing, or is refused: amber, to be seen */
 tr.stands td:last-child {
   color: var(--system);
+}
+
+/* on a small screen the page scrolls: the table keeps a height of its own */
+:host-context(.mobile) .box {
+  flex: none;
+  max-height: 320px;
 }

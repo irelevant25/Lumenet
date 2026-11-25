@@ -42,12 +42,14 @@ interface Kind {
 }
 
 /**
- * The keys and faders of the desk in the MIDI panel, kind by kind, as the Keyboard panel lists the
+ * The keys and faders of the desk in the MIDI view, kind by kind, as the Keyboard panel lists the
  * keys: one kind open at a time, with its targets, the controls that work each, Learn and ✕. Learn
- * waits for the next control that moves (pressed again, it stops); Listen picks a key on the desk
- * itself and learns it. Under a fader that has a control stand its options: how a controller moves
- * it (a fader, or an endless encoder of one of three kinds), whether it takes over only at the
- * desk's value, and whether the desk sends its value back (a motor, a ring of lights).
+ * waits for the next control that moves (pressed again, it stops). Listen picks a key or a fader on
+ * the desk itself, as Listen of the Keyboard panel picks a key: it is shown here, marked and with
+ * the focus on its Learn, and nothing more. Under a fader that has a control stand its options: how
+ * a controller moves it (a fader, or an endless encoder of one of three kinds), whether it takes
+ * over only at the desk's value, and whether the desk sends its value back (a motor, a ring of
+ * lights); under a key's control, whether the desk lights it.
  */
 @Component({
   selector: 'lm-midi-targets',
@@ -93,15 +95,13 @@ export class MidiTargets {
       return (channelOf(action.id) ?? 0) <= channels;
     });
     const faders = FADER_TARGETS.filter((fader) => (channelOf(fader.id) ?? 0) <= channels);
-    return [
-      ...keys.map((action) => ({
-        id: action.id,
-        group: action.group,
-        label: targetLabel(action.id),
-      })),
-      ...SLOT_KEYS,
-      ...faders,
-    ];
+    // every target called as targetLabel calls it: a channel with its universe, "Channel fader 113 (U2)"
+    const listed = (target: { id: string; group: string }): Target => ({
+      id: target.id,
+      group: target.group,
+      label: targetLabel(target.id),
+    });
+    return [...keys.map(listed), ...SLOT_KEYS, ...faders.map(listed)];
   });
 
   // Each kind's targets: all of them, and those the search finds.
@@ -134,19 +134,21 @@ export class MidiTargets {
   });
 
   constructor() {
-    // A key picked on the desk by Listen: its kind opens, its row comes into sight, and Learn waits for it.
+    // A key or fader picked on the desk by Listen: its kind opens, and its row (marked, see the
+    // template) comes into the middle of the list with the focus on its Learn. Learn waits for a
+    // press of it, as Set does in the Keyboard panel.
     effect(() => {
-      const picked = this.keyboard.picked();
-      if (!picked || this.keyboard.pickedFor() !== 'midi') return;
+      const picked = this.keyboard.midiPicked();
+      if (!picked) return;
       untracked(() => {
-        this.keyboard.picked.set(null); // taken: once
         this.search.set('');
         this.openGroup.set(targetGroup(picked) ?? null);
-        void this.midi.learn(picked);
         afterNextRender(
           () => {
             const row = this.host.querySelector<HTMLElement>(`[data-row="${CSS.escape(picked)}"]`);
-            if (row) bringToMiddle(row);
+            if (!row) return;
+            bringToMiddle(row);
+            row.querySelector<HTMLButtonElement>('button.learn')?.focus({ preventScroll: true });
           },
           { injector: this.injector },
         );

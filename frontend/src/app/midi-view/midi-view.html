@@ -1,0 +1,51 @@
+<header>
+  <h2>MIDI</h2>
+  <p class="summary">
+    MIDI controllers plugged into this PC: their keys press the keys of the desk, their faders and
+    knobs move its faders, and the desk lights their keys and moves their motorized faders. What
+    their controls do belongs to this PC; Export takes it to another one.
+    @if (midi.state()) {
+      {{ mapped() }} {{ mapped() === 1 ? 'control is' : 'controls are' }} mapped.
+    }
+  </p>
+</header>
+
+@if (!pc()) {
+  <p class="hint">
+    MIDI controllers belong to the PC the desk program runs on: only the PC sets them.
+  </p>
+} @else if (midi.state() === null) {
+  <p class="hint">
+    @if (midi.answered()) {
+      The desk program is older than this page and knows no MIDI.
+    } @else {
+      Waiting for the desk program…
+    }
+  </p>
+} @else {
+  <div class="panels">
+    <section class="panel controllers" aria-labelledby="midi-controllers-title">
+      <h3 id="midi-controllers-title">Controllers</h3>
+      <lm-midi-devices />
+
+      @if (learning(); as target) {
+        <div class="learning" role="status">
+          <div>
+            Learning <strong>{{ target }}</strong>: press or move a control.
+          </div>
+          <button type="button" (click)="stop()">Stop</button>
+        </div>
+      }
+      @if (midi.problem()) {
+        <p class="error" role="alert">{{ midi.problem() }}</p>
+      }
+
+      <lm-midi-monitor />
+    </section>
+
+    <section class="panel targets" aria-labelledby="midi-targets-title">
+      <h3 id="midi-targets-title">Keys and faders</h3>
+      <lm-midi-targets />
+    </section>
+  </div>
+}

@@ -79,7 +79,7 @@ internal sealed class MidiControllerSimulator : ISimulator
 
     /// <inheritdoc />
     public string Finding =>
-        $"In the desk: Settings, MIDI lists \"{Name}\"; tick it to use it, and Ready-made mapping gives its controls their keys and faders.\n"
+        $"In the desk: the MIDI view lists \"{Name}\"; tick it to use it, and Ready-made mapping gives its controls their keys and faders.\n"
         + $"Its controls: {Url}";
 
     /// <inheritdoc />

@@ -44,6 +44,11 @@ export const routes: Routes = [
     title: 'Lumenet: notes',
   },
   {
+    path: 'midi',
+    loadComponent: () => import('./midi-view/midi-view').then((file) => file.MidiView),
+    title: 'Lumenet: MIDI',
+  },
+  {
     path: 'settings',
     loadComponent: () => import('./settings-view/settings-view').then((file) => file.SettingsView),
     title: 'Lumenet: settings',

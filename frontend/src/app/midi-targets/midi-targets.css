@@ -163,8 +163,9 @@ th {
   color: var(--danger);
 }
 
-/* the target Learn waits for: amber */
+/* the target Learn waits for, and the one Listen picked: amber */
 tr.learning > *,
+tr.picked > *,
 .learn[aria-pressed='true'] {
   border-color: var(--system);
   background: color-mix(in srgb, var(--system) 14%, var(--panel));
@@ -206,15 +207,16 @@ tr.learning > *,
   accent-color: var(--system);
 }
 
-.for-readers {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
 :host-context(.mobile) .kinds {
   overflow: visible;
+}
+
+/* on a phone a control's name wraps, so the list stays as wide as the screen */
+:host-context(.phone) .mapping {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+:host-context(.phone) .options select {
+  max-width: 100%;
 }

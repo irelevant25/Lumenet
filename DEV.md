@@ -960,8 +960,14 @@ and only on localhost or HTTPS, and a controller belongs to the PC it is plugged
   `SetMidiSetup` and `WatchMidi` only from the PC, `ClaimMidi`, `ReportMidiLamps` and `ReportMidiPages`; to the
   pages `MidiChanged`, `MidiMessages`, `MidiKey` and `MidiRole`.
 * **The page:** `desk/midi.ts` (the types), `desk/desk-midi.ts` (the state, the keys it presses, the lamps and
-  pages it tells), `desk/action-lamps.ts`, `desk/midi-targets.ts` (the list of the panel, loaded only with
-  Settings), and the components `midi-panel`, `midi-devices`, `midi-monitor` and `midi-targets`.
+  pages it tells), `desk/action-lamps.ts`, `desk/midi-targets.ts` (the list of the MIDI view, loaded only with
+  it), and the components `midi-view` (the view, route `/midi`, after Notes), `midi-devices`, `midi-monitor`
+  and `midi-targets`. **Listen** of the MIDI view is the Keyboard panel's (`Keyboard.listen('midi')`): its
+  pick goes to `Keyboard.midiPicked`, which the list shows (marked, the focus on Learn) and nothing more.
+  Listening for MIDI a fader can be picked too: a fader of the desk says its target as `data-fader`
+  ("fader.channel.12", on the strips, the master, the rate, the speed of a sequence, the live faders of an
+  effect and the faders of a light), and a press on it is held back like a press on a key, so it does not
+  move; the double click of a pick is passed over (the rate fader's own goes back to 120 BPM).
 * **The ready-made mappings** follow the manuals of the APC mini mk2 (pads: Note On with a color of its palette
   as the velocity and the brightness as the channel, 1 for 10 %, 3 for 50 %, 7 for full) and the
   nanoKONTROL2 (CC mode; its LEDs answer only in the LED mode External). Behringer's manuals do not say how
@@ -1665,6 +1671,17 @@ receivers listen at 5568 and the desk sends from a port of its own.
   of a connection at a time), so a controller's fader of the page shown still moved the page before; the
   search answers as a stream now, which runs beside the page's calls (a test moves a fader during a
   search and has its answer within a second).
+* **MIDI as a view, Listen as in Keyboard (2026-11-25):** the owner's words: MIDI is a view of its own in the
+  top bar (it was a panel of Settings), Listen only shows what was picked (it started Learn), and a fader
+  can be picked with a double click. The page passes 261 tests: the views with MIDI after Notes, also in a
+  kept order; Listen of a key, of the master fader and of the rate fader (no Clear, no move, no tempo back to
+  120 BPM, nothing learned; the line marked and its Learn focused). On a test copy, in Chrome: the top bar
+  with ten links at 19 sizes from 360 × 780 to 1920 × 1080, one line from 1366 pixels (from 1366 to about
+  1440 the links 4 pixels apart instead of 6, so the project's name keeps the room it had beside nine), two
+  rows of five links up to 470 pixels; the MIDI view at 1920 × 1080, 1366 × 768 and 390 × 844 without
+  sideways scrolling (on a phone a control's name wraps); Listen, then a double click on channel fader 3 of
+  Main showed "Channel fader 3 (U1)" marked, its Learn focused. No error on the page. The other pictures of
+  the manual still show the top bar with nine links.
 * **dmxbox 2 on paper (2026-11-23):** both versions (two outputs and one) are drawn from their `circuit.py`,
   and each drawing passed its check against it: the schematic, the breadboard plan, the perfboard plan (38 and
   26 insulated wires, with SW1 at the cut left edge and the holes around the four screws kept empty;

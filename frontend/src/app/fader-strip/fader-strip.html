@@ -1,6 +1,8 @@
 <span class="readout" aria-hidden="true">{{ value() }}</span>
 
+<!-- data-fader: its name for MIDI ("fader.channel.12"), for Listen of the MIDI view -->
 <lm-fader
+  [attr.data-fader]="'fader.' + kind() + '.' + number()"
   [value]="value()"
   [ownLevel]="ownLevel()"
   [label]="name()"

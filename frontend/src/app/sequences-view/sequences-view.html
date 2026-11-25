@@ -92,6 +92,7 @@
             orientation="horizontal"
             tone="system"
             label="Speed of the sequence"
+            [attr.data-fader]="sequence() ? 'fader.sequence.' + memory() : null"
             [inert]="!sequence() || locked()"
             [max]="speedPositions"
             [step]="speedKeyStep"

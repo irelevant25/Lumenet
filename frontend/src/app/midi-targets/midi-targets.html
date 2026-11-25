@@ -2,7 +2,7 @@
   <button
     type="button"
     class="listen"
-    aria-label="Listen for a key of the desk to learn"
+    aria-label="Listen for a key or a fader of the desk"
     (click)="keyboard.listen('midi')"
   >
     Listen
@@ -17,8 +17,9 @@
     (input)="onSearch($event)"
   />
   <p class="hint">
-    Learn, then press or move the control that is to work it; Listen learns the key you double-click
-    on the desk. A controller's key acts as its shortcut would, on the page of this PC used last.
+    Learn, then press or move the control that is to work it. Listen shows the desk: the key or
+    fader you double-click there is shown here. A controller's key acts as its shortcut would, on
+    the page of this PC used last.
   </p>
 </div>
 
@@ -56,16 +57,14 @@
           [attr.aria-labelledby]="'midi-kind-' + index"
         >
           @if (rows().length) {
-            <table>
-              <caption class="for-readers">
-                Controls:
-                {{
-                  kind.group
-                }}
-              </caption>
+            <table [attr.aria-label]="'Controls: ' + kind.group">
               <tbody>
                 @for (target of rows(); track target.id) {
-                  <tr [attr.data-row]="target.id" [class.learning]="learning() === target.id">
+                  <tr
+                    [attr.data-row]="target.id"
+                    [class.learning]="learning() === target.id"
+                    [class.picked]="keyboard.midiPicked() === target.id"
+                  >
                     <th scope="row">{{ target.label }}</th>
                     <td class="control">
                       @if (learning() === target.id) {

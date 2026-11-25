@@ -120,7 +120,7 @@ h1 {
 }
 
 .views a {
-  padding: 9px 6px 7px; /* close together: nine links, and the project's name keeps its room */
+  padding: 9px 6px 7px; /* close together: ten links, and the project's name keeps its room */
   border-bottom: 3px solid var(--edge);
   color: var(--legend-dim);
   font-size: 15px;
@@ -156,6 +156,18 @@ h1 {
   letter-spacing: 0.08em;
   line-height: 1;
   vertical-align: 1px;
+}
+
+/* From 1366 to about 1440 pixels the ten links share one line with the project tightly: closer
+   together, they leave its name the room it had beside nine. */
+@container (max-width: 1420px) {
+  :host-context(html:not(.narrow)) .views {
+    gap: 3px;
+  }
+
+  :host-context(html:not(.narrow)) .views a {
+    padding-inline: 4px;
+  }
 }
 
 /* ---- right: the project */
@@ -247,7 +259,7 @@ h1 {
   justify-self: end;
 }
 
-/* The nine links share the line: narrow lettering, little room around the words, and the line
+/* The ten links share the line: narrow lettering, little room around the words, and the line
    shared out among them. Should they still be wider than the line, the line scrolls sideways,
    not the page; its room at the top keeps the "live" tag in sight. */
 :host-context(.phone) .views {
@@ -276,9 +288,9 @@ h1 {
   margin: 0;
 }
 
-/* Nine links need about 415 pixels in one line: on a narrower phone (a bar of 450 pixels is a
-   window of 470) they stand in two rows of five and four, and in one line only where there is
-   some room to spare between them. */
+/* Ten links need about 450 pixels in one line: on a narrower phone (a bar of 450 pixels is a
+   window of 470) they stand in two rows of five, and in one line only where there is some room
+   to spare between them. */
 @container (max-width: 450px) {
   :host-context(.phone) .views {
     display: grid;

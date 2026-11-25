@@ -26,7 +26,6 @@ input {
   color: var(--legend);
   font: inherit;
   text-align: center;
-  user-select: text;
 }
 
 input:focus {

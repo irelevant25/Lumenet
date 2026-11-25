@@ -54,7 +54,13 @@
          level (drawn from data-note). One element a cell, nothing more. A double click on a cell
          lays fields over it, to change the level and the note (lm-cell-editor). -->
     <div #tableBox class="table-box">
-      <table class="matrix" [class.with-notes]="withNotes()" [class.editable]="!store.live()" (dblclick)="onTableDouble($event)">
+      <table
+        class="matrix"
+        [class.with-notes]="withNotes()"
+        [class.editable]="!store.live()"
+        (mousedown)="onTableDown($event)"
+        (dblclick)="onTableDouble($event)"
+      >
         <caption>
           The channels of memory {{ store.inspectedMemory() }}{{ universeKeys().length > 0 ? ', universe ' + universe() : '' }}
         </caption>

@@ -176,7 +176,7 @@ public sealed class PlaybackHubTests
         await using HubClient ui = await server.ConnectAsync();
 
         JsonElement idle = await ui.InvokeAsync("GetPlayback");
-        Assert.Equal(["levels", "sequenceSteps", "stack", "effects"], idle.EnumerateObject().Select(property => property.Name));
+        Assert.Equal(["levels", "sequenceSteps", "stack", "sequenceOn", "effects"], idle.EnumerateObject().Select(property => property.Name));
         Assert.Equal(512, idle.GetProperty("levels").GetArrayLength());
         Assert.Equal(
             """{"currentId":null,"nextId":null,"state":"idle","paused":false,"remaining":0,"live":false,"on":[]}""",

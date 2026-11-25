@@ -238,7 +238,7 @@ table {
   width: auto;
 }
 
-/* a table of nine columns is wider than a phone: it scrolls sideways in its box */
+/* a table of ten columns is wider than a phone: it scrolls sideways in its box */
 :host-context(.mobile) .table-box {
   overflow-x: auto;
   overflow-y: visible;

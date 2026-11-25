@@ -110,7 +110,6 @@ input::placeholder {
   margin-top: 4px;
   overflow: auto;
   scrollbar-width: thin;
-  user-select: text;
 }
 
 h4 {

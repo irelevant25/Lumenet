@@ -36,6 +36,7 @@
     linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
   cursor: crosshair;
   touch-action: none;
+  user-select: none; /* a drag selects no text */
 }
 
 .marker {

@@ -8,6 +8,7 @@
   min-height: 0;
   cursor: pointer;
   touch-action: pan-y; /* a finger in the slot scrolls the page; only the cap moves the fader */
+  user-select: none; /* a drag, a long press or a double click selects no text */
 }
 
 :host(.tone-memory) {

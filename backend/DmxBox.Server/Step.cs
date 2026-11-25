@@ -2,15 +2,15 @@ namespace DmxBox.Server;
 
 /// <summary>
 /// One step of a sequence or of the stack: a channel, a memory, a fixture or a group of fixtures
-/// of the stage plan, the value it is brought to, and three times in seconds. In the stack a step
-/// can also release another step of the stack, see <see cref="Release"/>.
+/// of the stage plan, or an effect, the value it is brought to, and three times in seconds. A step
+/// can also release another step of the same stack or sequence, see <see cref="Release"/>.
 /// </summary>
-/// <param name="Target">What the step stands for: "channel", "memory", "fixture", "group", or in the stack "release" and "effect".</param>
+/// <param name="Target">What the step stands for: "channel", "memory", "fixture", "group", "effect" or "release".</param>
 /// <param name="Number">
 /// The channel (1-512) or the memory (1-128); for a fixture or a group its number in the stage
-/// plan (<see cref="StageLight.Id"/>, <see cref="LightGroup.Id"/>), 0 for one that is gone; for a
-/// release the name of the step of the stack it takes down (<see cref="StackStep.Id"/>), 0 for none;
-/// for an effect its number (1-64).
+/// plan (<see cref="StageLight.Id"/>, <see cref="LightGroup.Id"/>), 0 for one that is gone; for an
+/// effect its number (1-64); for a release the step it takes down, 0 for none: in the stack that
+/// step's name (<see cref="StackStep.Id"/>), in a sequence its number in the list, from 1.
 /// </param>
 /// <param name="Value">The level the step brings it to, 0-255; for a fixture or a group the intensity of its lights.</param>
 /// <param name="Up">Seconds for the way from zero to the value.</param>
@@ -35,16 +35,17 @@ public sealed record Step(string Target, int Number, int Value, double Up, doubl
     public const string Group = "group";
 
     /// <summary>
-    /// The <see cref="Target"/> of a step of the stack that takes the light of another step of the
-    /// stack down, in its own down time, and leaves everything else as it is. <see cref="Number"/>
+    /// The <see cref="Target"/> of a step that takes the light of another step of the same stack or
+    /// sequence down, in its own down time, and leaves everything else as it is. <see cref="Number"/>
     /// names that step; the value and the up time are not used.
     /// </summary>
     public const string Release = "release";
 
     /// <summary>
-    /// The <see cref="Target"/> of a step of the stack that plays an effect: it brings the effect's
-    /// fader to its value in its up time, which starts the effect, and back to zero in its down
-    /// time when the stack leaves it, which stops it. <see cref="Number"/> names the effect.
+    /// The <see cref="Target"/> of a step that plays an effect. In the stack it brings the effect's
+    /// fader to its value in its up time, which starts the effect, and back to zero in its down time
+    /// when the stack leaves it, which stops it. In a sequence it plays the effect as strongly as the
+    /// step is up, and leaves the fader alone (Desk.Effects.cs). <see cref="Number"/> names the effect.
     /// </summary>
     public const string EffectTarget = "effect";
 
@@ -60,9 +61,9 @@ public sealed record Step(string Target, int Number, int Value, double Up, doubl
     public string? Color { get; init; }
 
     /// <summary>
-    /// Only in the stack: true for a step that comes up on top of what is on and takes nothing
-    /// down. A step without it takes down every step that is on and that it does not use itself.
-    /// False for a release and for every step of a sequence; the UIs get the field only when it is true.
+    /// True for a step that comes up on top of what is on and takes nothing down. A step without
+    /// it takes down every step that is on (in the stack: unless it uses the same fader itself).
+    /// False for a release; the UIs get the field only when it is true.
     /// </summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public bool Add { get; init; }
@@ -73,11 +74,14 @@ public sealed record Step(string Target, int Number, int Value, double Up, doubl
     /// <summary>True for a step that stands for a fixture or a group of fixtures.</summary>
     internal bool IsLights => Target is Fixture or Group;
 
-    /// <summary>True for a step of the stack that releases another one.</summary>
+    /// <summary>True for a step that releases another one.</summary>
     internal bool IsRelease => Target == Release;
 
-    /// <summary>True for a step of the stack that plays an effect.</summary>
+    /// <summary>True for a step that plays an effect.</summary>
     internal bool IsEffect => Target == EffectTarget;
+
+    /// <summary>True for a step that gives light: a channel, a memory, a fixture or a group.</summary>
+    internal bool GivesLight => !IsRelease && !IsEffect;
 
     /// <summary>
     /// Checks a step that came from a UI or a file, and rounds its times to tenths of a second.
@@ -101,9 +105,9 @@ public sealed record Step(string Target, int Number, int Value, double Up, doubl
         }
         else if (IsRelease)
         {
-            // which steps there are, the stack checks
+            // which steps there are, the stack or the sequence checks
             if (Number < 0)
-                throw new DeskException($"A release names a step of the stack, not {Number}.");
+                throw new DeskException($"A release names another step, not {Number}.");
         }
         else
         {
@@ -125,21 +129,6 @@ public sealed record Step(string Target, int Number, int Value, double Up, doubl
         {
             Up = Seconds(Up, "up"), Wait = Seconds(Wait, "wait"), Down = Seconds(Down, "down"), Color = color, Add = Add && !IsRelease,
         };
-    }
-
-    /// <summary>
-    /// Checks a step of a sequence: as <see cref="Checked"/>, but a release belongs to the stack
-    /// only, and a step of a sequence never adds (the steps of a sequence follow each other).
-    /// </summary>
-    /// <exception cref="DeskException">Something about the step is out of range, or it is a release.</exception>
-    internal Step CheckedForSequence()
-    {
-        if (IsRelease)
-            throw new DeskException("A step of a sequence cannot release anything; only a step of the stack can.");
-        if (IsEffect)
-            throw new DeskException("A step of a sequence cannot play an effect; a step of the stack can.");
-
-        return Checked() with { Add = false };
     }
 
     private static double Seconds(double time, string which)

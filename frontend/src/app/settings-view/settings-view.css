@@ -49,7 +49,6 @@ h2 {
   min-height: 0;
   overflow: auto;
   scrollbar-width: thin;
-  user-select: text;
 }
 
 /* The Outputs panel is two columns wide: its table needs about 650 pixels, a column has 340 or

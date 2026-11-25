@@ -15,9 +15,10 @@ namespace DmxBox.Server;
 /// gives it again; with no memory left, the channel fader.
 /// </para>
 /// <para>
-/// A sequence gives an attribute what its step that is on gives it, or the last step before
-/// that one that gives it something. Every move that takes something gets the next number of
-/// <see cref="_claims"/>; the highest number is the latest.
+/// A sequence gives an attribute what the latest of its steps that are on gives it (with steps
+/// that add, several are on), or else the last step before the one played last that gives it
+/// something. Every move that takes something gets the next number of <see cref="_claims"/>; the
+/// highest number is the latest.
 /// </para>
 /// </remarks>
 internal sealed partial class Desk
@@ -140,32 +141,47 @@ internal sealed partial class Desk
         if (_sequences[index] is not { Steps.Length: > 0 } sequence)
             return null;
 
-        // The step that is on, or else the last one before it that gives the channel something.
-        int current = SequenceTimeline.CurrentStep(sequence, SequenceTime(index, now), _sequenceSeeds[index]);
+        // Of the steps that are on, the latest that gives the channel something; or else the last
+        // step before the one played last that gives it something: an attribute stays when its step goes.
+        SequenceTimeline.Moment moment = MomentOf(index, sequence, now);
+        for (int at = moment.On.Length - 1; at >= 0; at--)
+        {
+            if (AttributeOfStep(sequence.Steps[moment.On[at]], channel, light) is { } value)
+                return value;
+        }
+
         int count = sequence.Steps.Length;
         for (int back = 0; back < count; back++)
         {
-            Step step = sequence.Steps[((current - back) % count + count) % count];
-            if (step.IsLights)
-            {
-                foreach (FixtureLooks.Part part in LookOfLights(step))
-                {
-                    if (part.Channel == channel && part.Attribute)
-                        return part.Value;
-                }
-            }
-            else if (!step.IsMemory)
-            {
-                if (step.Number - 1 == channel)
-                    return (byte)step.Value;
-            }
-            else if (_memories[step.Number - 1] is { } stepLook && LookHolds(stepLook, light))
-            {
-                return stepLook[channel];
-            }
+            Step step = sequence.Steps[((moment.Current - back) % count + count) % count];
+            if (AttributeOfStep(step, channel, light) is { } value)
+                return value;
         }
 
         return null;
+    }
+
+    // Call with the lock held. What one step of a sequence gives an attribute channel of a light;
+    // null if it gives it nothing, as an effect or a release never does.
+    private byte? AttributeOfStep(Step step, int channel, AttributeLight light)
+    {
+        if (step.IsLights)
+        {
+            foreach (FixtureLooks.Part part in LookOfLights(step))
+            {
+                if (part.Channel == channel && part.Attribute)
+                    return part.Value;
+            }
+
+            return null;
+        }
+
+        if (!step.GivesLight)
+            return null;
+        if (!step.IsMemory)
+            return step.Number - 1 == channel ? (byte)step.Value : null;
+
+        return _memories[step.Number - 1] is { } stepLook && LookHolds(stepLook, light) ? stepLook[channel] : null;
     }
 
     // A look holds a light when it gives any of its channels a level.
@@ -186,6 +202,9 @@ internal sealed partial class Desk
     {
         foreach (Step step in sequence.Steps)
         {
+            if (!step.GivesLight)
+                continue;
+
             bool holds = step.IsLights
                 ? LookOfLights(step).Any(part => Array.IndexOf(light.Channels, part.Channel) >= 0)
                 : step.IsMemory

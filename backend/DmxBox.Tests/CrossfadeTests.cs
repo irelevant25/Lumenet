@@ -96,13 +96,18 @@ public sealed class CrossfadeTests
         int[] before = SequenceTimeline.OrderOf(sequence, seed: 5, round: 0);
         int[] now = SequenceTimeline.OrderOf(sequence, seed: 5, round: 1);
 
-        List<SequenceTimeline.Play> plays = SequenceTimeline.Recent(sequence, 6.5, seed: 5);
+        SequenceTimeline.Moment moment = SequenceTimeline.At(sequence, 6.5, seed: 5);
 
-        Assert.Equal([now[0], before[2], before[1]], plays.Select(play => play.Step));
-        Assert.Equal(0.5, plays[0].Fraction, precision: 6);            // half way up
-        Assert.Equal(1 - 0.5 / 3, plays[1].Fraction, precision: 6);    // half a second of its three down
-        Assert.Equal(1 - 2.5 / 3, plays[2].Fraction, precision: 6);    // still on its way down: kept
-        Assert.Single(SequenceTimeline.Recent(sequence, 0.5, seed: 5));   // the first step of all: nothing before it
+        Assert.Equal(now[0], moment.Current);
+        Assert.Equal(0.5, moment.In, precision: 6);                    // half way up
+        Assert.Equal([before[2]], moment.Before);                      // the light rises from there
+        Assert.Equal([before[2], before[1]], moment.Going.Select(going => going.Step));
+        Assert.Equal(1 - 0.5 / 3, moment.Going[0].Fraction, precision: 6);    // half a second of its three down
+        Assert.Equal(1 - 2.5 / 3, moment.Going[1].Fraction, precision: 6);    // still on its way down: kept
+
+        SequenceTimeline.Moment first = SequenceTimeline.At(sequence, 0.5, seed: 5);   // the first step of all: nothing before it
+        Assert.Empty(first.Before);
+        Assert.Empty(first.Going);
     }
 
     [Fact]

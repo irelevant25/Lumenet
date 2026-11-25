@@ -468,7 +468,7 @@ export class DeskStore {
 
     const used = { channel: new Map<number, number[]>(), memory: new Map<number, number[]>(), fixture: new Map<number, number[]>(), group: new Map<number, number[]>() };
     (this.sequences()[mode.memory]?.steps ?? []).forEach((step, index) => {
-      if (step.target === 'release' || step.target === 'effect') return; // only the stack has these
+      if (step.target === 'release' || step.target === 'effect') return; // no key records these
       const users = used[step.target];
       const numbers = users.get(step.number);
       if (numbers) numbers.push(index + 1);

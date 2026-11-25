@@ -94,7 +94,6 @@ lm-fader {
   line-height: 15px;
   text-align: center;
   text-overflow: ellipsis;
-  user-select: text;
 }
 
 .note input:hover {

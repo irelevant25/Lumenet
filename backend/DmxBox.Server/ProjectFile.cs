@@ -397,12 +397,13 @@ internal sealed class ProjectFileStep
 
     /// <summary>
     /// The channel (1-512) or the memory (1-128); a fixture or a group by its place in the file's
-    /// list of lights or groups, counted from 1 (0 for one that is gone). 0 for a release, which
-    /// names its step with <see cref="Releases"/>. The effect (1-64) of a step of an effect.
+    /// list of lights or groups, counted from 1 (0 for one that is gone). 0 for a release of the
+    /// stack, which names its step with <see cref="Releases"/>; for a release of a sequence the
+    /// number of the step it takes down, counted from 1 (0 for none). The effect (1-64) of a step of an effect.
     /// </summary>
     public int? Number { get; set; }
 
-    /// <summary>Only for a step of the stack that comes up on top of what is on: true. Written only then.</summary>
+    /// <summary>Only for a step that comes up on top of what is on: true. Written only then.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? Add { get; set; }
 

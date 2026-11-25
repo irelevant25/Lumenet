@@ -47,7 +47,6 @@ router-outlet {
   border: 1px solid var(--system);
   border-radius: 8px;
   background: var(--panel-raised);
-  user-select: text;
 }
 
 .offline h2 {

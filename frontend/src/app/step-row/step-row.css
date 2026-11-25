@@ -29,7 +29,6 @@ td {
   color: var(--legend);
   text-overflow: ellipsis;
   white-space: nowrap;
-  user-select: text;
 }
 
 /* the color of a step of a fixture or a group: a press asks for another */

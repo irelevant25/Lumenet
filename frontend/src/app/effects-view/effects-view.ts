@@ -35,7 +35,13 @@ export class EffectsView {
       return `Effect ${this.chosen()} is empty. Choose a kind to make it, or another effect by its name.`;
     const playback = this.playback();
     const lights = effectLights(effect, this.store.stage()).length;
-    const state = playback?.running ? (playback.fading ? 'fading' : 'running') : 'out';
+    const state = !playback?.running
+      ? 'out'
+      : playback.fading
+        ? 'fading'
+        : playback.level === 0 && (playback.played ?? 0) > 0
+          ? 'played by a sequence'
+          : 'running';
     const said = effectSummary(effect, lights, playback?.bpm ?? effect.speed);
     return `Effect ${effect.number}, ${effect.name || 'without a name'}: ${said.charAt(0).toLowerCase()}${said.slice(1)}, ${state}.`;
   });

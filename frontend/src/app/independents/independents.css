@@ -60,7 +60,6 @@ h2 {
   font-size: var(--key-number);
   font-stretch: 87.5%;
   text-align: center;
-  user-select: text;
 }
 
 .field.memory {

@@ -75,6 +75,7 @@ table {
   line-height: 1;
   text-align: center;
   cursor: grab;
+  user-select: none; /* a handle: dragged, never selected */
 }
 
 .grip:active {
@@ -93,27 +94,6 @@ table.locked .grip {
 
 .cue input {
   font-weight: 600;
-}
-
-/* Add: a box in the middle of its narrow cell, not a field as wide as the cell */
-.adds {
-  width: 1%;
-  padding: 0 10px;
-  text-align: center;
-}
-
-.adds input {
-  width: 18px;
-  height: 18px;
-  margin: 0;
-  padding: 0;
-  accent-color: var(--key-play);
-  vertical-align: middle;
-  cursor: pointer;
-}
-
-.adds input:disabled {
-  cursor: default;
 }
 
 .explain {

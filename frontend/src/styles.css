@@ -178,6 +178,13 @@ body {
   -webkit-tap-highlight-color: transparent; /* the keys show a press themselves */
   overflow: hidden; /* the desk fills the window; nothing scrolls */
   touch-action: manipulation; /* fast taps on a key must not zoom the page */
+}
+
+/* Text can be selected and copied, as on any page. What is pressed or dragged cannot: a key, a
+   fader, a link of the top bar, the stage plan, a color field, a position pad, the preview of an
+   effect (those set it themselves). So a press, a double click, a drag or a long press on a phone
+   selects nothing there. */
+button {
   user-select: none;
 }
 
@@ -405,6 +412,27 @@ table.steps tr.drop-after > * {
   box-shadow: inset 0 -3px 0 var(--focus);
 }
 
+/* Add: a box in the middle of its narrow cell, not a field as wide as the cell */
+table.steps td.adds {
+  width: 1%;
+  padding: 0 10px;
+  text-align: center;
+}
+
+table.steps td.adds input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--key-play);
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+table.steps td.adds input:disabled {
+  cursor: default;
+}
+
 table.steps input,
 table.steps select {
   box-sizing: border-box;
@@ -423,7 +451,6 @@ table.steps select {
 
 table.steps input {
   text-align: right;
-  user-select: text;
 }
 
 table.steps select {

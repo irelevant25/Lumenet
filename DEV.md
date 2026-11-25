@@ -744,6 +744,21 @@ state as soon as a box answers.
   are numbered on through them inside, 1 to 4096, and the arrays are made for 4096 once. The user never
   sees that number: the page and the desk's messages write a channel 1 to 512 in its universe, "113 (U2)"
   for channel 625 (`frontend/src/app/desk/universes.ts`, `Desk.ChannelLabel`).
+* **Sequences** play themselves the way the stack is played (Add, Release, effect steps), but from the clock
+  alone, so that nothing of a run is kept and loops, random orders, the speed and Rate work as they always
+  did. `SequenceTimeline.At` goes through the steps of the round from its start (each round starts afresh,
+  as the stack does round from its last step) and through the rounds before as far as a step of them can
+  still be on its way down (at most 4 × steps + 64 steps back), with the stack's rules (`OnAfter`). The
+  moment it gives: the step played last and how far it has come in (a release: in its down time), the steps
+  on before it and now, and the steps on their way down, each with the steps that had come on after it
+  (`Going.Over`: the faders those held were theirs). `Desk.Sequences.cs` makes the light of it: the faders
+  the steps hold, the later step's level where two use the same channel, memory or effect
+  (`SequenceLooks`, the stack's `Fader`), between faders the highest. A step without Add rises from what
+  was on in its up time, and what falls goes with the steps that went, each in its own down time (the
+  crossfade without a dip, as before); a step that adds and a release change what is on in their own time.
+  A sequence without Add, releases or effects plays exactly as before. One frame needs the moment of a
+  sequence for its light, its effects and the attributes: `KnownMoment` keeps it while the sequence, its
+  time and its seed are the same. The page gets the steps that are on in `Playback.SequenceOn`.
 * **Boxes:** `BoxNetwork` keeps a `BoxLink` (a thread of its own, 40 rounds a second) for every box it looks
   for: the one of `Box:Host`, the ones the project lists (`boxes` in the project file), and 10.1.n.1 for
   every adapter of the PC with an address 10.1.n.x, where a box with the number n on its switch gives the PC
@@ -805,6 +820,12 @@ state as soon as a box answers.
   * **Windows** are `<dialog>`s opened with `showModal`. Each has `lmDialog` (`desk/dialog-dismiss.ts`),
     which asks the component to close it (`dismiss`) on a press that begins and ends outside the window, and
     a ✕ of the class `dialog-close` (styles.css) at its top right; Esc closes it as the browser does.
+  * **Text can be selected** everywhere, as on any page (the owner's wish; the body had `user-select: none`
+    and some views turned it back on). What is pressed or dragged sets `user-select: none` itself:
+    `button` (styles.css), the fader (`:host`), the links of the top bar, the stage plan, the color field,
+    the position pad, the preview canvas of an effect and the grips of the stack. The Memories table lets
+    a double click open its fields without selecting the cell's digits (`onTableDown`: the second press's
+    default is prevented); a drag still selects its levels.
 * The backend listens on every network card (`Urls` is `http://*:5080`), but serves another device only while
   LAN is on and only with the password; while LAN is off it closes such a connection before reading it. Two
   more rules keep other websites that are open in a browser from operating the desk: the backend answers only
@@ -853,7 +874,14 @@ time. The rules of how it mixes with the rest stand at the top of `Desk.Effects.
 * **The stack:** a step of the kind effect moves the effect's fader as a memory step moves a memory's: up in
   its up time, which starts the effect, and down in the down time of the step that takes it off, which stops
   it at 0. The stack's fader of an effect is `Fader(Memory: false, Number, Effect: true)`: it gives no light
-  to the crossfade, and Add and Release work for it as for the others. A sequence cannot play an effect.
+  to the crossfade, and Add and Release work for it as for the others.
+* **Sequences** play an effect without moving its fader. `AddSequenceEffects` gives each effect the highest
+  of what the running sequences give it (how far its step is up, times its value and the memory's fader).
+  `SettleEffects` keeps that from every tick in `EffectRun.Played` and starts the effect's cycle when it
+  rises from 0 while the fader does not run it already; a frame takes the higher of the fader and a fresh
+  `AddSequenceEffects` of that moment (a memory held with SOLO DOWN gives nothing). The effect runs while
+  either plays it (`EffectRun.Plays`): its key on the pages is lit, and `EffectPlayback.Played` says how much
+  the sequences give. The key and the `toggle` of `SetEffectControl` still work the fader alone.
 * **The pages** get the playback of each effect in `Playback.Effects` (about 30 times a second while one
   runs: `DeskClock` then sends the playback every round instead of every third, `Desk.PlaysEffects`),
   and in `Playback.EffectLevels` the channels the effects change, at what the effects make of them before
@@ -874,6 +902,11 @@ time. The rules of how it mixes with the rest stand at the top of `Desk.Effects.
 * **Project file version 7:** `effects` (the lights and the group of each by their places in the plan's
   lists, like the steps), `effectIndependents`, and steps with `"target": "effect"`. Only a project with
   any of them says version 7; others stay version 5 or 6, which older desks read.
+* **Project file version 8:** sequences whose steps add (`"add": true`), release (`"target": "release"`,
+  `"number"`: the step it takes down, counted from 1 in its sequence, no `releases`) or play an effect. A
+  desk that reads versions 6 and 7 would play a step that adds as one that does not, or refuse the release
+  with a message about the stack, so only such a project says version 8; the others stay as they were. A
+  release a file names wrongly (itself, or a step the sequence does not have) takes down none.
 
 ### Effects from outside
 
@@ -1000,12 +1033,13 @@ publish.cmd        # builds the page, then publish\Lumenet.exe
 
 ### Tests
 
-`dotnet test backend/DmxBox.sln` (763 tests: the client, also against the simulator with two outputs, the
+`dotnet test backend/DmxBox.sln` (775 tests: the client, also against the simulator with two outputs, the
 desk, solo, sequences and the stack with a clock the tests set by hand, the rate and its tempo, undo and the autosave, the
 stage plan and its picture, fixtures, their attributes, their steps and their notes, the notes, the
 universes, project files with Export and Import, the examples, the import of show files, the links to the
 boxes and their wiring with the blackout button, the hub, LAN with a pretend PC and a pretend phone, the
-crossfades of sequences and the stack, steps of the stack that add and releases, a level of a memory changed
+crossfades of sequences and the stack, steps of the stack and of sequences that add and releases, at random
+in the order of each round, effects played by sequences, project files of version 8, a level of a memory changed
 from the Memories view, and the outputs besides the boxes: the packets of Art-Net, sACN and the DMX USB Pro
 byte by byte, and Art-Net and sACN on 127.0.0.1 with a pretend node and receiver, a pretend USB interface; the simulated devices of sim.cmd, the four box simulators among them, and the desk finding them;
 the effects: their rules frame by frame, their playback and the stack with the clock set by hand, the
@@ -1013,9 +1047,10 @@ shapes, the places in the run and the pixels, and project files of version 7; MI
 bytes, the scales, 14 bits, the endless encoders, pickup, slots that follow the pages, held keys, the page
 that presses the keys, Learn, lights and motors sent back, devices pulled out and plugged in again with
 pretend ports (`MidiPretend.cs`), midi.json, the ready-made mappings, and the simulated controllers against
-the desk's own ports), and in `frontend/`: `npm test -- --watch=false` (261 tests of the page; for MIDI the
+the desk's own ports), and in `frontend/`: `npm test -- --watch=false` (264 tests of the page; for MIDI the
 keys of a controller pressed as shortcuts with their locks and holds, the keys of the pages shown, the lamps
-and pages told, the panel, Listen, and Export and Import).
+and pages told, the panel, Listen, and Export and Import; for sequences Add, Release and Effect in the table,
+the releases following their steps, and the steps that are on).
 
 On Windows the first packets of a new UDP flow (a socket and a receiver) can be held back for a moment while
 the firewall looks at the flow, and what follows meanwhile is dropped. The tests of the network outputs
@@ -1685,6 +1720,36 @@ receivers listen at 5568 and the desk sends from a port of its own.
   be picked: the check of a fader's name took one digit at its end. It takes a number of any length now;
   a test picks channel fader 12 and memory fader 10 (it fails with the old check), and in Edge 158 a
   double click picked channel faders 3, 12 and 32 and memory faders 10 and 16.
+* **Sequences that play themselves like the stack (2026-11-25):** the owner's words: a sequence is "a stack
+  which plays itself", with Add, Release and effect steps. The backend passes 775 tests and the page 264.
+  In the tests: a step that adds comes up on top and the next without Add takes all down, each in its own
+  down time; a release takes its step down in its own time and leaves the rest; a loop starts each round
+  afresh without a dip where a light comes again; a step that adds over a shared channel takes it in its up
+  time and gives it back at the release; at random, 30 seeds of 4 rounds each follow the stack's rules in
+  that round's order; an attribute comes from the latest step that is on; releases that name themselves or
+  a step that is not there are refused, from a file they take down none; version 8 written and read back,
+  a plain sequence still version 5; an effect played by a sequence as strongly as its step, scaled by the
+  memory's fader, its fader left at 0, the higher of the two counting, its key still working the fader, and
+  stopping when its step went down or was released; the existing crossfade and timeline tests pass
+  unchanged. On a test copy, in Edge headless at 1920 × 1080: a sequence of channel 1, channel 2 with Add,
+  a release of step 2 and channel 3, built on the Sequences view (the release took step 2 at first, its note
+  "Channel 2 (U1)"), ran with its memory fader up: step 1; steps 1 and 2 on; the release with step 1 on;
+  step 3 alone; then step 1 afresh, every 2 seconds. An intensity effect in a sequence of one step lit its
+  key with its fader at 0, and the Effects view said "played by a sequence"; with the memory fader down
+  it was out again. No error on the page. AXE was not run. The picture of the Sequences view in the manual
+  has no Add column yet.
+* **Counts of the MIDI view, text that can be copied (2026-11-25):** the owner's words: the counts of "Keys
+  and faders" were green even where nothing was mapped, unlike the Keyboard panel's; and "Keys and faders"
+  and other texts could not be copied while "Keyboard" could, though only the keys' text needs to stay out.
+  The cause of the first: the rule that dims a count of none stood before the green one in
+  midi-targets.css, as specific as it, so green won (and a search's count stayed yellow at 0); the rules
+  are now in the Keyboard panel's order, and its triangle turns the same way. The second: see "Text can be
+  selected" above. The page passes 264 tests. On a test copy, in Edge headless at 1920 × 1080: every count
+  in brackets of the MIDI view gray at (0) and green above, as the Keyboard panel's, the search's count
+  yellow only above 0; a double click selected the titles "Keys and faders", "Controllers", "Keyboard",
+  the channels' title and the line at the top of Memories, and nothing on a key, the head of a kind, a
+  link of the top bar or a channel fader; a double click on a cell of the Memories table opened its fields
+  with nothing selected. No error on the page.
 * **dmxbox 2 on paper (2026-11-23):** both versions (two outputs and one) are drawn from their `circuit.py`,
   and each drawing passed its check against it: the schematic, the breadboard plan, the perfboard plan (38 and
   26 insulated wires, with SW1 at the cut left edge and the holes around the four screws kept empty;

@@ -1,4 +1,4 @@
-import type { EffectLevels, EffectPlayback } from './effects';
+import { type EffectLevels, type EffectPlayback, MAX_EFFECTS } from './effects';
 
 /**
  * Sizes of the desk. A universe is the 512 channels one DMX cable carries; a project has 1 to 8
@@ -268,9 +268,10 @@ export type StepTarget = 'channel' | 'memory';
 
 /**
  * What a step of a sequence or of the stack stands for: a fader, or a fixture or a group of
- * fixtures of the stage plan. In the stack also "release": a step that takes another step of the
- * stack down (its number is that step's id); and "effect": a step that brings the fader of an
- * effect up (its number is the effect's).
+ * fixtures of the stage plan; "effect": a step that plays an effect (its number is the effect's;
+ * in the stack it brings the effect's fader up); "release": a step that takes another step of the
+ * same stack or sequence down (its number names that step: in the stack its id, in a sequence its
+ * number in the list).
  */
 export type StepKind = StepTarget | 'fixture' | 'group' | 'release' | 'effect';
 
@@ -288,7 +289,8 @@ export interface TimedStep {
   target: StepKind;
   /**
    * The channel (1 to 512 for each universe) or the memory (1 to 128); a fixture or a group by its
-   * id in the stage plan; for a release the id of the step of the stack it takes down, 0 for none.
+   * id in the stage plan; the effect (1 to 64); for a release the step it takes down, 0 for none:
+   * in the stack that step's id, in a sequence its number in the list, from 1.
    */
   number: number;
   /** 0 to 255: for a fixture or a group, the intensity of its lights. A release has none. */
@@ -298,10 +300,7 @@ export interface TimedStep {
   down: number;
   /** For a fixture or a group: the color its lights shine in, like "#ff2000"; missing or null for white. */
   color?: string | null;
-  /**
-   * Only in the stack: true for a step that comes up on top of what is on and takes nothing down.
-   * Missing means false, as for every step of a sequence.
-   */
+  /** True for a step that comes up on top of what is on and takes nothing down. Missing means false. */
   add?: boolean;
 }
 
@@ -383,8 +382,13 @@ export interface StackCrossfade {
 export interface Playback {
   /** What the running sequences give each channel right now (already scaled by their memory faders). */
   levels: number[];
-  /** For each memory whose sequence is running: the number of the step it is on, counted from 1. */
+  /** For each memory whose sequence is running: the number of the step it played last, counted from 1. */
   sequenceSteps: Record<number, number>;
+  /**
+   * For each memory whose sequence is running: the steps that are on, counted from 1 (several with
+   * steps that add). Missing from a desk program from before sequences could add.
+   */
+  sequenceOn?: Record<number, number[]>;
   stack: StackPlayback;
   /** The stack's crossfade while one runs; missing while none does. */
   crossfade?: StackCrossfade | null;
@@ -425,7 +429,7 @@ export function stepAfter(
   const number =
     last.target === 'fixture' ? nextOf([...plan.lights].sort((a, b) => a.address - b.address).map((light) => light.id))
     : last.target === 'group' ? nextOf(plan.groups.map((group) => group.id))
-    : Math.min(last.number + 1, last.target === 'channel' ? channels : MEMORY_COUNT);
+    : Math.min(last.number + 1, last.target === 'channel' ? channels : last.target === 'effect' ? MAX_EFFECTS : MEMORY_COUNT);
   const { target, value, up, wait, down, color } = last;
   return color === undefined ? { target, number, value, up, wait, down } : { target, number, value, up, wait, down, color };
 }

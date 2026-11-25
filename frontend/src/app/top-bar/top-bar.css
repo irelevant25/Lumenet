@@ -108,7 +108,6 @@ h1 {
 
 .lan .password {
   letter-spacing: 0.12em;
-  user-select: text; /* it can be copied */
 }
 
 /* ---- middle: the links to the views. The view that is shown has a lit bar under its name. */
@@ -130,6 +129,7 @@ h1 {
   line-height: 1;
   text-decoration: none;
   text-transform: uppercase;
+  user-select: none; /* keys of the desk: a double click selects no text */
 }
 
 .views a:hover {

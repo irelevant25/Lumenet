@@ -166,6 +166,14 @@ export class MemoriesView {
   });
 
   /**
+   * The second press of a double click that lays the fields over a cell selects none of its
+   * digits. A drag over the table still selects its levels, to copy them.
+   */
+  protected onTableDown(event: MouseEvent): void {
+    if (event.detail > 1 && !this.store.live()) event.preventDefault();
+  }
+
+  /**
    * A double click on a cell lays the fields over it: the level, and the channel's note. The one
    * double-clicked gets the focus: the note when the click was under the level of a table that
    * shows notes.

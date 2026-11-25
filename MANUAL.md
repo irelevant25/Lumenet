@@ -56,7 +56,10 @@ for how this device shows the desk and for its keyboard shortcuts (see [Settings
 top bar says how many outputs play (Settings shows them, see [Universes and outputs](#universes-and-outputs));
 beside it stand **LAN**, **Undo** and **Redo**, at the right the keys of the project. Every window of the page
 (Load, Save, Import, Export and the others) closes with **✕** at its top right, with a press outside it, or
-with Esc; a drag that begins inside it and ends outside leaves it open. At the right of Main the
+with Esc; a drag that begins inside it and ends outside leaves it open. The text of the page can be selected
+and copied, as on any page; the keys, the faders, the links of the top bar and the things that are dragged
+(the stage plan, a color field, a position pad) cannot, so that a press, a double click or a drag there never
+selects text. At the right of Main the
 **Stack** lies across the top, and under it stand three columns: the **Master** section (Black out and the
 master fader with its level) over **Record**; the **General** section (Clear, Solo up, Solo down, Rate, the
 tempo fader with the tempo on top, and Tempo under it); and at the right edge the **Independents** (unless Settings shows none of
@@ -560,10 +563,12 @@ and others), at a serial port of this PC: each plays one universe, or Off, which
 
 ### Steps
 
-A sequence and the stack are both made of steps. A step stands for a channel, a memory, a
-**fixture** or a **group** of fixtures (see the Fixtures view), has the value it brings that to (0 to 255),
-and three times in seconds: **up** (from zero to the value), **wait** (how long it stays) and **down** (back
-to zero when the next step takes over). The old step goes down while the new one goes up, and every light
+A sequence and the stack are both made of steps, and both are played the same way. A step stands for a
+channel, a memory, a **fixture** or a **group** of fixtures (see the Fixtures view), has the value it brings
+that to (0 to 255), and three times in seconds: **up** (from zero to the value), **wait** (how long it stays)
+and **down** (back to zero when a step takes it down). A step can also play an **effect**, take another step
+down (**Release**) or come up on top of what is on (**Add**): see the Stack view, and the Sequences view for
+how a sequence does it. The old step goes down while the new one goes up, and every light
 moves straight from its level in the old step to its level in the new one: a light that both steps give at
 the same level stays where it is, without a dip; one that rises follows the up time of the new step, one that
 falls the down time of the old step (down to zero if the new step does not give it). A light at 120 in the old
@@ -584,8 +589,7 @@ group moves the channel faders of its lights. A step follows its fixture when th
 address; a fixture that is taken off the plan leaves its steps doing nothing ("Gone").
 
 In both tables the **kind** of a step says what it stands for: **Channel (U1)**, **Channel (U2)** and so on, one
-for each universe of the project, then Memory, Fixture and Group; in the stack also **Release** (see the Stack
-view). A channel step that is switched to another
+for each universe of the project, then Memory, Fixture, Group, **Effect** and **Release**. A channel step that is switched to another
 universe keeps its number there (113 of U1 becomes 113 of U2). The **number** of a step is chosen from a list.
 Each line of the list reads like `5: Front left`: the number, then the note that stands under that fader in
 the main view (its two lines with a space between them); a fader without a note shows its number alone. For a
@@ -606,8 +610,8 @@ it gives in red.
 ![The Sequences view: the rainbow of the LED bar, six steps of a fixture in a loop, step 5 running](docs/screenshots/sequences.png)
 
 * Choose a memory with the keys along the top; the two lines of its note stand under each. Add step puts
-  in a step like the last one, on the next channel or memory. Every change goes to the desk at once. Rec
-  seq in the main view is the other way to put in steps: by pressing keys.
+  in a step like the last one that is no release, on the next channel or memory. Every change goes to the
+  desk at once. Rec seq in the main view is the other way to put in steps: by pressing keys.
 * **Once**, **Loop** or **Random:** played once, the last step stays on; in a loop the first step follows
   the last. Random loops too, but plays all steps on every round in a new order, so that a few steps never
   look like a loop (the same step never comes twice in a row between two rounds). A new sequence is played
@@ -630,6 +634,24 @@ it gives in red.
   * **Storm:** strikes up to High and faint flickers from Low, with dark pauses between, at random. The
     pauses are steps with the value 0: they give no light at all.
 * A wait of 0 means the next step starts as soon as this one is up.
+* **A sequence plays itself the way the stack is played** (see the Stack view): **Add** (the box after the
+  step number) brings a step up on top of what is on; the next step without Add takes everything down, each
+  in its own down time, and so does every new round of a loop, whose first step starts afresh. Played once,
+  what is on after the last step stays on. The step played last is green, every other step that is on a
+  paler green. Where two steps that are on use the same channel, memory or effect, the later one's value
+  counts, as in the stack.
+* **Release** takes one step of the sequence down, in the release's own down time, and leaves the rest. Its
+  number is the step it takes down, chosen from the other steps (`2: Channel 5 (U1)`). Moved, a step keeps
+  its release, which follows it to its new number; taken out, its release takes down none. At random, Add
+  and Release follow the order of each round: a release that comes before its step in a round takes nothing
+  down.
+* **Effect** plays an effect as strongly as its step is up, scaled by the fader of the sequence's memory,
+  and moves no fader: the effect's own fader stays where it is, and the higher of the two counts. The effect
+  starts when its step begins to come up and stops when neither its fader nor a sequence plays it.
+* What still differs from the stack: many sequences can run at once, each dimmed by its memory's fader; a
+  sequence never moves a fader on the page; and a wait of 0 goes on at once, where the stack waits for Play.
+  A project whose sequences add, release or play effects is saved as version 8 of the project file, which an
+  older Lumenet refuses with a message instead of playing it wrong.
 * A step that stands for a memory plays that memory's look. A memory that holds a sequence itself gives
   nothing there: sequences are not played inside sequences. So the list for a memory step offers only the
   memories that hold a look.
@@ -673,18 +695,19 @@ back to zero. A memory that holds a sequence starts running, because its fader g
   For example: step 1.0 is the scene; step 2.0 is a special light, with Add: it comes up and the scene stays.
   Step 3.0 is the scene again, without Add: the special light goes down in its own down time, and the scene
   does not move.
-* **Release** is a kind of step of the stack: it takes one step that is on down, in the release's own down
+* **Release** is a kind of step (of a sequence too): it takes one step that is on down, in the release's own down
   time, and leaves everything else as it is. Its number is the step it takes down, chosen from the other
   steps of the stack (`2.0: Memory 5 (Special)`); it has no value and no up time, its wait counts as usual.
   In the example, a release of 2.0 as step 3.0 takes the special light down and leaves the scene, even when
   the special light is a sequence. A release of a step that is not on does nothing, and when the step it
   names is taken out of the stack, it names none. Where two steps that are on use the same fader, the later
   one's value counts; when it goes, the earlier one's counts again.
-* **Effect** is a kind of step of the stack too (not of a sequence): its number is an effect, chosen from
-  the 64 (`3: Chase`). Going to it brings the effect's fader up to the step's value in its up time, which
-  starts the effect; leaving it brings the fader back to zero in its down time, which stops the effect. Add
-  and a release work on it as on any step. The stack uses the step's times, not the effect's own fade times,
-  and moves the effect's real fader, so the Effects view and the row on Main show it.
+* **Effect** is a kind of step too: its number is an effect, chosen from the 64 (`3: Chase`). Going to it
+  brings the effect's fader up to the step's value in its up time, which starts the effect; leaving it brings
+  the fader back to zero in its down time, which stops the effect. Add and a release work on it as on any
+  step. The stack uses the step's times, not the effect's own fade times, and moves the effect's real fader,
+  so the Effects view and the row on Main show it. (A sequence plays the effect without moving the fader:
+  see the Sequences view.)
 * **Prev** sets up the steps that are on as if the stack had come to that step from the top: from the last
   step before it without Add, through the steps that add. Round from the last step, the first one starts
   afresh, with nothing on under it.
@@ -719,6 +742,10 @@ plan; a pixel effect works on every cell of its lights, by where the cell is on 
     down to zero in its fade-out time, which stops it. Pressed while the fader is on its way, it turns back
     from where it is. It is faint where there is no effect, half lit for an effect that is out, fully lit
     while it runs, and blinks while it moves the fader.
+  * **A sequence** can play an effect too, with an effect step (see the Sequences view): as strongly as the
+    step is up, dimmed by the fader of the sequence's memory. It leaves the effect's fader where it is, and
+    the higher of the two counts. The key is lit while a sequence plays the effect, and the line at the top
+    of the view says "played by a sequence"; the key still brings the fader up and down.
   * **The name** under a key chooses the effect for the editor; the chosen one is framed. A number without an
     effect shows a dash.
 * **To make an effect,** press the key (or the dash) of a number without one: the view offers Movement,
@@ -1033,8 +1060,10 @@ its left stand the controllers and the messages that came in, at its right every
   "Memory key 5 pressed", "Channel fader 1 of the page shown to 128". In amber when it did nothing: no
   mapping, no page of the desk open on the PC, a fader waiting until the control reaches the desk's value, or
   a refusal with its reason.
-* **Keys and faders:** every key and fader of the desk, kind by kind, as the Keyboard panel lists the keys,
-  each with the controls that work it, **Learn** and **✕**. **Learn**, then press or move a control: from now
+* **Keys and faders:** every key and fader of the desk, kind by kind, as the Keyboard panel lists the keys
+  (each kind with the number of its keys and faders, in brackets how many have a control, green when there
+  are some, and while the search runs how many it finds, yellow when it finds some: Stack 6 (5) 2), each
+  with the controls that work it, **Learn** and **✕**. **Learn**, then press or move a control: from now
   on it works that key or fader, and nothing else. Learn again, Stop or Esc stops waiting. **Listen** shows
   the desk, as Listen of the Keyboard panel does: the key or fader double-clicked there is not pressed or
   moved but shown here, its kind open, its line marked and its Learn ready (a fader does not move at all

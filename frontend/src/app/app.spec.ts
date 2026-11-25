@@ -937,7 +937,7 @@ describe('the desk page', () => {
     await show('/sequences');
     await press(button('Work on memory 3'));
     const row = () => page.querySelectorAll('lm-sequences-view table.steps tbody tr')[0];
-    const kind = () => row().querySelector<HTMLSelectElement>('select[aria-label="Step 1, channel, memory, fixture or group"]')!;
+    const kind = () => row().querySelector<HTMLSelectElement>('select[aria-label="Step 1, channel, memory, fixture, group, effect or release"]')!;
     const number = () => row().querySelector<HTMLSelectElement>('select[aria-label="Step 1, number of the channel"]')!;
     expect([...kind().options].map((option) => option.text.trim())).toEqual([
       'Channel (U1)',
@@ -945,6 +945,8 @@ describe('the desk page', () => {
       'Memory',
       'Fixture',
       'Group',
+      'Effect',
+      'Release',
     ]);
     expect(kind().value).toBe('channel:1');
 
@@ -2002,8 +2004,8 @@ describe('the desk page', () => {
     await planWithGroup(stageLight(1, 'Par', 11, 'RGB', null, 2, 8), stageLight(2, 'Front', 5, 'D', null, 8, 5));
     await show('/sequences');
     await press(button('Work on memory 3'));
-    const kind = page.querySelector<HTMLSelectElement>('select[aria-label="Step 1, channel, memory, fixture or group"]')!;
-    expect([...kind.options].map((option) => option.text.trim())).toEqual(['Channel (U1)', 'Memory', 'Fixture', 'Group']);
+    const kind = page.querySelector<HTMLSelectElement>('select[aria-label="Step 1, channel, memory, fixture, group, effect or release"]')!;
+    expect([...kind.options].map((option) => option.text.trim())).toEqual(['Channel (U1)', 'Memory', 'Fixture', 'Group', 'Effect', 'Release']);
 
     // a fixture: the first by its address, which the closed field shows; its name is the note
     kind.value = 'fixture';
@@ -2781,6 +2783,58 @@ describe('the desk page', () => {
     expect(store.memorySequence()[8]).toBe(true);
   });
 
+  it('the sequences view marks the steps that are on, with a step that adds', async () => {
+    await show('/sequences');
+    await press(button('Work on memory 3'));
+    connection.emit('PlaybackChanged', { ...connection.playback, sequenceSteps: { 3: 2 }, sequenceOn: { 3: [1, 2] } });
+    await fixture.whenStable();
+
+    const rows = [...page.querySelectorAll('lm-sequences-view table.steps tbody tr')];
+    expect(rows.map((row) => row.classList.contains('on'))).toEqual([true, true]);
+    expect(rows.map((row) => row.classList.contains('current'))).toEqual([false, true]);
+  });
+
+  it('a step of a sequence adds, releases another step or plays an effect, and a release follows its step', async () => {
+    await show('/sequences');
+    await press(button('Work on memory 3'));
+    const rows = () => [...page.querySelectorAll('lm-sequences-view table.steps tbody tr')];
+    const sent = () => (connection.last('SetSequence')?.[1] as Sequence).steps;
+    const adds = (row: number) => rows()[row].querySelector<HTMLInputElement>('td.adds input');
+    const kind = (row: number) => `select[aria-label="Step ${row}, channel, memory, fixture, group, effect or release"]`;
+
+    // Add: the box of step 2; a step without it has no "add" at all
+    expect(adds(1)?.checked).toBe(false);
+    await press(adds(1));
+    expect(sent()).toEqual([step(5, 200), step(6, 100, { wait: 0, add: true })]);
+    expect(adds(1)?.checked).toBe(true);
+
+    // a release: of the step above it at first, chosen by its number; it has no Add, no value and no up time
+    await press(button('Add a step'));
+    expect(sent()[2]).toEqual(step(7, 100, { wait: 0 })); // like step 2, without its Add
+    await choose(kind(3), 'release');
+    expect(sent()[2]).toEqual({ target: 'release', number: 2, value: 100, up: 1, wait: 0, down: 1 });
+    expect(adds(2)).toBeNull();
+    expect(rows()[2].querySelectorAll('td.unused').length).toBe(2);
+    expect(rows()[2].querySelector('td.note')?.textContent?.trim()).toBe('Channel 6 (U1) (Front left)');
+    const released = rows()[2].querySelector<HTMLSelectElement>('select[aria-label="Step 3, the step it takes down"]')!;
+    released.dispatchEvent(new Event('focus'));
+    expect([...released.options].map((option) => option.text.trim())).toEqual(['1: Channel 5 (U1)', '2: Channel 6 (U1) (Front left)']);
+
+    // moved, a release goes on taking down its step; taken out, the steps after it are numbered anew
+    await press(button('Move step 2 down'));
+    expect(sent().map((item) => [item.target, item.number])).toEqual([['channel', 5], ['release', 3], ['channel', 6]]);
+    await press(button('Take step 1 out'));
+    expect(sent().map((item) => [item.target, item.number])).toEqual([['release', 2], ['channel', 6]]);
+    await press(button('Take step 2 out')); // the step it took down: it takes down none now
+    expect(sent()).toEqual([{ target: 'release', number: 0, value: 100, up: 1, wait: 0, down: 1 }]);
+    expect(rows()[0].querySelector('td.note')?.textContent?.trim()).toBe('No step to take down: choose one');
+
+    // an effect, by its number
+    await choose(kind(1), 'effect');
+    expect(sent()).toEqual([{ target: 'effect', number: 1, value: 100, up: 1, wait: 0, down: 1 }]);
+    expect(rows()[0].querySelector('td.note')?.textContent?.trim()).toBe('No such effect yet');
+  });
+
   it('random plays a sequence in a new order every round', async () => {
     await show('/sequences');
     await press(button('Work on memory 3'));
@@ -2882,8 +2936,9 @@ describe('the desk page', () => {
 
     // the note of the step's channel stands beside its number: step 2 is on channel 6
     const headers = [...page.querySelectorAll('lm-sequences-view table.steps thead th')];
-    expect(headers.map((header) => header.textContent?.trim()).slice(0, 5)).toEqual([
+    expect(headers.map((header) => header.textContent?.trim()).slice(0, 6)).toEqual([
       'Step',
+      'Add',
       'Kind',
       'Number',
       'Notes',
@@ -2923,7 +2978,7 @@ describe('the desk page', () => {
     expect(numberOf(0)?.options[0].text.trim()).toBe('5');
 
     // a step switched to "memory": only the memories that hold a look are on offer, and it lands on one
-    const kind = rows()[0].querySelector<HTMLSelectElement>('select[aria-label="Step 1, channel, memory, fixture or group"]');
+    const kind = rows()[0].querySelector<HTMLSelectElement>('select[aria-label="Step 1, channel, memory, fixture, group, effect or release"]');
     if (!kind) throw new Error('no kind field in step 1');
     kind.value = 'memory';
     kind.dispatchEvent(new Event('change'));
@@ -3239,12 +3294,12 @@ describe('the desk page', () => {
     expect(page.querySelector('.card.current .what')?.textContent).toContain('Release of step 1.0: Channel 7 (U1)');
     expect(page.querySelector('.card.current .how')?.textContent).toContain('Taking its step down, 0.4 s left.');
 
-    // a sequence has no releases
+    // a sequence has releases too, of its own steps
     await stackStands(NOT_LIVE);
     await show('/sequences');
     await press(button('Work on memory 3'));
-    const sequenceKind = page.querySelector<HTMLSelectElement>('select[aria-label="Step 1, channel, memory, fixture or group"]');
-    expect([...(sequenceKind?.options ?? [])].map((option) => option.value)).not.toContain('release');
+    const sequenceKind = page.querySelector<HTMLSelectElement>('select[aria-label="Step 1, channel, memory, fixture, group, effect or release"]');
+    expect([...(sequenceKind?.options ?? [])].map((option) => option.value)).toContain('release');
   });
 
   it('while the stack crossfades, the page shows what the desk sends: a channel both looks hold does not dip', async () => {
@@ -3927,6 +3982,18 @@ describe('the desk page', () => {
     expect(page.querySelector('button[aria-label="Effect 2 key"]')?.classList).toContain('level-3');
     // the fader this page moved a moment ago keeps the page's level
     expect(store.effectPlaybacks().get(2)?.level).toBe(128);
+  });
+
+  it('the Effects view says when a sequence plays an effect whose fader is down, and its key is lit', async () => {
+    connection.emit('EffectsChanged', [anEffect(2, { name: 'Pulse' })]);
+    await show('/effects');
+    store.chosenEffect.set(2);
+    connection.emit('EffectPlaybackChanged', {
+      number: 2, running: true, level: 0, played: 200, speed: 60, size: 100, spread: 100, fading: false, phase: 0.5, bpm: 60, changed: false,
+    });
+    await fixture.whenStable();
+    expect(page.querySelector('lm-effects-view .summary')?.textContent).toContain(', played by a sequence.');
+    expect(page.querySelector('button[aria-label="Effect 2 key"]')?.classList).toContain('level-3');
   });
 
   it('on the Stage view a light in a running effect shows a change at once and keeps it a sixth of a second', async () => {

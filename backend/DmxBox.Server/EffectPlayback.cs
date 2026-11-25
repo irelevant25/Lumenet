@@ -6,13 +6,19 @@ namespace DmxBox.Server;
 /// </summary>
 /// <remarks>Public only because <see cref="IDeskClient"/> has to be.</remarks>
 /// <param name="Number">The effect, 1 to 64.</param>
-/// <param name="Running">True from its start until its fader is down at zero.</param>
+/// <param name="Running">True from its start until its fader is down at zero, and while a sequence plays it.</param>
 /// <param name="Level">Its fader, 0-255: how much of the effect there is.</param>
 /// <param name="Speed">Its live speed, in cycles a minute (BPM).</param>
 /// <param name="Size">Its live size, 0 to 100 per cent.</param>
 /// <param name="Spread">Its live spread, 0 to 100 per cent.</param>
 public sealed record EffectPlayback(int Number, bool Running, int Level, double Speed, int Size, int Spread)
 {
+    /// <summary>
+    /// How strongly the sequences play it, 0-255, scaled by the faders of their memories; 0 while
+    /// none does. A sequence leaves the fader where it is: the higher of the two counts.
+    /// </summary>
+    public int Played { get; init; }
+
     /// <summary>True while its key moves its fader up or down, in the effect's fade times.</summary>
     public bool Fading { get; init; }
 

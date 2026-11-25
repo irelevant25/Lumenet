@@ -17,6 +17,7 @@
     #08090b;
   cursor: crosshair;
   touch-action: none;
+  user-select: none; /* a drag selects no text */
 }
 
 .line {

@@ -69,11 +69,12 @@ export class StepRow {
   /** What a screen reader calls this row, for example "Step 2". */
   readonly label = input.required<string>();
   /**
-   * The numbers a step can be given, for a channel and for a memory, each with its note; in the
-   * stack also the steps a release can take down, which makes Release one of the kinds.
+   * The numbers a step can be given, for a channel and for a memory, each with its note; also the
+   * effects, which makes Effect one of the kinds, and the steps a release can take down, which
+   * makes Release one.
    */
   readonly choices = input.required<StepChoices>();
-  /** In the stack: the id of the step itself, which a release cannot take down. */
+  /** The step itself, which a release cannot take down: its id in the stack, its number in a sequence. */
   readonly self = input<number | null>(null);
   /** The note under the fader of the step's channel or memory, as one line. It is shown, not changed here. */
   readonly note = input('');
@@ -92,16 +93,16 @@ export class StepRow {
   /** True for a step of a fixture or a group, which has a color. */
   protected readonly lights = computed(() => isLights(this.step().target));
 
-  /** True for a release: it takes another step of the stack down, and has no value and no up time. */
+  /** True for a release: it takes another step down, and has no value and no up time. */
   protected readonly release = computed(() => this.step().target === 'release');
 
   /** The universes of the project: as many as the channels on offer fill. */
   private readonly universes = computed(() => Math.max(1, Math.ceil(this.choices().channel.length / UNIVERSE_SIZE)));
 
-  /** The steps of the stack a release of this row can take down: all but itself. Undefined outside the stack. */
+  /** The steps a release of this row can take down: all but itself. Undefined where there are no releases. */
   private readonly releasable = computed(() => this.choices().release?.filter((choice) => choice.number !== this.self()));
 
-  /** The lines of the field for the kind: a channel of each universe, then memory, fixture, group (and in the stack effect and release). */
+  /** The lines of the field for the kind: a channel of each universe, then memory, fixture, group, effect and release. */
   protected readonly kinds = computed<KindChoice[]>(() => [
     ...Array.from({ length: this.universes() }, (_, index) => ({
       value: `channel:${index + 1}`,
@@ -232,8 +233,8 @@ export class StepRow {
   }
 
   /**
-   * The step a step switched to a release takes down at first: the one right above it in the
-   * stack, or else the one below it; none in a stack without another step.
+   * The step a step switched to a release takes down at first: the one right above it, or else
+   * the one below it; none without another step.
    */
   private stepAbove(): number {
     const offered = this.choices().release ?? [];

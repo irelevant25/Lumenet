@@ -73,14 +73,21 @@ namespace DmxBox.Server;
 /// that play an effect ("target": "effect", "number": 3). An older program would drop the effects
 /// unsaid when it saves, so a file with effects, such steps or effect keys bound otherwise than on a
 /// new desk says version 7, and one without them stays version 5 or 6.
+/// Version 8 has sequences whose steps add ("add": true), release ("target": "release", "number":
+/// the step it takes down, counted from 1 in the sequence, 0 for none) or play an effect. Versions 6
+/// and 7 have these in the stack only: a program that reads them would play such a sequence wrong
+/// (a step that adds as one that does not) or refuse it with a message about the stack. So a file
+/// with such a sequence says version 8, and one without stays as it was.
 /// </remarks>
 internal static class ProjectFormat
 {
     private const string FormatName = "lumenet-project";
 
-    // The newest version this program reads, and the one it writes for a project with effects (see
-    // the remarks). Version 6 has a stack with steps that add or release; version 5 the universes and the boxes.
-    private const int CurrentVersion = 7;
+    // The newest version this program reads, and the one it writes for a project whose sequences
+    // add, release or play effects (see the remarks). Version 7 has effects; version 6 a stack with
+    // steps that add or release; version 5 the universes and the boxes.
+    private const int CurrentVersion = 8;
+    private const int VersionWithEffects = 7;
     private const int VersionWithAddOrRelease = 6;
     private const int VersionWithoutAddOrRelease = 5;
 
@@ -109,10 +116,16 @@ internal static class ProjectFormat
         bool effects = project.Effects.Any(effect => effect is not null)
             || project.Stack.Any(step => step.Step.IsEffect)
             || !project.EffectIndependents.SequenceEqual(Desk.DefaultEffectIndependents());
+        bool sequencesLikeTheStack = project.Sequences.Any(sequence =>
+            sequence is not null && sequence.Steps.Any(step => step.Add || !step.GivesLight));
+        int version = sequencesLikeTheStack ? CurrentVersion
+            : effects ? VersionWithEffects
+            : addsOrReleases ? VersionWithAddOrRelease
+            : VersionWithoutAddOrRelease;
         var file = new ProjectFile
         {
             Format = FormatName,
-            Version = effects ? CurrentVersion : addsOrReleases ? VersionWithAddOrRelease : VersionWithoutAddOrRelease,
+            Version = version,
             Effects = effects ? project.Effects.OfType<Effect>().Select(effect => FileEffect(effect, places)).ToList<ProjectFileEffect?>() : null,
             EffectIndependents = effects ? [.. project.EffectIndependents] : null,
             Universes = project.Universes,
@@ -666,10 +679,17 @@ internal static class ProjectFormat
             if (steps.Count > Sequence.MaxSteps)
                 throw Bad($"The sequence of memory {number} in the file has {steps.Count} steps; there can be {Sequence.MaxSteps}.");
 
+            // A release names a step of its sequence by its number. One that names itself or a step
+            // the sequence does not have releases nothing, as in the stack.
             string where = $"of the sequence of memory {number}";
-            sequences[number - 1] = new Sequence(
-                entry.Loop ?? Sequence.DefaultLoop,
-                steps.Select((step, index) => StepOf(step, $"Step {index + 1} {where}", inStack: false)).ToArray())
+            Step[] read = [.. steps.Select((step, index) => StepOf(step, $"Step {index + 1} {where}"))];
+            for (int index = 0; index < read.Length; index++)
+            {
+                if (read[index].IsRelease && (read[index].Number > read.Length || read[index].Number == index + 1))
+                    read[index] = read[index] with { Number = 0 };
+            }
+
+            sequences[number - 1] = new Sequence(entry.Loop ?? Sequence.DefaultLoop, read)
             {
                 Random = entry.Random ?? false,
                 Speed = SpeedOf(entry.Speed, number),
@@ -714,7 +734,7 @@ internal static class ProjectFormat
 
             // A release names its step by that step's number ("releases"); its own "number" is not
             // used. One whose step the stack does not have releases nothing, as after taking it out.
-            Step step = StepOf(entry, where, inStack: true);
+            Step step = StepOf(entry, where);
             CueNumber? releases = null;
             if (step.IsRelease)
             {
@@ -739,9 +759,8 @@ internal static class ProjectFormat
     }
 
     // The same rules as for a step made on the UI, so that a file cannot bring in a step that
-    // the desk itself would refuse. "where" names the step for the message. A step of the stack
-    // may add or release; one of a sequence does neither.
-    private static Step StepOf(ProjectFileStep? entry, string where, bool inStack)
+    // the desk itself would refuse. "where" names the step for the message.
+    private static Step StepOf(ProjectFileStep? entry, string where)
     {
         if (entry is null || entry.Target is null || entry.Number is null || entry.Value is null)
             throw Bad($"{where} in the file is not complete: it needs a target, a number and a value.");
@@ -751,9 +770,9 @@ internal static class ProjectFormat
             var step = new Step(entry.Target, entry.Number.Value, entry.Value.Value, entry.Up ?? 0, entry.Wait ?? 0, entry.Down ?? 0)
             {
                 Color = entry.Color,
-                Add = inStack && entry.Add == true,
+                Add = entry.Add == true,
             };
-            return inStack ? step.Checked() : step.CheckedForSequence();
+            return step.Checked();
         }
         catch (DeskException e)
         {
@@ -761,12 +780,10 @@ internal static class ProjectFormat
         }
     }
 
-    // A step of the stack as the file has it: with its number, and whether it adds or what it releases.
+    // A step of the stack as the file has it: with its number, and what it releases.
     private static ProjectFileStep FileStackStep(ProjectStep step, StepPlaces places)
     {
         ProjectFileStep file = FileStep(step.Step, step.Cue.ToString(), places);
-        if (step.Step.Add)
-            file.Add = true;
         if (step.Step.IsRelease)
         {
             file.Number = 0;
@@ -776,8 +793,9 @@ internal static class ProjectFormat
         return file;
     }
 
-    // A step as the file has it. "places" gives a fixture or a group its place in the file's
-    // lists (from 1); 0 for one the plan does not have any more.
+    // A step as the file has it, and whether it adds. "places" gives a fixture or a group its place
+    // in the file's lists (from 1); 0 for one the plan does not have any more. A release of a
+    // sequence names its step by its number in the sequence, which needs no translation.
     private static ProjectFileStep FileStep(Step step, string? cue, StepPlaces places)
     {
         int number = step.Target switch
@@ -796,6 +814,7 @@ internal static class ProjectFormat
             Wait = step.Wait,
             Down = step.Down,
             Color = step.Color,
+            Add = step.Add ? true : null,
         };
     }
 

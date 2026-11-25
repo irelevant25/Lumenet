@@ -72,11 +72,17 @@ public sealed record StackCrossfade(int[] Channels, int[] Memories, int[] Levels
 /// 512 levels: what the running sequences give each channel right now, already scaled by the
 /// faders of their memories. 0 where they give nothing.
 /// </param>
-/// <param name="SequenceSteps">For each memory whose sequence is running: the step it is on, counted from 1.</param>
+/// <param name="SequenceSteps">For each memory whose sequence is running: the step it played last, counted from 1.</param>
 /// <param name="Stack">Where the stack stands.</param>
 /// <remarks>Public only because <see cref="IDeskClient"/> has to be.</remarks>
 public sealed record Playback(int[] Levels, Dictionary<int, int> SequenceSteps, StackPlayback Stack)
 {
+    /// <summary>
+    /// For each memory whose sequence is running: the steps that are on, counted from 1, in the
+    /// order they came on. Several with steps that add; none after a release took the last one down.
+    /// </summary>
+    public Dictionary<int, int[]> SequenceOn { get; init; } = [];
+
     /// <summary>The stack's crossfade while one runs; left out while none does.</summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public StackCrossfade? Crossfade { get; init; }

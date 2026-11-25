@@ -2,11 +2,17 @@ namespace DmxBox.Server;
 
 // The part of the desk that deals with sequences: a memory can hold one in place of a look.
 // A sequence runs while the fader of its memory is up, from the moment the fader leaves zero.
-// It is a layer like a look: scaled by the fader, merged highest-wins, and it moves no fader.
+// It plays itself the way the stack is played (steps that add, releases, effects; see
+// SequenceTimeline), but it is a layer like a look: scaled by the fader, merged highest-wins, and
+// it moves no fader, an effect's neither (Desk.Effects.cs).
 internal sealed partial class Desk
 {
     // The sequence stored in each memory. Null where the memory holds a look or nothing.
     private readonly Sequence?[] _sequences = new Sequence?[MemoryCount];
+
+    // The moment each sequence was last worked out for, with what it was worked out from: the
+    // output of one frame needs it several times (the light, the effects, the attributes).
+    private readonly KnownMoment?[] _moments = new KnownMoment?[MemoryCount];
 
     // When the sequence of each memory started, in desk seconds, as if it had always run at the
     // speed it has now: then the time of the sequence is (now - start) x speed. A change of the
@@ -52,7 +58,8 @@ internal sealed partial class Desk
     /// <param name="memory">Memory number, 1-128.</param>
     /// <param name="sequence">The sequence: at most 99 steps (none at all is allowed: such a sequence gives nothing), and a speed from 0.1 to 10.</param>
     /// <exception cref="DeskException">
-    /// The memory holds a look, a step or the speed is out of range, or the stack is live.
+    /// The memory holds a look, a step or the speed is out of range, a release names itself or a
+    /// step the sequence does not have, or the stack is live.
     /// </exception>
     public void SetSequence(int memory, Sequence? sequence)
     {
@@ -66,9 +73,10 @@ internal sealed partial class Desk
 
         Sequence checkedSequence = sequence with
         {
-            Steps = Array.ConvertAll(steps, step => (step ?? throw new DeskException("A step is missing.")).CheckedForSequence()),
+            Steps = Array.ConvertAll(steps, step => (step ?? throw new DeskException("A step is missing.")).Checked()),
             Speed = Sequence.CheckedSpeed(sequence.Speed),
         };
+        RequireReleasesFit(checkedSequence.Steps);
 
         lock (_lock)
         {
@@ -172,12 +180,13 @@ internal sealed partial class Desk
     /// <param name="memory">Memory number, 1-128.</param>
     /// <param name="step">The step.</param>
     /// <exception cref="DeskException">
-    /// The memory holds a look, the sequence is full, the step is out of range, or the stack is live.
+    /// The memory holds a look, the sequence is full, the step is out of range (a release: of a
+    /// step the sequence does not have), or the stack is live.
     /// </exception>
     public void AddSequenceStep(int memory, Step? step)
     {
         RequireMemory(memory);
-        Step checkedStep = (step ?? throw new DeskException("A step is missing.")).CheckedForSequence();
+        Step checkedStep = (step ?? throw new DeskException("A step is missing.")).Checked();
 
         lock (_lock)
         {
@@ -189,7 +198,9 @@ internal sealed partial class Desk
             if (old.Steps.Length >= Sequence.MaxSteps)
                 throw TooManySteps();
 
-            StoreSequence(memory, old with { Steps = [.. old.Steps, checkedStep] });
+            Step[] steps = [.. old.Steps, checkedStep];
+            RequireReleasesFit(steps);
+            StoreSequence(memory, old with { Steps = steps });
             CountLookChange();
         }
     }
@@ -256,6 +267,24 @@ internal sealed partial class Desk
         return new DeskException($"A sequence can have at most {Sequence.MaxSteps} steps.");
     }
 
+    // A release of a sequence names another step of it by its number, from 1, or none (0).
+    private static void RequireReleasesFit(Step[] steps)
+    {
+        for (int index = 0; index < steps.Length; index++)
+        {
+            Step step = steps[index];
+            if (!step.IsRelease || step.Number == 0)
+                continue;
+            if (step.Number == index + 1)
+                throw new DeskException($"Step {index + 1} cannot release itself. Choose another step of the sequence.");
+            if (step.Number > steps.Length)
+            {
+                string has = steps.Length == 1 ? "1 step" : $"{steps.Length} steps";
+                throw new DeskException($"Step {index + 1} releases step {step.Number}, but the sequence has {has}.");
+            }
+        }
+    }
+
     // Call with the lock held. Every move of a memory fader goes through here, by hand or by
     // the stack: a fader that leaves zero starts the sequence of its memory, and takes the
     // attributes of the lights the memory holds (Desk.Attributes.cs).
@@ -271,59 +300,56 @@ internal sealed partial class Desk
     }
 
     // Call with the lock held. Raises "levels" to what the running sequences give at "now".
-    // "stepsOn", if given, receives the step each running sequence is on, counted from 1. The
-    // memories in "leftOut" (held with SOLO DOWN) give nothing.
-    private void AddSequences(byte[] levels, double now, Dictionary<int, int>? stepsOn, HashSet<Fader>? leftOut = null)
+    // "stepsOn", if given, receives the step each running sequence played last, counted from 1,
+    // and "onSteps" the steps that are on in it. The memories in "leftOut" (held with SOLO DOWN)
+    // give nothing.
+    private void AddSequences(
+        byte[] levels, double now, Dictionary<int, int>? stepsOn, HashSet<Fader>? leftOut = null, Dictionary<int, int[]>? onSteps = null)
     {
         for (int index = 0; index < MemoryCount; index++)
         {
             if (_memoryLevels[index] > 0 && leftOut?.Contains(new Fader(true, index + 1)) != true)
-                AddSequence(levels, index, now, _memoryLevels[index], stepsOn);
+                AddSequence(levels, index, now, _memoryLevels[index], stepsOn, onSteps);
         }
     }
 
     // Call with the lock held. Raises "levels" to what the sequence of one memory gives at "now",
     // under a fader at "fader".
     //
-    // Going from one step to the next is a crossfade without a dip: every channel moves from its
-    // level in the step before to its level in the step that comes. A channel both steps hold at
-    // the same level stays where it is; one that rises follows the up time of the step that comes,
-    // one that falls the down time of the step that goes (to 0 if the next step does not hold it).
-    // A step played earlier that is still on its way down (a down time longer than the steps
-    // after it) holds its channels up the same way, from where the newer steps have them.
-    private void AddSequence(byte[] levels, int index, double now, byte fader, Dictionary<int, int>? stepsOn)
+    // A step that takes everything down goes over in a crossfade without a dip: every channel moves
+    // from its level in what was on to its level in the step that comes. A channel both hold at the
+    // same level stays where it is; one that rises follows the up time of the step that comes, one
+    // that falls the down time of the step that held it (to 0 if the new step does not hold it).
+    // A step that adds, or a release, changes what is on in its own time: the up time of the step
+    // that adds, the down time of the release. A step played earlier that is still on its way down
+    // (a down time longer than the steps after it) holds its channels up the same way, from where
+    // the newer steps have them.
+    private void AddSequence(
+        byte[] levels, int index, double now, byte fader, Dictionary<int, int>? stepsOn, Dictionary<int, int[]>? onSteps = null)
     {
         if (_sequences[index] is not { Steps.Length: > 0 } sequence)
             return;
 
-        double elapsed = SequenceTime(index, now);
-        int seed = _sequenceSeeds[index];
-        List<SequenceTimeline.Play> plays = SequenceTimeline.Recent(sequence, elapsed, seed);
-        stepsOn?.Add(index + 1, plays[0].Step + 1);
-        if (plays.Count == 1)
+        SequenceTimeline.Moment moment = MomentOf(index, sequence, now);
+        stepsOn?.Add(index + 1, moment.Current + 1);
+        onSteps?.Add(index + 1, [.. moment.On.Select(step => step + 1)]);
+        if (moment.Before.Length == 0 && moment.Going.Length == 0 && moment.On.Length == 1)
         {
-            // The first step of a run: nothing before it, it comes up from dark.
-            AddStep(levels, sequence.Steps[plays[0].Step], plays[0].Fraction, fader);
+            // Nothing was on before it and nothing goes down: it comes up from dark.
+            AddStep(levels, sequence.Steps[moment.On[0]], moment.In, fader);
             return;
         }
 
-        var looks = new Dictionary<int, byte[]>();
-        byte[] LookOf(int step) => looks.TryGetValue(step, out byte[]? look) ? look : looks[step] = FullLook(sequence.Steps[step], levels.Length);
-
-        byte[][] stepLooks = plays.Select(play => LookOf(play.Step)).ToArray();
-        byte[] coming = stepLooks[0], before = stepLooks[1];
-        double up = plays[0].Fraction;
+        var looks = new SequenceLooks(this, sequence.Steps, levels.Length);
+        byte[] from = looks.LightOf(moment.Before), to = looks.LightOf(moment.On);
+        (byte[] Look, double Fraction)[] going = [.. moment.Going.Select(step => (looks.LightOf(step), step.Fraction))];
         for (int channel = 0; channel < levels.Length; channel++)
         {
-            // Rising: from the level of the step before, with the step that comes. Falling: the
-            // steps that go hold it up, each with how far up it still is.
-            double value = coming[channel] >= before[channel]
-                ? before[channel] + (coming[channel] - before[channel]) * up
-                : coming[channel];
-            for (int at = 1; at < plays.Count; at++)
+            double value = Between(from[channel], to[channel], moment.In, moment.TookAll);
+            foreach ((byte[] look, double fraction) in going)
             {
-                if (stepLooks[at][channel] > value)
-                    value += (stepLooks[at][channel] - value) * plays[at].Fraction;
+                if (look[channel] > value)
+                    value += (look[channel] - value) * fraction;
             }
 
             if (value > 0)
@@ -331,12 +357,70 @@ internal sealed partial class Desk
         }
     }
 
+    // Call with the lock held. Raises "levels" (one per effect, 0 to 1) to how strongly the running
+    // sequences play each effect at "now": as far as its step is up, scaled by the fader of the
+    // sequence's memory; the highest wins. An effect step comes and goes like the light of a step,
+    // without the crossfade, which an effect does not need. The memories in "leftOut" (held with
+    // SOLO DOWN) play nothing.
+    private void AddSequenceEffects(double[] levels, double now, HashSet<Fader>? leftOut)
+    {
+        for (int index = 0; index < MemoryCount; index++)
+        {
+            byte fader = _memoryLevels[index];
+            if (fader == 0 || _sequences[index] is not { } sequence || !sequence.Steps.Any(step => step.IsEffect)
+                || leftOut?.Contains(new Fader(true, index + 1)) == true)
+            {
+                continue;
+            }
+
+            SequenceTimeline.Moment moment = MomentOf(index, sequence, now);
+            var looks = new SequenceLooks(this, sequence.Steps, Channels);
+            byte[] from = looks.EffectsOf(moment.Before), to = looks.EffectsOf(moment.On);
+            (byte[] Levels, double Fraction)[] going = [.. moment.Going.Select(step => (looks.EffectsOf(step), step.Fraction))];
+            for (int effect = 0; effect < levels.Length; effect++)
+            {
+                double value = Between(from[effect], to[effect], moment.In, moment.TookAll);
+                foreach ((byte[] played, double fraction) in going)
+                {
+                    if (played[effect] > value)
+                        value += (played[effect] - value) * fraction;
+                }
+
+                levels[effect] = Math.Max(levels[effect], value * fader / (MaxLevel * (double)MaxLevel));
+            }
+        }
+    }
+
+    // Where a channel (or an effect) stands while the step played last comes in, "coming" of its
+    // way: between its level in what was on ("from") and in what is on now ("to"). One that rises
+    // goes up with the step. One that falls goes down with it too where the step added or released;
+    // where it took everything down the channel is at its new level at once, and the steps that
+    // went down hold it up as they go (AddSequence).
+    private static double Between(byte from, byte to, double coming, bool tookAll)
+    {
+        return to >= from || !tookAll ? from + (to - from) * coming : to;
+    }
+
+    // Call with the lock held. The moment the sequence at "index" stands at "now", see SequenceTimeline.
+    private SequenceTimeline.Moment MomentOf(int index, Sequence sequence, double now)
+    {
+        double elapsed = SequenceTime(index, now);
+        int seed = _sequenceSeeds[index];
+        if (_moments[index] is { } known && ReferenceEquals(known.Sequence, sequence) && known.Elapsed == elapsed && known.Seed == seed)
+            return known.Moment;
+
+        SequenceTimeline.Moment moment = SequenceTimeline.At(sequence, elapsed, seed);
+        _moments[index] = new KnownMoment(sequence, elapsed, seed, moment);
+        return moment;
+    }
+
     // What one step gives when it is all the way up, before the fader of its sequence: a channel
     // its value, a memory its look at the step's value, a fixture or a group the light of its parts.
+    // An effect and a release give no light.
     private byte[] FullLook(Step step, int channels)
     {
         byte[] look = new byte[channels];
-        if (step.Value == 0)
+        if (step.Value == 0 || !step.GivesLight)
             return look;
 
         if (step.IsLights)
@@ -363,11 +447,11 @@ internal sealed partial class Desk
 
     // What one step gives while it is "fraction" of the way up, under the fader of its sequence.
     // A fixture or a group gives its light here; its attributes (a shutter, a color wheel) come
-    // from the step that is on, see Desk.Attributes.cs.
+    // from the step that is on, see Desk.Attributes.cs. An effect and a release give no light.
     private void AddStep(byte[] levels, Step step, double fraction, byte fader)
     {
         byte level = (byte)Math.Round(step.Value * fraction);
-        if (level == 0)
+        if (level == 0 || !step.GivesLight)
             return;
 
         if (step.IsLights)
@@ -412,5 +496,121 @@ internal sealed partial class Desk
         }
 
         return false;
+    }
+
+    // A moment of a sequence, with what it was worked out from: it holds while these are the same.
+    private sealed record KnownMoment(Sequence Sequence, double Elapsed, int Seed, SequenceTimeline.Moment Moment);
+
+    // What the steps of one sequence give, each worked out once for one moment: their light, and
+    // the effects they play.
+    private sealed class SequenceLooks(Desk desk, Step[] steps, int channels)
+    {
+        private readonly Dictionary<int, byte[]> _looks = [];
+        private readonly Dictionary<int, Dictionary<Fader, byte>> _faders = [];
+
+        // The light of the steps in "on", all the way up. Of two that use the same fader (the
+        // same channel, the same memory) the later one's level counts, as on the stack; between
+        // faders the highest wins.
+        public byte[] LightOf(int[] on)
+        {
+            if (on.Length == 1)
+                return LookOf(on[0]);
+
+            byte[] light = new byte[channels];
+            foreach ((Fader fader, byte level) in Held(on))
+                desk.Contribute(light, fader, level);
+
+            return light;
+        }
+
+        // The light of a step on its way down, from all the way up: without the faders that the
+        // steps which came on after it held, as those were theirs.
+        public byte[] LightOf(SequenceTimeline.Going going)
+        {
+            if (going.Over.Length == 0)
+                return LookOf(going.Step);
+
+            byte[] light = new byte[channels];
+            foreach ((Fader fader, byte level) in Without(going))
+                desk.Contribute(light, fader, level);
+
+            return light;
+        }
+
+        // How strongly the steps in "on" play each effect, all the way up, 0-255.
+        public byte[] EffectsOf(int[] on)
+        {
+            return EffectLevels(Held(on));
+        }
+
+        // How strongly a step on its way down played each effect, from all the way up.
+        public byte[] EffectsOf(SequenceTimeline.Going going)
+        {
+            return EffectLevels(Without(going));
+        }
+
+        private static byte[] EffectLevels(IEnumerable<KeyValuePair<Fader, byte>> faders)
+        {
+            byte[] levels = new byte[Effect.MaxEffects];
+            foreach ((Fader fader, byte level) in faders)
+            {
+                if (fader.Effect)
+                    levels[fader.Number - 1] = Math.Max(levels[fader.Number - 1], level);
+            }
+
+            return levels;
+        }
+
+        // The faders the steps in "on" hold, each at the level of the last of them that uses it.
+        private Dictionary<Fader, byte> Held(int[] on)
+        {
+            var held = new Dictionary<Fader, byte>();
+            foreach (int step in on)
+            {
+                foreach ((Fader fader, byte level) in FadersOf(step))
+                    held[fader] = level;
+            }
+
+            return held;
+        }
+
+        // The faders a step on its way down held when it went: its own but those of the steps over it.
+        private IEnumerable<KeyValuePair<Fader, byte>> Without(SequenceTimeline.Going going)
+        {
+            Dictionary<Fader, byte> over = Held(going.Over);
+            return FadersOf(going.Step).Where(pair => !over.ContainsKey(pair.Key));
+        }
+
+        // The faders one step holds, as the stack would move them: the fader of its channel, memory
+        // or effect, or the channel faders of its lights (the higher, where two of them share one),
+        // each at its level; a release holds none. Attributes do not count here (Desk.Attributes.cs).
+        private Dictionary<Fader, byte> FadersOf(int index)
+        {
+            if (_faders.TryGetValue(index, out Dictionary<Fader, byte>? faders))
+                return faders;
+
+            faders = [];
+            Step step = steps[index];
+            if (step.IsLights)
+            {
+                foreach (FixtureLooks.Part part in desk.LookOfLights(step))
+                {
+                    var fader = new Fader(Memory: false, part.Channel + 1);
+                    if (!part.Attribute)
+                        faders[fader] = Math.Max(faders.GetValueOrDefault(fader), part.Value);
+                }
+            }
+            else if (!step.IsRelease)
+            {
+                faders[new Fader(step.IsMemory, step.Number, step.IsEffect)] = (byte)step.Value;
+            }
+
+            return _faders[index] = faders;
+        }
+
+        private byte[] LookOf(int index)
+        {
+            return _looks.TryGetValue(index, out byte[]? look) ? look : _looks[index] = desk.FullLook(steps[index], channels);
+        }
     }
 }

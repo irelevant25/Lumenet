@@ -116,7 +116,8 @@ internal sealed partial class Desk
             double now = Now;
             byte[] levels = new byte[Channels];
             var stepsOn = new Dictionary<int, int>();
-            AddSequences(levels, now, stepsOn);
+            var onSteps = new Dictionary<int, int[]>();
+            AddSequences(levels, now, stepsOn, onSteps: onSteps);
             if (_roles.AttributeLights.Length > 0)
                 PutSequenceAttributes(levels, now);
 
@@ -128,6 +129,7 @@ internal sealed partial class Desk
             };
             return new Playback(Array.ConvertAll(levels, level => (int)level), stepsOn, stack)
             {
+                SequenceOn = onSteps,
                 Crossfade = CrossfadeForUi(),
                 Effects = EffectPlaybacksNow(now),
                 EffectLevels = EffectLevelsForUi(now),

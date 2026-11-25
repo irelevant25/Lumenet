@@ -13,8 +13,9 @@ import { LampLevel } from '../desk/lamps';
 import { storedMemoryPages } from '../desk/memory-pages';
 import { noteInOneLine } from '../desk/notes';
 import { PressedInSight } from '../desk/pressed-in-sight';
+import { MAX_EFFECTS } from '../desk/effects';
 import { SPEED_KEY_STEP, SPEED_POSITIONS, speedAt, speedPosition, speedText } from '../desk/speed';
-import { StepChoices, channelChoices, lightChoices, stepChoices } from '../desk/step-choices';
+import { StepChoices, channelChoices, effectChoices, lightChoices, stepChoices } from '../desk/step-choices';
 import { Fader } from '../fader/fader';
 import { LampButton, LampTone } from '../lamp-button/lamp-button';
 import { NoteLines } from '../note-lines/note-lines';
@@ -39,10 +40,12 @@ const PLAY_MODES: readonly { mode: PlayMode; lines: readonly string[]; name: str
  * The Sequences view: the steps of the sequence a memory holds. A memory key chooses the
  * memory; the table under the keys is its sequence, and every change goes to the desk at once.
  *
- * A sequence runs while the fader of its memory is up, in the main view. Each step brings a
- * channel or a memory up to its value, stays for its wait, and goes down again when the next
- * step takes over. A sequence can also be recorded key by key in the main view, with Rec seq,
- * or made from a template here. Its speed fader makes all its times shorter or longer.
+ * A sequence runs while the fader of its memory is up, in the main view, and plays itself the way
+ * the stack is played. Each step brings a channel, a memory, a fixture or a group up to its value
+ * and stays for its wait; the next step without Add takes it down again, one with Add comes on
+ * top. A release takes one step down, an effect step plays an effect. A sequence can also be
+ * recorded key by key in the main view, with Rec seq, or made from a template here. Its speed
+ * fader makes all its times shorter or longer.
  *
  * While the stack is live the view only shows: nothing that is stored can be changed then.
  */
@@ -106,15 +109,21 @@ export class SequencesView {
   /** True while nothing can be changed here: the stack is live. */
   protected readonly locked = this.store.live;
 
-  /** The step the sequence is on right now, counted from 1; 0 while it does not run. */
+  /** The step the sequence played last, counted from 1; 0 while it does not run. */
   protected readonly runningStep = computed(
     () => this.store.playback().sequenceSteps[this.memory()] ?? 0,
   );
 
+  /** The steps that are on while it runs, counted from 1: with steps that add, several. */
+  protected readonly onSteps = computed<ReadonlySet<number>>(
+    () => new Set(this.store.playback().sequenceOn?.[this.memory()] ?? []),
+  );
+
   /**
-   * What the number of a step is chosen from: every channel, the memories that hold a look, and
-   * the fixtures and groups of the stage plan. A memory that holds a sequence is not offered,
-   * because a sequence cannot play another one; neither is an empty memory.
+   * What the number of a step is chosen from: every channel, the memories that hold a look, the
+   * fixtures and groups of the stage plan, the effects, and for a release the other steps of the
+   * sequence that are no release, "2: Channel 5 (U1) (Front left)". A memory that holds a
+   * sequence is not offered, because a sequence cannot play another one; neither is an empty memory.
    */
   protected readonly choices = computed<StepChoices>(() => ({
     channel: channelChoices(this.store.channelNames()),
@@ -123,6 +132,12 @@ export class SequencesView {
       (memory) => this.store.memoryContent(memory) === 'look',
     ),
     ...lightChoices(this.store.stage()),
+    effect: effectChoices(this.store.effects(), MAX_EFFECTS),
+    release: this.steps().flatMap((step, index) =>
+      step.target === 'release'
+        ? []
+        : [{ number: index + 1, text: `${index + 1}: ${this.store.stepWithNote(step)}`, short: String(index + 1) }],
+    ),
   }));
 
   /** One sentence about the memory that is worked on. */
@@ -161,9 +176,21 @@ export class SequencesView {
     return this.store.memorySequence()[memory - 1] ? 'sequence' : 'memory';
   }
 
-  /** The note under the fader of the step's channel or memory, or the name of its fixture or group, in one line. */
+  /**
+   * The note under the fader of the step's channel or memory, the name of its fixture, group or
+   * effect, or for a release the step of this sequence it takes down; in one line.
+   */
   protected noteOf(step: TimedStep): string {
-    return this.store.stepNote(step);
+    if (step.target !== 'release') return this.store.stepNote(step);
+    const released = this.steps()[step.number - 1];
+    return released && released.target !== 'release'
+      ? this.store.stepWithNote(released)
+      : 'No step to take down: choose one';
+  }
+
+  /** The Add box of a step: checked, the step comes up on top of what is on and takes nothing down. */
+  protected setAdd(index: number, event: Event): void {
+    this.changeStep(index, { ...this.steps()[index], add: (event.target as HTMLInputElement).checked });
   }
 
   /** The color of a step of a fixture or a group was pressed: the window asks for another. */
@@ -190,28 +217,35 @@ export class SequencesView {
     this.store.setSequenceSpeed(this.memory(), 1);
   }
 
-  /** Puts a step at the end: the first one of a new sequence, or one like the last on the next channel or memory. */
+  /**
+   * Puts a step at the end: the first one of a new sequence, or one like the last step that is no
+   * release, on the next channel or memory.
+   */
   protected addStep(): void {
     const steps = this.steps();
-    const last = steps.at(-1);
-    this.save([...steps, last ? stepAfter(last, this.store.stage(), this.store.channelCount()) : firstStep(1)]);
+    const pattern = steps.filter((step) => step.target !== 'release').at(-1);
+    this.save([...steps, pattern ? stepAfter(pattern, this.store.stage(), this.store.channelCount()) : firstStep(1)]);
   }
 
   protected changeStep(index: number, step: TimedStep): void {
     this.save(this.steps().map((old, at) => (at === index ? step : old)));
   }
 
-  /** Moves a step one place up (-1) or down (+1). */
+  /** Moves a step one place up (-1) or down (+1). A release goes on taking down the step it named. */
   protected moveStep(index: number, by: -1 | 1): void {
     const steps = [...this.steps()];
     const other = index + by;
     if (other < 0 || other >= steps.length) return;
     [steps[index], steps[other]] = [steps[other], steps[index]];
-    this.save(steps);
+    const [first, second] = [index + 1, other + 1];
+    this.save(releasesFollowing(steps, (number) => (number === first ? second : number === second ? first : number)));
   }
 
+  /** Takes a step out. A release of it releases nothing from then on; one of a step after it follows that step. */
   protected deleteStep(index: number): void {
-    this.save(this.steps().filter((_, at) => at !== index));
+    const gone = index + 1;
+    const left = this.steps().filter((_, at) => at !== index);
+    this.save(releasesFollowing(left, (number) => (number === gone ? 0 : number > gone ? number - 1 : number)));
   }
 
   /** Sends the sequence to the desk, played as before unless another mode is given, at its speed. */
@@ -220,8 +254,21 @@ export class SequencesView {
       loop: mode !== 'once',
       random: mode === 'random',
       speed: this.speed(),
-      steps: [...steps],
+      steps: steps.map(plain),
     };
     this.store.setSequence(this.memory(), sequence);
   }
+}
+
+/** The steps with every release naming the step it named, by the number `renumbered` gives it now (0: gone). */
+function releasesFollowing(steps: readonly TimedStep[], renumbered: (number: number) => number): TimedStep[] {
+  return steps.map((step) =>
+    step.target === 'release' && step.number > 0 ? { ...step, number: renumbered(step.number) } : step,
+  );
+}
+
+/** A step as the desk keeps it: `add` only where it is true, and never for a release. */
+function plain(step: TimedStep): TimedStep {
+  const { add, ...rest } = step;
+  return add && step.target !== 'release' ? { ...rest, add: true } : rest;
 }

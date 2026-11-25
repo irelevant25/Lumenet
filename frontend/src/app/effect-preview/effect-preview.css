@@ -11,6 +11,7 @@ canvas {
   border: 1px solid var(--edge);
   border-radius: 4px;
   background: var(--well);
+  user-select: none; /* a press or a drag selects no text */
 }
 
 /* a movement: a press or a drag on it moves the center the heads go around */

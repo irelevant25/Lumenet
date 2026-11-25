@@ -188,11 +188,6 @@ public sealed class StackAddReleaseTests
         int release = Add(new Step(Step.Release, step, 0, 0, 0, 1));
         error = Assert.Throws<DeskException>(() => _desk.UpdateStackStep(release, new Step(Step.Release, release, 0, 0, 0, 1)));
         Assert.Equal("A step cannot release itself. Choose another step of the stack.", error.Message);
-        error = Assert.Throws<DeskException>(() => _desk.SetSequence(3, loop: true, [new Step(Step.Release, step, 0, 0, 0, 1)]));
-        Assert.Equal("A step of a sequence cannot release anything; only a step of the stack can.", error.Message);
-
-        _desk.SetSequence(3, loop: true, [Channel(1, 255, down: 1) with { Add = true }]);
-        Assert.False(_desk.GetSequences()[3].Steps[0].Add);   // a step of a sequence never adds
 
         _desk.DeleteStackStep(step);                          // the release releases nothing from then on
         StackStep left = Assert.Single(_desk.GetStack().Steps);
@@ -250,20 +245,13 @@ public sealed class StackAddReleaseTests
     }
 
     [Fact]
-    public void AFileWithAReleaseInASequenceOrAReleaseWithoutAProperNumberIsRefused()
+    public void AFileWithAReleaseWithoutAProperNumberIsRefusedAndOneOfAStepThatIsGoneReleasesNothing()
     {
-        const string sequence = """
-            { "format": "lumenet-project", "version": 6, "memories": [], "sequences": [ { "number": 2, "steps": [
-              { "target": "release", "number": 0, "value": 0, "up": 0, "wait": 0, "down": 1 } ] } ] }
-            """;
-        InvalidDataException error = Assert.Throws<InvalidDataException>(() => ProjectFormat.ReadText(sequence));
-        Assert.Contains("cannot release anything", error.Message);
-
         const string stack = """
             { "format": "lumenet-project", "version": 6, "memories": [], "stack": [
               { "cue": "1.0", "target": "release", "number": 0, "value": 0, "up": 0, "wait": 0, "down": 1, "releases": "x" } ] }
             """;
-        error = Assert.Throws<InvalidDataException>(() => ProjectFormat.ReadText(stack));
+        InvalidDataException error = Assert.Throws<InvalidDataException>(() => ProjectFormat.ReadText(stack));
         Assert.Contains("no proper number", error.Message);
 
         const string gone = """

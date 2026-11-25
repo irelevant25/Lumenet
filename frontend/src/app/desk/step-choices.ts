@@ -16,8 +16,9 @@ export interface StepChoice {
 }
 
 /**
- * The lists for the kinds of step. `release` and `effect` only in the stack: the steps a release
- * can take down, by their ids, and the effects; a table without them offers neither.
+ * The lists for the kinds of step. `release`: the steps a release can take down (in the stack by
+ * their ids, in a sequence by their numbers); `effect`: the effects. A table without them offers
+ * neither kind.
  */
 export interface StepChoices {
   readonly channel: readonly StepChoice[];

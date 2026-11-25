@@ -93,22 +93,33 @@ h4 {
   color: var(--legend-dim);
 }
 
+/* a small triangle: pointing right while closed, down while open */
 .chevron {
+  width: 0;
+  height: 0;
   border-top: 4px solid transparent;
   border-bottom: 4px solid transparent;
   border-left: 6px solid currentColor;
+  transition: rotate 0.12s;
 }
 
 .open .chevron {
   rotate: 90deg;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}
+
 .name {
   font-weight: 600;
 }
 
-.count,
-.none {
+/* "Stack 9 (2) 1", as the Keyboard panel has it: the targets of the kind, in brackets those with a
+   control in green, while a search runs those it finds in yellow; a count of none stays dim */
+.count {
   color: var(--legend-dim);
 }
 
@@ -118,6 +129,10 @@ h4 {
 
 .found {
   color: var(--sequence-end);
+}
+
+:is(.mapped, .found).none {
+  color: var(--legend-dim);
 }
 
 .list {

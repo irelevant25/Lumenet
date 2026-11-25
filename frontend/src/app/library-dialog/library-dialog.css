@@ -12,7 +12,6 @@ dialog {
   border-radius: 8px;
   background: var(--panel-raised);
   color: var(--legend);
-  user-select: text;
 }
 
 dialog::backdrop {

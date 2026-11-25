@@ -30,6 +30,11 @@ namespace DmxBox.Server;
 // says how much of the effect there is (for a movement around a center of its own, also how far the
 // heads have gone there). Its key moves the fader: up to full in the effect's fade-in time, and down
 // to zero in its fade-out time. The stack moves the fader in its step times, like a memory fader.
+//
+// A sequence plays an effect without moving its fader: while a step of it is up, the effect plays as
+// strongly as the step, scaled by the fader of the sequence's memory (Desk.Sequences.cs). The higher
+// of that and the fader counts. An effect a sequence starts begins its cycle, as from its fader; one
+// that runs already goes on where it is. It stops when neither its fader nor a sequence plays it.
 internal sealed partial class Desk
 {
     /// <summary>Number of independent keys for effects. Each is bound to one effect, which the key starts and stops.</summary>
@@ -123,6 +128,7 @@ internal sealed partial class Desk
             _rigs[number - 1] = null;
             _runs[number - 1].Running = false;
             _runs[number - 1].Level = 0;
+            _runs[number - 1].Played = 0;
             _projectChanges++;
             _outputChanges++;
             return true;
@@ -378,14 +384,30 @@ internal sealed partial class Desk
     // Call with the lock held. True while an effect runs.
     private bool EffectsRun()
     {
-        return _runs.Any(run => run.Running);
+        return _runs.Any(run => run.Plays);
     }
 
     // Call with the lock held. Moves the faders the keys are moving to where they belong at "now";
-    // a fader that has come down to zero stops its effect. The UIs hear of every fader moved. True
-    // while an effect runs.
+    // a fader that has come down to zero stops its effect. Takes how strongly the sequences play
+    // each effect: one they start begins its cycle. The UIs hear of every fader moved. True while
+    // an effect runs.
     private bool SettleEffects(double now)
     {
+        // The sequences, and an effect they start, at the time itself.
+        double[] played = new double[Effect.MaxEffects];
+        AddSequenceEffects(played, now, leftOut: null);
+        for (int index = 0; index < _runs.Length; index++)
+        {
+            EffectRun run = _runs[index];
+            bool wasPlayed = run.Played > 0;
+            run.Played = _effects[index] is null ? 0 : played[index];
+            if (run.Played > 0 && !wasPlayed && !run.Running)
+            {
+                Start(run, now);
+                _outputChanges++;
+            }
+        }
+
         // Times are sums of fractions of seconds, which a computer does not add exactly: a fade of
         // 4 s can seem to be 3.9999999 s old at its end. A millionth of a second settles that.
         now += 0.000001;
@@ -413,14 +435,14 @@ internal sealed partial class Desk
                 }
             }
 
-            any |= run.Running;
+            any |= run.Plays;
         }
 
         return any;
     }
 
     // Call with the lock held. Every effect stops at once and its fader goes to zero: Clear, a
-    // project loaded, the stack going live.
+    // project loaded, the stack going live. (A sequence still up would start it again.)
     private void StopEffects()
     {
         foreach (EffectRun run in _runs)
@@ -428,6 +450,7 @@ internal sealed partial class Desk
             run.Running = false;
             run.Moving = false;
             run.Level = 0;
+            run.Played = 0;
         }
     }
 
@@ -448,6 +471,7 @@ internal sealed partial class Desk
                 _runs[index].Running = false;
                 _runs[index].Moving = false;
                 _runs[index].Level = 0;
+                _runs[index].Played = 0;
             }
             else if (old is null || !old.SameAs(effect))
             {
@@ -488,7 +512,11 @@ internal sealed partial class Desk
         }
 
         if (start && !run.Running)
-            Start(run, now);
+        {
+            if (!run.Plays)
+                Start(run, now);
+            run.Running = true;
+        }
 
         run.Moving = true;
         run.MoveFrom = from;
@@ -499,15 +527,21 @@ internal sealed partial class Desk
 
     // Call with the lock held. Every move of an effect's fader at once goes through here, by hand or
     // by the stack (a move the key began ends): a fader that leaves zero starts the effect, one that
-    // comes to zero stops it.
+    // comes to zero stops it (unless a sequence plays it).
     private void MoveEffectFader(int number, byte level, double now)
     {
         EffectRun run = _runs[number - 1];
         run.Moving = false;
         if (level > 0 && !run.Running && _effects[number - 1] is not null)
-            Start(run, now);
+        {
+            if (!run.Plays)
+                Start(run, now);
+            run.Running = true;
+        }
         else if (level == 0)
+        {
             run.Running = false;
+        }
 
         run.Level = level;
     }
@@ -516,7 +550,6 @@ internal sealed partial class Desk
     // the effects that started before it.
     private void Start(EffectRun run, double now)
     {
-        run.Running = true;
         run.Claim = ++_effectStarts;
         run.PhaseBase = 0;
         run.PhaseAt = now;
@@ -580,27 +613,36 @@ internal sealed partial class Desk
         EffectRun run = _runs[number - 1];
         Effect? effect = _effects[number - 1];
         byte level = (byte)Math.Round(LevelAt(run, now), MidpointRounding.AwayFromZero);
-        return new EffectPlayback(number, run.Running, level, run.Speed, run.Size, run.Spread)
+        return new EffectPlayback(number, run.Plays, level, run.Speed, run.Size, run.Spread)
         {
             Fading = run.Moving,
-            Phase = Math.Round(run.Running ? PhaseOf(run, now) : 0, 4),
+            Phase = Math.Round(run.Plays ? PhaseOf(run, now) : 0, 4),
             Bpm = Math.Round(CyclesPerMinute(run), 2),
             Changed = effect is not null && (run.Speed != effect.Speed || run.Size != effect.Size || run.Spread != effect.Spread),
+            Played = (int)Math.Round(run.Played * MaxLevel, MidpointRounding.AwayFromZero),
         };
     }
 
     // Call with the lock held. The effects that give something at "now", in the order they started,
-    // with what they need for this frame; null when none does.
-    private EffectFrame? EffectFrameAt(double now)
+    // with what they need for this frame; null when none does. The higher of an effect's fader and
+    // what the sequences give it counts; the memories in "leftOut" (held with SOLO DOWN) give nothing.
+    private EffectFrame? EffectFrameAt(double now, HashSet<Fader>? leftOut = null)
     {
         List<EffectNow>? running = null;
+        double[]? played = null;
         for (int index = 0; index < Effect.MaxEffects; index++)
         {
             EffectRun run = _runs[index];
-            if (!run.Running || _effects[index] is not { } effect)
+            if (!run.Plays || _effects[index] is not { } effect)
                 continue;
 
-            double level = LevelAt(run, now) / MaxLevel;
+            if (played is null)
+            {
+                played = new double[Effect.MaxEffects];
+                AddSequenceEffects(played, now, leftOut);
+            }
+
+            double level = Math.Max(run.Running ? LevelAt(run, now) / MaxLevel : 0, played[index]);
             if (level <= 0)
                 continue;
 
@@ -685,7 +727,8 @@ internal sealed partial class Desk
     // The playback of an effect: none of it is stored in the project.
     private sealed class EffectRun
     {
-        public bool Running;        // from its start until its fader is down at zero
+        public bool Running;        // by its fader: from its start until its fader is down at zero
+        public double Played;       // how strongly the sequences play it, 0 to 1, as the clock last found it
         public byte Level;          // its fader, as the UIs last heard of it
         public bool Moving;         // its key moves the fader, from MoveFrom to MoveTo:
         public double MoveFrom;     // where the fader stood when the move began, 0 to 255
@@ -698,6 +741,9 @@ internal sealed partial class Desk
         public double PhaseBase;    // the cycles it had run at PhaseAt
         public double PhaseAt;      // desk seconds
         public long Claim;          // when it started, on the count of starts
+
+        // True while it plays: by its fader, or by a sequence.
+        public bool Plays => Running || Played > 0;
     }
 
     // An effect that gives something in this frame.

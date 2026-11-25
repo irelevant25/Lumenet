@@ -691,7 +691,7 @@ internal sealed partial class Desk
         {
             double now = Now;
             (HashSet<Fader> up, HashSet<Fader> down) = SoloFaders();
-            EffectFrame? effects = EffectFrameAt(now);
+            EffectFrame? effects = EffectFrameAt(now, down);
             byte[] output;
             if (up.Count > 0)
             {

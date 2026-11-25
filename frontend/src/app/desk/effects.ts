@@ -71,10 +71,15 @@ export interface Effect {
 /** The playback of an effect: whether it runs, its fader, its live values. None of it is stored. */
 export interface EffectPlayback {
   number: number;
-  /** From its start until its fader is down at zero. */
+  /** From its start until its fader is down at zero, and while a sequence plays it. */
   running: boolean;
   /** Its fader, 0 to 255. */
   level: number;
+  /**
+   * How strongly the sequences play it, 0 to 255; it leaves the fader alone, and the higher of the
+   * two counts. Missing from a desk program from before sequences could play effects.
+   */
+  played?: number;
   /** Its live speed (BPM), size and spread (per cent). */
   speed: number;
   size: number;

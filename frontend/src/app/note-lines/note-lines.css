@@ -34,7 +34,6 @@ input.line {
   color: var(--legend);
   font: inherit;
   text-align: center;
-  user-select: text;
 }
 
 input.line:focus {

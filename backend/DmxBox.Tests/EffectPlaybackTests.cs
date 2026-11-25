@@ -226,11 +226,102 @@ public sealed class EffectPlaybackTests
     }
 
     [Fact]
-    public void AStepOfASequenceCannotPlayAnEffect()
+    public void AnEffectStepNeedsAnEffectNumber()
     {
-        var error = Assert.Throws<DeskException>(() => _desk.SetSequence(3, true, [new Step(Step.EffectTarget, 1, 255, 0, 0, 0)]));
-        Assert.Equal("A step of a sequence cannot play an effect; a step of the stack can.", error.Message);
         Assert.Throws<DeskException>(() => _desk.AddStackStep(new Step(Step.EffectTarget, 65, 255, 0, 0, 0)));
+        Assert.Throws<DeskException>(() => _desk.SetSequence(3, true, [new Step(Step.EffectTarget, 0, 255, 0, 0, 0)]));
+    }
+
+    [Fact]
+    public void ASequencePlaysAnEffectAsStronglyAsItsStepAndLeavesItsFaderAlone()
+    {
+        _desk.SetEffect(Pulse());
+        _desk.SetSequence(3, loop: false, [new Step(Step.EffectTarget, 1, 255, Up: 2, Wait: 0, Down: 0)]);
+        _desk.SetMemoryLevel(3, 255);
+        _desk.Tick();
+        Assert.False(Playback().Running);    // its step is only beginning to come up
+
+        _time.Pass(1);                       // half way up: the effect starts at half
+        Assert.Empty(Moved());               // and no fader moves for it
+        EffectPlayback playback = Playback();
+        Assert.True(playback.Running);
+        Assert.Equal((0, 128), (playback.Level, playback.Played));
+        Assert.Equal(128, Dimmer());
+
+        _time.Pass(1);                       // up, one cycle on: the pulse at full
+        _desk.Tick();
+        Assert.Equal(255, Dimmer());
+        Assert.Equal((0, 255), (Playback().Level, Playback().Played));
+
+        _desk.SetMemoryLevel(3, 128);        // the fader of the memory scales it
+        _desk.Tick();
+        Assert.Equal(128, Dimmer());
+
+        _desk.SetMemoryLevel(3, 0);          // and stops it with the sequence
+        _desk.Tick();
+        Assert.False(Playback().Running);
+        Assert.Equal(0, Dimmer());
+    }
+
+    [Fact]
+    public void TheHigherOfItsFaderAndASequenceCountsAndItsKeyStillWorksItsFader()
+    {
+        _desk.SetEffect(Pulse());
+        _desk.SetSequence(3, loop: false, [new Step(Step.EffectTarget, 1, 102, Up: 0, Wait: 0, Down: 0)]);   // 40 per cent
+        _desk.SetMemoryLevel(3, 255);
+        _desk.Tick();
+        Assert.Equal(102, Dimmer());
+
+        Assert.Equal(255, _desk.SetEffectControl(1, "toggle", 0).Level);   // the key brings the fader up, as always
+        Assert.Equal(255, Dimmer());
+
+        EffectPlayback down = _desk.SetEffectControl(1, "toggle", 0);       // and down again
+        Assert.Equal(0, down.Level);
+        Assert.True(down.Running);                                          // the sequence plays it on, where it was
+        Assert.Equal(102, Dimmer());
+
+        _desk.SetEffectControl(1, "level", 60);                             // 153, higher than the sequence
+        Assert.Equal(153, Dimmer());
+    }
+
+    [Fact]
+    public void AnEffectOfASequenceGoesDownWithTheStepThatTakesItDownOrInTheTimeOfItsRelease()
+    {
+        _desk.SetEffect(Pulse() with { Speed = 6 });   // full for the first five seconds of every ten
+        _desk.SetSequence(3, loop: false,
+        [
+            new Step(Step.EffectTarget, 1, 255, Up: 0, Wait: 1, Down: 2),
+            new Step(Step.Channel, 5, 255, Up: 0, Wait: 1, Down: 0),
+        ]);
+        _desk.SetMemoryLevel(3, 255);
+        _desk.Tick();
+        Assert.Equal(255, Dimmer());
+
+        _time.Pass(1.5);                               // the channel took it down half a second ago, in its two seconds down
+        _desk.Tick();
+        Assert.Equal(191, Dimmer());
+        Assert.Equal(255, _desk.GetOutput()[4]);
+        _time.Pass(1.5);
+        _desk.Tick();
+        Assert.False(Playback().Running);
+
+        // Added on top of the channel, and released in the release's one second, not in its own three.
+        _desk.SetSequence(3, loop: false,
+        [
+            new Step(Step.Channel, 5, 255, Up: 0, Wait: 1, Down: 0),
+            new Step(Step.EffectTarget, 1, 255, Up: 0, Wait: 1, Down: 3) { Add = true },
+            new Step(Step.Release, 2, 0, Up: 0, Wait: 1, Down: 1),
+        ]);
+        _time.Pass(1.5);
+        _desk.Tick();
+        Assert.Equal((255, 255), (Dimmer(), _desk.GetOutput()[4]));
+        _time.Pass(1);                                 // half way through the release
+        _desk.Tick();
+        Assert.Equal((128, 255), (Dimmer(), _desk.GetOutput()[4]));
+        _time.Pass(0.5);
+        _desk.Tick();
+        Assert.False(Playback().Running);
+        Assert.Equal(255, _desk.GetOutput()[4]);
     }
 
     [Fact]

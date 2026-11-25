@@ -63,6 +63,23 @@ export class DeskConnection {
     }
   }
 
+  /**
+   * Calls a method of the backend that answers as a stream of one item, and waits for that item.
+   * The backend takes one call of a page at a time, but a stream runs beside them: a method that
+   * takes long (the search for Art-Net nodes) answers so, and the page's faders and keys go on
+   * meanwhile. Fails with a plain message.
+   */
+  ask<Result>(method: string, ...args: unknown[]): Promise<Result | undefined> {
+    return new Promise((resolve, reject) => {
+      let answer: Result | undefined;
+      this.hub.stream<Result>(method, ...args).subscribe({
+        next: (item) => (answer = item),
+        complete: () => resolve(answer),
+        error: (error) => reject(new Error(plainMessage(error))),
+      });
+    });
+  }
+
   /** Calls a method of the backend without waiting. While offline the call is simply dropped. */
   send(method: string, ...args: unknown[]): void {
     if (!this.online()) return;

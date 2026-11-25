@@ -1,16 +1,19 @@
 import { Component, ElementRef, Injector, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
+import { DeskMidi } from '../desk/desk-midi';
 import { DeskSettings } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
 import { IMPORT_LIMIT_BYTES } from '../desk/desk-types';
+import type { MidiSetup } from '../desk/midi';
 import { readShowFile } from '../desk/show-file';
-import { TRANSFER_PARTS, TransferPart, missingParts, readImportFile } from '../desk/transfer';
+import { TRANSFER_PARTS, TransferPart, TransferPartView, missingParts, pcPartNote, readImportFile } from '../desk/transfer';
 import { DialogDismiss } from '../desk/dialog-dismiss';
 import { LampButton } from '../lamp-button/lamp-button';
 
 /**
  * The window of Import: what to take from a file of this device, each with a checkbox, none of
- * them checked at first. The project, the stage, the settings of this device and its keyboard
- * shortcuts come from a file that Export made (or a project file); .ASC is the show of a theatre
+ * them checked at first. The project, the stage, the settings of this device, its keyboard
+ * shortcuts and (on the PC) the MIDI controllers come from a file that Export made (or a project
+ * file); .ASC is the show of a theatre
  * console in the USITT ASCII format, a file of its own, so it is taken alone. Once it is done the
  * window says what became of the file.
  */
@@ -23,6 +26,7 @@ import { LampButton } from '../lamp-button/lamp-button';
 export class ImportDialog {
   private readonly store = inject(DeskStore);
   private readonly settings = inject(DeskSettings);
+  private readonly midi = inject(DeskMidi);
   private readonly injector = inject(Injector);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly picker = viewChild.required<ElementRef<HTMLInputElement>>('picker');
@@ -60,6 +64,11 @@ export class ImportDialog {
     this.busy.set(false);
     this.report.set(null);
     this.dialog().nativeElement.showModal();
+  }
+
+  /** Why a part of the PC cannot be checked here: on a phone, or with a desk program without MIDI; empty when it can. */
+  protected note(part: TransferPartView): string {
+    return pcPartNote(part, this.store.lan()?.local !== false, this.midi.state() !== null);
   }
 
   protected onCheck(part: TransferPart, event: Event): void {
@@ -149,6 +158,10 @@ export class ImportDialog {
     if (chosen.has('keyboard')) {
       this.settings.takeShortcuts(source.shortcuts);
       report.push('The keyboard shortcuts of this device are those of the file.');
+    }
+    if (chosen.has('midi') && source.midi !== null) {
+      await this.midi.takeSetup(source.midi as unknown as MidiSetup);
+      report.push('The MIDI controllers of this PC, and what their controls do, are those of the file.');
     }
     return report;
   }

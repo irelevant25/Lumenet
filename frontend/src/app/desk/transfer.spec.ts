@@ -1,4 +1,4 @@
-import { TransferPart, exportFileName, exportText, missingParts, readImportFile } from './transfer';
+import { TRANSFER_PARTS, TransferPart, exportFileName, exportText, missingParts, pcPartNote, readImportFile } from './transfer';
 
 const PROJECT_FILE = JSON.stringify({
   format: 'lumenet-project',
@@ -71,5 +71,29 @@ describe('Export and Import', () => {
     const empty = readImportFile('empty.json', '{"format":"lumenet-export","version":1}');
     expect(empty.name).toBe('empty');
     expect(missingParts(chosen('project', 'stage', 'keyboard'), empty)).toBe('the project, the stage and the keyboard');
+  });
+
+  it('take the MIDI of the PC out and back, and only on the PC', () => {
+    const midi = {
+      devices: ['APC mini mk2'],
+      mappings: [{ device: 'APC mini mk2', channel: 1, message: 'note', number: 56, target: 'stack.play' }],
+    };
+    const text = exportText(chosen('midi'), { name: 'Concert', midi });
+    expect(JSON.parse(text).midi).toEqual(midi);
+    expect(exportFileName(chosen('midi'), 'Concert')).toBe('Lumenet - midi.json');
+
+    const source = readImportFile('Lumenet - midi.json', text);
+    expect(source.midi).toEqual(midi);
+    expect(missingParts(chosen('midi'), source)).toBe('');
+    expect(missingParts(chosen('keyboard', 'midi'), readImportFile('Evening.json', PROJECT_FILE))).toBe('the keyboard and the MIDI');
+    // a MIDI part without its two lists is none
+    expect(readImportFile('odd.json', '{"format":"lumenet-export","version":1,"midi":{"devices":"APC"}}').midi).toBeNull();
+
+    // its checkbox: on the PC with a desk program that knows MIDI; the other parts anywhere
+    const part = TRANSFER_PARTS.find((found) => found.part === 'midi')!;
+    expect(pcPartNote(part, true, true)).toBe('');
+    expect(pcPartNote(part, false, true)).toContain('only the PC');
+    expect(pcPartNote(part, true, false)).toContain('knows no MIDI');
+    expect(pcPartNote(TRANSFER_PARTS[0], false, false)).toBe('');
   });
 });

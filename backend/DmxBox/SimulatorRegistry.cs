@@ -8,10 +8,11 @@ namespace DmxBox;
 /// the simulator tells the Lumenet desk about it: a device that is plugged in is there for the
 /// desk, one that is pulled out is not, and one whose simulator ends is gone.
 /// </summary>
-/// <param name="Kind"><see cref="Dmxbox"/>, <see cref="ArtNet"/>, <see cref="Sacn"/> or <see cref="Usb"/>.</param>
+/// <param name="Kind"><see cref="Dmxbox"/>, <see cref="ArtNet"/>, <see cref="Sacn"/>, <see cref="Usb"/> or <see cref="Midi"/>.</param>
 /// <param name="Address">
 /// Where the device is reached: "127.0.0.1:52011" for a dmxbox (its DX port), "127.0.0.2" for an
-/// Art-Net node or an sACN receiver, "SIM1" for a DMX USB interface. One simulator has it at a time.
+/// Art-Net node or an sACN receiver, "SIM1" for a DMX USB interface, "MIDI1" for a MIDI controller
+/// (its pipe, see <see cref="MidiPipeName"/>). One simulator has it at a time.
 /// </param>
 /// <param name="Name">What the device is, for people: "dmxbox with the Pico (simulator)".</param>
 /// <param name="ProcessId">The simulator's process. A device whose process has ended is gone.</param>
@@ -28,6 +29,19 @@ public sealed record SimulatedDevice(string Kind, string Address, string Name, i
 
     /// <summary>The <see cref="Kind"/> of a DMX USB interface of the kind of the Enttec DMX USB Pro.</summary>
     public const string Usb = "usb";
+
+    /// <summary>
+    /// The <see cref="Kind"/> of a MIDI controller: a device with an input and an output under its
+    /// <see cref="Name"/>, played through the named pipe of its address.
+    /// </summary>
+    public const string Midi = "midi";
+
+    /// <summary>
+    /// The named pipe of a simulated MIDI controller, "lumenet-midi-MIDI1": the MIDI bytes go both
+    /// ways in it, as no MIDI port can be made on Windows without a driver.
+    /// </summary>
+    /// <param name="address">Its address, "MIDI1".</param>
+    public static string MidiPipeName(string address) => $"lumenet-midi-{address.ToUpperInvariant()}";
 
     /// <summary>True while the device is plugged in; a pulled-out device keeps its address for its simulator.</summary>
     public bool PluggedIn { get; init; }

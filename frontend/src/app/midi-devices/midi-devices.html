@@ -1,0 +1,49 @@
+<h4 id="midi-devices-title">Devices</h4>
+@if (devices().length === 0) {
+  <p class="hint">
+    No MIDI device is plugged in.
+    @if (works()) {
+      One that is plugged in shows here within a few seconds.
+    } @else {
+      This system has none for the desk (Windows and macOS do).
+    }
+  </p>
+} @else {
+  <ul class="devices" aria-labelledby="midi-devices-title">
+    @for (device of devices(); track device.name) {
+      <li>
+        <label>
+          <input type="checkbox" [checked]="device.used" (change)="use(device, $event)" />
+          <span class="name">{{ device.name }}</span>
+        </label>
+        <span class="state" [class]="device.state">{{ stateText(device) }}</span>
+      </li>
+    }
+  </ul>
+  <p class="hint">
+    A ticked device is used by the desk: it opens it, and other programs cannot have it meanwhile.
+  </p>
+
+  @if (presets().length > 0) {
+    <div class="preset">
+      <label for="midi-preset">Ready-made mapping</label>
+      <select id="midi-preset" (change)="choosePreset($event)">
+        @for (item of presets(); track item.id) {
+          <option [value]="item.id" [selected]="item.id === preset()">{{ item.name }}</option>
+        }
+      </select>
+      <label for="midi-preset-device">for</label>
+      <select id="midi-preset-device" (change)="chooseDevice($event)">
+        @for (item of devices(); track item.name) {
+          <option [value]="item.name" [selected]="item.name === device()">{{ item.name }}</option>
+        }
+      </select>
+      <button type="button" [disabled]="!preset() || !device()" (click)="usePreset()">Use</button>
+    </div>
+    @if (chosenPreset(); as chosen) {
+      <p class="hint">
+        {{ chosen.about }} It takes the place of what the device's controls did before.
+      </p>
+    }
+  }
+}

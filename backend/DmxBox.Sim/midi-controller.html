@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MIDI controller (simulator)</title>
+<!--
+  The page of a simulated MIDI controller of sim.cmd (MidiControllerSimulator.cs). Pads and keys are
+  pressed with the mouse (held while held), faders and knobs moved; what the desk sends back lights
+  the keys and moves the motorized faders and the rings of the knobs, as the controller would.
+-->
+<style>
+  :root {
+    color-scheme: dark;
+    --page: #111316;
+    --body: #1b1e23;
+    --edge: #343a43;
+    --text: #e8eaed;
+    --dim: #a0a7b1;
+    --dark: #2a2e35;
+    --ring: #ffb020;
+  }
+
+  body {
+    margin: 0;
+    padding: 16px;
+    background: var(--page);
+    color: var(--text);
+    font: 14px/1.4 system-ui, sans-serif;
+  }
+
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 16px;
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 18px;
+  }
+
+  .status {
+    margin: 0;
+    color: var(--dim);
+  }
+
+  .status strong {
+    color: #3ddc84;
+    font-weight: 600;
+  }
+
+  .status strong.away {
+    color: var(--ring);
+  }
+
+  .device {
+    display: grid;
+    gap: 16px;
+    box-sizing: border-box;
+    width: max-content;
+    max-width: 100%;
+    padding: 16px;
+    overflow-x: auto;
+    border: 1px solid var(--edge);
+    border-radius: 10px;
+    background: var(--body);
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 22px;
+  }
+
+  h2 {
+    margin: 0 0 6px;
+    color: var(--dim);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(var(--columns), auto);
+    justify-content: start;
+    justify-items: center;
+    gap: 6px;
+  }
+
+  button {
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+    touch-action: none;
+  }
+
+  /* a pad or a key: dark, or lit in its color as bright as the desk says */
+  .pad,
+  .key {
+    --level: 0;
+    --color: #000;
+    border: 1px solid #000;
+    background: color-mix(in srgb, var(--color) calc(var(--level) * 100%), var(--dark));
+    box-shadow: 0 0 calc(var(--level) * 10px) color-mix(in srgb, var(--color) calc(var(--level) * 70%), transparent);
+  }
+
+  .pad {
+    width: 38px;
+    height: 38px;
+    border-radius: 5px;
+  }
+
+  .key {
+    min-width: 50px;
+    height: 28px;
+    padding: 0 6px;
+    border-color: var(--edge);
+    border-radius: 4px;
+    font-size: 12px;
+  }
+
+  .down {
+    outline: 2px solid #fff;
+    outline-offset: 1px;
+    transform: scale(0.95);
+  }
+
+  .blink {
+    animation: blink 0.5s steps(1) infinite;
+  }
+
+  .pulse {
+    animation: pulse 1s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    50% {
+      background: var(--dark);
+      box-shadow: none;
+    }
+  }
+
+  @keyframes pulse {
+    50% {
+      filter: brightness(0.35);
+    }
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* a fader: standing, the top at 127 */
+  .fader {
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    font-size: 12px;
+  }
+
+  .fader input {
+    width: 30px;
+    height: 150px;
+    margin: 0;
+    writing-mode: vertical-lr;
+    direction: rtl;
+    accent-color: var(--ring);
+  }
+
+  .driven {
+    color: var(--ring);
+  }
+
+  /* a knob: a ring that shows where it stands; dragged up and down, or turned with the wheel */
+  .knob {
+    --turn: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle, var(--body) 0 55%, transparent 56%),
+      conic-gradient(from 225deg, var(--ring) calc(var(--turn) * 270deg), #3a3f47 0 270deg, transparent 0);
+    cursor: ns-resize;
+    touch-action: none;
+  }
+
+  .knob-box {
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+    font-size: 12px;
+  }
+
+  .value {
+    color: var(--dim);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .hint {
+    max-width: 80ch;
+    margin: 12px 0 0;
+    color: var(--dim);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">MIDI controller</h1>
+  <p class="status" id="status" role="status">Waiting for the simulator…</p>
+</header>
+<main class="device" id="device" aria-labelledby="title"></main>
+<p class="hint">
+  Keys and pads are held while the mouse button is (Space or Enter too). Faders move with the mouse
+  or the arrow keys; knobs are dragged up and down, or turned with the wheel or the arrow keys. A
+  fader or knob in amber is one the desk moves too (a motor, a ring of lights).
+</p>
+<script>
+  const device = document.getElementById('device');
+  const status = document.getElementById('status');
+  const controls = new Map();   // id: { element, kind, value, held }
+
+  // One message after the other, in the order they were made, as the cable of a controller has them:
+  // requests of their own could reach the simulator in another order (a key let go before it was pressed).
+  let sending = Promise.resolve();
+  function send(body) {
+    sending = sending.then(() =>
+      fetch('control', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {}),
+    );
+  }
+
+  // A key or pad: held while the pointer (or Space, Enter) is down.
+  function pressable(control) {
+    const element = document.createElement('button');
+    element.type = 'button';
+    element.className = control.kind === 'pad' ? 'pad' : 'key';
+    element.textContent = control.label;
+    element.title = control.message;
+    element.setAttribute('aria-label', `${control.label || 'Pad'} (${control.message})`);
+    const press = (down) => {
+      const item = controls.get(control.id);
+      if (item.held === down) return;
+      item.held = down;
+      send({ id: control.id, down });
+    };
+    element.addEventListener('pointerdown', (event) => {
+      element.setPointerCapture(event.pointerId);
+      press(true);
+    });
+    element.addEventListener('pointerup', () => press(false));
+    element.addEventListener('pointercancel', () => press(false));
+    element.addEventListener('keydown', (event) => {
+      if ((event.key === ' ' || event.key === 'Enter') && !event.repeat) {
+        event.preventDefault();
+        press(true);
+      }
+    });
+    element.addEventListener('keyup', (event) => {
+      if (event.key === ' ' || event.key === 'Enter') press(false);
+    });
+    element.addEventListener('blur', () => press(false));
+    return element;
+  }
+
+  function fader(control) {
+    const box = document.createElement('label');
+    box.className = 'fader' + (control.driven ? ' driven' : '');
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.min = '0';
+    input.max = '127';
+    input.value = '0';
+    input.title = control.message;
+    input.addEventListener('input', () => {
+      controls.get(control.id).value = Number(input.value);
+      send({ id: control.id, value: Number(input.value) });
+    });
+    // held while the mouse moves it, wherever the button is let go: the desk does not move it meanwhile
+    input.addEventListener('pointerdown', () => {
+      controls.get(control.id).held = true;
+      window.addEventListener('pointerup', () => (controls.get(control.id).held = false), { once: true });
+    });
+    box.append(input, control.label);
+    return { box, element: input };
+  }
+
+  function knob(control) {
+    const box = document.createElement('div');
+    box.className = 'knob-box' + (control.driven ? ' driven' : '');
+    const element = document.createElement('div');
+    element.className = 'knob';
+    element.tabIndex = 0;
+    element.title = control.message;
+    element.setAttribute('role', 'slider');
+    element.setAttribute('aria-label', `Knob ${control.label} (${control.message})`);
+    element.setAttribute('aria-valuemin', '0');
+    element.setAttribute('aria-valuemax', '127');
+    const shown = document.createElement('span');
+    shown.className = 'value';
+    const move = (value) => {
+      const item = controls.get(control.id);
+      value = Math.max(0, Math.min(127, Math.round(value)));
+      if (value === item.value) return;
+      item.value = value;
+      show(item);
+      send({ id: control.id, value });
+    };
+    let from = null;
+    element.addEventListener('pointerdown', (event) => {
+      element.setPointerCapture(event.pointerId);
+      from = { y: event.clientY, value: controls.get(control.id).value };
+      controls.get(control.id).held = true;
+    });
+    element.addEventListener('pointermove', (event) => {
+      if (from) move(from.value + (from.y - event.clientY) / 2);
+    });
+    const letGo = () => {
+      from = null;
+      controls.get(control.id).held = false;
+    };
+    element.addEventListener('pointerup', letGo);
+    element.addEventListener('pointercancel', letGo);
+    element.addEventListener('wheel', (event) => {
+      event.preventDefault();
+      move(controls.get(control.id).value + (event.deltaY < 0 ? 2 : -2));
+    }, { passive: false });
+    element.addEventListener('keydown', (event) => {
+      const by = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1, PageUp: 8, PageDown: -8 }[event.key];
+      if (by === undefined) return;
+      event.preventDefault();
+      move(controls.get(control.id).value + by);
+    });
+    box.append(element, shown, control.label);
+    return { box, element, shown };
+  }
+
+  // How a control looks now.
+  function show(item) {
+    if (item.kind === 'fader') {
+      if (!item.held) item.element.value = String(item.value);
+    } else if (item.kind === 'knob') {
+      item.element.style.setProperty('--turn', String(item.value / 127));
+      item.element.setAttribute('aria-valuenow', String(item.value));
+      item.shown.textContent = String(item.value);
+    }
+  }
+
+  function take(message) {
+    if (message.type === 'status') {
+      const plugged = message.pluggedIn
+        ? message.desk
+          ? '<strong>The desk uses it.</strong>'
+          : '<strong class="away">Plugged in; the desk does not use it yet</strong> (Settings, MIDI: tick it).'
+        : '<strong class="away">Pulled out</strong> (U in the simulator plugs it in again).';
+      const last = message.fromDesk > 0 ? ` From the desk: ${message.fromDesk} messages, the last ${message.last}.` : '';
+      status.innerHTML = plugged + last;
+      return;
+    }
+    const item = controls.get(message.id);
+    if (!item) return;
+    if (item.kind === 'pad' || item.kind === 'key') {
+      item.element.style.setProperty('--color', message.color ?? '#000');
+      item.element.style.setProperty('--level', String(message.color ? message.level : 0));
+      item.element.classList.toggle('blink', message.motion === 'blink');
+      item.element.classList.toggle('pulse', message.motion === 'pulse');
+      item.element.classList.toggle('down', message.down);
+    } else if (!item.held) {
+      item.value = message.value;
+      show(item);
+    }
+  }
+
+  async function start() {
+    const layout = await (await fetch('layout')).json();
+    document.title = layout.name;
+    document.getElementById('title').textContent = `${layout.title}: ${layout.name}`;
+    const rows = new Map();
+    for (const section of layout.sections) {
+      if (!rows.has(section.row)) {
+        const row = document.createElement('div');
+        row.className = 'row';
+        rows.set(section.row, row);
+        device.append(row);
+      }
+      const part = document.createElement('section');
+      const title = document.createElement('h2');
+      title.textContent = section.title;
+      const grid = document.createElement('div');
+      grid.className = 'grid';
+      grid.style.setProperty('--columns', String(section.columns));
+      for (const control of section.controls) {
+        const item = { kind: control.kind, value: 0, held: false };
+        if (control.kind === 'fader') Object.assign(item, fader(control));
+        else if (control.kind === 'knob') Object.assign(item, knob(control));
+        else Object.assign(item, { box: (item.element = pressable(control)) });
+        controls.set(control.id, item);
+        show(item);
+        grid.append(item.box);
+      }
+      part.append(title, grid);
+      rows.get(section.row).append(part);
+    }
+
+    const events = new EventSource('events');
+    events.onmessage = (event) => take(JSON.parse(event.data));
+    events.onerror = () => (status.textContent = 'The simulator does not answer: it may have ended.');
+  }
+
+  start().catch((error) => (status.textContent = `The page could not start: ${error.message}`));
+</script>
+</body>
+</html>

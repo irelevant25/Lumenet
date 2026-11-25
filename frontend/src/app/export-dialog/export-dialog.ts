@@ -1,15 +1,17 @@
 import { Component, ElementRef, Injector, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
+import { DeskMidi } from '../desk/desk-midi';
 import { DeskSettings } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
 import { saveTextFile } from '../desk/save-file';
-import { TRANSFER_PARTS, TransferPart, exportFileName, exportText } from '../desk/transfer';
+import { TRANSFER_PARTS, TransferPart, TransferPartView, exportFileName, exportText, pcPartNote } from '../desk/transfer';
 import { DialogDismiss } from '../desk/dialog-dismiss';
 import { LampButton } from '../lamp-button/lamp-button';
 
 /**
  * The window of Export: the parts to put into a file on this device, each with a checkbox, none
- * of them checked at first: the project, the stage on its own, the settings of this device and its
- * keyboard shortcuts. Import (in its own window) takes them back, here or on another device.
+ * of them checked at first: the project, the stage on its own, the settings of this device, its
+ * keyboard shortcuts, and (on the PC) the MIDI controllers with what their controls do. Import (in
+ * its own window) takes them back, here or on another device.
  */
 @Component({
   imports: [DialogDismiss, LampButton],
@@ -20,6 +22,7 @@ import { LampButton } from '../lamp-button/lamp-button';
 export class ExportDialog {
   private readonly store = inject(DeskStore);
   private readonly settings = inject(DeskSettings);
+  private readonly midi = inject(DeskMidi);
   private readonly injector = inject(Injector);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly okKey = viewChild('ok', { read: ElementRef<HTMLButtonElement> });
@@ -32,6 +35,11 @@ export class ExportDialog {
   protected readonly saved = signal<string | null>(null);
 
   protected readonly canExport = computed(() => this.chosen().size > 0 && !this.busy());
+
+  /** Why a part of the PC cannot be checked here: on a phone, or with a desk program without MIDI; empty when it can. */
+  protected note(part: TransferPartView): string {
+    return pcPartNote(part, this.store.lan()?.local !== false, this.midi.state() !== null);
+  }
 
   /** Opens the window with nothing checked. */
   open(): void {
@@ -59,7 +67,14 @@ export class ExportDialog {
     this.error.set('');
     try {
       const projectFile = chosen.has('project') || chosen.has('stage') ? await this.store.exportProject() : undefined;
-      const text = exportText(chosen, { name, projectFile, settings: this.settings.settingsPart(), shortcuts: this.settings.shortcuts() });
+      const midi = chosen.has('midi') ? await this.midi.setup() : undefined;
+      const text = exportText(chosen, {
+        name,
+        projectFile,
+        settings: this.settings.settingsPart(),
+        shortcuts: this.settings.shortcuts(),
+        midi,
+      });
       const saved = await saveTextFile(exportFileName(chosen, name), text);
       if (saved === null) return; // no place was chosen: the window stays as it was
       this.saved.set(saved);

@@ -37,7 +37,7 @@ computer. See [dmxbox 2: the PIC32 box](#dmxbox-2-the-pic32-box).
 | `backend/` | .NET: the `DmxBox` library, the `dmxbox` command-line tool, the server of the Lumenet desk, `Lumenet.exe` (`backend/Lumenet`), the simulated devices of `sim.cmd` (`backend/DmxBox.Sim`), and the tests. |
 | `frontend/` | Angular: the page of the Lumenet fader desk. |
 | `run.cmd` | Starts the Lumenet desk: backend and frontend together. |
-| `sim.cmd` | Starts a simulated DMX device, as if it were plugged in: a dmxbox, an Art-Net node, an sACN receiver or an Enttec DMX USB Pro. |
+| `sim.cmd` | Starts a simulated device, as if it were plugged in: a dmxbox, an Art-Net node, an sACN receiver, an Enttec DMX USB Pro, or a MIDI controller with its page in the browser. |
 | `publish.cmd` | Makes `Lumenet.exe`, the whole desk in one file. |
 | `.github/` | The workflow that makes `Lumenet.exe` after every push to `main` and puts it on the Releases page. |
 | `examples/` | The example projects of the desk, which its Load window lists, and an example show file of a theatre console, to import. |
@@ -677,9 +677,9 @@ built with the Visual Studio C compiler; on Linux or macOS use `make -C firmware
 
 ### Simulated devices: sim.cmd
 
-`sim.cmd` at the root starts a simulated DMX device as if it were plugged into this PC: the desk (`run.cmd`
-or Lumenet.exe) finds it by itself. It needs the .NET 10 SDK; the box simulators are built the first time
-(and again when the firmware changed), with Visual Studio's C compiler.
+`sim.cmd` at the root starts a simulated DMX device or MIDI controller as if it were plugged into this PC:
+the desk (`run.cmd` or Lumenet.exe) finds it by itself. It needs the .NET 10 SDK; the box simulators are
+built the first time (and again when the firmware changed), with Visual Studio's C compiler.
 
 ```powershell
 sim.cmd                        # the devices and the options
@@ -687,6 +687,7 @@ sim.cmd pico-1-universe        # the box with the Pico; also pico-2-universes, p
 sim.cmd artnet --ports 2       # an Art-Net node with two ports (--at 0:0:0, --name "Sim node")
 sim.cmd sacn --universes 1-4   # an sACN receiver (--multicast takes the desk's multicast too)
 sim.cmd enttec                 # an Enttec DMX USB Pro (--serial 12345678)
+sim.cmd apc-mini-mk2           # an Akai APC mini mk2; also nanokontrol2, x-touch-mini, x-touch-compact
 ```
 
 * **Keys:** U pulls the device out and plugs it in again, Q (or Ctrl+C) ends it; a box also has B, its
@@ -707,8 +708,15 @@ sim.cmd enttec                 # an Enttec DMX USB Pro (--serial 12345678)
   6454 and 5568; the USB interface behind a named pipe, `lumenet-sim-SIM1` (no serial port can be made
   without a driver; `PipeDmxPort` plays it in the desk). None of them is on the network, and Windows does not
   ask about its firewall, except for the receiver with `--multicast`, which listens on every address.
-* The box simulator is a C program started by `backend/DmxBox.Sim` (`dmxbox-sim`); the other three are C#
-  in that program, which `SimulatorTests` runs in the test's own process.
+* **MIDI controllers:** a MIDI device "APC mini mk2 (simulator)" (a second one of the same kind "APC mini
+  mk2 2 (simulator)") behind a named pipe, `lumenet-midi-MIDI1` (no MIDI port can be made on Windows without
+  a driver; `SimulatedMidiPorts` plays it in the desk). Its controls are on a page of its own, which the
+  simulator serves at a free port of 127.0.0.1 (`--port` for a fixed one) and the browser opens
+  (`--no-browser` does not; O opens it): the pads, keys, faders and knobs of the real one, sending what it
+  sends, and the desk's messages read as it reads them (`MidiControllers.cs`: the APC's 128 colors and its
+  brightness by channel, the lights of the X-Touch on other notes, motorized faders and rings).
+* The box simulator is a C program started by `backend/DmxBox.Sim` (`dmxbox-sim`); the others are C# in that
+  program, which `SimulatorTests` runs in the test's own process.
 
 ---
 
@@ -759,7 +767,9 @@ state as soon as a box answers.
   shows the boxes and these outputs in one table, the Outputs panel of Settings (`outputs-panel`: a line for
   each output of a box and each port of the others, two columns of the panels wide, as its table needs
   about 650 pixels; it asks for the networks, the serial ports and the nodes only once the page is
-  connected; the top left, `outputs-status`, only counts them). The
+  connected; the top left, `outputs-status`, only counts them). `FindArtNetNodes` takes a second and a
+  half and answers as a stream of one (`DeskConnection.ask`): SignalR takes one call of a page at a time,
+  and a call that long would hold up that page's faders and keys, while a stream runs beside them. The
   packets are in [section 6](#6-art-net-sacn-and-the-dmx-usb-pro):
   * `NetworkOutputs`, one thread of 40 rounds a second for Art-Net and sACN: a port sends when its 512 levels
     change, twice more in the next rounds (a lost packet is made up), and every 0.8 s while they stay the
@@ -867,8 +877,8 @@ time. The rules of how it mixes with the rest stand at the top of `Desk.Effects.
 
 ### Effects from outside
 
-For a MIDI controller or another program later: the hub's `SetEffectControl(effect, control, value)` works
-one effect's playback, as the page's keys and faders do. "Effect 3 speed = 120 BPM" is
+For another program: the hub's `SetEffectControl(effect, control, value)` works one effect's playback, as
+the page's keys and faders do. "Effect 3 speed = 120 BPM" is
 `SetEffectControl(3, "speed", 120)`; over SignalR from a script,
 `connection.invoke('SetEffectControl', 3, 'speed', 120)`.
 
@@ -884,7 +894,80 @@ one effect's playback, as the page's keys and faders do. "Effect 3 speed = 120 B
 It returns the effect's playback after the change, and the pages hear of it (`EffectPlaybackChanged`). It
 changes this run only, like the faders: no Undo, nothing saved, and it works while the stack is live. A
 value out of its range is refused with the reason ("The speed of an effect goes from 0.5 to 600 BPM.").
-A mapping of MIDI notes and controllers to addresses such as `effect/3/speed` would call it.
+The MIDI controllers call it through the targets `fader.effect.N`, `fader.effect-speed.N` and the like (see
+[MIDI controllers](#midi-controllers)); OSC is to do the same.
+
+### MIDI controllers
+
+The desk program takes the MIDI controllers of the PC, not the page: several pages are often open at once
+(Stage on a second screen, phones) and each would hear every message, Web MIDI works only in Chrome and Edge
+and only on localhost or HTTPS, and a controller belongs to the PC it is plugged into.
+
+* **Library:** [DryWetMIDI](https://github.com/melanchall/drywetmidi) 8 (`Melanchall.DryWetMidi`, MIT, kept
+  up to date). It reads and sends MIDI on Windows and macOS through a small native library of its own,
+  without a driver, and lists the devices by their names. Linux has no devices for it; the simulators work
+  everywhere. It stays behind the desk's own `IMidiPorts` (`MidiPorts.cs`): `DryWetMidiPorts` lists and
+  opens the devices of the PC (looked for every 2 seconds), `SimulatedMidiPorts` those of sim.cmd, and
+  `CombinedMidiPorts` both, so another library could take its place there. Lumenet.exe carries the native
+  library for 64-bit Windows inside and unpacks it when it starts (`IncludeNativeLibrariesForSelfExtract`);
+  those for 32-bit Windows and macOS are left out (`LeaveOutOtherMidiLibraries` in `Lumenet.csproj`).
+* **Where:** `MidiControl` (a hosted service) opens the devices that are used, opens again by its name one
+  that was pulled out and is back, learns, keeps the last 40 incoming messages for the pages that show them,
+  and every 50 ms sends what goes back. `MidiMapper` turns a message into a key press or a fader move,
+  `MidiDeskFaders` moves the desk's faders (`IMidiDesk`), `MidiFeedback` makes the lights and values that go
+  back, `MidiSetup.cs` holds the setup, its check and `midi.json`, `MidiPresets.cs` the ready-made mappings,
+  and `ControlTarget.cs` the names of the targets and the scales of the faders.
+* **Keys go through a page:** the desk program does not press the desk's keys itself. It sends a key
+  (`MidiKey`) to the page on the PC that was used last (`ClaimMidi` when it connects, gets the focus, a click
+  or a key; at most once a second), which presses it as its shortcut would (`Keyboard.midiKey`): the locks,
+  the Record keys and the holds of a solo are the page's own. That page tells which pages of faders it shows
+  (`ReportMidiPages`, for the slots) and how the keys the controllers have are lit (`ReportMidiLamps`, only
+  what changed, at most every 40 ms; `desk/action-lamps.ts` works a lamp out from the store, also for a key
+  that is not shown). Without such a page the keys do nothing; the faders still work. A phone never claims.
+* **Faders** go straight to the desk (`SetChannel`, `SetMemoryLevel`, `SetMaster`, `SetRate`, the speed of a
+  sequence as a step of Undo, `SetEffectControl`), and the pages hear of them as of any change.
+* **The names of the targets**, which OSC is to use too: a key by its name in `desk-actions.ts`
+  ("memory.5", "stack.play", "page.channel.next"), a key of the pages shown "slot.channel.3", and the faders:
+
+  | Name | Fader | Its 0 to 255 |
+  |---|---|---|
+  | `fader.channel.N` | channel N, 1 to 4096 | its level |
+  | `fader.memory.N` | memory N, 1 to 128 | its level |
+  | `fader.master` | the master | its level |
+  | `fader.rate` | Rate | 30 to 300 BPM |
+  | `fader.sequence.N` | the speed of the sequence in memory N | 0.1× to 1× in the lower half, 1× to 10× in the upper, 1× at 127 and 128 |
+  | `fader.effect.N` | the fader of effect N, 1 to 64 | 0 to 100 % |
+  | `fader.effect-speed.N` | its live speed | 0.5 to 600 BPM, by octaves |
+  | `fader.effect-size.N`, `fader.effect-spread.N` | its live size and spread | 0 to 100 % |
+  | `fader.slot.channel.K`, `fader.slot.memory.K`, `fader.slot.effect.K` | the Kth fader of the page shown | as above |
+
+* **Messages:** Note On and Off, Control Change (absolute; a pair N and N + 32 for 14 bits, the coarse one
+  clearing the fine half; relative in three kinds: 1 up and 127 down, 65 up and 63 down, 1 up and 65 down,
+  2 of 255 a click), Pitch Bend (14 bits) and Program Change (a press let go at once), each on a device and a
+  channel. Running status is kept; SysEx and real-time bytes are passed over. **Pickup:** a fader takes over
+  once its control comes within 3 of 255 of the desk's value or passes it; a move of the desk's fader from
+  elsewhere makes it wait again. **Feedback:** a light goes only when it changed (on a channel and a note
+  that may be others than the key's own, `MidiLights`); a value not while the hand moved its control in the
+  last 0.4 s; a control that was pressed or moved gets its light or value again after it (a controller that
+  lights its own key while it is held, a motor the desk did not follow). A light without a blink of its own
+  is blinked by the desk, twice a second.
+* **midi.json** beside the LAN password: `{ "format": "lumenet-midi", "version": 1, "devices": [...],
+  "mappings": [...] }`, a mapping `{ "device", "channel", "message": "note|cc|cc14|pitchbend|program",
+  "number", "target", "mode", "pickup", "feedback", "lights" }`. A file that cannot be read is kept as
+  `midi.json.bad`, and the desk starts without one. Export puts the devices and mappings into its file as
+  `midi`.
+* **The hub:** `GetMidi`, `SetMidiDevice`, `SetMidiMappings`, `LearnMidi`, `UseMidiPreset`, `GetMidiSetup`,
+  `SetMidiSetup` and `WatchMidi` only from the PC, `ClaimMidi`, `ReportMidiLamps` and `ReportMidiPages`; to the
+  pages `MidiChanged`, `MidiMessages`, `MidiKey` and `MidiRole`.
+* **The page:** `desk/midi.ts` (the types), `desk/desk-midi.ts` (the state, the keys it presses, the lamps and
+  pages it tells), `desk/action-lamps.ts`, `desk/midi-targets.ts` (the list of the panel, loaded only with
+  Settings), and the components `midi-panel`, `midi-devices`, `midi-monitor` and `midi-targets`.
+* **The ready-made mappings** follow the manuals of the APC mini mk2 (pads: Note On with a color of its palette
+  as the velocity and the brightness as the channel, 1 for 10 %, 3 for 50 %, 7 for full) and the
+  nanoKONTROL2 (CC mode; its LEDs answer only in the LED mode External). Behringer's manuals do not say how
+  the X-Touch Mini and Compact light their keys in Standard mode: as darktable sends it, the Mini by Note 0
+  to 15 on channel 1 (8 below the key's own; 0 off, 1 on, 2 blinking), the Compact by the note 16 below the
+  key's own on channel 2 with 2 for on. A knob of either is set, with its ring, by its own controller.
 
 ### Lumenet.exe and its releases
 
@@ -896,7 +979,8 @@ publish.cmd        # builds the page, then publish\Lumenet.exe
 ```
 
 * `backend/Lumenet` holds the tray, the log window, and the sources of `DmxBox.Server` compiled in as well (a
-  program cannot be put into another one's single file). The page and the examples are resources of the exe;
+  program cannot be put into another one's single file), with its packages (System.IO.Ports, DryWetMIDI,
+  whose native library goes into the exe too). The page and the examples are resources of the exe;
   `make-icon.ps1` there draws its icon (three faders with knobs in the colors of the keys), which is the
   page's icon too.
 * The version is 0.1 and the number of commits (`backend/Version.props` has the 0.1); the page shows it in
@@ -910,7 +994,7 @@ publish.cmd        # builds the page, then publish\Lumenet.exe
 
 ### Tests
 
-`dotnet test backend/DmxBox.sln` (704 tests: the client, also against the simulator with two outputs, the
+`dotnet test backend/DmxBox.sln` (763 tests: the client, also against the simulator with two outputs, the
 desk, solo, sequences and the stack with a clock the tests set by hand, the rate and its tempo, undo and the autosave, the
 stage plan and its picture, fixtures, their attributes, their steps and their notes, the notes, the
 universes, project files with Export and Import, the examples, the import of show files, the links to the
@@ -919,8 +1003,13 @@ crossfades of sequences and the stack, steps of the stack that add and releases,
 from the Memories view, and the outputs besides the boxes: the packets of Art-Net, sACN and the DMX USB Pro
 byte by byte, and Art-Net and sACN on 127.0.0.1 with a pretend node and receiver, a pretend USB interface; the simulated devices of sim.cmd, the four box simulators among them, and the desk finding them;
 the effects: their rules frame by frame, their playback and the stack with the clock set by hand, the
-shapes, the places in the run and the pixels, and project files of version 7),
-and in `frontend/`: `npm test -- --watch=false` (249 tests of the page).
+shapes, the places in the run and the pixels, and project files of version 7; MIDI: the messages and their
+bytes, the scales, 14 bits, the endless encoders, pickup, slots that follow the pages, held keys, the page
+that presses the keys, Learn, lights and motors sent back, devices pulled out and plugged in again with
+pretend ports (`MidiPretend.cs`), midi.json, the ready-made mappings, and the simulated controllers against
+the desk's own ports), and in `frontend/`: `npm test -- --watch=false` (261 tests of the page; for MIDI the
+keys of a controller pressed as shortcuts with their locks and holds, the keys of the pages shown, the lamps
+and pages told, the panel, Listen, and Export and Import).
 
 On Windows the first packets of a new UDP flow (a socket and a receiver) can be held back for a moment while
 the firewall looks at the flow, and what follows meanwhile is dropped. The tests of the network outputs
@@ -1107,10 +1196,11 @@ receivers listen at 5568 and the desk sends from a port of its own.
   sends one, [dmxbox 2](#dmxbox-2-the-pic32-box) two. Its board is ready for **RDM**: with RDM in the firmware
   and the desk, the desk could find the fixtures on a line and set their addresses.
 * **More for the effects:** a running text or a picture over the cells of LED bars (the pixel effects
-  already work out each cell by where it is on the stage, so either would be one more pattern); MIDI notes
-  and controllers on `SetEffectControl` (see [Effects from outside](#effects-from-outside)); a cycle given in
-  beats of the tempo rather than in BPM of its own; where the heads point in degrees in the preview, for
+  already work out each cell by where it is on the stage, so either would be one more pattern); a cycle given
+  in beats of the tempo rather than in BPM of its own; where the heads point in degrees in the preview, for
   kinds of lights whose pan and tilt ranges are known.
+* **More for MIDI:** MIDI clock, MIDI timecode and MIDI Show Control (with the beat and the sound), MIDI sent
+  to other programs, and OSC on the same names of targets ([MIDI controllers](#midi-controllers)).
 * **A boot loader for dmxbox 2,** so that a new firmware goes on over USB without the programmer.
 * **Pushed state:** a "subscribe" message, so the box sends live output to your UI.
 * **Fabrication files for the carrier board**, so it can be ordered instead of hand-wired.
@@ -1547,6 +1637,34 @@ receivers listen at 5568 and the desk sends from a port of its own.
   loaded at Settings showed "Cannot send data if the connection is not in the 'Connected' State." there:
   the panel now asks the desk program once the page is connected (a test holds the page offline first). No
   error on the page. AXE was not run.
+* **MIDI controllers (2026-11-25):** the backend passes 763 tests and the page 261. In the tests: the bytes
+  of every kind of message and running status; 0 to 127 as 0 to 255, 14-bit pairs, the pitch bend and the
+  three kinds of endless encoders; pickup at the desk's value and by passing it, and again after the desk's
+  fader moved elsewhere; slots that follow the pages and let go of a key on the page it was pressed on;
+  held keys let go when a device is no more used; keys sent only to the page on the PC used
+  last, none without one; Learn, also of a 14-bit pair; lights that follow the lamps, blink by the desk or
+  by the controller, go on other notes, are sent again after a press; motors that wait while the hand moves
+  them and go back where the desk did not follow; midi.json written, read back and put aside when broken;
+  every ready-made mapping a setup the desk takes; the simulated APC and X-Touch Compact against the desk's
+  ports, both ways. On the page: a controller's keys as shortcuts with their locks, holds of a solo, the
+  keys of the pages shown, the lamps told and only their changes, the panel with Learn, ✕, the options and
+  the search, Listen, Export and Import with MIDI, and a phone that cannot. On a test copy, in Chrome, with
+  the simulators of an APC mini mk2 and an X-Touch Compact in the test desk's own folder and the example
+  "6 Concert": both were listed within 2 seconds and used with their ready-made mappings (169 controls); the
+  APC's pads were lit as the desk's keys (memory 1 red at half, channel page 1 green at full, Play yellow
+  and dim); its pad of memory 1 brought memory 1 up and the pad to full; its first fader took channel fader 1
+  of the page shown over at 0 and moved it to 255, and the Compact's motorized fader 1 followed to the top
+  while its first knob showed memory 1 at full; Learn gave Blackout to the Compact's first knob pressed; the
+  APC pulled out showed "Not plugged in", plugged in again "In use" with its lights back. Lumenet.exe built
+  single-file holds the native library of DryWetMIDI and not those of 32-bit Windows and macOS, and a small
+  single-file program built the same way listed this PC's MIDI devices through it. No error on the page.
+  AXE was not run. **Not yet tried with a real controller**: the lights of the two X-Touch follow darktable's
+  code, as Behringer's manuals do not say, and the nanoKONTROL2's need its LED mode External. Seen on the
+  way and fixed, older than this round: while the Outputs panel searched for Art-Net nodes (1.5 s when
+  Settings opens, and at Search again), the hub took nothing else from that page (SignalR handles one call
+  of a connection at a time), so a controller's fader of the page shown still moved the page before; the
+  search answers as a stream now, which runs beside the page's calls (a test moves a fader during a
+  search and has its answer within a second).
 * **dmxbox 2 on paper (2026-11-23):** both versions (two outputs and one) are drawn from their `circuit.py`,
   and each drawing passed its check against it: the schematic, the breadboard plan, the perfboard plan (38 and
   26 insulated wires, with SW1 at the cut left edge and the holes around the four screws kept empty;

@@ -1,6 +1,6 @@
 import { DestroyRef, Service, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { ActionContext, DESK_ACTIONS, SIDED_KEYS, actionWithId, pressOf, shortcutOf, shortcutsOf } from './desk-actions';
+import { ActionContext, DESK_ACTIONS, SIDED_KEYS, actionWithId, pressOf, shortcutOf, shortcutsOf, slotKey } from './desk-actions';
 import { DEFAULT_SHORTCUTS, DeskSettings } from './desk-settings';
 import { DeskStore } from './desk-store';
 
@@ -42,6 +42,8 @@ export class Keyboard {
   readonly listening = signal(false);
   /** The key of the desk chosen in the Keyboard panel: by listening, or in its list. */
   readonly picked = signal<string | null>(null);
+  /** Which panel listened for the key picked: the Keyboard panel, or the MIDI panel (it learns the key then). */
+  readonly pickedFor = signal<'keyboard' | 'midi'>('keyboard');
   /** The key whose shortcut is being recorded; null while none is. */
   readonly recording = signal<string | null>(null);
   /** What the last recording did besides, like "Ctrl + 1 was the shortcut of Clear before." */
@@ -66,6 +68,13 @@ export class Keyboard {
   // The Ctrl and Alt keys held down now, by their codes ("ControlLeft"): the browser says only that a
   // Ctrl is held, so the presses of the keys themselves tell which.
   private readonly sides = new Set<string>();
+
+  // While a solo is lit: the keys of the desk that keys of MIDI controllers hold down now.
+  private readonly midiHeld = new Set<string>();
+
+  // The keys of the desk that keys of the pages shown ("slot.channel.3") pressed: let go are those,
+  // also when the page has moved on meanwhile.
+  private readonly midiSlots = new Map<string, string>();
 
   private readonly destroyRef = inject(DestroyRef);
 
@@ -115,9 +124,10 @@ export class Keyboard {
     if (!event.altKey) ['AltLeft', 'AltRight'].forEach((code) => this.sides.delete(code));
   }
 
-  /** Shows the desk; the next key clicked there is picked, see the class. */
-  listen(): void {
+  /** Shows the desk; the next key clicked there is picked, see the class: for the Keyboard panel, or the MIDI panel. */
+  listen(forPanel: 'keyboard' | 'midi' = 'keyboard'): void {
     this.recording.set(null);
+    this.pickedFor.set(forPanel);
     this.listening.set(true);
     void this.router.navigateByUrl('/');
   }
@@ -126,7 +136,7 @@ export class Keyboard {
     if (!this.listening()) return;
     this.dropPending();
     this.listening.set(false);
-    void this.router.navigateByUrl(KEYBOARD_URL);
+    void this.router.navigateByUrl(this.backUrl());
   }
 
   /** The next keys pressed become the shortcut of this key of the desk. */
@@ -134,6 +144,7 @@ export class Keyboard {
     this.dropPending();
     this.listening.set(false);
     this.lastMove.set('');
+    this.pickedFor.set('keyboard');
     this.picked.set(id);
     this.recording.set(id);
   }
@@ -159,6 +170,36 @@ export class Keyboard {
     }
 
     actionWithId(id)?.run?.(this.context());
+  }
+
+  /**
+   * A key of a MIDI controller was pressed (down) or let go, and the desk program sent it to this
+   * page (desk-midi.ts): it presses the key of the desk with this name as its shortcut would. The
+   * same rules hold: a locked key stays locked, keys rest while a window is open or a key is being
+   * picked, and while a solo is lit a key held down holds its fader until it is let go. A key of the
+   * pages shown ("slot.channel.3", see slotKey) presses the key under that fader of the page shown.
+   */
+  midiKey(id: string, down: boolean): void {
+    if (!down) {
+      const key = this.midiSlots.get(id) ?? id;
+      this.midiSlots.delete(id);
+      if (this.midiHeld.delete(key)) actionWithId(key)?.hold?.(this.context(), false);
+      return;
+    }
+    if (this.listening() || this.recording() !== null || document.querySelector('dialog[open]')) return;
+
+    const slot = slotKey(id, this.store);
+    if (slot === null) return;   // a place beyond the page shown
+    const key = slot ?? id;
+    if (slot) this.midiSlots.set(id, key);
+
+    const hold = actionWithId(key)?.hold;
+    if (hold && this.store.soloMode()) {
+      this.midiHeld.add(key);
+      hold(this.context(), true);
+      return;
+    }
+    this.press(key);
   }
 
   private onKeyDown(event: KeyboardEvent): void {
@@ -280,11 +321,16 @@ export class Keyboard {
     this.pick(keyUnder(event));
   }
 
-  // A key is picked: Settings comes back with it chosen in its Keyboard panel.
+  // A key is picked: Settings comes back with it chosen in its Keyboard panel (or learned in its MIDI panel).
   private pick(id: string | null): void {
     this.picked.set(id);
     this.listening.set(false);
-    void this.router.navigateByUrl(KEYBOARD_URL);
+    void this.router.navigateByUrl(this.backUrl());
+  }
+
+  // Where listening comes back to: the Keyboard panel, or the MIDI panel of Settings.
+  private backUrl(): string {
+    return this.pickedFor() === 'midi' ? `${KEYBOARD_URL}#midi` : KEYBOARD_URL;
   }
 
   // A single press on a key while listening, with no second one after it: the key gets its click

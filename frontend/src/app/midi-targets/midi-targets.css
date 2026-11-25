@@ -1,0 +1,220 @@
+/* Listen and the search over the kinds of targets, which scroll: as the Keyboard panel's kinds of keys. */
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.top {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.hint {
+  grid-column: 1 / -1;
+  max-width: 80ch;
+  margin: 2px 0 6px;
+  color: var(--legend-dim);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+input,
+select,
+button {
+  box-sizing: border-box;
+  height: 30px;
+  margin: 0;
+  padding: 0 8px;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--legend);
+  font: inherit;
+  font-size: 14px;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+:is(input, select, button):hover:not(:disabled) {
+  border-color: var(--legend-dim);
+}
+
+.listen {
+  border-color: var(--system);
+  background: color-mix(in srgb, var(--system) 14%, var(--panel));
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.kinds {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+h4 {
+  margin: 0;
+  font-size: inherit;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: auto;
+  padding: 7px 8px;
+  border-color: transparent transparent var(--edge);
+  border-left: 3px solid transparent;
+  border-radius: 0;
+  background: none;
+  text-align: left;
+}
+
+.open .head {
+  border-left-color: var(--system);
+  background: var(--panel);
+  color: #fff;
+}
+
+.none-found {
+  color: var(--legend-dim);
+}
+
+.chevron {
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 6px solid currentColor;
+}
+
+.open .chevron {
+  rotate: 90deg;
+}
+
+.name {
+  font-weight: 600;
+}
+
+.count,
+.none {
+  color: var(--legend-dim);
+}
+
+.mapped {
+  color: var(--channel);
+}
+
+.found {
+  color: var(--sequence-end);
+}
+
+.list {
+  padding: 4px 0 10px 11px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+th,
+td {
+  padding: 3px 8px;
+  border-top: 1px solid var(--edge);
+  background: var(--panel);
+  text-align: left;
+}
+
+th {
+  font-weight: 400;
+}
+
+.mapping {
+  display: block;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.row-keys {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.row-keys button {
+  height: 26px;
+  margin-left: 4px;
+  font-size: 13px;
+}
+
+.delete {
+  color: var(--danger);
+}
+
+/* the target Learn waits for: amber */
+tr.learning > *,
+.learn[aria-pressed='true'] {
+  border-color: var(--system);
+  background: color-mix(in srgb, var(--system) 14%, var(--panel));
+}
+
+.waiting {
+  color: var(--system);
+}
+
+/* the options of a fader's control, under its row */
+.options td {
+  border-top: 0;
+  font-size: 13px;
+}
+
+.options select {
+  height: 26px;
+  margin-right: 10px;
+  font-size: 13px;
+}
+
+.options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 12px;
+}
+
+/* which control the options are of, when the target has several */
+.for {
+  display: block;
+  margin: 2px 0;
+  color: var(--legend-dim);
+}
+
+.options input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--system);
+}
+
+.for-readers {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+:host-context(.mobile) .kinds {
+  overflow: visible;
+}

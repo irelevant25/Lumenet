@@ -1,0 +1,172 @@
+<div class="top">
+  <button
+    type="button"
+    class="listen"
+    aria-label="Listen for a key of the desk to learn"
+    (click)="keyboard.listen('midi')"
+  >
+    Listen
+  </button>
+  <input
+    class="search"
+    type="search"
+    placeholder="Find a key, a fader or a control"
+    aria-label="Find a key, a fader or a control"
+    autocomplete="off"
+    [value]="search()"
+    (input)="onSearch($event)"
+  />
+  <p class="hint">
+    Learn, then press or move the control that is to work it; Listen learns the key you double-click
+    on the desk. A controller's key acts as its shortcut would, on the page of this PC used last.
+  </p>
+</div>
+
+<!-- The kinds of targets, one under the other: "Stack 9 (2) 1", like the kinds of keys of Keyboard. -->
+<div class="kinds" role="group" aria-label="Keys and faders">
+  @for (kind of kinds(); track kind.group; let index = $index) {
+    <section class="kind" [class.open]="kind.group === openGroup()">
+      <h4>
+        <button
+          type="button"
+          class="head"
+          [id]="'midi-kind-' + index"
+          [attr.aria-label]="kindName(kind)"
+          [attr.aria-expanded]="kind.group === openGroup()"
+          [attr.aria-controls]="'midi-kind-list-' + index"
+          [class.none-found]="searching() && kind.found === 0"
+          (click)="toggle(kind.group)"
+          (keydown)="onHeadKey($event, index)"
+        >
+          <span class="chevron" aria-hidden="true"></span>
+          <span class="name">{{ kind.group }}</span>
+          <span class="count">{{ kind.total }}</span>
+          <span class="mapped" [class.none]="kind.mapped === 0">({{ kind.mapped }})</span>
+          @if (searching()) {
+            <span class="found" [class.none]="kind.found === 0">{{ kind.found }}</span>
+          }
+        </button>
+      </h4>
+
+      @if (kind.group === openGroup()) {
+        <div
+          class="list"
+          role="region"
+          [id]="'midi-kind-list-' + index"
+          [attr.aria-labelledby]="'midi-kind-' + index"
+        >
+          @if (rows().length) {
+            <table>
+              <caption class="for-readers">
+                Controls:
+                {{
+                  kind.group
+                }}
+              </caption>
+              <tbody>
+                @for (target of rows(); track target.id) {
+                  <tr [attr.data-row]="target.id" [class.learning]="learning() === target.id">
+                    <th scope="row">{{ target.label }}</th>
+                    <td class="control">
+                      @if (learning() === target.id) {
+                        <span class="waiting">Press or move a control…</span>
+                      } @else {
+                        @for (mapping of mappingsOf(target.id); track $index) {
+                          <span class="mapping">{{ controlOf(mapping) }}</span>
+                        }
+                      }
+                    </td>
+                    <td class="row-keys">
+                      <button
+                        type="button"
+                        class="learn"
+                        [attr.aria-label]="'Learn a control for ' + target.label"
+                        [attr.aria-pressed]="learning() === target.id"
+                        (click)="learn(target.id)"
+                      >
+                        Learn
+                      </button>
+                      <button
+                        type="button"
+                        class="delete"
+                        [attr.aria-label]="'Take the controls of ' + target.label + ' away'"
+                        [disabled]="mappingsOf(target.id).length === 0"
+                        (click)="remove(target.id)"
+                      >
+                        ✕
+                      </button>
+                    </td>
+                  </tr>
+                  @if (isFader(target.id)) {
+                    @for (mapping of mappingsOf(target.id); track $index) {
+                      <tr class="options">
+                        <td colspan="3">
+                          @if (mappingsOf(target.id).length > 1) {
+                            <span class="for">{{ controlOf(mapping) }}:</span>
+                          }
+                          @if (mapping.message === 'cc') {
+                            <select
+                              [attr.aria-label]="
+                                'How ' + controlOf(mapping) + ' moves ' + target.label
+                              "
+                              (change)="setMode(mapping, $event)"
+                            >
+                              @for (item of modes; track item.mode) {
+                                <option [value]="item.mode" [selected]="item.mode === mapping.mode">
+                                  {{ item.label }}
+                                </option>
+                              }
+                            </select>
+                          }
+                          <label>
+                            <input
+                              type="checkbox"
+                              [checked]="mapping.pickup"
+                              [disabled]="mapping.message === 'cc' && mapping.mode !== 'absolute'"
+                              (change)="setPickup(mapping, $event)"
+                            />
+                            Takes over at the desk's value
+                          </label>
+                          <label>
+                            <input
+                              type="checkbox"
+                              [checked]="mapping.feedback"
+                              (change)="setFeedback(mapping, $event)"
+                            />
+                            Motor or lights: the desk sends its value
+                          </label>
+                        </td>
+                      </tr>
+                    }
+                  } @else {
+                    @for (mapping of mappingsOf(target.id); track $index) {
+                      @if (mapping.message !== 'program') {
+                        <tr class="options">
+                          <td colspan="3">
+                            @if (mappingsOf(target.id).length > 1) {
+                              <span class="for">{{ controlOf(mapping) }}:</span>
+                            }
+                            <label>
+                              <input
+                                type="checkbox"
+                                [checked]="mapping.feedback"
+                                (change)="setFeedback(mapping, $event)"
+                              />
+                              Light: the desk lights it as this key
+                            </label>
+                          </td>
+                        </tr>
+                      }
+                    }
+                  }
+                }
+              </tbody>
+            </table>
+          } @else {
+            <p class="hint">No key, fader or control has these letters.</p>
+          }
+        </div>
+      }
+    </section>
+  }
+</div>

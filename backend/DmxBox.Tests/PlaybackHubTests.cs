@@ -459,6 +459,15 @@ public sealed class PlaybackHubTests
 
         public Task EffectIndependentChanged(int index, int effect) => throw new NotSupportedException();
 
+        // The MIDI of the test desk: no controllers, nothing to note.
+        public Task MidiChanged(MidiState state) => Task.CompletedTask;
+
+        public Task MidiMessages(MidiMonitorLine[] lines) => Task.CompletedTask;
+
+        public Task MidiKey(string key, bool down) => Task.CompletedTask;
+
+        public Task MidiRole(MidiRole role) => Task.CompletedTask;
+
         private Task Note(string message)
         {
             Messages.Add(message);

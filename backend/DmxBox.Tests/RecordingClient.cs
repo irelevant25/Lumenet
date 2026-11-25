@@ -150,4 +150,16 @@ internal sealed class RecordingClient : IDeskClient
 
     /// <inheritdoc />
     public Task EffectIndependentChanged(int index, int effect) => throw new NotSupportedException();
+
+    /// <inheritdoc />
+    public Task MidiChanged(MidiState state) => Task.CompletedTask;
+
+    /// <inheritdoc />
+    public Task MidiMessages(MidiMonitorLine[] lines) => Task.CompletedTask;
+
+    /// <inheritdoc />
+    public Task MidiKey(string key, bool down) => Task.CompletedTask;
+
+    /// <inheritdoc />
+    public Task MidiRole(MidiRole role) => Task.CompletedTask;
 }

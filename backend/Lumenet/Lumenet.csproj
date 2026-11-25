@@ -33,6 +33,9 @@
     <PublishIISAssets>false</PublishIISAssets>
     <PublishDocumentationFiles>false</PublishDocumentationFiles>
     <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
+    <!-- The native library of DryWetMIDI (MIDI) goes into the exe too; the exe unpacks it when it
+         starts. -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <!-- The built page (npm run build in frontend). -->
     <PageFolder>$(MSBuildThisFileDirectory)..\..\frontend\dist\lumenet\browser\</PageFolder>
   </PropertyGroup>
@@ -47,8 +50,9 @@
   <ItemGroup>
     <Compile Include="..\DmxBox.Server\**\*.cs" Exclude="..\DmxBox.Server\bin\**;..\DmxBox.Server\obj\**" Link="DmxBox.Server\%(RecursiveDir)%(Filename)%(Extension)" />
     <ProjectReference Include="..\DmxBox\DmxBox.csproj" />
-    <!-- The package of DmxBox.Server: the serial ports of the DMX USB interfaces. -->
+    <!-- The packages of DmxBox.Server: the serial ports of the DMX USB interfaces, and MIDI. -->
     <PackageReference Include="System.IO.Ports" Version="10.0.14" />
+    <PackageReference Include="Melanchall.DryWetMidi" Version="8.0.3" />
   </ItemGroup>
 
   <ItemGroup>
@@ -58,6 +62,14 @@
     <EmbeddedResource Include="..\..\examples\*.json" LogicalName="lumenet-examples/%(Filename)%(Extension)" WithCulture="false" />
     <EmbeddedResource Include="$(PageFolder)**\*" LogicalName="lumenet-page/%(RecursiveDir)%(Filename)%(Extension)" WithCulture="false" />
   </ItemGroup>
+
+  <!-- DryWetMIDI brings its native library for 32-bit Windows and for macOS as well. Lumenet.exe is
+       for 64-bit Windows: those two stay out, or they would stand beside the single exe. -->
+  <Target Name="LeaveOutOtherMidiLibraries" BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <None Remove="@(None)" Condition="'%(Filename)%(Extension)' == 'Melanchall_DryWetMidi_Native32.dll' or '%(Filename)%(Extension)' == 'Melanchall_DryWetMidi_Native64.dylib'" />
+    </ItemGroup>
+  </Target>
 
   <!-- An exe without its page would only offer the hub: publishing needs the page built first. -->
   <Target Name="RequireThePage" BeforeTargets="PrepareForPublish" Condition="!Exists('$(PageFolder)index.html')">

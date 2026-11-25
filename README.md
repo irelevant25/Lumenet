@@ -25,6 +25,9 @@ Pico that takes what the desk sends over USB to the DMX512 cable of the lights.
 * **Projects** in files, with notes for the show, undo and redo, and an autosave; export and import, also of the
   show files of theatre consoles (USITT ASCII).
 * **Phones and tablets** in the same network can use the desk as well, with a password.
+* **MIDI controllers** play the desk: their keys press its keys, their faders and knobs move its faders, and
+  the desk lights their keys and moves their motorized faders. Learn maps a control in two presses; the Akai
+  APC mini mk2, Korg nanoKONTROL2 and Behringer X-Touch Mini and Compact have ready-made mappings.
 * A keyboard shortcut for every key, and settings for how each device shows the desk.
 * **Seven example shows** to start from, from a few memories to a whole concert, and one of effects.
 
@@ -60,7 +63,8 @@ say that it does not know the program, as it is not signed: More info, then Run 
 
 **From the sources:** with the .NET 10 SDK and Node.js 22, `run.cmd` starts the desk; then open
 http://localhost:4200. `sim.cmd` starts a simulated box, Art-Net node, sACN receiver or USB interface for the
-desk to play on, without the hardware (see [DEV.md](DEV.md#simulated-devices-simcmd)).
+desk to play on, or a MIDI controller to play it with, without the hardware (see
+[DEV.md](DEV.md#simulated-devices-simcmd)).
 
 **The box:** the parts are in [BOM.md](hardware/pico/BOM.md). The schematic, the plans for a breadboard and a perfboard, and
 the firmware, which is built with the Pico SDK and copied onto the Pico, are in [DEV.md](DEV.md#1-hardware).

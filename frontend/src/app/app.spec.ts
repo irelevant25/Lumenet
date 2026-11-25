@@ -31,6 +31,8 @@ import {
 } from './desk/desk-types';
 import { Effect } from './desk/effects';
 import { IDLE } from './desk/function-mode';
+import { Keyboard } from './desk/keyboard';
+import type { MidiLamp, MidiMapping, MidiMonitorLine, MidiSetup, MidiState } from './desk/midi';
 import { NOTE_LINE_SEPARATOR } from './desk/notes';
 
 // The test browser (jsdom) has no modal windows. A window of the page only gets its "open" mark here.
@@ -116,6 +118,10 @@ class FakeConnection {
   networks: NetworkChoice[] = [{ network: '192.168.1.0/24', address: '192.168.1.20', adapter: 'Wi-Fi', router: true }];
   /** The effects of the project, as the backend answers "GetEffects": none at first. */
   effects: Effect[] = [];
+  /** The MIDI of the PC, as the backend answers "GetMidi": none (a desk program from before MIDI) unless a test gives it. */
+  midi: MidiState | undefined = undefined;
+  /** The messages that came in from the controllers, as "WatchMidi" answers. */
+  midiLines: MidiMonitorLine[] = [];
 
   start(): void {
     this.online.set(true);
@@ -175,7 +181,33 @@ class FakeConnection {
     if (method === 'GetNetworks') return this.networks;
     if (method === 'GetEffects') return this.effects;
     if (method === 'PreviewEffect') return null;
+    if (method === 'GetMidi') return this.midi;
+    if (method === 'WatchMidi') return args[0] ? this.midiLines : undefined;
+    if (this.midi) return this.midiAnswer(this.midi, method, args);
     return undefined;
+  }
+
+  // The answers of a desk program with MIDI: the MIDI after the change.
+  private midiAnswer(midi: MidiState, method: string, args: unknown[]): unknown {
+    if (method === 'SetMidiMappings') return (this.midi = { ...midi, mappings: args[0] as MidiMapping[] });
+    if (method === 'LearnMidi') return (this.midi = { ...midi, learning: args[0] as string | null });
+    if (method === 'SetMidiDevice') {
+      const [name, used] = args as [string, boolean];
+      const devices = midi.devices.map((device) =>
+        device.name === name ? { ...device, used, state: used ? ('open' as const) : ('unused' as const) } : device,
+      );
+      return (this.midi = { ...midi, devices });
+    }
+    if (method === 'GetMidiSetup') {
+      return { devices: midi.devices.filter((device) => device.used).map((device) => device.name), mappings: midi.mappings };
+    }
+    if (method === 'SetMidiSetup') return (this.midi = { ...midi, mappings: (args[0] as MidiSetup).mappings });
+    return undefined;
+  }
+
+  /** A method that answers as a stream of one item (the search for Art-Net nodes): as invoke here. */
+  ask(method: string, ...args: unknown[]): Promise<unknown> {
+    return this.invoke(method, ...args);
   }
 
   send(method: string, ...args: unknown[]): void {
@@ -216,7 +248,29 @@ const QUESTIONS = [
   'GetNetworks',
   'GetEffects',
   'PreviewEffect',
+  // the MIDI controllers of the PC: asked for on connecting, the keys claimed when the page is used,
+  // the lamps and the pages told, the list of messages watched while the MIDI panel is shown
+  'GetMidi',
+  'ClaimMidi',
+  'ReportMidiLamps',
+  'ReportMidiPages',
+  'WatchMidi',
 ];
+
+/** The MIDI of the PC in the tests: a controller in use with two controls mapped, and one that is not plugged in. */
+const MIDI: MidiState = {
+  works: true,
+  devices: [
+    { name: 'APC mini mk2', input: true, output: true, used: true, state: 'open', problem: null, simulated: false },
+    { name: 'nanoKONTROL2', input: true, output: true, used: true, state: 'missing', problem: null, simulated: false },
+  ],
+  mappings: [
+    { device: 'APC mini mk2', channel: 1, message: 'note', number: 56, target: 'stack.play', mode: 'absolute', pickup: false, feedback: false },
+    { device: 'APC mini mk2', channel: 1, message: 'cc', number: 48, target: 'fader.slot.channel.1', mode: 'absolute', pickup: true, feedback: false },
+  ],
+  learning: null,
+  presets: [{ id: 'apc-mini-mk2', name: 'Akai APC mini mk2', device: 'APC mini mk2', about: 'The faders move the channels of the page shown.' }],
+};
 
 /** A step on a channel, with all three times at one second unless said otherwise. */
 function step(number: number, value: number, more: Partial<TimedStep> = {}): TimedStep {
@@ -3422,11 +3476,11 @@ describe('the desk page', () => {
     expect(page.querySelectorAll('lm-channel-section lm-fader-strip').length).toBe(16);
   });
 
-  it('Settings has four panels: the main view with the universes, the zoom, the autosave and LAN; the views; the colors; the keyboard; the outputs under them', async () => {
+  it('Settings has its panels: the main view with the universes, the zoom, the autosave and LAN; the views; the colors; the keyboard; MIDI and the outputs after them', async () => {
     await show('/settings');
     const panels = [...page.querySelectorAll('lm-settings-view .panels > *')];
     const titles = (panel: Element, level: string) => [...panel.querySelectorAll(level)].map((title) => title.textContent?.trim());
-    expect(panels.map((panel) => titles(panel, 'h3')[0])).toEqual(['Main view', 'Views in the top bar', 'Colors of the keys', 'Keyboard', 'Outputs']);
+    expect(panels.map((panel) => titles(panel, 'h3')[0])).toEqual(['Main view', 'Views in the top bar', 'Colors of the keys', 'Keyboard', 'MIDI', 'Outputs']);
     expect(titles(panels[0], 'h4')).toEqual(['Universes', 'Zoom', 'Autosave', 'Network (LAN)']);
     expect(page.querySelector('#universes')?.closest('.panel')).toBe(panels[0]);
     // fields only, no sentences about them, until the autosave and LAN, which keep theirs
@@ -3954,5 +4008,243 @@ describe('the desk page', () => {
       expect(actionWithId(id)).toBeTruthy();
     }
     expect(ACTION_GROUPS).toContain('Effect keys');
+  });
+
+  // ---------------------------------------------------------------- MIDI controllers
+
+  /** The desk program knows MIDI: it says what the PC has, as after a change. */
+  async function withMidi(state: Partial<MidiState> = {}): Promise<void> {
+    connection.midi = { ...MIDI, ...state };
+    connection.emit('MidiChanged', connection.midi);
+    await fixture.whenStable();
+  }
+
+  /** A key of a controller, pressed or let go, as the desk program sends it to the page that presses the keys. */
+  async function midiKey(key: string, down: boolean): Promise<void> {
+    connection.emit('MidiKey', key, down);
+    await fixture.whenStable();
+  }
+
+  it('a key of a MIDI controller presses the key of the desk, as its shortcut would', async () => {
+    await midiKey('master.clear', true);
+    await midiKey('master.clear', false);
+    expect(connection.methods().filter((method) => method === 'Clear')).toEqual(['Clear']);
+
+    await midiKey('view.stage', true);
+    expect(TestBed.inject(Router).url).toBe('/stage');
+
+    // a key of the pages shown presses the key under that fader of the page shown
+    await midiKey('slot.memory.2', true);
+    await midiKey('slot.memory.2', false);
+    expect(store.memoryLevels()[1]).toBe(255);
+    store.showChannelPage(store.channelsPerPage() + 1);
+    await midiKey('slot.channel.5', true);
+    expect(store.channels()[store.channelsPerPage() + 4]).toBe(255);
+    expect(store.channels()[4]).toBe(0);
+
+    // the next and the one before of the page keys
+    await midiKey('page.channel.previous', true);
+    expect(store.firstChannel()).toBe(1);
+    await midiKey('page.channel.previous', true);
+    expect(store.firstChannel()).toBe(1); // there is none before the first
+    await midiKey('page.memory.next', true);
+    expect(store.firstMemory()).toBe(store.memoriesPerPage() + 1);
+  });
+
+  it('while a solo is lit, a key of a controller held down holds its fader until it is let go', async () => {
+    await midiKey('master.solo', true);
+    await midiKey('master.solo', false);
+    expect(store.soloMode()).toBe('up');
+
+    await midiKey('slot.memory.2', true);
+    expect(connection.last('HoldSolo')).toEqual([true, 'memory', 2, true]);
+    expect(store.memoryLevels()[1]).toBe(255);
+
+    // the page moves on meanwhile: the key let go is still that of memory 2
+    store.showMemoryPage(store.memoriesPerPage() + 1);
+    await midiKey('slot.memory.2', false);
+    expect(connection.last('HoldSolo')).toEqual([true, 'memory', 2, false]);
+    expect(store.memoryLevels()[1]).toBe(0);
+  });
+
+  it('a locked key stays locked for a controller, and the keys rest while a key is being picked', async () => {
+    const keyboard = TestBed.inject(Keyboard);
+    keyboard.listen('midi');
+    await fixture.whenStable();
+    await midiKey('master.clear', true);
+    expect(connection.methods()).not.toContain('Clear');
+    keyboard.stopListening();
+    await fixture.whenStable();
+
+    // while the stack is live, the Record keys are locked: Save mem does nothing
+    await stackStands(LIVE);
+    await midiKey('record.save', true);
+    expect(store.mode()).toEqual(IDLE);
+  });
+
+  it('the page that presses the keys tells the desk program how they are lit, and which pages it shows', async () => {
+    const lamps = async (): Promise<MidiLamp[]> => {
+      await fixture.whenStable();
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      return (connection.last('ReportMidiLamps')?.[0] as MidiLamp[] | undefined) ?? [];
+    };
+    connection.emit('MidiRole', { controls: true, keys: ['master.clear', 'master.blackout', 'memory.2', 'slot.memory.2', 'record.save'] });
+    const first = await lamps();
+    expect(first).toContainEqual({ key: 'master.clear', level: 3, blink: false });
+    expect(first).toContainEqual({ key: 'master.blackout', level: 1, blink: false });
+    expect(first).toContainEqual({ key: 'memory.2', level: 2, blink: false }); // it holds a look, its fader is down
+    expect(first).toContainEqual({ key: 'slot.memory.2', level: 2, blink: false });
+    expect(connection.last('ReportMidiPages')).toEqual([
+      {
+        firstChannel: 1,
+        channelsPerPage: store.channelsPerPage(),
+        firstMemory: 1,
+        memoriesPerPage: store.memoriesPerPage(),
+        firstEffect: 1,
+        effectsPerPage: store.stripsPerRow(),
+      },
+    ]);
+
+    // Save mem waits for a memory: it is lit, the memory keys blink; only what changed goes again
+    store.pressFunction('save');
+    const changed = await lamps();
+    expect(changed).toContainEqual({ key: 'record.save', level: 3, blink: false });
+    expect(changed).toContainEqual({ key: 'memory.2', level: 2, blink: true });
+    expect(changed.map((lamp) => lamp.key)).not.toContain('master.clear');
+
+    // another page is used now: this one tells nothing more
+    connection.emit('MidiRole', { controls: false, keys: [] });
+    const told = connection.calls.length;
+    store.pressFunction('save');
+    await lamps();
+    expect(connection.calls.slice(told).map((call) => call.method)).not.toContain('ReportMidiLamps');
+  });
+
+  it('the MIDI panel of Settings lists the devices, the messages that came in, and every key and fader with its controls', async () => {
+    await show('/settings');
+    const panel = page.querySelector<HTMLElement>('lm-midi-panel')!;
+    expect(panel.textContent).toContain('The desk program is older than this page and knows no MIDI.');
+
+    await withMidi();
+    expect(connection.last('WatchMidi')).toEqual([true]);
+    expect(panel.querySelector('lm-midi-devices')?.textContent).toContain('APC mini mk2');
+    expect(panel.querySelector('lm-midi-devices')?.textContent).toContain('Not plugged in');
+    expect(panel.querySelector('#midi-preset-device')).toBeTruthy();
+
+    // a message came in: the list shows it, with what it did
+    connection.emit('MidiMessages', [
+      {
+        at: Date.now(),
+        device: 'APC mini mk2',
+        message: 'Note On 56, velocity 127, channel 1',
+        target: 'stack.play',
+        result: 'down',
+        value: null,
+        desk: null,
+        reason: null,
+      },
+    ]);
+    await fixture.whenStable();
+    expect(panel.querySelector('lm-midi-monitor tbody tr')?.textContent).toContain('Play pressed');
+
+    // the kinds of keys and faders: Stack has Play with its control; Learn waits for Pause
+    const head = (name: string) =>
+      [...panel.querySelectorAll<HTMLButtonElement>('lm-midi-targets .head')].find((found) => found.querySelector('.name')?.textContent === name)!;
+    const row = (id: string) => panel.querySelector<HTMLElement>(`tr[data-row="${id}"]`)!;
+    expect(head('Stack').getAttribute('aria-label')).toBe('Stack: 6 targets, 1 with a control');
+    await press(head('Stack'));
+    expect(row('stack.play').textContent).toContain('APC mini mk2: Note 56, channel 1');
+    await press(row('stack.pause').querySelector<HTMLButtonElement>('button.learn'));
+    expect(connection.last('LearnMidi')).toEqual(['stack.pause']);
+    expect(row('stack.pause').classList).toContain('learning');
+    expect(panel.querySelector('.learning[role="status"]')?.textContent).toContain('Pause');
+    // Esc stops it
+    panel.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await fixture.whenStable();
+    expect(connection.last('LearnMidi')).toEqual([null]);
+
+    // ✕ takes the controls of Play away
+    await press(row('stack.play').querySelector<HTMLButtonElement>('button.delete'));
+    expect((connection.last('SetMidiMappings')?.[0] as MidiMapping[]).map((mapping) => mapping.target)).toEqual(['fader.slot.channel.1']);
+
+    // a fader's control has its options: as an endless encoder it takes no pickup
+    await press(head('Faders of the pages shown'));
+    const options = () => row('fader.slot.channel.1').nextElementSibling as HTMLElement;
+    const mode = options().querySelector('select')!;
+    mode.value = 'relative-twos';
+    mode.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect((connection.last('SetMidiMappings')?.[0] as MidiMapping[])[0]).toMatchObject({ target: 'fader.slot.channel.1', mode: 'relative-twos' });
+    expect(options().querySelector<HTMLInputElement>('input[type="checkbox"]')!.disabled).toBe(true);
+
+    // the search finds a control by what it is
+    const search = panel.querySelector<HTMLInputElement>('lm-midi-targets input[type="search"]')!;
+    search.value = 'cc 48';
+    search.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    expect([...panel.querySelectorAll('lm-midi-targets tr[data-row]')].map((found) => found.getAttribute('data-row'))).toEqual([
+      'fader.slot.channel.1',
+    ]);
+  });
+
+  it('Listen in the MIDI panel learns the key double-clicked on the desk', async () => {
+    const router = TestBed.inject(Router);
+    await withMidi();
+    await show('/settings');
+    await press(button('Listen for a key of the desk to learn'));
+    expect(router.url).toBe('/');
+
+    const clear = page.querySelector('[data-action="master.clear"]')!;
+    for (let twice = 0; twice < 2; twice++) {
+      clear.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, cancelable: true }));
+      (clear as HTMLElement).click();
+    }
+    await fixture.whenStable();
+    expect(router.url).toBe('/settings#midi');
+    await until(() => connection.last('LearnMidi')?.[0] === 'master.clear');
+    expect(connection.last('LearnMidi')).toEqual(['master.clear']);
+    expect(page.querySelector('lm-midi-targets tr[data-row="master.clear"]')).toBeTruthy(); // its kind is open
+    expect(connection.methods()).not.toContain('Clear'); // the key picked is not pressed
+  });
+
+  it('Export and Import take the MIDI of the PC along; a phone cannot, and its MIDI panel says so', async () => {
+    const written: string[] = [];
+    (globalThis as { showSaveFilePicker?: unknown }).showSaveFilePicker = async (options: { suggestedName: string }) => ({
+      name: options.suggestedName,
+      createWritable: async () => ({ write: async (text: string) => void written.push(text), close: async () => undefined }),
+    });
+    try {
+      await withMidi();
+      await press(button('Export'));
+      await check('lm-export-dialog', 'MIDI');
+      await press(button('Export the file'));
+      await until(() => written.length > 0);
+      const file = JSON.parse(written[0]);
+      expect(file.midi).toEqual({ devices: ['APC mini mk2', 'nanoKONTROL2'], mappings: MIDI.mappings });
+      await press(buttonIn('lm-export-dialog', 'OK'));
+
+      await press(button('Import'));
+      await check('lm-import-dialog', 'MIDI');
+      await pick(new File([written[0]], 'Lumenet - midi.json'));
+      await press(button('Import the file'));
+      await until(() => page.querySelector('lm-import-dialog .report') !== null);
+      expect(connection.last('SetMidiSetup')).toEqual([file.midi]);
+      expect(textOf('lm-import-dialog .report')).toContain('The MIDI controllers of this PC');
+      await press(buttonIn('lm-import-dialog', 'OK'));
+    } finally {
+      delete (globalThis as { showSaveFilePicker?: unknown }).showSaveFilePicker;
+    }
+
+    // a phone
+    connection.emit('LanAccessChanged', { ...connection.lan, local: false });
+    await fixture.whenStable();
+    await press(button('Export'));
+    const box = [...page.querySelectorAll('lm-export-dialog .parts label')].find((label) => label.textContent?.trim().startsWith('MIDI'))!;
+    expect(box.querySelector('input')!.disabled).toBe(true);
+    expect(box.textContent).toContain('only the PC');
+    await press(buttonIn('lm-export-dialog', 'Cancel'));
+    await show('/settings');
+    expect(page.querySelector('lm-midi-panel')?.textContent).toContain('only the PC sets them');
+    expect(page.querySelector('lm-midi-targets')).toBeNull();
   });
 });

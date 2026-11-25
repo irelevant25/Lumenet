@@ -31,6 +31,7 @@ internal sealed class DeskHub : Hub<IDeskClient>
     private readonly LanAccess _lan;
     private readonly UndoHistory _history;
     private readonly Autosave _autosave;
+    private readonly MidiControl _midi;
 
     /// <summary>SignalR makes a hub for every call and fills in the parts of the server.</summary>
     /// <param name="desk">The desk.</param>
@@ -40,8 +41,9 @@ internal sealed class DeskHub : Hub<IDeskClient>
     /// <param name="lan">Whether other devices in the network may use the desk.</param>
     /// <param name="history">Undo and redo for what the project holds.</param>
     /// <param name="autosave">Keeps the work that is not saved yet.</param>
+    /// <param name="midi">The MIDI controllers of the PC.</param>
     public DeskHub(
-        Desk desk, ProjectStore projects, BoxNetwork boxes, OutputNetwork outputs, LanAccess lan, UndoHistory history, Autosave autosave)
+        Desk desk, ProjectStore projects, BoxNetwork boxes, OutputNetwork outputs, LanAccess lan, UndoHistory history, Autosave autosave, MidiControl midi)
     {
         _desk = desk;
         _projects = projects;
@@ -50,6 +52,7 @@ internal sealed class DeskHub : Hub<IDeskClient>
         _lan = lan;
         _history = history;
         _autosave = autosave;
+        _midi = midi;
     }
 
     // True when the UI that calls runs on this PC, not on another device in the network.
@@ -74,6 +77,9 @@ internal sealed class DeskHub : Hub<IDeskClient>
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         _lan.Untrack(Context.ConnectionId);
+
+        // A page on the PC that pressed the keys of the MIDI controllers hands that to the one used before it.
+        _midi.Leave(Context.ConnectionId);
 
         // Keys it held for a solo are let go with it: no solo stays on by itself.
         if (_desk.DropSolo(Context.ConnectionId))
@@ -602,11 +608,25 @@ internal sealed class DeskHub : Hub<IDeskClient>
 
     /// <summary>
     /// Asks every Art-Net node on the networks of this PC to answer, and gives those that did, for
-    /// the Outputs window to add. Takes a second and a half.
+    /// the Outputs panel to add. It takes a second and a half, so it answers as a stream of one:
+    /// SignalR takes one call of a page at a time, and a call this long would hold up that page's
+    /// faders and keys meanwhile (and the keys of a MIDI controller it presses); a stream runs
+    /// beside them.
     /// </summary>
-    public Task<FoundNode[]> FindArtNetNodes()
+    public async IAsyncEnumerable<FoundNode[]> FindArtNetNodes()
     {
-        return _outputs.FindArtNetNodesAsync();
+        FoundNode[] found;
+        try
+        {
+            found = await _outputs.FindArtNetNodesAsync();
+        }
+        catch (DeskException e)
+        {
+            // UserErrorFilter sees only the start of a stream: the refusal is said here as it says them.
+            throw new HubException(e.Message);
+        }
+
+        yield return found;
     }
 
     /// <summary>The serial ports of the PC, for a DMX USB interface: "COM3", "/dev/ttyUSB0".</summary>
@@ -750,6 +770,102 @@ internal sealed class DeskHub : Hub<IDeskClient>
     public string? GetRecovered()
     {
         return _projects.Recovered?.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture);
+    }
+
+    // ---------------------------------------------------------------- MIDI
+
+    /// <summary>
+    /// The MIDI controllers of the PC: the devices, what their controls do, the ready-made mappings.
+    /// A page on another device sees them; only a page on the PC changes them (they belong to it).
+    /// </summary>
+    public MidiState GetMidi()
+    {
+        return _midi.State;
+    }
+
+    /// <summary>Uses a MIDI device (the desk opens it) or leaves it to other programs. Only on the PC.</summary>
+    /// <param name="name">The device, by its name.</param>
+    /// <param name="use">True to use it.</param>
+    public MidiState SetMidiDevice(string name, bool use)
+    {
+        RequireLocal("MIDI can only be set on the PC.");
+        return _midi.Use(name, use);
+    }
+
+    /// <summary>What the controls do, all of them: they take the place of those before. Only on the PC.</summary>
+    /// <param name="mappings">Every mapping.</param>
+    public MidiState SetMidiMappings(MidiMapping[] mappings)
+    {
+        RequireLocal("MIDI can only be set on the PC.");
+        return _midi.SetMappings(mappings);
+    }
+
+    /// <summary>
+    /// Learn: the next control that moves on a device the desk uses is to work this key or fader;
+    /// null stops learning. Only on the PC.
+    /// </summary>
+    /// <param name="target">The key ("memory.5") or fader ("fader.master"), see <see cref="ControlTarget"/>.</param>
+    public MidiState LearnMidi(string? target)
+    {
+        RequireLocal("MIDI can only be set on the PC.");
+        return _midi.Learn(target);
+    }
+
+    /// <summary>Gives a device the ready-made mapping of its controller. Only on the PC.</summary>
+    /// <param name="preset">The preset, like "apc-mini-mk2".</param>
+    /// <param name="device">The device, by its name.</param>
+    public MidiState UseMidiPreset(string preset, string device)
+    {
+        RequireLocal("MIDI can only be set on the PC.");
+        return _midi.UsePreset(preset, device);
+    }
+
+    /// <summary>The MIDI setup of the PC, for Export. Only on the PC.</summary>
+    public MidiSetup GetMidiSetup()
+    {
+        RequireLocal("MIDI can only be exported on the PC.");
+        return _midi.Setup;
+    }
+
+    /// <summary>A MIDI setup takes the place of the PC's (Import). Only on the PC.</summary>
+    /// <param name="setup">The setup.</param>
+    public MidiState SetMidiSetup(MidiSetup setup)
+    {
+        RequireLocal("MIDI can only be imported on the PC.");
+        return _midi.SetSetup(setup);
+    }
+
+    /// <summary>
+    /// A page on the PC was used: it presses the keys of the controllers from now on, as the one
+    /// used last. A page on another device never does.
+    /// </summary>
+    public void ClaimMidi()
+    {
+        if (IsLocal)
+            _midi.Claim(Context.ConnectionId);
+    }
+
+    /// <summary>The page that presses the keys of the controllers tells how the desk's keys are lit: the controllers' lights follow.</summary>
+    /// <param name="lamps">The lamps that changed, or all of them.</param>
+    public void ReportMidiLamps(MidiLamp[] lamps)
+    {
+        _midi.ReportLamps(Context.ConnectionId, lamps);
+    }
+
+    /// <summary>The page that presses the keys of the controllers tells which pages of faders it shows: the slots follow.</summary>
+    /// <param name="pages">The pages.</param>
+    public void ReportMidiPages(MidiPages pages)
+    {
+        _midi.ReportPages(Context.ConnectionId, pages);
+    }
+
+    /// <summary>The page shows the list of incoming MIDI messages, or no more. Only on the PC.</summary>
+    /// <param name="on">True while it shows it.</param>
+    /// <returns>The last messages, while it shows them.</returns>
+    public MidiMonitorLine[] WatchMidi(bool on)
+    {
+        RequireLocal("The MIDI messages can only be shown on the PC.");
+        return _midi.Watch(Context.ConnectionId, on);
     }
 
     /// <summary>Play: goes on after a pause, or goes to the next step.</summary>

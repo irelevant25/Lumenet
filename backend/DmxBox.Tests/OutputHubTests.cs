@@ -90,7 +90,7 @@ public sealed class OutputHubTests : IDisposable
         await using TestServer server = await StartAsync();
         await using HubClient ui = await server.ConnectAsync();
 
-        JsonElement found = await ui.InvokeAsync("FindArtNetNodes");
+        JsonElement found = await SearchAsync(ui);
 
         JsonElement node = Assert.Single(found.EnumerateArray());
         Assert.Equal(
@@ -98,8 +98,30 @@ public sealed class OutputHubTests : IDisposable
             node.GetRawText());
 
         _node.ShortName = "dmxbox 2";
-        found = await ui.InvokeAsync("FindArtNetNodes");
+        found = await SearchAsync(ui);
         Assert.True(Assert.Single(found.EnumerateArray()).GetProperty("dmxbox").GetBoolean());
+    }
+
+    [Fact]
+    public async Task TheSearchHoldsUpNothingElseOfTheUi()
+    {
+        await using TestServer server = await StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+
+        // The search takes a second and a half; a fader moved meanwhile is answered at once.
+        string search = await ui.StartStreamAsync("FindArtNetNodes");
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        await ui.InvokeAsync("SetChannel", 1, 200);
+        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(1), $"The fader waited {clock.Elapsed.TotalSeconds:0.00} s for the search.");
+
+        JsonElement found = Assert.Single(await ui.StreamResultAsync(search));
+        Assert.Single(found.EnumerateArray());
+    }
+
+    // The search, as the Outputs panel asks for it: a stream of one answer.
+    private static async Task<JsonElement> SearchAsync(HubClient ui)
+    {
+        return Assert.Single(await ui.StreamResultAsync(await ui.StartStreamAsync("FindArtNetNodes")));
     }
 
     [Fact]

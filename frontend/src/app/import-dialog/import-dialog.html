@@ -21,9 +21,14 @@
         <legend>Import</legend>
         @for (part of parts; track part.part) {
           <label>
-            <input type="checkbox" [checked]="chosen().has(part.part)" (change)="onCheck(part.part, $event)" />
+            <input
+              type="checkbox"
+              [checked]="chosen().has(part.part)"
+              [disabled]="note(part) !== ''"
+              (change)="onCheck(part.part, $event)"
+            />
             {{ part.label }}
-            <small>{{ part.hint }}</small>
+            <small>{{ note(part) || part.hint }}</small>
           </label>
         }
         <label>

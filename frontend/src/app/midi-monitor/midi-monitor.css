@@ -1,0 +1,63 @@
+/* The incoming messages: a small table that scrolls, the newest at the top. */
+h4 {
+  margin: 4px 0 6px;
+  color: var(--legend-dim);
+  font-size: 12px;
+  font-stretch: 75%;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hint {
+  max-width: 80ch;
+  margin: 2px 0 10px;
+  color: var(--legend-dim);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.box {
+  max-height: 136px;
+  margin-bottom: 10px;
+  overflow: auto;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: var(--panel);
+  scrollbar-width: thin;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  padding: 4px 8px;
+  background: var(--panel);
+  color: var(--legend-dim);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+td {
+  padding: 3px 8px;
+  border-top: 1px solid var(--edge);
+}
+
+.time,
+.message {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* a control that does nothing, or is refused: amber, to be seen */
+tr.stands td:last-child {
+  color: var(--system);
+}

@@ -126,7 +126,7 @@ export class KeyboardPanel {
     effect(() => {
       const picked = this.keyboard.picked();
       const action = picked ? actionWithId(picked) : undefined;
-      if (!action) return;
+      if (!action || this.keyboard.pickedFor() !== 'keyboard') return; // one picked for MIDI is the MIDI panel's
 
       this.openGroup.set(action.group);
       this.search.set('');

@@ -380,19 +380,21 @@ each.
   They are the files in `examples/`; the desk program takes them along when it is built, and the setting
   `Projects:Examples` names another folder for them.
 
-![The Export window with its four checkboxes, none checked](docs/screenshots/export.png)
+![The Export window with its five checkboxes, none checked](docs/screenshots/export.png)
 
 * **Export** puts parts of the desk into one file on this device: **Project** (everything the project holds,
   as its file has it), **Stage** (the stage alone: its lights, their kinds, the groups and the picture),
-  **Settings** (those of this device) and **Keyboard** (its shortcuts). Each has a checkbox, none checked at
-  first. Chrome and Edge on the PC ask where to save the file; other browsers put it among the downloads.
+  **Settings** (those of this device), **Keyboard** (its shortcuts) and **MIDI** (the MIDI controllers of the
+  PC and what their controls do; on the PC only, see [MIDI controllers](#midi-controllers)). Each has a
+  checkbox, none checked at first. Chrome and Edge on the PC ask where to save the file; other browsers put it
+  among the downloads.
 * **Import** takes parts back from such a file, here or on another device: the same checkboxes, none checked
   at first, then **File** and **Import**. It also takes a project file of the projects folder (its project
   and its stage). A project comes in place of the open one, as with Load, called after the file and not
   saved until Save; a stage comes in place of the project's stage (a step of Undo), and a step that played
-  light 3 of the old stage plays light 3 of the new one; settings and shortcuts become this device's. When
-  the file lacks a part that is checked, nothing is imported, and the window says which part. The window
-  then says what came in. **.ASC** is the fifth checkbox, for the show of a theatre console, a file of its
+  light 3 of the old stage plays light 3 of the new one; settings and shortcuts become this device's, and the
+  MIDI the PC's. When the file lacks a part that is checked, nothing is imported, and the window says which
+  part. The window then says what came in. **.ASC** is the sixth checkbox, for the show of a theatre console, a file of its
   own, so it is taken alone (it unchecks the others): a file in the USITT ASCII format (`.asc`, up to 8 MB),
   the plain text in which consoles such as ETC Eos, Ion and Express, the ETC (AVAB) SmartFade or the Strand
   consoles hand a show on (on an Eos: File, Export, USITT ASCII; a SmartFade saves its shows in this format).
@@ -836,9 +838,9 @@ really does, and flashes on the screen at most twice a second, as a strobe does.
 
 ### From another program
 
-The playback of every effect can also be worked from outside the page, for a MIDI controller later: start
-and stop, the fader, the speed, the size and the spread, as "effect 3 speed = 120 BPM". How: see
-[DEV.md](DEV.md#effects-from-outside).
+The playback of every effect can also be worked from outside the page: start and stop, the fader, the speed,
+the size and the spread, as "effect 3 speed = 120 BPM". A MIDI controller does it with its keys and faders
+(see [MIDI controllers](#midi-controllers)); another program as [DEV.md](DEV.md#effects-from-outside) says.
 
 ## Screens, phones and tablets
 
@@ -912,11 +914,12 @@ LAN to the desk program.
 
 ![The Settings view](docs/screenshots/settings.png)
 
-Settings has five panels side by side, as many as the window has room for, each as high as the window
+Settings has six panels side by side, as many as the window has room for, each as high as the window
 lets it be and scrolling where it holds more: **Main view** (with the universes, the zoom, the autosave and
 the network under it), **Views in the top bar**, **Colors of the keys** (one under the other),
-**Keyboard** (see [Keyboard](#keyboard)) and the **Outputs** of the project (see
-[The outputs](#the-outputs)), which is two columns wide for its table.
+**Keyboard** (see [Keyboard](#keyboard)), **MIDI** (see [MIDI controllers](#midi-controllers)) and the
+**Outputs** of the project (see [The outputs](#the-outputs)); MIDI and Outputs are two columns wide for their
+tables.
 
 * **Channels on a page** (Main): Auto (a row of 32 or 16 by the window, as above), or 8, 16, 32, 64 or 128.
 * **Rows of channel faders** and **rows of memory faders** (Main): 1 or 2 of each, at first 2 and 1. A
@@ -1007,3 +1010,100 @@ their own, Keyboard, with tabs; its address now opens Settings.)
   Sequences view and of the Stage view, Copy and Del of the Effects view and Edit of the independents, which
   work only where they are (Keep and ↺ work on the effect the Effects view shows). Shortcuts rest while a note
   or another field is typed into and while a window such as Load is open.
+
+## MIDI controllers
+
+A MIDI controller plugged into the PC (an Akai APC mini, a Korg nanoKONTROL2, a Behringer X-Touch and many
+others) plays the desk: its keys press the desk's keys, its faders and knobs move its faders, and the desk
+lights its keys and moves its motorized faders back. The desk program takes the controller, not the page, so it
+works whichever pages are open, on Windows and macOS (on Linux only the simulators below).
+
+![The MIDI panel of Settings: two simulated controllers in use, the messages that came in, and the faders of the pages shown with their controls](docs/screenshots/midi.png)
+
+The **MIDI** panel of Settings, two columns wide, sets it up; only the PC can, as the controllers belong to it.
+
+* **Devices:** the MIDI devices of the PC. A ticked one the desk uses: it opens it, and on Windows no other
+  program can have it meanwhile. A device that is pulled out shows "Not plugged in"; when it is back the
+  desk takes it again by its name (it looks every 2 seconds). "No output" means its lights cannot be set.
+* **Ready-made mapping:** gives a device the mapping of its controller (see below). It takes the place of
+  what that device's controls did before, and the desk uses the device.
+* **Incoming messages:** the last messages of the devices in use, the newest first, each with what it did:
+  "Memory key 5 pressed", "Channel fader 1 of the page shown to 128". In amber when it did nothing: no
+  mapping, no page of the desk open on the PC, a fader waiting until the control reaches the desk's value, or
+  a refusal with its reason.
+* Under them every key and fader of the desk, kind by kind, as the Keyboard panel lists the keys, each with
+  the controls that work it, **Learn** and **✕**. **Learn**, then press or move a control: from now on it
+  works that key or fader, and nothing else. Learn again, Stop or Esc stops waiting. **Listen** shows the
+  desk, and the key double-clicked there is learned. ✕ takes all controls of that key or fader away. The
+  search finds keys and faders by their names, and controls by what they are ("cc 48").
+* A key takes a note, a controller (CC, pressed above 0) or a program change. A fader takes a controller, a
+  pair of controllers for 14 bits (when the fine one, 32 above, follows at once while learning) or the pitch
+  bend (the faders of Mackie controllers). Under a fader's control stand how it moves the fader (a fader or
+  knob from 0 to 127, or an endless encoder of one of three kinds), **Takes over at the desk's value** and
+  **Motor or lights**; under a key's control **Light**.
+
+What a control works:
+
+* **Keys:** every key the Keyboard panel lists, as its keyboard shortcut does, on the page of the PC that was
+  used last (a click, a key, the focus): a locked key stays locked (while the stack is live, Record does
+  nothing from a controller either), keys rest while a window is open or a key is being picked, and while
+  Solo up or Solo down is lit a key held down holds its fader until it is let go. Without a page of the desk
+  open on the PC the keys do nothing; the faders still work. A phone or a tablet never presses them.
+* **Keys of the pages shown:** the key under the first, second, ... channel, memory or effect fader of the
+  page shown; they follow the page keys. The page keys also have a next and a previous.
+* **Faders:** a channel, memory or effect fader by its number, or the first, second, ... of the page shown,
+  which follow the page keys, so that 8 faders of a controller play any 8 channels. The master; Rate (the
+  tempo, 30 to 300 BPM); the speed of a sequence (the lower half 0.1× to 1×, the upper half 1× to 10×, 1× in
+  the middle); the live speed, size and spread of an effect. A control's 0 to 127 is the fader's 0 to 255;
+  14 bits and the pitch bend are finer. An endless encoder moves a fader 2 of 255 a click.
+* **Takes over at the desk's value** (for a fader without a motor): the control moves the desk's fader only
+  once it has reached the desk's value or gone past it, so a light does not jump; the incoming messages say
+  "waits" until then. After the desk's fader moved some other way (the page, a phone, the stack), it waits
+  again.
+* **Motor or lights, Light:** the desk sends back what it has. A key's light follows the desk's key: off, half,
+  full, and blinking where a Record key waits for it (a controller that cannot blink by itself is blinked by
+  the desk). A motorized fader or a knob's ring of lights follows the desk's fader, wherever that changed: the
+  page, a phone, the stack. A fader the hand moves gets nothing back for 0.4 seconds.
+
+The mapping belongs to the PC, not to the project: it is kept in `midi.json` beside the LAN password
+(`%LOCALAPPDATA%\Lumenet`). Export and Import take it to another PC with **MIDI** checked.
+
+### Ready-made mappings
+
+The faders of these work the faders of the pages shown, so the page keys choose what they move.
+
+* **Akai APC mini mk2** (its Session mode): the 8 faders are the channel faders of the page shown, the ninth
+  is the master, and the keys above them are their channel keys. The pads, from the top row down: Stack, Prev,
+  Play, Pause, Next, Clear, Solo up and Solo down; channel pages 1 to 8; memory pages 1 to 8; memories 1 to 32
+  in four rows; effects 1 to 8. The keys at the right: Save mem, Edit mem, Rec seq, Copy, Del, Rate, Tempo
+  and Black out. The pads light in the colors of their kinds, dim, half or full as the desk's keys.
+* **Korg nanoKONTROL2** (its CC mode, as it comes): the sliders are the channel faders of the page shown, the
+  knobs its memory faders; S, M and R are its channel, memory and effect keys. Play, Stop (Pause), ◀◀ and ▶▶
+  (Prev and Next), ● (Stack) and Cycle (Black out); Track ◀ ▶ and Marker ◀ ▶ go through the channel and
+  memory pages, and Set is Clear. Its lights follow the desk only once its LED mode is "External" (Korg
+  Kontrol Editor).
+* **Behringer X-Touch Mini** (its Standard mode, layer A): the knobs are the channel faders of the page shown
+  and show where those stand; pressed, they are its channel keys. The upper keys are its memory keys, the
+  lower ones Stack, Play, Pause, Next and the channel and memory pages back and on. The fader is the master.
+* **Behringer X-Touch Compact** (its Standard mode, layer A): the motorized faders follow the channel faders
+  of the page shown, the main fader the master; the upper knobs are its memory faders, the knobs at the right
+  its effect faders, both showing where those stand. The keys under the faders are its channel keys, the one
+  under the main fader Black out; the rows above them the channel pages, the memory pages, and Save mem, Edit
+  mem, Rec seq, Copy, Del, Clear, Solo up and Solo down. The transport: Prev, Next, Tempo (Loop), Stack (●),
+  Pause (■) and Play.
+
+These follow the makers' manuals; the lights of the two X-Touch follow what other programs send them, as
+their manuals do not say. They were tried with the simulators below, not yet with the real controllers.
+
+### Without a controller
+
+`sim.cmd` in the source code starts a simulated controller, as if it were plugged into the PC: `sim.cmd
+apc-mini-mk2`, `nanokontrol2`, `x-touch-mini` or `x-touch-compact`. The MIDI panel lists it as "APC mini mk2
+(simulator)", and the browser opens its page: pads and keys held with the mouse, faders and knobs moved, lit
+and moved by the desk as the real one would be. U pulls it out and plugs it in again, Q ends it (see
+[DEV.md](DEV.md#simulated-devices-simcmd)).
+
+![A simulated APC mini mk2: the pads lit as the desk's keys, memory 1 up, channel page 2 shown, the first fader at the top](docs/screenshots/midi-simulator.png)
+
+Not yet: MIDI clock, MIDI timecode and MIDI Show Control (with beats and the sound later), and MIDI sent to
+other programs.

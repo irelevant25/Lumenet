@@ -12,14 +12,17 @@ namespace DmxBox.Tests;
 /// The protocol in short: every message is one JSON object followed by the character 0x1E.
 /// The client opens with {"protocol":"json","version":1} and the server answers {}.
 /// After that, "type" tells the messages apart: 1 calls a method (the UI one of the hub, or
-/// the server one of the UI, which is how its messages arrive), 3 carries the result or the
-/// error of a call, 6 is a keep-alive.
+/// the server one of the UI, which is how its messages arrive), 4 calls a hub method that
+/// answers as a stream, 2 carries an item of a stream, 3 carries the result or the error of a
+/// call and the end of a stream, 6 is a keep-alive.
 /// </remarks>
 internal sealed class HubClient : IAsyncDisposable
 {
     private const byte EndOfMessage = 0x1E;
     private const int MethodCall = 1;
+    private const int StreamItem = 2;
     private const int Completion = 3;
+    private const int StreamCall = 4;
 
     // Longer than anything here should take. A test that waits for a message that never
     // comes fails after this time instead of hanging.
@@ -29,6 +32,7 @@ internal sealed class HubClient : IAsyncDisposable
     private readonly MemoryStream _incoming = new();        // a message that has arrived in part
     private readonly Queue<JsonElement> _unread = new();    // whole messages nobody has looked at
     private readonly Queue<HubMessage> _messages = new();   // what the server sent on its own
+    private readonly List<JsonElement> _streamed = [];      // items and ends of streams, until they are asked for
     private int _calls;
 
     private HubClient()
@@ -91,6 +95,52 @@ internal sealed class HubClient : IAsyncDisposable
         return WriteAsync(new { type = MethodCall, target = method, arguments });
     }
 
+    /// <summary>Calls a hub method that answers as a stream, and goes on at once; <see cref="StreamResultAsync"/> collects the answer.</summary>
+    /// <returns>The stream's id.</returns>
+    public async Task<string> StartStreamAsync(string method, params object?[] arguments)
+    {
+        string id = (++_calls).ToString();
+        await WriteAsync(new { type = StreamCall, invocationId = id, target = method, arguments });
+        return id;
+    }
+
+    /// <summary>The items of a stream, once it has ended.</summary>
+    /// <param name="id">The stream's id, from <see cref="StartStreamAsync"/>.</param>
+    /// <exception cref="HubCallException">The stream ended with an error.</exception>
+    public async Task<JsonElement[]> StreamResultAsync(string id)
+    {
+        var items = new List<JsonElement>();
+        while (true)
+        {
+            JsonElement message;
+            int kept = _streamed.FindIndex(found => found.GetProperty("invocationId").GetString() == id);
+            if (kept >= 0)
+            {
+                message = _streamed[kept];
+                _streamed.RemoveAt(kept);
+            }
+            else
+            {
+                message = await ReadAsync();
+                if (!message.TryGetProperty("invocationId", out JsonElement of) || of.GetString() != id)
+                {
+                    Keep(message);
+                    continue;
+                }
+            }
+
+            if (message.GetProperty("type").GetInt32() == StreamItem)
+            {
+                items.Add(message.GetProperty("item"));
+                continue;
+            }
+
+            if (message.TryGetProperty("error", out JsonElement error))
+                throw new HubCallException(error.GetString()!);
+            return [.. items];
+        }
+    }
+
     /// <summary>Waits for the next message the server sent on its own, for example "DeskChanged".</summary>
     public async Task<HubMessage> NextMessageAsync()
     {
@@ -114,10 +164,18 @@ internal sealed class HubClient : IAsyncDisposable
             && message.GetProperty("invocationId").GetString() == id;
     }
 
-    // Puts a message of the server aside for NextMessageAsync. Keep-alives are dropped.
+    // Puts a message of the server aside: an item or the end of a stream for StreamResultAsync, a
+    // message of its own for NextMessageAsync. Keep-alives are dropped.
     private void Keep(JsonElement message)
     {
-        if (message.GetProperty("type").GetInt32() != MethodCall)
+        int type = message.GetProperty("type").GetInt32();
+        if (type is StreamItem or Completion && message.TryGetProperty("invocationId", out _))
+        {
+            _streamed.Add(message);
+            return;
+        }
+
+        if (type != MethodCall)
             return;
 
         _messages.Enqueue(new HubMessage(

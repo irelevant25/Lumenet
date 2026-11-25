@@ -1212,9 +1212,12 @@ export class DeskStore {
     await this.connection.invoke<void>('SetOutputs', outputs);
   }
 
-  /** Asks the Art-Net nodes on the PC's networks to answer: those that did, after a second and a half. */
+  /**
+   * Asks the Art-Net nodes on the PC's networks to answer: those that did, after a second and a
+   * half. The answer comes as a stream (DeskConnection.ask), so the page's other calls go on meanwhile.
+   */
   async findArtNetNodes(): Promise<FoundNode[]> {
-    return (await this.connection.invoke<FoundNode[] | undefined>('FindArtNetNodes')) ?? [];
+    return (await this.connection.ask<FoundNode[]>('FindArtNetNodes')) ?? [];
   }
 
   /** The serial ports of the PC, for a DMX USB interface; none from a desk program without outputs. */

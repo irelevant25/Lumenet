@@ -206,6 +206,19 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
       if (offset < UNIVERSE_SIZE) store.showChannelPage(universeStart(store.shownUniverse()) + offset);
     },
   })),
+  // The next and the one before, within the universe shown: for the arrows of a MIDI controller too.
+  ...[-1, 1].map(
+    (step): DeskAction => ({
+      id: `page.channel.${step > 0 ? 'next' : 'previous'}`,
+      group: 'Channel pages',
+      label: step > 0 ? 'Next channel page' : 'Previous channel page',
+      run: ({ store }) => {
+        const start = universeStart(store.shownUniverse());
+        const first = store.firstChannel() + step * store.channelsPerPage();
+        if (first >= start && first < start + UNIVERSE_SIZE) store.showChannelPage(first);
+      },
+    }),
+  ),
   ...numbered(MAX_MEMORY_PAGES, (page) => ({
     id: `page.memory.${page}`,
     group: 'Memory pages',
@@ -215,6 +228,17 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
       if (first <= MEMORY_COUNT) store.showMemoryPage(first);
     },
   })),
+  ...[-1, 1].map(
+    (step): DeskAction => ({
+      id: `page.memory.${step > 0 ? 'next' : 'previous'}`,
+      group: 'Memory pages',
+      label: step > 0 ? 'Next memory page' : 'Previous memory page',
+      run: ({ store }) => {
+        const first = store.firstMemory() + step * store.memoriesPerPage();
+        if (first >= 1 && first <= MEMORY_COUNT) store.showMemoryPage(first);
+      },
+    }),
+  ),
   ...numbered(MAX_EFFECT_PAGES, (page) => ({
     id: `page.effect.${page}`,
     group: 'Effect pages',
@@ -224,6 +248,17 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
       if (first <= MAX_EFFECTS) store.showEffectPage(first);
     },
   })),
+  ...[-1, 1].map(
+    (step): DeskAction => ({
+      id: `page.effect.${step > 0 ? 'next' : 'previous'}`,
+      group: 'Effect pages',
+      label: step > 0 ? 'Next effect page' : 'Previous effect page',
+      run: ({ store }) => {
+        const first = store.firstEffect() + step * store.stripsPerRow();
+        if (first >= 1 && first <= MAX_EFFECTS) store.showEffectPage(first);
+      },
+    }),
+  ),
 
   // All 4096; the Keyboard panel lists those of the project's universes, and a key of a universe
   // the project does not have does nothing.
@@ -258,6 +293,29 @@ const BY_ID = new Map(DESK_ACTIONS.map((action) => [action.id, action]));
 /** The action with this name, or undefined. */
 export function actionWithId(id: string): DeskAction | undefined {
   return BY_ID.get(id);
+}
+
+/**
+ * The key a key of the pages shown names: "slot.channel.3" is the channel key under the third
+ * channel fader of the page shown ("channel.35" on the second page of 32), "slot.memory.2" and
+ * "slot.effect.1" likewise. The keys of a MIDI controller under its faders press them, so they
+ * follow the page keys as those faders do. Null for a place beyond the page shown; undefined for a
+ * name that is no key of the pages shown.
+ */
+export function slotKey(id: string, store: DeskStore): string | null | undefined {
+  const slot = /^slot\.(channel|memory|effect)\.(\d+)$/.exec(id);
+  if (!slot) return undefined;
+  const place = Number(slot[2]);
+  if (slot[1] === 'channel') {
+    const channel = store.firstChannel() + place - 1;
+    return place <= store.channelsPerPage() && channel <= store.channelCount() ? `channel.${channel}` : null;
+  }
+  if (slot[1] === 'memory') {
+    const memory = store.firstMemory() + place - 1;
+    return place <= store.memoriesPerPage() && memory <= MEMORY_COUNT ? `memory.${memory}` : null;
+  }
+  const effect = store.firstEffect() + place - 1;
+  return place <= store.stripsPerRow() && effect <= MAX_EFFECTS ? `effect.${effect}` : null;
 }
 
 function view(name: string, label: string, url: string): DeskAction {

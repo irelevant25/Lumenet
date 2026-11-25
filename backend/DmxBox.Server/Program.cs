@@ -89,6 +89,7 @@ internal static class Program
 
         AddDesk(builder.Services, builder.Configuration, box);
         AddOutputs(builder.Services, builder.Configuration, passwordFile);
+        AddMidi(builder.Services, passwordFile);
         AddHub(builder.Services, origins);
         AddLan(builder, pc, passwordFile);
 
@@ -211,6 +212,33 @@ internal static class Program
 
         // The same outputs: the host starts and stops them, the hub asks them for their states.
         services.AddHostedService(provider => provider.GetRequiredService<OutputNetwork>());
+    }
+
+    // The MIDI controllers of this PC: the system's (DryWetMIDI, on Windows and macOS) and the
+    // simulated ones of sim.cmd. Their setup belongs to the PC and is kept beside the LAN password,
+    // in midi.json: a test desk with a password file of its own has a setup of its own too.
+    private static void AddMidi(IServiceCollection services, string passwordFile)
+    {
+        string file = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(passwordFile)) ?? "", MidiSetupFile.FileName);
+        services.AddSingleton(provider =>
+        {
+            ILogger log = provider.GetRequiredService<ILoggerFactory>().CreateLogger<MidiControl>();
+            IHubContext<DeskHub, IDeskClient> hub = provider.GetRequiredService<IHubContext<DeskHub, IDeskClient>>();
+            return new MidiControl(
+                new CombinedMidiPorts(new DryWetMidiPorts(), new SimulatedMidiPorts(provider.GetRequiredService<Simulators>())),
+                new MidiSetupFile(file, log),
+                new MidiDeskFaders(
+                    provider.GetRequiredService<Desk>(),
+                    provider.GetRequiredService<ProjectStore>(),
+                    provider.GetRequiredService<UndoHistory>(),
+                    hub.Clients.All,
+                    log),
+                new HubMidiPages(hub, log),
+                log);
+        });
+
+        // The same MIDI: the host starts and stops it, the hub asks it and tells it.
+        services.AddHostedService(provider => provider.GetRequiredService<MidiControl>());
     }
 
     private static void AddHub(IServiceCollection services, AllowedOrigins origins)

@@ -1,7 +1,8 @@
 /**
  * Export and Import: the parts of the desk that go into a file on this device and come back from
  * one. One file holds the parts that were chosen: the project (as its project file says it), the
- * stage on its own, the settings of this device, and its keyboard shortcuts.
+ * stage on its own, the settings of this device, its keyboard shortcuts, and the MIDI controllers
+ * of the PC with what their controls do (only the PC takes those out and back).
  *
  * ```json
  * {
@@ -11,7 +12,8 @@
  *   "project": { "format": "lumenet-project", "version": 4, ... },
  *   "stage": { "width": 16, "depth": 10, "lights": [ ... ] },
  *   "settings": { "channelSize": "auto", "zoom": 1, "colors": {}, ... },
- *   "keyboard": { "shortcuts": { "stack.play": "Space" } }
+ *   "keyboard": { "shortcuts": { "stack.play": "Space" } },
+ *   "midi": { "devices": ["APC mini mk2"], "mappings": [ ... ] }
  * }
  * ```
  *
@@ -20,19 +22,46 @@
  * project's then: they can be taken as the settings and the keyboard of this device.
  */
 
-export type TransferPart = 'project' | 'stage' | 'settings' | 'keyboard';
+export type TransferPart = 'project' | 'stage' | 'settings' | 'keyboard' | 'midi';
+
+/** A part as the windows of Export and Import list it. */
+export interface TransferPartView {
+  readonly part: TransferPart;
+  readonly label: string;
+  readonly hint: string;
+  /** How a sentence names it: "the keyboard". */
+  readonly said: string;
+  /** True for a part that only the PC takes out and back: the MIDI controllers belong to it. */
+  readonly pcOnly?: boolean;
+}
 
 /** The parts, in the order the windows of Export and Import list them. */
-export const TRANSFER_PARTS: readonly { readonly part: TransferPart; readonly label: string; readonly hint: string }[] = [
-  { part: 'project', label: 'Project', hint: 'everything the project holds: memories, sequences, the stack, the stage and the notes' },
-  { part: 'stage', label: 'Stage', hint: 'the stage alone: its lights, their kinds, the groups and the picture' },
-  { part: 'settings', label: 'Settings', hint: 'the settings of this device: layout, zoom, colors of the keys, views' },
-  { part: 'keyboard', label: 'Keyboard', hint: 'the keyboard shortcuts of this device' },
+export const TRANSFER_PARTS: readonly TransferPartView[] = [
+  {
+    part: 'project',
+    label: 'Project',
+    hint: 'everything the project holds: memories, sequences, the stack, the stage and the notes',
+    said: 'the project',
+  },
+  { part: 'stage', label: 'Stage', hint: 'the stage alone: its lights, their kinds, the groups and the picture', said: 'the stage' },
+  { part: 'settings', label: 'Settings', hint: 'the settings of this device: layout, zoom, colors of the keys, views', said: 'the settings' },
+  { part: 'keyboard', label: 'Keyboard', hint: 'the keyboard shortcuts of this device', said: 'the keyboard' },
+  { part: 'midi', label: 'MIDI', hint: 'the MIDI controllers of this PC and what their controls do', said: 'the MIDI', pcOnly: true },
 ];
 
 const FORMAT = 'lumenet-export';
 const VERSION = 1;
 const PROJECT_FORMAT = 'lumenet-project';
+
+/**
+ * Why a part cannot be checked on this page: a part of the PC on a phone or a tablet, or MIDI with a
+ * desk program that knows none. Empty when it can.
+ */
+export function pcPartNote(part: TransferPartView, onPc: boolean, hasMidi: boolean): string {
+  if (!part.pcOnly) return '';
+  if (!onPc) return 'the MIDI controllers belong to the PC: only the PC takes them out and back';
+  return hasMidi ? '' : 'the desk program is older than this page and knows no MIDI';
+}
 
 /** What a file of Export is made of: each part as the desk has it. */
 export interface ExportParts {
@@ -42,6 +71,8 @@ export interface ExportParts {
   readonly projectFile?: string;
   readonly settings?: unknown;
   readonly shortcuts?: Readonly<Record<string, string>>;
+  /** The MIDI setup of the PC, as the desk program gives it: its devices and mappings. */
+  readonly midi?: unknown;
 }
 
 /** The text of a file of Export with the chosen parts. */
@@ -52,6 +83,7 @@ export function exportText(chosen: ReadonlySet<TransferPart>, parts: ExportParts
   if (chosen.has('stage') && project?.['stage']) file['stage'] = project['stage'];
   if (chosen.has('settings') && parts.settings) file['settings'] = parts.settings;
   if (chosen.has('keyboard') && parts.shortcuts) file['keyboard'] = { shortcuts: parts.shortcuts };
+  if (chosen.has('midi') && parts.midi) file['midi'] = parts.midi;
   return JSON.stringify(file, null, 2);
 }
 
@@ -73,6 +105,8 @@ export interface ImportSource {
   readonly stage: string | null;
   readonly settings: unknown;
   readonly shortcuts: unknown;
+  /** The MIDI setup: an object with the lists "devices" and "mappings", or null. */
+  readonly midi: Record<string, unknown> | null;
 }
 
 /**
@@ -99,6 +133,7 @@ export function readImportFile(fileName: string, text: string): ImportSource {
       stage: content['stage'] ? JSON.stringify(content['stage']) : null,
       settings: earlier,
       shortcuts: objectOrNull(earlier?.['shortcuts']),
+      midi: null,
     };
   }
 
@@ -114,6 +149,7 @@ export function readImportFile(fileName: string, text: string): ImportSource {
     stage: stage ? JSON.stringify(stage) : null,
     settings: objectOrNull(content['settings']),
     shortcuts: objectOrNull(objectOrNull(content['keyboard'])?.['shortcuts']),
+    midi: midiOrNull(content['midi']),
   };
 }
 
@@ -124,13 +160,20 @@ export function missingParts(chosen: ReadonlySet<TransferPart>, source: ImportSo
     stage: source.stage !== null,
     settings: source.settings !== null,
     keyboard: source.shortcuts !== null,
+    midi: source.midi !== null,
   };
-  const missing = TRANSFER_PARTS.filter((part) => chosen.has(part.part) && !has[part.part]).map((part) => `the ${part.part}`);
+  const missing = TRANSFER_PARTS.filter((part) => chosen.has(part.part) && !has[part.part]).map((part) => part.said);
   return missing.length <= 1 ? (missing[0] ?? '') : `${missing.slice(0, -1).join(', ')} and ${missing.at(-1)}`;
 }
 
 function objectOrNull(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+}
+
+// A MIDI setup has its devices and its mappings, each a list.
+function midiOrNull(value: unknown): Record<string, unknown> | null {
+  const midi = objectOrNull(value);
+  return midi && Array.isArray(midi['devices']) && Array.isArray(midi['mappings']) ? midi : null;
 }
 
 function notOurs(fileName: string): Error {

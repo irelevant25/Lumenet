@@ -1,0 +1,85 @@
+/* A panel of Settings like the others, two of their columns wide (settings-view.css), as high as
+   their room (100cqh): the devices, Learn and the messages at the top; the keys and faders under
+   them take the rest and scroll. On a small screen the page scrolls instead. */
+:host {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  height: 100cqh;
+  min-width: 0;
+  padding: 10px 14px 12px;
+  overflow: auto;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: var(--well);
+  scrollbar-width: thin;
+}
+
+:host-context(.mobile) {
+  height: auto;
+  overflow: visible;
+}
+
+h3 {
+  margin: 0 0 6px;
+  color: var(--legend-dim);
+  font-size: 12px;
+  font-stretch: 75%;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.hint,
+.error,
+.learning {
+  max-width: 80ch;
+  margin: 2px 0 10px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.hint {
+  color: var(--legend-dim);
+}
+
+.error {
+  color: var(--danger);
+}
+
+/* what Learn waits for: amber, as a key being picked */
+.learning {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  max-width: none;
+  padding: 6px 10px;
+  border: 1px solid var(--system);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--system) 14%, var(--panel));
+  color: var(--legend);
+}
+
+.learning button {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--legend);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* the rest of the panel; on a low screen at least this much, and the panel scrolls as a whole */
+lm-midi-targets {
+  flex: 1;
+  min-height: 320px;
+}
+
+:host-context(.mobile) lm-midi-targets {
+  flex: none;
+}

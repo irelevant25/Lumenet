@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter, take } from 'rxjs';
+import { DeskMidi } from './desk/desk-midi';
 import { DeskSettings } from './desk/desk-settings';
 import { DeskStore } from './desk/desk-store';
 import { Keyboard } from './desk/keyboard';
@@ -22,6 +23,9 @@ export class App {
     // The settings of this browser, read before anything is drawn: the font size among them.
     const settings = inject(DeskSettings);
     this.keyboard.start();
+
+    // The MIDI controllers of the PC: a page on the PC that is used presses their keys.
+    inject(DeskMidi).start();
 
     // A desk whose Settings leave Main out of the top bar opens on the first view that is in it.
     const router = inject(Router);

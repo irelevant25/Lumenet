@@ -1,0 +1,29 @@
+<h4 id="midi-monitor-title">Incoming messages</h4>
+@if (lines().length === 0) {
+  <p class="hint">
+    Press or move a control on a device the desk uses: its message shows here, with what it did.
+  </p>
+} @else {
+  <div class="box">
+    <table aria-labelledby="midi-monitor-title">
+      <thead>
+        <tr>
+          <th scope="col">Time</th>
+          <th scope="col">Device</th>
+          <th scope="col">Message</th>
+          <th scope="col">What it did</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (line of lines(); track $index) {
+          <tr [class.stands]="stands(line)">
+            <td class="time">{{ time(line) }}</td>
+            <td>{{ line.device }}</td>
+            <td class="message">{{ line.message }}</td>
+            <td>{{ text(line) }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

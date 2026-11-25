@@ -18,6 +18,9 @@
     <!-- The serial ports of the DMX USB interfaces (Enttec DMX USB Pro and compatible), on
          Windows, Linux and macOS. Lumenet.exe takes the same package. -->
     <PackageReference Include="System.IO.Ports" Version="10.0.14" />
+    <!-- MIDI controllers, on Windows and macOS (DryWetMIDI has no devices on Linux): MidiPorts.cs
+         keeps it behind an interface of the desk's own. Lumenet.exe takes the same package. -->
+    <PackageReference Include="Melanchall.DryWetMidi" Version="8.0.3" />
   </ItemGroup>
 
   <ItemGroup>

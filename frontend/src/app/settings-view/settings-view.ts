@@ -22,6 +22,7 @@ import {
 import { ALWAYS_SHOWN, DEFAULT_VIEW_ORDER, ViewName, viewNamed } from '../desk/views';
 import { KeyColorsPanel } from '../key-colors-panel/key-colors-panel';
 import { KeyboardPanel } from '../keyboard-panel/keyboard-panel';
+import { MidiPanel } from '../midi-panel/midi-panel';
 import { OutputsPanel } from '../outputs-panel/outputs-panel';
 
 /** How often the autosave can keep the work, in seconds: as the desk program offers it. */
@@ -41,14 +42,15 @@ const AUTOSAVE_INTERVALS: readonly number[] = [5, 30, 60, 300];
  * - The colors of the keys (key-colors-panel), one under the other in a list that scrolls.
  * - The keyboard shortcuts (keyboard-panel), the kinds of keys one under the other.
  *
- * Under them, across the whole width, the outputs of the project (outputs-panel): the dmxboxes,
- * Art-Net nodes, sACN and DMX USB interfaces, and the universe each plays.
+ * After them, two columns wide each: the MIDI controllers of the PC and what their controls do
+ * (midi-panel), and the outputs of the project (outputs-panel): the dmxboxes, Art-Net nodes, sACN
+ * and DMX USB interfaces, and the universe each plays.
  *
- * The universes and the outputs belong to the project, the autosave and LAN to the desk program;
- * the rest is kept as desk-settings.ts says.
+ * The universes and the outputs belong to the project, the autosave, LAN and MIDI to the desk
+ * program on the PC; the rest is kept as desk-settings.ts says.
  */
 @Component({
-  imports: [KeyColorsPanel, KeyboardPanel, OutputsPanel],
+  imports: [KeyColorsPanel, KeyboardPanel, MidiPanel, OutputsPanel],
   selector: 'lm-settings-view',
   styleUrl: './settings-view.css',
   templateUrl: './settings-view.html',

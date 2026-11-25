@@ -5,13 +5,15 @@ using System.Net;
 namespace DmxBox.Sim;
 
 /// <summary>
-/// sim.cmd: starts a simulator of a DMX device, as if the device were plugged into this PC. The
-/// desk finds it by itself; U pulls it out and plugs it in again, Q (or Ctrl+C) ends it.
+/// sim.cmd: starts a simulator of a DMX device or a MIDI controller, as if the device were plugged
+/// into this PC. The desk finds it by itself; U pulls it out and plugs it in again, Q (or Ctrl+C)
+/// ends it.
 /// </summary>
 internal static class Program
 {
     private const string Usage = """
-        Starts a simulated DMX device, as if it were plugged into this PC. The desk finds it by itself.
+        Starts a simulated DMX device or MIDI controller, as if it were plugged into this PC. The desk
+        finds it by itself.
 
           sim.cmd <device> [options]
 
@@ -23,6 +25,13 @@ internal static class Program
           artnet              an Art-Net node
           sacn                an sACN receiver
           enttec              an Enttec DMX USB Pro
+          apc-mini-mk2        an Akai APC mini mk2 (MIDI)
+          nanokontrol2        a Korg nanoKONTROL2 (MIDI)
+          x-touch-mini        a Behringer X-Touch Mini (MIDI, Standard mode, layer A)
+          x-touch-compact     a Behringer X-Touch Compact (MIDI, Standard mode, layer A)
+
+        A MIDI controller has a page of its own, which the browser opens: its pads, keys, faders and
+        knobs, lit and moved by the desk as the real one would be.
 
         Options:
           --show 16                   how many channels it writes when they change (1 to 512)
@@ -39,9 +48,12 @@ internal static class Program
                   --address 127.0.0.2 --port 5568
           enttec: --serial 12345678   its serial number
                   --name SIM1         its port
+          MIDI:   --port 8090         the port of its page on this PC (any free one unless given)
+                  --no-browser        the browser does not open its page (O opens it)
 
         Keys while it runs: U pulls it out and plugs it in again, Q ends it (Ctrl+C too); a dmxbox
-        also has B, its blackout button, and P, its preset button.
+        also has B, its blackout button, and P, its preset button; a MIDI controller has O, which
+        opens its page.
         """;
 
     private static int Main(string[] args)
@@ -59,7 +71,8 @@ internal static class Program
             int show = options.Number("--show", 16, 1, 512);
             using ISimulator simulator = Make(args[0].ToLowerInvariant(), options, folder, show);
             options.RequireAllUsed();
-            return Run(simulator, folder);
+            bool openPage = !options.Flag("--no-browser");
+            return Run(simulator, folder, openPage);
         }
         catch (UsageException e)
         {
@@ -82,6 +95,12 @@ internal static class Program
         {
             options.RequireAllUsed();   // before a build that may take a while
             return new BoxSimulator(box, folder, BoxPrograms.Find(box.Program), show, Console.Out);
+        }
+
+        if (MidiControllers.Find(device) is { } controller)
+        {
+            options.Flag("--no-browser");   // taken once it runs
+            return new MidiControllerSimulator(controller, folder, options.Number("--port", 0, 0, 65535), Console.Out);
         }
 
         return device switch
@@ -119,7 +138,7 @@ internal static class Program
     }
 
     // Plugs the device in, writes what it does, and takes the keys until Q, Esc or Ctrl+C.
-    private static int Run(ISimulator simulator, string folder)
+    private static int Run(ISimulator simulator, string folder, bool openPage)
     {
         using var stop = new CancellationTokenSource();
         ConsoleCancelEventHandler onCtrlC = (_, press) =>
@@ -130,7 +149,7 @@ internal static class Program
         Console.CancelKeyPress += onCtrlC;
         try
         {
-            return Play(simulator, folder, stop.Token);
+            return Play(simulator, folder, openPage, stop.Token);
         }
         finally
         {
@@ -138,7 +157,7 @@ internal static class Program
         }
     }
 
-    private static int Play(ISimulator simulator, string folder, CancellationToken stopping)
+    private static int Play(ISimulator simulator, string folder, bool openPage, CancellationToken stopping)
     {
         simulator.PlugIn();
         Console.WriteLine($"{simulator.Title}: plugged in.");
@@ -147,6 +166,8 @@ internal static class Program
         Console.WriteLine($"Keys: {ownKeys}U pulls it out and plugs it in again, Q ends it.");
         if (folder != SimulatorRegistry.DefaultFolder)
             Console.WriteLine($"(For the desk whose simulators are in {folder}.)");
+        if (openPage && simulator is MidiControllerSimulator controller)
+            controller.OpenPage();
 
         // Keys come from the keyboard; from a script, as lines ("u", "b", "q") on the input.
         var keys = new System.Collections.Concurrent.ConcurrentQueue<char>();
@@ -228,7 +249,7 @@ internal sealed class UsageException(string message) : Exception(message);
 /// <summary>The options after the device: "--name value" pairs and flags.</summary>
 internal sealed class Options
 {
-    private static readonly string[] Flags = ["--multicast"];
+    private static readonly string[] Flags = ["--multicast", "--no-browser"];
 
     private readonly Dictionary<string, string?> _given = new(StringComparer.Ordinal);
     private readonly HashSet<string> _used = new(StringComparer.Ordinal);

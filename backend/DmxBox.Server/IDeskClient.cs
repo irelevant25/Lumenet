@@ -155,4 +155,27 @@ public interface IDeskClient
     /// <param name="index">Number of the key, 1-32.</param>
     /// <param name="effect">The effect the key starts and stops now, 1-64.</param>
     Task EffectIndependentChanged(int index, int effect);
+
+    /// <summary>
+    /// The MIDI changed: a device came or went, the setup changed, learning started or ended. Only
+    /// the pages on the PC get it.
+    /// </summary>
+    /// <param name="state">The MIDI now.</param>
+    Task MidiChanged(MidiState state);
+
+    /// <summary>MIDI messages came in, and what became of them: for the pages that show the list.</summary>
+    /// <param name="lines">The messages, the oldest first.</param>
+    Task MidiMessages(MidiMonitorLine[] lines);
+
+    /// <summary>
+    /// A key of a controller was pressed or let go: the page presses the desk's key, as its keyboard
+    /// shortcut would. Only the page on the PC that presses the keys gets it (see <see cref="MidiRole"/>).
+    /// </summary>
+    /// <param name="key">The desk's key, by its name ("memory.5").</param>
+    /// <param name="down">True when pressed, false when let go.</param>
+    Task MidiKey(string key, bool down);
+
+    /// <summary>The page is now the one that presses the keys of the controllers, or no more.</summary>
+    /// <param name="role">Whether it is, and the keys whose lamps the desk needs from it.</param>
+    Task MidiRole(MidiRole role);
 }

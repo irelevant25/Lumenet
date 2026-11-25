@@ -285,6 +285,66 @@ public sealed class SimulatorTests : IDisposable
         }
     }
 
+    // ---------------------------------------------------------------- a simulated MIDI controller
+
+    [Fact]
+    public async Task SimulatedControllerIsAMidiDeviceOfTheDeskBothWays()
+    {
+        using var apc = new MidiControllerSimulator(MidiControllers.Find("apc-mini-mk2")!, Folder, port: 0, TextWriter.Null);
+        apc.PlugIn();
+        var ports = new SimulatedMidiPorts(new Simulators(Folder));
+        Assert.Contains("APC mini mk2 (simulator)", ports.List().Inputs);
+        var received = new List<MidiMessage>();
+        using IMidiConnection connection = ports.Open("APC mini mk2 (simulator)", message =>
+        {
+            lock (received)
+                received.Add(message);
+        });
+        await Wait.UntilAsync(() => apc.DeskConnected, "The simulator did not see the desk.");
+
+        // a pad pressed and a fader moved on its page
+        apc.PressControl("n56", down: true);
+        apc.MoveControl("c48", 100);
+        await Wait.UntilAsync(() => Count(received) == 2, "The desk did not hear the controller.");
+        Assert.Equal([new MidiMessage(MidiKind.NoteOn, 1, 56, 127), new MidiMessage(MidiKind.ControlChange, 1, 48, 100)], received);
+
+        // the desk lights the pad of memory 1 red at half, as the APC reads it
+        Assert.True(connection.Send(new MidiMessage(MidiKind.NoteOn, 3, 32, 5)));
+        await Wait.UntilAsync(() => apc.Look("n32").Color == "#FF0000", "The pad was not lit.");
+        Assert.Equal((0.5, ""), (apc.Look("n32").Level, apc.Look("n32").Motion));
+
+        // a second one gets a name of its own
+        using var another = new MidiControllerSimulator(MidiControllers.Find("apc-mini-mk2")!, Folder, port: 0, TextWriter.Null);
+        Assert.Equal("APC mini mk2 2 (simulator)", another.Name);
+
+        apc.PullOut();
+        await Wait.UntilAsync(() => connection.Failed, "Pulled out, the desk's connection did not end.");
+        await Wait.UntilAsync(() => !ports.List().Inputs.Contains("APC mini mk2 (simulator)"), "Pulled out, it was still listed.");
+    }
+
+    [Fact]
+    public async Task TheXTouchCompactSimulatorTakesTheLightsAndMotorsWhereTheRealOneDoes()
+    {
+        using var compact = new MidiControllerSimulator(MidiControllers.Find("x-touch-compact")!, Folder, port: 0, TextWriter.Null);
+        compact.PlugIn();
+        var ports = new SimulatedMidiPorts(new Simulators(Folder));
+        using IMidiConnection connection = ports.Open("X-TOUCH COMPACT (simulator)", _ => { });
+        await Wait.UntilAsync(() => compact.DeskConnected, "The simulator did not see the desk.");
+
+        connection.Send(new MidiMessage(MidiKind.NoteOn, 2, 38, 2));        // Play (Note 54) lit
+        connection.Send(new MidiMessage(MidiKind.ControlChange, 1, 1, 127)); // fader 1 to the top
+        connection.Send(new MidiMessage(MidiKind.ControlChange, 1, 10, 64)); // knob 1 half way
+        await Wait.UntilAsync(() => compact.Look("c10").Value == 64, "The desk's messages did not arrive.");
+        Assert.NotNull(compact.Look("n54").Color);
+        Assert.Equal(127, compact.Look("c1").Value);
+    }
+
+    private static int Count(List<MidiMessage> messages)
+    {
+        lock (messages)
+            return messages.Count;
+    }
+
     private static (string State, string Detail) LastState(List<(string State, string Detail)> states)
     {
         lock (states)

@@ -1681,7 +1681,10 @@ receivers listen at 5568 and the desk sends from a port of its own.
   rows of five links up to 470 pixels; the MIDI view at 1920 × 1080, 1366 × 768 and 390 × 844 without
   sideways scrolling (on a phone a control's name wraps); Listen, then a double click on channel fader 3 of
   Main showed "Channel fader 3 (U1)" marked, its Learn focused. No error on the page. The other pictures of
-  the manual still show the top bar with nine links.
+  the manual still show the top bar with nine links. Then the owner found that no fader from 10 up could
+  be picked: the check of a fader's name took one digit at its end. It takes a number of any length now;
+  a test picks channel fader 12 and memory fader 10 (it fails with the old check), and in Edge 158 a
+  double click picked channel faders 3, 12 and 32 and memory faders 10 and 16.
 * **dmxbox 2 on paper (2026-11-23):** both versions (two outputs and one) are drawn from their `circuit.py`,
   and each drawing passed its check against it: the schematic, the breadboard plan, the perfboard plan (38 and
   26 insulated wires, with SW1 at the cut left edge and the holes around the four screws kept empty;

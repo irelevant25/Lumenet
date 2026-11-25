@@ -28,7 +28,7 @@ const commits = git('log', '--format=%s%x1f%b%x1e', ...range)
   .filter((entry) => entry !== '')
   .map((entry) => {
     const [title, text = ''] = entry.split('\x1f');
-    return { title: plain(title.trim()), paragraphs: paragraphsOf(text).map(plain) };
+    return { title: plain(withoutCiMark(title.trim())), paragraphs: paragraphsOf(text).map(plain) };
   });
 
 const lines = [];
@@ -62,6 +62,11 @@ function sinceTheWorkflowCame() {
     .filter(Boolean)
     .pop();
   return added && tryGit('rev-parse', '--verify', `${added}^`) ? [`${added}^..HEAD`] : ['-1', 'HEAD'];
+}
+
+// "[skip ci]" in a title kept that push from making a release of its own; in the notes it says nothing.
+function withoutCiMark(title) {
+  return title.replace(/\s*\[(?:skip ci|ci skip|no ci|skip actions|actions skip)\]/gi, '').trim();
 }
 
 // A commit's text is plain text, the notes are Markdown: "0.1.<number of commits>" would be taken for

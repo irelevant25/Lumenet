@@ -4228,6 +4228,14 @@ describe('the desk page', () => {
     await press(button('Listen for a key or a fader of the desk'));
     await twice(page.querySelector('[data-fader="fader.rate"]')!);
     await picked('fader.rate');
+
+    // faders with a number of two digits, as every other (until 2026-11-25 only 1 to 9 were picked)
+    for (const fader of ['fader.channel.12', 'fader.memory.10']) {
+      await press(button('Listen for a key or a fader of the desk'));
+      await twice(page.querySelector(`[data-fader="${fader}"]`)!);
+      expect(router.url, fader).toBe('/midi');
+      await picked(fader);
+    }
     expect(connection.methods().slice(sent)).toEqual([]);
     expect(connection.calls.map((call) => call.method)).not.toContain('LearnMidi');
   });

@@ -421,10 +421,16 @@ function keyElementUnder(event: Event, faders = false): HTMLElement | null {
   return (event.target as Element | null)?.closest?.<HTMLElement>(marked) ?? null;
 }
 
+/**
+ * The name of a fader: words with dashes after "fader.", and a number of any length at the end
+ * ("fader.master", "fader.channel.12", "fader.effect-speed.3"); see FADER_TARGETS in midi-targets.ts.
+ */
+const FADER_NAME = /^fader(\.[a-z][a-z-]*)+(\.[0-9]+)?$/;
+
 /** The name of a key of the desk, if the desk knows it, or of a fader ("fader.master"). */
 function keyOf(element: Element): string | null {
   const fader = element.getAttribute('data-fader');
-  if (fader !== null) return /^fader\.[a-z]+[a-z.-]*[a-z0-9]$/.test(fader) ? fader : null;
+  if (fader !== null) return FADER_NAME.test(fader) ? fader : null;
   const id = element.getAttribute('data-action');
   return id !== null && actionWithId(id) ? id : null;
 }

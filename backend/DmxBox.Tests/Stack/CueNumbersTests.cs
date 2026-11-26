@@ -89,7 +89,7 @@ public sealed class CueNumbersTests
     {
         var full = Steps("2.9", "3.0", "4.0");
         var error = Assert.Throws<DeskException>(() => CueNumbers.Move(full, Id(full, "4.0"), Id(full, "2.9")));
-        Assert.Equal("There is no free number after 2.9. Give a step another number first.", error.Message);
+        Assert.Equal("There is no free number after 2.9. Give a cue another number first.", error.Message);
 
         var zero = Steps("0.0", "1.0");
         Assert.Throws<DeskException>(() => CueNumbers.Move(zero, Id(zero, "1.0"), null));

@@ -1,5 +1,8 @@
 import { type EffectLevels, type EffectPlayback, MAX_EFFECTS } from '../effects/effects';
 import { type ListenView, MAX_SOUNDS, type MixerView, type SoundPlayback } from '../sounds/sounds';
+import type { SoundTime } from './hub-contract';
+
+export type { SoundTime };
 
 /**
  * Sizes of the desk. A universe is the 512 channels one DMX cable carries; a project has 1 to 8
@@ -323,6 +326,12 @@ export interface TimedStep {
    * means false.
    */
   disabled?: boolean;
+  /**
+   * Only for a cue of the stack: the moment of a sound it comes at instead of GO. While the stack is
+   * live, it goes to this cue when that sound plays and reaches the moment; GO still goes earlier, and
+   * a jump in the sound takes the stack to the cue of that moment. Missing or null for none.
+   */
+  at?: SoundTime | null;
 }
 
 /** A sequence, stored in a memory: its steps run one after the other while the memory's fader is up. */
@@ -383,6 +392,8 @@ export interface StackPlayback {
    * it came on top of (Add). Missing from a desk program that knows no Add.
    */
   on?: number[];
+  /** True while GO learns the moments of sounds (Learn on the Stack view). Missing means false. */
+  learning?: boolean;
 }
 
 /**

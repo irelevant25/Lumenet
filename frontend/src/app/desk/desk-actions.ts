@@ -134,11 +134,13 @@ export const DESK_ACTIONS: readonly DeskAction[] = [
       if (store.live() || store.stack().steps.length > 0) store.setStackLive(!store.live());
     },
   },
-  liveOnly('stack.previous', 'Prev', (store) => store.stackPrevious()),
-  liveOnly('stack.play', 'Play', (store) => store.stackPlay()),
+  liveOnly('stack.previous', 'Back', (store) => store.stackPrevious()),
+  liveOnly('stack.play', 'GO', (store) => store.stackPlay()),
   liveOnly('stack.pause', 'Pause', (store) => store.stackPause()),
   liveOnly('stack.next', 'Next', (store) => store.stackNext()),
-  { id: 'stack.add', group: 'Stack', label: 'Add step (Stack view)', run: ({ store }) => store.addStackStepAtEnd() },
+  { id: 'stack.add', group: 'Stack', label: 'Add cue (Stack view)', run: ({ store }) => store.addStackStepAtEnd() },
+  // in a rehearsal with the music: GO stores the moment of the sound that plays into the cue it goes to
+  { id: 'stack.learn', group: 'Stack', label: 'Learn (Stack view)', run: ({ store }) => store.toggleStackLearning() },
 
   ...RECORD_KEYS.map(
     (key): DeskAction => ({

@@ -5,9 +5,29 @@
  * would) and tells the desk program how its keys are lit, for the lights of the controllers.
  *
  * A control works a target by its name: a key by the name of desk-actions.ts ("memory.5"), a fader
- * by a name of midi-targets.ts ("fader.channel.12", "fader.slot.memory.3"). OSC is to use the same
- * names. See DmxBox.Server/Midi/ControlTarget.cs.
+ * by a name of midi-targets.ts ("fader.channel.12", "fader.slot.memory.3"). OSC from other programs
+ * works the same targets, at addresses made of their names (oscAddress). See
+ * DmxBox.Server/Midi/ControlTarget.cs and DmxBox.Server/Osc.
  */
+
+/** The UDP port OSC listens on at first: the one most programs that send OSC to a lighting desk use. */
+export const OSC_DEFAULT_PORT = 8000;
+
+/** The address at which OSC works a key or a fader: "stack.play" is "/lumenet/stack/play". */
+export function oscAddress(target: string): string {
+  return `/lumenet/${target.replaceAll('.', '/')}`;
+}
+
+/** OSC from other programs, as the MIDI view shows it (OscView in the desk program). */
+export interface OscView {
+  /** True while the desk is to receive OSC. */
+  readonly on: boolean;
+  /** The UDP port it receives on. */
+  readonly port: number;
+  /** "off"; "listening"; "failed": the port cannot be had (problem). */
+  readonly state: 'off' | 'listening' | 'failed';
+  readonly problem: string | null;
+}
 
 /** The kinds of MIDI messages a control can be. */
 export type MidiMessageKind = 'note' | 'cc' | 'cc14' | 'pitchbend' | 'program';
@@ -76,6 +96,8 @@ export interface MidiState {
   /** The target the next control that moves is to work; null while none. */
   readonly learning: string | null;
   readonly presets: readonly MidiPresetView[];
+  /** OSC from other programs. Missing from a desk program of before OSC. */
+  readonly osc?: OscView;
 }
 
 /** The MIDI setup of the PC as Export and Import carry it. */

@@ -1,0 +1,109 @@
+/* The element takes no room in the view: only the window it opens is ever seen. The window looks like
+   the others of the desk. */
+:host {
+  display: contents;
+}
+
+dialog {
+  width: min(620px, calc(100vw / var(--zoom) - 40px));
+  padding: 20px;
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  background: var(--panel-raised);
+  color: var(--legend);
+}
+
+dialog::backdrop {
+  background: rgb(0 0 0 / 60%);
+}
+
+form {
+  display: grid;
+  gap: 12px;
+}
+
+h2 {
+  margin: 0 0 12px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+form h2 {
+  margin: 0;
+}
+
+.hint,
+.about,
+.views {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.hint {
+  color: var(--legend-dim);
+}
+
+/* two lines at least, so that the window does not jump between the setups */
+.about {
+  min-height: 2.7em;
+}
+
+.views .label {
+  color: var(--legend-dim);
+}
+
+/* the four kinds of show, two by two; the one chosen lit in the color of the system keys */
+.setups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.choice {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--legend);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.choice:hover {
+  border-color: var(--legend-dim);
+}
+
+.choice.chosen {
+  border-color: var(--system);
+  background: color-mix(in srgb, var(--system) 22%, var(--panel));
+  font-weight: 600;
+}
+
+/* the first steps: a button, and what it opens beside it */
+.first {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.first li {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--strip-gap);
+  margin-top: 4px;
+}

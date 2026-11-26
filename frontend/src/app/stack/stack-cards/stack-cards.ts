@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { DeskStore } from '../../desk/desk-store';
 import { TimedStep } from '../../desk/desk-types';
+import { momentWords } from '../moments';
 
 /**
  * Where the stack stands, on three cards: the step before the one that is on, that one with
@@ -29,19 +30,22 @@ export class StackCards {
 
     const { state, paused, remaining } = this.playback();
     const left = `${remaining.toFixed(1)} s`;
-    if (paused) return remaining > 0 ? `Paused, with ${left} left. Play goes on.` : 'Paused. Play goes on.';
+    if (paused) return remaining > 0 ? `Paused, with ${left} left. GO goes on.` : 'Paused. GO goes on.';
 
     // a release takes its step down: it has no way up, only that
     const release = this.current()?.target === 'release';
     switch (state) {
       case 'fading':
-        return release ? `Taking its step down, ${left} left.` : `On its way up, ${left} left.`;
+        return release ? `Taking its cue down, ${left} left.` : `On its way up, ${left} left.`;
       case 'waiting':
         return `${release ? 'Done' : 'Up'}. The stack goes on by itself in ${left}.`;
-      case 'holding':
-        return `${release ? 'Done' : 'Up'}. ${this.next() ? 'The stack waits for Play.' : 'It is the only step.'}`;
+      case 'holding': {
+        const next = this.next();
+        const waits = next?.at ? `The stack waits for ${this.moment(next)}, or GO.` : 'The stack waits for GO.';
+        return `${release ? 'Done' : 'Up'}. ${next ? waits : 'It is the only cue.'}`;
+      }
       default:
-        return 'Play goes to the first step.';
+        return 'GO goes to the first cue.';
     }
   });
 
@@ -58,11 +62,18 @@ export class StackCards {
     return `${this.store.stepWithNote(step)}${step.add ? ', adds' : ''}${step.continue ? ', plays on' : ''}`;
   }
 
-  /** The times of a step in words, for the "next" card. */
+  /** The times of a step in words, for the "next" card; first the moment of a sound it comes at. */
   protected times(step: TimedStep): string {
-    const wait = step.wait > 0 ? `then goes on after ${step.wait.toFixed(1)} s` : 'then waits for Play';
-    return step.target === 'release'
-      ? `Takes it down in ${step.down.toFixed(1)} s, ${wait}.`
-      : `Up in ${step.up.toFixed(1)} s, ${wait}.`;
+    const wait = step.wait > 0 ? `then goes on after ${step.wait.toFixed(1)} s` : 'then waits for GO';
+    const times =
+      step.target === 'release'
+        ? `Takes it down in ${step.down.toFixed(1)} s, ${wait}.`
+        : `Up in ${step.up.toFixed(1)} s, ${wait}.`;
+    return step.at ? `Comes at ${this.moment(step)}. ${times}` : times;
+  }
+
+  /** The moment of a sound a step comes at, "0:31.25 of Thunder". */
+  private moment(step: TimedStep): string {
+    return step.at ? momentWords(step.at, this.store.soundsByNumber()) : '';
   }
 }

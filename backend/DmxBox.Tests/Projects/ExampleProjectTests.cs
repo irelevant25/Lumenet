@@ -53,7 +53,7 @@ public sealed class ExampleProjectTests : IDisposable
     public void TheExamplesGoFromOneThingToAllOfIt()
     {
         Assert.Equal(
-            ["1 Memories and the stack", "2 Sequences", "3 Fixtures and the stage", "4 Moving heads", "5 Theatre show", "6 Concert", "7 Effects", "8 Sounds", "9 Sounds in the stack"],
+            ["1 Looks and cues", "2 Chases and sequences", "3 LED lights and groups", "4 Moving heads", "5 A whole theatre show", "6 A whole concert", "7 Effects", "8 Playing sounds", "9 Light and sound cues", "10 Cues on the music"],
             _store.List().Examples);
     }
 
@@ -131,7 +131,7 @@ public sealed class ExampleProjectTests : IDisposable
     [Fact]
     public void TheTheatreShowShowsEveryKindOfThingOfMemories()
     {
-        _store.OpenExample("5 Theatre show");
+        _store.OpenExample("5 A whole theatre show");
         ProjectContent content = _desk.GetProject().Content;
         Sequence[] sequences = content.Sequences.OfType<Sequence>().ToArray();
         StackStep[] stack = _desk.GetStack().Steps;
@@ -160,7 +160,7 @@ public sealed class ExampleProjectTests : IDisposable
     [Fact]
     public void TheStackOfFixturesAndTheStageIsMadeOfLightsAndGroupsOnly()
     {
-        _store.OpenExample("3 Fixtures and the stage");
+        _store.OpenExample("3 LED lights and groups");
         StackStep[] stack = _desk.GetStack().Steps;
 
         Assert.All(stack, step => Assert.Contains(step.Target, new[] { Step.Fixture, Step.Group }));
@@ -185,7 +185,7 @@ public sealed class ExampleProjectTests : IDisposable
     [Fact]
     public void TheConcertUsesAllOfItTogether()
     {
-        _store.OpenExample("6 Concert");
+        _store.OpenExample("6 A whole concert");
         ProjectContent content = _desk.GetProject().Content;
         StackStep[] stack = _desk.GetStack().Steps;
 
@@ -226,7 +226,7 @@ public sealed class ExampleProjectTests : IDisposable
     {
         var soundFiles = new SoundStore(Path.Combine(_folder.FullName, "store"));
         var store = new ProjectStore(_desk, _folder.FullName, Examples, soundFiles);
-        store.OpenExample("8 Sounds");
+        store.OpenExample("8 Playing sounds");
         Sound[] sounds = _desk.GetSounds();
 
         // every file comes from the folder beside the example into the desk program's sounds, and plays
@@ -253,7 +253,7 @@ public sealed class ExampleProjectTests : IDisposable
         var time = new ManualTime();
         var desk = new Desk(time);
         var soundFiles = new SoundStore(Path.Combine(_folder.FullName, "store"));
-        new ProjectStore(desk, _folder.FullName, Examples, soundFiles).OpenExample("9 Sounds in the stack");
+        new ProjectStore(desk, _folder.FullName, Examples, soundFiles).OpenExample("9 Light and sound cues");
         StackStep[] stack = desk.GetStack().Steps;
         Assert.All(desk.GetSounds(), sound => Assert.NotNull(soundFiles.InfoOf(sound.Hash)));
         Assert.Contains(stack, step => step.Target == Step.SoundTarget && step.Continue);
@@ -285,6 +285,57 @@ public sealed class ExampleProjectTests : IDisposable
         Go();             // 6.0 Morning, 6.1 the rain is released
         Assert.False(Plays(2));
         Assert.Equal(255, desk.GetOutput()[0]);   // the front of Morning at full
+    }
+
+    [Fact]
+    public void TheCuesOnTheMusicComeAtItsMomentsAndTheHazeIsSkipped()
+    {
+        var time = new ManualTime();
+        var desk = new Desk(time);
+        var player = new PretendSoundPlayer();
+        desk.UseSoundPlayer(player);
+        var soundFiles = new SoundStore(Path.Combine(_folder.FullName, "store"));
+        new ProjectStore(desk, _folder.FullName, Examples, soundFiles).OpenExample("10 Cues on the music");
+        StackStep[] stack = desk.GetStack().Steps;
+        Sound music = Assert.Single(desk.GetSounds());
+        Assert.NotNull(soundFiles.InfoOf(music.Hash));
+        Assert.Equal([8, 16, 24, 26, 27, 28, 36], stack.Where(step => step.At is not null).Select(step => step.At!.Seconds));
+        Assert.All(stack.Where(step => step.At is not null), step => Assert.Equal(music.Number, step.At!.Sound));
+        Assert.True(music.Seconds > 36, "the music lasts past its last moment");
+        Assert.Equal("1.2", Assert.Single(stack, step => step.Disabled).Cue);
+
+        string Current() => stack.Single(step => step.Id == desk.GetPlayback().Stack.CurrentId).Cue;
+        void MusicAt(double seconds)
+        {
+            player.Position[music.Number - 1] = seconds;
+            time.Pass(0.2);
+            desk.Tick();
+        }
+
+        desk.SetStackLive(true);   // 1.0, the intro: up in 2 seconds, then it waits for GO
+        time.Pass(2.5);
+        desk.Tick();
+        Assert.Equal("1.0", Current());
+        desk.StackPlay();          // 1.1 starts the music; 1.2, the haze, is skipped
+        MusicAt(0.5);
+        Assert.Equal("1.1", Current());
+        MusicAt(8);
+        Assert.Equal("2.0", Current());
+        MusicAt(16);
+        MusicAt(16.2);
+        MusicAt(16.4);             // 3.0, up in 0.2 seconds, and after its wait of 0.1 the chase of 3.1
+        Assert.Equal("3.1", Current());
+        MusicAt(26.1);             // past the break (24): straight to the flash of 26
+        Assert.Equal("4.1", Current());
+        MusicAt(27);
+        Assert.Equal("4.2", Current());
+        MusicAt(28);
+        MusicAt(28.2);             // the finale, and by itself the pulse of 5.1
+        Assert.Equal("5.1", Current());
+        MusicAt(36);
+        Assert.Equal("6.0", Current());
+        MusicAt(39);               // the end of the music: 7.0 waits for GO
+        Assert.Equal("6.0", Current());
     }
 
     private static string WithoutCarriageReturns(string text) => text.Replace("\r\n", "\n", StringComparison.Ordinal);

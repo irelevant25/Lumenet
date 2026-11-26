@@ -17,6 +17,24 @@ Enttec DMX USB Pro, see [Universes and outputs](#universes-and-outputs). To try 
 `sim.cmd` (from the sources) starts a simulated box, Art-Net node, sACN receiver or USB interface, and the
 desk finds it as if it were plugged in: see [DEV.md](DEV.md#simulated-devices-simcmd).
 
+### The first start
+
+The first time the page opens on a device (the PC, a phone, a tablet), it asks what kind of shows you run:
+
+| Setup | The views in the top bar | Rows on Main |
+|---|---|---|
+| **Theatre**: light and sound in one stack of cues, played with GO | Main, Stack, Stage, Sounds | sounds |
+| **Theatre with moving lights**: the same, with fixtures, effects, memories and sequences | all but Notes and MIDI | effects, sounds |
+| **Concert**: lights played live to the music | Main, Sequences, Stage, Fixtures, Effects, MIDI | effects |
+| **Everything** | all but Notes | effects, sounds |
+
+Settings is always there too, and Notes is in none of them: Settings shows it with a tick, for a show whose
+notes are written there. **Use this setup** sets them on this device, and then offers the first steps:
+**Outputs** (Settings, where the dmxbox or another output is set up), **Lights** (the Stage view, where the
+lights are put on the plan) and **Examples** (the Load window with the example shows). **Later** changes
+nothing. Either way the device is not asked again; **Setup…** in Settings (beside Views in the top bar)
+offers the setups any time, and Settings changes each view and row on its own.
+
 ## Lumenet.exe
 
 The whole desk in one file, for Windows 10 and 11 (64-bit), with nothing to install: the desk program, the
@@ -46,8 +64,8 @@ page and the examples are inside it, and so is .NET. Every release on the [Relea
 
 ## What is on the page
 
-The top bar has ten links: **Main**, **Memories**, **Sequences**, **Stack**, **Stage**, **Fixtures**,
-**Effects**, **Notes**, **MIDI** and **Settings** (in this order until Settings gives them another). Main is the desk itself. Memories shows what is stored, and changes it with a double click. Sequences, Effects and Stack
+The top bar has a link for each view: **Main**, **Memories**, **Sequences**, **Stack**, **Stage**, **Fixtures**,
+**Effects**, **Sounds**, **MIDI** and **Settings**, and **Notes** once Settings shows it (in this order until Settings gives them another). Main is the desk itself. Memories shows what is stored, and changes it with a double click. Sequences, Effects and Stack
 are for the things that run by themselves (see below), Stage shows the lights of the rig in their colors,
 Fixtures plays them as fixtures, Notes holds the instructions for the show, MIDI sets up the MIDI controllers
 of the PC (see [MIDI controllers](#midi-controllers)), Settings is
@@ -146,7 +164,7 @@ the top, one line each.
   tap on, the tempo is the beat of the taps, the average of the last four beats, and the fader moves to it.
   A pause of more than two seconds starts the count afresh. Its shortcut taps as well.
 * **Undo** and **Redo** (top left) take back the last change of what the project holds, and make it again:
-  storing, copying and emptying memories, sequences and their speed, the effects, the steps of the stack,
+  storing, copying and emptying memories, sequences and their speed, the effects, the cues of the stack,
   notes and the channels, memories and effects of the independent keys. Their tooltip says what they would
   do, for example "Undo storing memory 5", and the top bar says what they did. The faders, Clear, the
   master, the playbacks of the effects and the settings are no steps; changes of one kind in quick
@@ -155,16 +173,16 @@ the top, one line each.
   one and an import start afresh, and while the stack is live they are locked. Ctrl + Z and Ctrl + Y are
   their shortcuts until the Keyboard panel of Settings gives them others.
 * **Stack** (across the top of the three columns at the right) is the stack at hand on Main: its keys stand
-  in a column at the left, over the master section. Stack takes it live, Prev, Play, Pause and Next go
+  in a column at the left, over the master section. Stack takes it live, Back, GO, Pause and Next go
   through it, as on the Stack view. Beside the keys, over the other two columns, stands a wheel of the
-  stack's steps, each number with its note beside it (the note under the fader of its channel or memory, the
-  name of its fixture or group, or for a step without one what it is, "Channel 5 (U1)"): the one that is on
-  in the middle (green, with an arrow beside it, at the height of Play), the step before it above (blue),
-  the one Play goes to below (yellow), the others grey, their numbers about half as high as a key is wide
-  (15 to 22 pixels). It shows 7 steps, or 1, 3, 5 or 9 as Settings says,
-  and rolls on when another step comes on. The stack goes round, and so does the wheel, but a step stands in
-  it once only. While no step is on, the middle is empty and the step Play goes to stands under it. On a low
-  window the keys of the column get flatter and the wheel shows fewer steps, always the one that is on.
+  stack's cues, each number with its note beside it (the note under the fader of its channel or memory, the
+  name of its fixture or group, or for a cue without one what it is, "Channel 5 (U1)"): the one that is on
+  in the middle (green, with an arrow beside it, at the height of GO), the cue before it above (blue),
+  the one GO goes to below (yellow), the others grey, their numbers about half as high as a key is wide
+  (15 to 22 pixels). It shows 7 cues, or 1, 3, 5 or 9 as Settings says,
+  and rolls on when another cue comes on. The stack goes round, and so does the wheel, but a cue stands in
+  it once only. While no cue is on, the middle is empty and the cue GO goes to stands under it. On a low
+  window the keys of the column get flatter and the wheel shows fewer cues, always the one that is on.
 * **The whole screen:** Stack, pressed to take the stack live, puts the page on the whole screen of this
   device, and pressed again to switch it off, takes it back (also on the Stack and Stage views, and with its
   shortcut). Esc leaves the whole screen at any time; the stack stays live. A stack switched on or off on
@@ -220,8 +238,8 @@ the top, one line each.
   up. Every window shows the same desk, so the plan can stay open in a second window, on a second screen or
   on a tablet over LAN while you program on Main.
   * **The stack** stands at the left of the plan (under it on a phone), to run a show while the plan shows
-    its lights: the keys of the Stack view (Stack, Prev, Play, Pause, Next), its cards Previous, Current and
-    Next one under the other, each with the number of its step big at the right; under them the wave of
+    its lights: the keys of the Stack view (Stack, Back, GO, Pause, Next), its cards Previous, Current and
+    Next one under the other, each with the number of its cue big at the right; under them the wave of
     the sound that plays, the master section (Black out and the master fader) and the sound section (MUTE,
     LISTEN and the volume of all sounds) in a line each; and its steps with their notes and times, the
     current one green and the next one with an amber edge. When the list is longer
@@ -248,8 +266,8 @@ the top, one line each.
   * **A double click on a light** puts its faders to full, and the next one back to zero: those of its
     dimmer and its colors, not a strobe or a mode (of a device that gives no light: all its channels).
     **Clear** (top right) is the Clear of Main, with the same shortcut: it cancels an unfinished function,
-    brings every channel fader and memory fader to zero and takes the stack off its step (a live stack stays
-    live, and Play starts it at its first step again).
+    brings every channel fader and memory fader to zero and takes the stack off its cue (a live stack stays
+    live, and GO starts it at its first cue again).
   * **Edit** (top right) places the lights: **Add light** puts one on the plan, on the channel after the
     last light, named after the note of that channel. Drag a light by its middle to move it (in half
     squares; the arrow keys move it too, with Shift by two squares; Delete takes it away), and by an edge
@@ -340,7 +358,7 @@ the top, one line each.
 ![The Notes view with the notes of the example concert](docs/screenshots/notes.png)
 
 * **The Notes view** holds the notes of the project: instructions for the show, what it is and how to run
-  it. They are read there; **Edit** (faint while off, full while on) makes them a text to write in, with
+  it. It is left out of the top bar at first: Settings shows it with a tick. They are read there; **Edit** (faint while off, full while on) makes them a text to write in, with
   the tool keys at the left: **B** (bold), **U** (underline), the **size** (small, normal, large, huge), a
   bulleted and a numbered **list**, and a **color** (the six colors of the desk, and **A** for the usual
   one). A tool key lights up when the text at the cursor has its mark, and works on the text that is
@@ -366,42 +384,47 @@ the top, one line each.
   and the top bar says so. Saving keeps it; loading the project again drops it. The faders are not brought
   back: a desk program that starts switches no light on by itself. Settings switches the autosave off and
   on and sets how often it keeps the work (see [Settings](#settings)).
-* **Examples:** the Load window lists them under the projects. One opens as a project of its name, without a
-  file: the example itself stays as it is, and Save asks for a name. Each has notes on what it shows and how
-  to use it (the Notes view), and none brings settings or shortcuts. The first four show one thing each, the
-  next two all of it together, the seventh the effects, the eighth the sounds and the ninth a show of
-  sounds and lights in the stack:
-  * **1 Memories and the stack:** eight lamps of a small theatre, six looks in memories and a stack of nine
-    cues, one of which goes on by itself.
-  * **2 Sequences:** a row of six lamps, two washes and a blinder: a chase, a bounce, a random sparkle at
+* **Examples:** the Load window lists them under the projects, in the order of their numbers. One opens as
+  a project of its name, without a file: the example itself stays as it is, and Save asks for a name. Each
+  has notes on what it shows and how to use it, in the Notes view (Settings shows it with a tick), and none
+  brings settings or shortcuts. The first four show one thing each, the next two all of it together, then
+  come the effects, the sounds, a show of light and sound cues, and cues that come on the music:
+  * **1 Looks and cues:** eight lamps of a small theatre, six looks in memories and a stack of nine cues,
+    one of which goes on by itself.
+  * **2 Chases and sequences:** a row of six lamps, two washes and a blinder: a chase, a bounce, a random sparkle at
     1.5×, a sequence of memories, an intro that runs once and two slow breaths at 0.5×.
-  * **3 Fixtures and the stage:** RGBW and RGB pars, an LED bar and a hazer, in three groups. The stack is
-    made of lights and groups of the stage only, each step with its color; memory 1 holds a chase of light
+  * **3 LED lights and groups:** RGBW and RGB pars, an LED bar and a hazer, in three groups. The stack is
+    made of lights and groups of the stage only, each cue with its color; memory 1 holds a chase of light
     steps.
   * **4 Moving heads:** two moving heads from the fixture library (American DJ Inno Pocket Spot, 9 channels),
     a front wash and a hazer: positions with colors and gobos in memories, a swing between two of them.
-  * **5 Theatre show:** the whole show of a small theatre on 17 channels: two red lights in a pot, a front
+  * **5 A whole theatre show:** the whole show of a small theatre on 17 channels: two red lights in a pot, a front
     wash, four blue back lights, a spot, an RGBW LED bar, a hazer, a mirror ball and the house light. Notes on
     every light and memory, ten looks, eleven sequences (every template, some made by hand and some recorded
     with Rec seq; in a loop, once and at random; at speeds from 0.5× to 2×), all twenty independent keys
-    bound, and a stack of 14 steps with steps put in between (3.5, 4.1), waits that go on by themselves and a
+    bound, and a stack of 14 cues with cues put in between (3.5, 4.1), waits that go on by themselves and a
     channel step for the hazer. Its stage plan lies over a drawing of the stage: a wooden floor, the back
     curtain, masking at the sides, a riser, the fire pot between its two red lights and tape marks.
-  * **6 Concert:** two moving heads, front and back pars, an LED bar, blinders, a hazer and the house light,
+  * **6 A whole concert:** two moving heads, front and back pars, an LED bar, blinders, a hazer and the house light,
     in five groups: looks and positions in memories, sequences of lights and of memories, and a stack that
     mixes memories, groups, a light and a channel.
   * **7 Effects:** four moving heads, eight RGBW pars and two LED bars of eight cells, with ten effects: a
     circle and a fan of the heads, a chase and a pulse of the pars, a rainbow and red and blue, and bars, a
     ripple, sparkle and plasma over the cells of the bars. Memories point the heads and light the pars, and a
     stack plays the effects with Add and a release.
-  * **8 Sounds:** a stormy night in sound and light, on the stage of example 3: rain and wind in loops,
+  * **8 Playing sounds:** a stormy night in sound and light, on the stage of example 3: rain and wind in loops,
     thunder near and far (one file played two ways), a church bell with an echo, applause and a short piece
     of music, which a second sound plays slower at the same pitch; four looks and a lightning effect. The
     sounds were made for Lumenet from noise and tones alone, so they are free to use; they lie in the folder
-    "8 Sounds sounds" beside the example, and come along when it is opened.
-  * **9 Sounds in the stack:** the night of example 8 as a show of 15 steps: looks and sounds together,
+    "8 Playing sounds sounds" beside the example, and come along when it is opened.
+  * **9 Light and sound cues:** the night of example 8 as a show of 15 cues: looks and sounds together,
     the music, the rain and the wind with Continue through the scenes after them until a release stops each,
     the thunder, the bell and the applause with Add, and the lightning.
+  * **10 Cues on the music:** a dance of the puppets on the stage of example 3. GO starts its music, "Puppet
+    dance" (40 seconds at 120 BPM, made for Lumenet as well), and the cues come by themselves at its moments:
+    the verse at 0:08, the chorus at 0:16, the break at 0:24 with a flash on each clap at 0:26 and 0:27, the
+    last chorus at 0:28 and the final chord at 0:36. Two effects at the tempo of the music, a skipped cue for
+    haze, and a release that ends the show.
 
   They are the files in `examples/`; the desk program takes them along when it is built, and the setting
   `Projects:Examples` names another folder for them.
@@ -426,10 +449,10 @@ the top, one line each.
   consoles hand a show on (on an Eos: File, Export, USITT ASCII; a SmartFade saves its shows in this format).
   It becomes the project, like Load replacing the open one, and the window warns when that has changes that
   are not saved and then says what came across and what was left out.
-  * **Cues:** every cue of the first cue list becomes a memory with its look, and a step of the stack that
+  * **Cues:** every cue of the first cue list becomes a memory with its look, and a cue of the stack that
     brings that memory up: with the cue's number, its up time, and as down the down time of the cue after it
-    (the stack takes the old step down while the new one comes up). A follow time becomes the step's wait,
-    which counts from the moment the step is up. A cue in parts becomes one fade, as long as its slowest
+    (the stack takes the old cue down while the new one comes up). A follow time becomes the cue's wait,
+    which counts from the moment the cue is up. A cue in parts becomes one fade, as long as its slowest
     part; a delay is added to the fade time. A cue without a time fades in 5 seconds. A last cue that links
     to the first goes round, as the stack does; other links are left out.
   * **Submasters and groups** become memories too, after the cues, as long as memories are left. There are 128
@@ -455,10 +478,10 @@ the top, one line each.
     levels of its own (a "state", a single channel) gets a memory of its own, and a memory that a step plays
     but the file does not hold stays empty, as on the console. Its sequences become memories that hold
     sequences: Loop and One Shot as on the console, Manual in a loop. A wait counts from the moment a step is
-    up, as on the console, and a wait of 0 waits for Play. Its patch has the DMX address first; the labels of
+    up, as on the console, and a wait of 0 waits for GO. Its patch has the DMX address first; the labels of
     its channels become the notes under them, and its independents IND 1 and IND 2 get independent keys 1
     and 2. A percentage becomes a DMX value rounded up, as the console has it (17 % is 44).
-  * `examples/Example theatre show.asc` is a short play for the lights of the example "5 Theatre show",
+  * `examples/Example theatre show.asc` is a short play for the lights of the example "5 A whole theatre show",
     written by hand to show all of this: a patch, a blackout, a cue in two parts with a delay, a storm whose
     cues follow on by themselves, a fade of 1:30, submasters and groups. Import it from the `examples` folder
     with .ASC checked.
@@ -483,7 +506,7 @@ to 512, as on the cable.
   beside it, 113 U2, 113 (U2) or U2 113. A number alone stays in the universe the key or the light is in, so
   in a project of one universe the number alone is enough. The Template window has a list of the universes
   beside the channel numbers.
-* **Fewer universes** are refused while a step of a sequence or of the stack, a light of the stage plan or a
+* **Fewer universes** are refused while a step of a sequence or a cue of the stack, a light of the stage plan or a
   key of the independents uses a channel of a universe that would go; the top bar says which. The levels the
   memories hold there and the notes of those channels go with them; Undo brings them back.
 * A light of the stage plan has all its channels in one universe: an address that would take it past the
@@ -585,7 +608,8 @@ and others), at a serial port of this PC: each plays one universe, or Off, which
 
 ### Steps
 
-A sequence and the stack are both made of steps, and both are played the same way. A step stands for a
+A sequence and the stack are both made of steps, and both are played the same way. In the stack a step is
+called a **cue**, as in other programs that play a show (QLab, the desks of ETC), and GO plays the next one. A step stands for a
 channel, a memory, a **fixture** or a **group** of fixtures (see the Fixtures view), has the value it brings
 that to (0 to 255), and three times in seconds: **up** (from zero to the value), **wait** (how long it stays)
 and **down** (back to zero when a step takes it down). A step can also play an **effect**, take another step
@@ -620,7 +644,8 @@ a fixture every light of the stage plan, by its address (`18 (U1): Spot 1`, the 
 address), for a group every group (`G1: Back`).
 The **Notes** column beside the number shows the note of the channel or memory the step uses, or the name
 of the fixture or group. It is read there, not written: a note is changed under its fader. **Add step**
-puts in a step like the last one, on the next channel, memory, fixture (by address) or group.
+(**Add cue** on the Stack view) puts in a step like the last one, on the next channel, memory, fixture (by
+address) or group.
 
 ### The Sequences view
 
@@ -682,7 +707,7 @@ it gives in red.
   plays the other steps. It can be switched while the stack is live too, but not for the step a running
   sequence plays just then; a running sequence goes on, its rounds shorter or longer from then on.
 * What still differs from the stack: many sequences can run at once, each dimmed by its memory's fader; a
-  sequence never moves a fader on the page; and a wait of 0 goes on at once, where the stack waits for Play.
+  sequence never moves a fader on the page; and a wait of 0 goes on at once, where the stack waits for GO.
   A project whose sequences add, release or play effects is saved as version 8 of the project file, which an
   older Lumenet refuses with a message instead of playing it wrong; one with sounds or steps of sounds as
   version 9.
@@ -695,91 +720,113 @@ it gives in red.
 
 ### The Stack view
 
-The project has one stack: a list of steps for a show. The stack moves the real faders:
-going to a step moves the fader of its channel or memory up to the step's value, leaving it moves that fader
+The project has one stack: a list of cues for a show. The stack moves the real faders:
+going to a cue moves the fader of its channel or memory up to the cue's value, leaving it moves that fader
 back to zero. A memory that holds a sequence starts running, because its fader goes up.
 
-![The Stack view, live: the previous, the current and the next step over the table of the 14 steps](docs/screenshots/stack.png)
+![The Stack view, live: the previous, the current and the next cue over the table of the 14 cues](docs/screenshots/stack.png)
 
+* **Cue sheet** (at the right of the view's title) shows the stack as a sheet to print, for rehearsals and
+  for whoever calls the cues: every cue with its number, what it plays and its note, its value, Add and
+  Continue, its up, wait and down (a wait of 0 says GO: the cue waits for GO), the moment of a sound it
+  comes at (At), skipped cues struck through, and a column **Called on** left empty to write in. **Print** hands it to the browser's printing, which
+  can save it as a PDF too; the rest of the desk is left out, black on white.
 * **Stack** is the switch of the stack. Pressed, it is fully lit and the stack is **live**: every channel
-  fader and memory fader goes to zero, and the first step starts. Pressed again, the stack stops and the
+  fader and memory fader goes to zero, and the first cue starts. Pressed again, the stack stops and the
   faders stay where they are. While the stack is live, the link to the Stack view in the top bar carries a
   red **Live** tag, in every view.
-* **While the stack is live, nothing that is stored can be changed:** not the steps of the stack, not a
+* **While the stack is live, nothing that is stored can be changed:** not the cues of the stack, not a
   memory (Save mem, Edit mem, Rec seq, Copy and Del are locked), not a sequence, not an effect, not a note,
   not the channels of the independent keys, and New and Load are locked too. The faders, the independent
   keys themselves, the playbacks of the effects (their keys, faders and live values), Clear, Black out, the
   master and saving the project work as always.
-* While the stack is not live it does not run: Play, Pause, Next and Prev are dark. That is the time to
-  change the steps.
-* **Play** goes to the next step, or goes on after Pause. **Pause** holds a fade or a wait where it is.
-  **Next** and **Prev** go to the next or the previous step at once, and without the steps' times: the
-  new step is there at once, the steps that go are gone at once, and so are their sounds. A fade that runs
-  ends where it goes. After Prev the stack stays on that step until Play, also when the step has a wait:
-  a step played by mistake (Play pressed too soon) is taken back with Prev, its music stops at once, and it
+* While the stack is not live it does not run: GO, Pause, Next and Back are dark. That is the time to
+  change the cues.
+* **GO** goes to the next cue, or goes on after Pause. **Pause** holds a fade or a wait where it is.
+  **Next** and **Back** go to the next or the previous cue at once, and without the cues' times: the
+  new cue is there at once, the cues that go are gone at once, and so are their sounds. A fade that runs
+  ends where it goes. After Back the stack stays on that cue until GO, also when the cue has a wait:
+  a cue played by mistake (GO pressed too soon) is taken back with Back, its music stops at once, and it
   does not come again by itself.
-* **The stack goes round:** after the last step comes the first, for Play, for Next and when the stack goes
-  on by itself. Prev from the first step goes to the last.
-* A wait of 0 means the stack stays on the step until Play. With a wait above 0 it goes on by itself that
-  many seconds after the step is up.
-* The view shows all steps, the **current** one in green, the **next** one with an amber edge, the
-  **previous** one (the step before the current one, where Prev goes) in blue and every other step that is
+* **The stack goes round:** after the last cue comes the first, for GO, for Next and when the stack goes
+  on by itself. Back from the first cue goes to the last.
+* A wait of 0 means the stack stays on the cue until GO. With a wait above 0 it goes on by itself that
+  many seconds after the cue is up.
+* The view shows all cues, the **current** one in green, the **next** one with an amber edge, the
+  **previous** one (the cue before the current one, where Back goes) in blue and every other cue that is
   **on** (see Add) in a paler green, and for the current one how far it is. Over the table three cards say
-  what the previous, the current and the next step are, each with the number of its step big at its right,
-  in the card's color. Prev, Play, Pause and Next are bigger than the other keys of the desk, Play the
+  what the previous, the current and the next cue are, each with the number of its cue big at its right,
+  in the card's color. Back, GO, Pause and Next are bigger than the other keys of the desk, GO the
   biggest. Stack also puts the page on the whole screen (see Main).
 * **Master and Sound** lie in a row under the keys and the cards: the master section (Black out and the
   master fader) and the sound section (MUTE, LISTEN and the volume of all sounds), as on Main. Under them
   stands the wave of the sound that plays (see [The Sounds view](#the-sounds-view)).
-* **Add** (the box after the step number): a step with Add comes up on top of what is on and takes nothing
-  down. A step without Add takes down everything that is on and that it does not give itself, each in its own
-  down time: the step before it and every step that added since. A light that both give stays where it is.
-  For example: step 1.0 is the scene; step 2.0 is a special light, with Add: it comes up and the scene stays.
-  Step 3.0 is the scene again, without Add: the special light goes down in its own down time, and the scene
+* **Add** (the box after the cue number): a cue with Add comes up on top of what is on and takes nothing
+  down. A cue without Add takes down everything that is on and that it does not give itself, each in its own
+  down time: the cue before it and every cue that added since. A light that both give stays where it is.
+  For example: cue 1.0 is the scene; cue 2.0 is a special light, with Add: it comes up and the scene stays.
+  Cue 3.0 is the scene again, without Add: the special light goes down in its own down time, and the scene
   does not move.
-* **Release** is a kind of step (of a sequence too): it takes one step that is on down, in the release's own down
-  time, and leaves everything else as it is. Its number is the step it takes down, chosen from the other
-  steps of the stack (`2.0: Memory 5 (Special)`); it has no value and no up time, its wait counts as usual.
-  In the example, a release of 2.0 as step 3.0 takes the special light down and leaves the scene, even when
-  the special light is a sequence. A release of a step that is not on does nothing, and when the step it
-  names is taken out of the stack, it names none. Where two steps that are on use the same fader, the later
+* **Release** is a kind of cue (and a step of a sequence): it takes one cue that is on down, in the release's own down
+  time, and leaves everything else as it is. Its number is the cue it takes down, chosen from the other
+  cues of the stack (`2.0: Memory 5 (Special)`); it has no value and no up time, its wait counts as usual.
+  In the example, a release of 2.0 as cue 3.0 takes the special light down and leaves the scene, even when
+  the special light is a sequence. A release of a cue that is not on does nothing, and when the cue it
+  names is taken out of the stack, it names none. Where two cues that are on use the same fader, the later
   one's value counts; when it goes, the earlier one's counts again.
-* **Effect** is a kind of step too: its number is an effect, chosen from the 64 (`3: Chase`). Going to it
-  brings the effect's fader up to the step's value in its up time, which starts the effect; leaving it brings
+* **Effect** is a kind of cue too: its number is an effect, chosen from the 64 (`3: Chase`). Going to it
+  brings the effect's fader up to the cue's value in its up time, which starts the effect; leaving it brings
   the fader back to zero in its down time, which stops the effect. Add and a release work on it as on any
-  step. The stack uses the step's times, not the effect's own fade times, and moves the effect's real fader,
+  cue. The stack uses the cue's times, not the effect's own fade times, and moves the effect's real fader,
   so the Effects view and the row on Main show it. (A sequence plays the effect without moving the fader:
   see the Sequences view.)
-* **Sound** is a kind of step too, chosen from the 64 sounds (`2: Rain`): going to it brings the sound's
-  fader up to the step's value in its up time, which starts the sound; leaving it brings the fader down in
-  its down time, which stops it. **Continue** (the box after Add, only for a sound) keeps the step on
-  through every step after it, with Add or without, until the sound ends by itself (a sound in a loop never
-  does) or a release names the step: rain can fall through five scenes and stop at the sixth. Stack off and
+* **Sound** is a kind of cue too, chosen from the 64 sounds (`2: Rain`): going to it brings the sound's
+  fader up to the cue's value in its up time, which starts the sound; leaving it brings the fader down in
+  its down time, which stops it. **Continue** (the box after Add, only for a sound) keeps the cue on
+  through every cue after it, with Add or without, until the sound ends by itself (a sound in a loop never
+  does) or a release names the cue: rain can fall through five scenes and stop at the sixth. Stack off and
   Clear stop such a sound too; the other faders stay where they are when the stack goes off, as always. A
-  step of a sound that still plays does not start it again, one whose sound is over plays it again; and
-  Prev starts no sound but that of the step it goes to: a step of another sound comes along only while its
+  cue of a sound that still plays does not start it again, one whose sound is over plays it again; and
+  Back starts no sound but that of the cue it goes to: a cue of another sound comes along only while its
   sound still plays. While a Soundcraft Ui mixer answers, the list of numbers offers, after the sounds,
   the tracks of its playlist that are no sound yet: one picked becomes a sound in the first free number
   (see [Tracks of a Soundcraft Ui mixer](#tracks-of-a-soundcraft-ui-mixer)). The same on the Sequences view.
-* **Disabled** (the box at the end of a row) skips a step without taking it out: the stack passes over it
-  with Play, Next, Prev and when it goes on by itself, and going live starts at the first step that is not
+* **At** (the column after Down) lets a cue come at a moment of a sound instead of GO. Press it, choose
+  the sound and type the moment (`1:15.5`, or `75.5` in seconds), or press **Now** while the sound plays to
+  take where it is; **Use** gives the cue that moment, **None** takes it away. While the stack is live and
+  the cue before is on, the cue comes the moment the sound gets there, as if GO was pressed then. GO still
+  goes earlier, and the next cue with a moment then waits for its own. A wait does not take the stack on
+  to a cue with a moment. Past several moments at once (a double click further on in the wave), the stack
+  goes straight to the last of them; sent back (a double click further back, a loop that begins again),
+  it goes back to the cue of the moment the sound is at now. While the sound is quiet its cues wait for
+  GO, and the stack never goes round from the last cue by a moment. At works while the stack is live
+  too: the moments are set in a rehearsal. The wave of the sound that plays has a thin amber line at the
+  moment of each of its cues, and the Current card says which moment the stack waits for. A project with
+  a moment is a file of version 10.
+* **Learn** (beside Add cue) sets the moments in a rehearsal with the music: while it blinks, each GO
+  stores where the sound that plays is (of several, the one that started last) into the cue it goes to,
+  and goes on also while a fade or a wait runs, so GO can be pressed on the beat. Press Learn again to
+  stop; Stack off stops it too. A GO while no sound plays leaves the cue's moment as it was, and Undo takes
+  a learned moment back.
+* **Disabled** (the box at the end of a row) skips a cue without taking it out: the stack passes over it
+  with GO, Next, Back and when it goes on by itself, and going live starts at the first cue that is not
   skipped. It can be switched while the stack is live too, as a way out when something goes wrong, but not
-  for the step that is on. A skipped step is faint and its number struck through, on Main's wheel too, and a
+  for the cue that is on. A skipped cue is faint and its number struck through, on Main's wheel too, and a
   project with one is a file of version 9.
-* **The kind and the number** of a step are in the color of its kind, as a key that is half lit: channels
+* **The kind and the number** of a cue are in the color of its kind, as a key that is half lit: channels
   and fixtures green, memories red, groups amber, effects violet, sounds cyan, releases white. So a long
   stack reads at a glance, also while it is live. The same on the
   Sequences view.
-* **Prev** sets up the steps that are on as if the stack had come to that step from the top: from the last
-  step before it without Add, through the steps that add. Round from the last step, the first one starts
+* **Back** sets up the cues that are on as if the stack had come to that cue from the top: from the last
+  cue before it without Add, through the cues that add. Round from the last cue, the first one starts
   afresh, with nothing on under it.
 * A fader the stack is moving and that you move by hand is yours from then on. Clear brings every fader down
-  and takes the stack off its step; it stays live, and Play starts with the first step again.
-* **Step numbers** look like 1.0, 2.0, 2.1. A new step gets the next whole number. Drag a step by its grip
-  (or use the arrows at the end of its row): it gets the number of the step it now follows with the digit
-  after the dot one higher, and the others keep theirs. Moved between 2.0 and 3.0, a step becomes 2.1.
-  Type a number to change it: if another step has it, that one gives way (3.0 becomes 4.0, 3.1 becomes 4.1).
-* **+** at the end of a row puts a new step right after that one: the step Add step would make after it
+  and takes the stack off its cue; it stays live, and GO starts with the first cue again.
+* **Cue numbers** look like 1.0, 2.0, 2.1. A new cue gets the next whole number. Drag a cue by its grip
+  (or use the arrows at the end of its row): it gets the number of the cue it now follows with the digit
+  after the dot one higher, and the others keep theirs. Moved between 2.0 and 3.0, a cue becomes 2.1.
+  Type a number to change it: if another cue has it, that one gives way (3.0 becomes 4.0, 3.1 becomes 4.1).
+* **+** at the end of a row puts a new cue right after that one: the cue Add cue would make after it
   (the next channel, memory, fixture or group, with the same times), numbered to fit there. After 2.0, with
   3.0 behind it, it becomes 2.1; if 2.1 is there already, that one gives way to 2.2.
 
@@ -950,7 +997,7 @@ Soundcraft Ui mixer, played by the mixer's own player beside the files (see
   * **The fader** is the sound's level: at full it plays at the sound's own level. Raised from zero, it
     starts the sound from its start; down at zero, the sound stops. A sound without a loop takes its fader
     down with its end: in its fade-out time before its end, as its key would, so that it fades out, and at
-    its end without one. Its key, or its fader from zero, plays it again. Where a step of the stack holds
+    its end without one. Its key, or its fader from zero, plays it again. Where a cue of the stack holds
     the fader, or a sequence plays the sound, the fader stays up at the end, and the stack or the sequence
     decides (see the Stack view).
   * **The key** moves the fader: up to full in the sound's fade-in time, which starts it, and pressed again
@@ -1051,7 +1098,7 @@ it, and each sound knows which it is. The desk works the mixer over the network 
     track's level and its fader. After the network to the mixer was gone a moment, the desk gives the
     mixer what the desk has. A double click on the wave jumps in the track.
   * the player plays a track and stops at its end: the desk sets it to manual, not one track after another.
-  * keys, faders and the steps of the stack and of sequences start and stop a track as they do a file. A
+  * keys, faders, the cues of the stack and the steps of sequences start and stop a track as they do a file. A
     step offers every sound, and after them the tracks of the playlist that are no sound yet.
 * **Playlist** (in the Sound part, while the mixer answers): All tracks at first, or a folder of the stick,
   or Tracks outside the folders: the tracks the steps and the Sounds view offer. **Add all its tracks**
@@ -1085,10 +1132,10 @@ it, and each sound knows which it is. The desk works the mixer over the network 
 
 ### Sounds in the stack and in sequences
 
-A step of the stack or of a sequence can play a sound (its kind **Sound**), at a level from 0 to 255 (255:
-the sound's own level), in its up time and down time instead of the sound's fade times. **Continue** lets it
-play on through the steps after it until its end or a release; without it, the next step without Add takes
-it down, as any step. See the Stack view and the Sequences view.
+A cue of the stack or a step of a sequence can play a sound (its kind **Sound**), at a level from 0 to 255
+(255: the sound's own level), in its up time and down time instead of the sound's fade times. **Continue**
+lets it play on through the cues or steps after it until its end or a release; without it, the next one
+without Add takes it down, as any other. See the Stack view and the Sequences view.
 
 ### The files
 
@@ -1226,18 +1273,20 @@ have a view of their own (see [MIDI controllers](#midi-controllers)).
 * **Views in the top bar:** the views in the order of their links, each with a tick; a view that is not
   ticked leaves the top bar (its keyboard shortcut still opens it). Settings is always ticked, so that the
   others can come back. ▲ and ▼ move a view one place to the left or right in the top bar (the keyboard focus
-  stays on the arrow), and ↺ beside the title brings every view back in the usual order. A desk without Main
+  stays on the arrow), and ↺ beside the title brings back the views of the start, every one but Notes, in the
+  usual order. **Setup…** offers the setups of
+  [the first start](#the-first-start) again: the views and rows of Main for a kind of show. A desk without Main
   in its top bar opens on the first view that is. A view that came later than the order kept (Notes,
   Effects, MIDI) stands after the view it follows in the usual order.
 * **Colors of the keys:** a color for each kind (channels, memories, the color a memory with a
   sequence runs into, effects and sounds), which is that of all its keys, page keys and faders, and one for each other key, group
-  by group: Black out; Clear, Solo up, Solo down, Rate (with its fader) and Tempo; Stack, Prev, Play, Pause, Next and Add step (Play also colors the
-  step that is on, Next the step Play goes to); the keys of Record, of the top bar, Edit of the independents,
+  by group: Black out; Clear, Solo up, Solo down, Rate (with its fader) and Tempo; Stack, Back, GO, Pause, Next and Add cue (GO also colors the
+  cue that is on, Next the cue GO goes to); the keys of Record, of the top bar, Edit of the independents,
   the keys of the Sequences view, of the Effects view, of the Stage view and of the Notes view. A press on a color opens the colors the keys have at
   first (green, red, yellow, amber, white, blue, violet and cyan, the one it has ringed) to take one of them, and Other for
   any color; while that one is picked, the desk shows it at once. A press anywhere else, or Esc, closes them.
   Each has a key back to its usual color, and ↺ beside the title takes all of them back. At first Clear, Solo
-  and Pause are white, Black out blue, Play green, Stack and Mute red, the effects violet, the sounds cyan
+  and Pause are white, Black out blue, GO green, Stack and Mute red, the effects violet, the sounds cyan
   and the others amber.
 
 The keys that take something out, ✕ at the end of a step in the Sequences and Stack views and of a shortcut
@@ -1251,9 +1300,27 @@ Record, those of the Sequences view, of the Effects view and of the Stage view, 
 and every key of the independents, every page key and U key, the key under every channel, memory and effect
 fader, Undo and Redo. It lists
 the channel keys and U keys of the project's universes; the shortcuts of the others are kept for a project
-that has them. The shortcuts belong to this device, as the settings do. Undo and Redo have Ctrl + Z and
-Ctrl + Y until they get others (or none: then they stay without). (Until 2026-11-24 the shortcuts had a view of
-their own, Keyboard, with tabs; its address now opens Settings.)
+that has them. The shortcuts belong to this device, as the settings do. (Until 2026-11-24 the shortcuts had a
+view of their own, Keyboard, with tabs; its address now opens Settings.)
+
+Some keys have a shortcut from the start, as in other programs:
+
+| Key | Shortcut |
+|---|---|
+| GO of the stack | the space bar, as in QLab and most programs that play cues |
+| Pause, Next, Back | P, N, Backspace |
+| Stack (live) | S |
+| Black out | B |
+| MUTE, LISTEN | M, L |
+| Tempo (tap) | T |
+| Save, Load | Ctrl + S, Ctrl + O |
+| Undo, Redo | Ctrl + Z, Ctrl + Y |
+
+Each keeps its shortcut until it gets another (or none: then it stays without), and a usual shortcut that
+another key took stays with that key. The space bar is GO also while a key that was clicked last has the
+focus; a box or a choice that has the focus keeps its space bar and ticks. **↺** beside the title of the panel
+gives every key the shortcut it has at first and takes away those set on this device: the first press asks (↺
+turns amber), and a second one within four seconds does it.
 
 ![The Keyboard panel of Settings: the keys of the project and LAN open, Undo and Redo with their shortcuts](docs/screenshots/keyboard.png)
 
@@ -1356,24 +1423,24 @@ The mapping belongs to the PC, not to the project: it is kept in `midi.json` bes
 The faders of these work the faders of the pages shown, so the page keys choose what they move.
 
 * **Akai APC mini mk2** (its Session mode): the 8 faders are the channel faders of the page shown, the ninth
-  is the master, and the keys above them are their channel keys. The pads, from the top row down: Stack, Prev,
-  Play, Pause, Next, Clear, Solo up and Solo down; channel pages 1 to 8; memory pages 1 to 8; memories 1 to 32
+  is the master, and the keys above them are their channel keys. The pads, from the top row down: Stack, Back,
+  GO, Pause, Next, Clear, Solo up and Solo down; channel pages 1 to 8; memory pages 1 to 8; memories 1 to 32
   in four rows; effects 1 to 8. The keys at the right: Save mem, Edit mem, Rec seq, Copy, Del, Rate, Tempo
   and Black out. The pads light in the colors of their kinds, dim, half or full as the desk's keys.
 * **Korg nanoKONTROL2** (its CC mode, as it comes): the sliders are the channel faders of the page shown, the
-  knobs its memory faders; S, M and R are its channel, memory and effect keys. Play, Stop (Pause), ◀◀ and ▶▶
-  (Prev and Next), ● (Stack) and Cycle (Black out); Track ◀ ▶ and Marker ◀ ▶ go through the channel and
+  knobs its memory faders; S, M and R are its channel, memory and effect keys. Play (GO), Stop (Pause), ◀◀ and ▶▶
+  (Back and Next), ● (Stack) and Cycle (Black out); Track ◀ ▶ and Marker ◀ ▶ go through the channel and
   memory pages, and Set is Clear. Its lights follow the desk only once its LED mode is "External" (Korg
   Kontrol Editor).
 * **Behringer X-Touch Mini** (its Standard mode, layer A): the knobs are the channel faders of the page shown
   and show where those stand; pressed, they are its channel keys. The upper keys are its memory keys, the
-  lower ones Stack, Play, Pause, Next and the channel and memory pages back and on. The fader is the master.
+  lower ones Stack, GO, Pause, Next and the channel and memory pages back and on. The fader is the master.
 * **Behringer X-Touch Compact** (its Standard mode, layer A): the motorized faders follow the channel faders
   of the page shown, the main fader the master; the upper knobs are its memory faders, the knobs at the right
   its effect faders, both showing where those stand. The keys under the faders are its channel keys, the one
   under the main fader Black out; the rows above them the channel pages, the memory pages, and Save mem, Edit
-  mem, Rec seq, Copy, Del, Clear, Solo up and Solo down. The transport: Prev, Next, Tempo (Loop), Stack (●),
-  Pause (■) and Play.
+  mem, Rec seq, Copy, Del, Clear, Solo up and Solo down. The transport: Back, Next, Tempo (Loop), Stack (●),
+  Pause (■) and GO (▶).
 
 These follow the makers' manuals; the lights of the two X-Touch follow what other programs send them, as
 their manuals do not say. They were tried with the simulators below, not yet with the real controllers.
@@ -1387,6 +1454,37 @@ and moved by the desk as the real one would be. U pulls it out and plugs it in a
 [DEV.md](DEV.md#simulated-devices-simcmd)).
 
 ![A simulated APC mini mk2: the pads lit as the desk's keys, memory 1 up, channel page 2 shown, the first fader at the top](docs/screenshots/midi-simulator.png)
+
+### OSC from other programs
+
+Other programs can work the desk with OSC (Open Sound Control) over the network: a sound program such as
+QLab that fires the light cues with its own, TouchOSC on a tablet, a show controller. **OSC** on the MIDI
+view switches it on (it is off at first) and sets the UDP port the desk listens on, 8000 at first; the
+other program sends to this PC at that port. It belongs to the PC, as MIDI does.
+
+* **Addresses:** every key and fader of the list at the right, its name with slashes after `/lumenet`:
+  `/lumenet/stack/play` is GO, `/lumenet/stack/previous` Back, `/lumenet/memory/5` the key of memory 5,
+  `/lumenet/fader/master` the master, `/lumenet/fader/channel/12` the fader of channel 12,
+  `/lumenet/fader/slot/memory/3` the third memory fader of the page shown. `/lumenet` may be left out.
+  While OSC is on, the list shows the address of each key and fader under its name, and the search finds
+  them by it.
+* **Keys:** a message without a value presses the key and lets it go, as a network cue of QLab sends it;
+  1 presses it and 0 lets it go, as the buttons of TouchOSC send them (true and false the same). As for a
+  controller, the page of the desk on this PC used last presses them: one has to be open there.
+* **Faders:** a number with a point from 0 to 1, as the faders of TouchOSC send it, or a whole number from 0
+  to 255, as the desk's faders show it. The fader goes there at once.
+* **From another computer** OSC counts only while LAN is on (see
+  [A phone or a tablet (LAN)](#a-phone-or-a-tablet-lan)); a message that does not count is listed as
+  refused. Programs on this PC send to 127.0.0.1 and always count. The view says the address other computers
+  send to. Windows may ask once whether Lumenet may use the network: allow it for private networks, or the
+  messages of other computers do not arrive.
+* **Incoming messages** lists every message, from "OSC from 192.168.1.30", with what it did; a key the desk
+  does not have (a slip in the address) is said so.
+* A port that another program has is said in red: choose another one, in both programs.
+* Windows may hold the very first message of a program back for a moment and lose those it sends right
+  behind it; after that every message arrives. A test from a new program is best begun with one message.
+
+The desk sends nothing back over OSC yet: a layout of TouchOSC does not see the desk's levels.
 
 Not yet: MIDI clock, MIDI timecode and MIDI Show Control (with beats and the sound later), and MIDI sent to
 other programs.

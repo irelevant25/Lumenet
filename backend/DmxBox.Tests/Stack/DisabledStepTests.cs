@@ -63,7 +63,7 @@ public sealed class DisabledStepTests
         _desk.SetStackLive(true);
 
         DeskException error = Assert.Throws<DeskException>(() => _desk.SetStackStepDisabled(first, true));
-        Assert.Equal("Step 1.0 is the step that is on: it cannot be skipped now.", error.Message);
+        Assert.Equal("Cue 1.0 is the cue that is on: it cannot be skipped now.", error.Message);
         Assert.Throws<DeskException>(() => _desk.UpdateStackStep(second, Channel(9)));   // every other change stays locked
 
         Assert.True(_desk.SetStackStepDisabled(second, true));
@@ -81,7 +81,7 @@ public sealed class DisabledStepTests
     {
         _desk.AddStackStep(Channel(1) with { Disabled = true });
         DeskException error = Assert.Throws<DeskException>(() => _desk.SetStackLive(true));
-        Assert.Contains("Every step of the stack is skipped", error.Message, StringComparison.Ordinal);
+        Assert.Contains("Every cue of the stack is skipped", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]

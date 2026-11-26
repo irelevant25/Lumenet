@@ -220,6 +220,12 @@ button:hover:not(:disabled) {
   font-size: 13px;
 }
 
+/* Setup… stands beside ↺, at the right */
+.head .setup {
+  margin-left: auto;
+  padding: 0 8px;
+}
+
 /* the views in the top bar, in their order: ticked when the link is there, ▲ ▼ to move it */
 .views {
   display: grid;

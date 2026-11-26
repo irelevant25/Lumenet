@@ -10,7 +10,6 @@ import type {
   MidiMapping,
   MidiMonitorLine,
   MidiPages,
-  MidiRole,
   MidiSetup,
   MidiState,
 } from './midi';
@@ -66,12 +65,12 @@ export class DeskMidi {
 
   constructor() {
     const connection = this.connection;
-    connection.on<[MidiState]>('MidiChanged', (state) => this.state.set(state));
-    connection.on<[MidiMonitorLine[]]>('MidiMessages', (lines) =>
+    connection.on('MidiChanged', (state) => this.state.set(state));
+    connection.on('MidiMessages', (lines) =>
       this.lines.update((kept) => [...kept, ...lines].slice(-KEPT_LINES)),
     );
-    connection.on<[string, boolean]>('MidiKey', (key, down) => this.keyboard.midiKey(key, down));
-    connection.on<[MidiRole]>('MidiRole', (role) => {
+    connection.on('MidiKey', (key, down) => this.keyboard.midiKey(key, down));
+    connection.on('MidiRole', (role) => {
       this.sent.clear();
       this.waiting.clear();
       this.keys.set(role.keys ?? []);
@@ -132,44 +131,49 @@ export class DeskMidi {
 
   /** Uses a device (the desk program opens it), or leaves it to other programs. */
   setDevice(name: string, use: boolean): Promise<void> {
-    return this.change('SetMidiDevice', name, use);
+    return this.change(() => this.connection.invoke('SetMidiDevice', name, use));
   }
 
   /** Every mapping, as the panel has it now. */
   setMappings(mappings: readonly MidiMapping[]): Promise<void> {
-    return this.change('SetMidiMappings', mappings);
+    return this.change(() => this.connection.invoke('SetMidiMappings', mappings));
   }
 
   /** Learn: the next control that moves works this key or fader; null stops. */
   learn(target: string | null): Promise<void> {
-    return this.change('LearnMidi', target);
+    return this.change(() => this.connection.invoke('LearnMidi', target));
   }
 
   /** Gives a device the ready-made mapping of its controller. */
   usePreset(preset: string, device: string): Promise<void> {
-    return this.change('UseMidiPreset', preset, device);
+    return this.change(() => this.connection.invoke('UseMidiPreset', preset, device));
+  }
+
+  /** OSC: whether the desk program receives it, and on which UDP port. */
+  setOsc(on: boolean, port: number): Promise<void> {
+    return this.change(() => this.connection.invoke('SetOsc', on, port));
   }
 
   /** Shows the list of incoming messages (with the last ones at once), or no more. */
   async watch(on: boolean): Promise<void> {
-    const lines = await this.connection.invoke<MidiMonitorLine[] | undefined>('WatchMidi', on);
+    const lines = await this.connection.invoke('WatchMidi', on);
     if (on) this.lines.set((lines ?? []).slice(-KEPT_LINES));
   }
 
   /** The MIDI setup of the PC, for Export. */
   setup(): Promise<MidiSetup> {
-    return this.connection.invoke<MidiSetup>('GetMidiSetup');
+    return this.connection.invoke('GetMidiSetup');
   }
 
   /** A setup from a file takes the place of the PC's (Import). */
   async takeSetup(setup: MidiSetup): Promise<void> {
-    this.state.set(await this.connection.invoke<MidiState>('SetMidiSetup', setup));
+    this.state.set(await this.connection.invoke('SetMidiSetup', setup));
   }
 
   // A change of the MIDI: the desk program answers with the MIDI after it, or says why it refuses.
-  private async change(method: string, ...args: unknown[]): Promise<void> {
+  private async change(call: () => Promise<MidiState>): Promise<void> {
     try {
-      const state = await this.connection.invoke<MidiState | undefined>(method, ...args);
+      const state = await call();
       if (state) this.state.set(state);
       this.problem.set('');
     } catch (error) {
@@ -180,7 +184,7 @@ export class DeskMidi {
   // Connected (again): the MIDI of the PC, and a page on the PC takes the keys.
   private async connected(): Promise<void> {
     try {
-      this.state.set((await this.connection.invoke<MidiState | undefined>('GetMidi')) ?? null);
+      this.state.set((await this.connection.invoke('GetMidi')) ?? null);
     } catch {
       this.state.set(null); // a desk program from before MIDI
       return;

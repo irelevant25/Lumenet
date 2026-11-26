@@ -182,10 +182,10 @@ public sealed class StackAddReleaseTests
         int step = Add(Channel(1, 255, down: 1));
 
         DeskException error = Assert.Throws<DeskException>(() => _desk.AddStackStep(new Step(Step.Release, 99, 0, 0, 0, 1)));
-        Assert.Equal("The step to release is not in the stack any more.", error.Message);
+        Assert.Equal("The cue to release is not in the stack any more.", error.Message);
         int release = Add(new Step(Step.Release, step, 0, 0, 0, 1));
         error = Assert.Throws<DeskException>(() => _desk.UpdateStackStep(release, new Step(Step.Release, release, 0, 0, 0, 1)));
-        Assert.Equal("A step cannot release itself. Choose another step of the stack.", error.Message);
+        Assert.Equal("A cue cannot release itself. Choose another cue of the stack.", error.Message);
 
         _desk.DeleteStackStep(step);                          // the release releases nothing from then on
         StackStep left = Assert.Single(_desk.GetStack().Steps);

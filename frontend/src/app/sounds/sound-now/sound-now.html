@@ -2,5 +2,5 @@
   <span class="name" [attr.title]="current.name">
     Sound {{ current.number }}{{ current.name ? ': ' + current.name : '' }}
   </span>
-  <lm-sound-wave [sound]="current" [playback]="playback()" />
+  <lm-sound-wave [sound]="current" [playback]="playback()" [marks]="marks()" />
 }

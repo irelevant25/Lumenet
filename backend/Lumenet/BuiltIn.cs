@@ -60,7 +60,7 @@ internal static class BuiltIn
 
     // The desk lists the examples in a folder, so they are written to one of their own at every
     // start, as this version of Lumenet has them: Lumenet\examples in the local application data. An
-    // example with sounds has their files in a folder beside it ("8 Sounds sounds").
+    // example with sounds has their files in a folder beside it ("8 Playing sounds sounds").
     private static string? UnpackExamples(LogBook log)
     {
         string folder = Path.Combine(

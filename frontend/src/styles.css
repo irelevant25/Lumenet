@@ -49,6 +49,7 @@
   --key-pause: #f1f3f6;
   --key-next: #ffb020;
   --key-add-step: #ffb020;
+  --key-learn: #ffb020;
   --key-save: #ffb020;
   --key-edit: #ffb020;
   --key-record: #ffb020;
@@ -634,4 +635,48 @@ table.steps td.empty {
 .dialog-close:hover {
   border-color: var(--legend-dim);
   color: #fff;
+}
+
+/* ---- printing ----
+   What is printed is the view alone (the cue sheet), on white paper, as long as it is: no zoom, no top
+   bar, no notices or windows, and nothing that holds the desk to the height of the window. */
+@media print {
+  @page {
+    margin: 15mm;
+  }
+
+  html {
+    zoom: 1 !important;
+  }
+
+  :root,
+  body {
+    height: auto;
+    overflow: visible;
+    background: #fff !important;
+    color: #000;
+    color-scheme: light; /* the margins of the paper are white too */
+  }
+
+  lm-root {
+    height: auto !important;
+  }
+
+  lm-root .desk {
+    display: block !important;
+    height: auto !important;
+  }
+
+  lm-root main {
+    display: block !important;
+    padding: 0 !important;
+  }
+
+  lm-top-bar,
+  lm-welcome-dialog,
+  lm-root .offline,
+  lm-root .notice,
+  lm-root .listening {
+    display: none !important;
+  }
 }

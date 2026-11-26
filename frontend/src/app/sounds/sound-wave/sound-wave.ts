@@ -42,6 +42,8 @@ const RUN_ON_MS = 1500;
  * as often as the mixer tells it); the line has a clock of its own that runs at the sound's speed and
  * takes those words in gently, so that it glides on and never trembles back.
  *
+ * Thin amber lines with a cap mark the moments where cues of the stack come (`marks`, TimedStep.at).
+ *
  * A track of the mixer has no file here: its wave is empty, a flat line, with the line where it is
  * and its length as the mixer tells while it plays. While a sound plays, a double click on the wave
  * plays it from there; with the focus on the wave, the arrows go 5 seconds back and on, Page Up and
@@ -59,6 +61,8 @@ const RUN_ON_MS = 1500;
 export class SoundWaveStrip {
   readonly sound = input.required<Sound>();
   readonly playback = input<SoundPlayback | undefined>();
+  /** Moments of the sound to mark on the wave, in seconds of its file: where cues of the stack come. */
+  readonly marks = input<readonly number[]>([]);
 
   private readonly store = inject(DeskStore);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -91,11 +95,12 @@ export class SoundWaveStrip {
   /** How long the file is; empty for a track whose length is not known yet. */
   protected readonly total = computed(() => (this.seconds() > 0 ? timeText(this.seconds()) : ''));
 
-  /** For screen readers: "Sound 3 plays, at 1:23.4 of 3:05.2". */
-  protected readonly said = computed(
-    () =>
-      `Sound ${this.sound().number} ${this.playing() ? 'plays' : 'is quiet'}, at ${this.now()}${this.total() ? ` of ${this.total()}` : ''}`,
-  );
+  /** For screen readers: "Sound 3 plays, at 1:23.4 of 3:05.2", and how many cues come at its moments. */
+  protected readonly said = computed(() => {
+    const marks = this.marks().length;
+    const cues = marks ? `, ${marks} ${marks === 1 ? 'cue comes' : 'cues come'} at its moments` : '';
+    return `Sound ${this.sound().number} ${this.playing() ? 'plays' : 'is quiet'}, at ${this.now()}${this.total() ? ` of ${this.total()}` : ''}${cues}`;
+  });
 
   /** For the keys on the wave, while the sound plays: where it is, and how long it is, in whole seconds. */
   protected readonly at = computed(() => Math.round(this.playback()?.position ?? 0));
@@ -140,6 +145,7 @@ export class SoundWaveStrip {
           this.wave();
           this.sound();
           this.playback();
+          this.marks();
           this.drawSoon();
         },
         { injector },
@@ -297,6 +303,21 @@ export class SoundWaveStrip {
         paint.fillRect(x, middle - peakHeight, bar, peakHeight * 2);
         paint.globalAlpha = outside ? 0.3 : played ? 1 : 0.7;
         paint.fillRect(x, middle - levelHeight, bar, levelHeight * 2);
+      }
+    }
+
+    // where cues come: a thin line over the whole height, with a cap at the top, in the color of Next
+    const marks = this.marks();
+    if (marks.length > 0 && seconds > 0) {
+      const thin = Math.max(1, Math.round(ratio));
+      const cap = Math.max(2, Math.round(3 * ratio));
+      paint.fillStyle = style.getPropertyValue('--key-next').trim() || '#ffb020';
+      for (const mark of marks) {
+        const x = Math.min(width - cap, Math.max(0, Math.round(xOf(mark) - thin / 2)));
+        paint.globalAlpha = 0.55;
+        paint.fillRect(x, 0, thin, height);
+        paint.globalAlpha = 1;
+        paint.fillRect(x - Math.floor((cap - thin) / 2), 0, cap, Math.round(height * 0.22));
       }
     }
 

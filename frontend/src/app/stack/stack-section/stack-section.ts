@@ -95,17 +95,17 @@ export class StackSection {
   /** What a screen reader says for a place, and the pointer on it; null for one that says nothing. */
   protected placeName(place: WheelPlace): string | null {
     if (!this.seen(place)) return null;
-    if (!place.step) return place.offset === 0 ? 'No step is on' : null;
+    if (!place.step) return place.offset === 0 ? 'No cue is on' : null;
     const step = `${place.step.cue}, ${this.noteOf(place)}${place.step.disabled ? ', skipped' : ''}`;
     switch (place.kind) {
       case 'previous':
-        return `Previous step: ${step}`;
+        return `Previous cue: ${step}`;
       case 'current':
-        return `Current step: ${step}`;
+        return `Current cue: ${step}`;
       case 'next':
-        return `Next step: ${step}`;
+        return `Next cue: ${step}`;
       default:
-        return `Step ${step}`;
+        return `Cue ${step}`;
     }
   }
 }

@@ -30,6 +30,10 @@ public sealed record StackStep(int Id, string Cue, string Target, int Number, in
     /// <summary>True for a step the stack passes over, see <see cref="Step.Disabled"/>. Sent only when it is true.</summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public bool Disabled { get; init; }
+
+    /// <summary>The moment of a sound the cue comes at, see <see cref="Step.At"/>. Sent only when it has one.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public SoundTime? At { get; init; }
 }
 
 /// <summary>The stack as the UI gets it.</summary>
@@ -64,6 +68,14 @@ public sealed record StackPlayback(int? CurrentId, int? NextId, string State, bo
     /// last one down.
     /// </summary>
     public int[] On { get; init; } = [];
+
+    /// <summary>
+    /// True while GO learns the moments of sounds: each GO stores the moment of the sound that
+    /// started last and plays into the cue it goes to (<see cref="Step.At"/>), for a rehearsal with
+    /// the music. The UIs get the field only when it is true.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Learning { get; init; }
 }
 
 /// <summary>

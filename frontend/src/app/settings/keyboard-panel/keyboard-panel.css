@@ -17,8 +17,35 @@
   height: auto;
 }
 
+/* the title, and at its right ↺, back to the usual shortcuts (as the panels of the views and the colors) */
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.title-row .reset {
+  height: 26px;
+  font-size: 13px;
+}
+
+/* asked once: amber, until the second press or a few seconds */
+.title-row .reset.asked {
+  border-color: var(--system);
+  background: color-mix(in srgb, var(--system) 20%, var(--panel));
+}
+
+.ask {
+  margin: 0 0 8px;
+  color: var(--system);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
 h3 {
-  margin: 0 0 6px;
+  margin: 0;
   color: var(--legend-dim);
   font-size: 12px;
   font-stretch: 75%;

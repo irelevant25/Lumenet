@@ -51,7 +51,7 @@
       </select>
     </div>
     <div class="field">
-      <label for="wheel-size">Steps the stack wheel shows</label>
+      <label for="wheel-size">Cues the stack wheel shows</label>
       <select id="wheel-size" (change)="onWheelSize($event)">
         @for (size of wheelSizes; track size) {
           <option [value]="size" [selected]="size === settings.wheelSize()">{{ size }}</option>
@@ -247,6 +247,14 @@
   <section class="panel" aria-labelledby="views-title">
     <div class="head">
       <h3 id="views-title">Views in the top bar</h3>
+      <button
+        type="button"
+        class="setup"
+        title="The views and rows for a kind of show: Theatre, Theatre with moving lights, Concert or Everything"
+        (click)="welcome.open()"
+      >
+        Setup…
+      </button>
       <button
         type="button"
         aria-label="The usual views"

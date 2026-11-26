@@ -22,6 +22,7 @@ The dev server passes `/hub` and `/api` on to the backend at http://localhost:50
 
 ```bash
 npm test -- --watch=false     # the tests of the page (Vitest)
+npm run lint                  # ESLint (angular-eslint, with the accessibility rules of the templates)
 npm run build                 # the finished files, in dist/lumenet
 ```
 
@@ -32,7 +33,9 @@ components of it (each in a folder of its own) and the plain TypeScript beside t
 
 | Folder in `src/app` | What it is |
 |---|---|
-| `desk/` | What every part uses: the state of the desk as the page sees it (`desk-store.ts`), the connection to the backend, the types of the messages, the actions behind the keys and their shortcuts, the settings of this device, the rules of the four memory functions (`function-mode.ts`) and of the lamps (`lamps.ts`), universes, tempo and notes. |
+| `desk/` | What every part uses: the state of the desk as the page sees it (`desk-store.ts`), the connection to the backend with the contract of its hub (`hub-contract.ts`, written by the desk program's tests: do not change it by hand), the types of the messages, the actions behind the keys and their shortcuts, the settings of this device, the rules of the four memory functions (`function-mode.ts`) and of the lamps (`lamps.ts`), universes, tempo and notes. |
+| `desk/store/` | The layers `DeskStore` is built of, one file each, like the desk program's `Desk.*.cs`: the state, then the faders, effects, sounds, solo, stack and project, each extending the one before; `desk-store.ts` on top takes the backend's messages. Components use `DeskStore` alone. |
+| `testing/` | What the tests of the whole page share: a fake backend, the page started on it, and helpers that find and press keys (`desk-page.testing.ts`, kept out of the app's build). |
 | `shared/` | Small parts used by many views: a fader, a key lit from behind (`lamp-button`), a fader with its level, key and note (`fader-strip`), the color picker, the Record section, and helpers for scrolling, dragging and windows. |
 | `top-bar/` | The bar at the top: the links to the views, the project's name, New, Load, Save, Import, Export, Undo, Redo and LAN. |
 | `main/` | The Main view and its sections: channels, memories, General, Master and the independents. |
@@ -42,5 +45,7 @@ components of it (each in a folder of its own) and the plain TypeScript beside t
 | `settings/`, `outputs/` | The Settings view and its panels; the outputs and their status in the top bar. |
 | `project/` | Load, Save, Import and Export, and the show files of other desks. |
 
-Every component has its own `.ts`, `.html` and `.css` file, and its tests beside it as `.spec.ts`;
-`app.spec.ts` tests the whole page. Sizes and colors shared by all of them are in `src/styles.css`.
+Every component has its own `.ts`, `.html` and `.css` file, and its tests beside it as `.spec.ts`. The
+tests of the whole page stand beside the part they are about (`sounds/sounds-page.spec.ts`,
+`stack/stack-page.spec.ts` ...), and `app.spec.ts` keeps those of Main. Sizes and colors shared by all of
+them are in `src/styles.css`.

@@ -2,6 +2,7 @@ import { Component, ElementRef, Injector, afterNextRender, computed, inject, sig
 import {
   CHANNEL_SIZES,
   ChannelSize,
+  DEFAULT_HIDDEN_VIEWS,
   DeskSettings,
   ROW_COUNTS,
   RowCount,
@@ -25,6 +26,7 @@ import { KeyColorsPanel } from '../key-colors-panel/key-colors-panel';
 import { KeyboardPanel } from '../keyboard-panel/keyboard-panel';
 import { OutputsPanel } from '../../outputs/outputs-panel/outputs-panel';
 import { SoundOutputPanel } from '../../sounds/sound-output/sound-output';
+import { Welcome } from '../../welcome/welcome';
 
 /** How often the autosave can keep the work, in seconds: as the desk program offers it. */
 const AUTOSAVE_INTERVALS: readonly number[] = [5, 30, 60, 300];
@@ -59,6 +61,8 @@ const AUTOSAVE_INTERVALS: readonly number[] = [5, 30, 60, 300];
 export class SettingsView {
   protected readonly settings = inject(DeskSettings);
   protected readonly store = inject(DeskStore);
+  /** Setup…: the window of the setups for a kind of show. */
+  protected readonly welcome = inject(Welcome);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
 
@@ -79,12 +83,15 @@ export class SettingsView {
   /** The views in the order of their links in the top bar. */
   protected readonly orderedViews = computed(() => this.settings.viewOrder().map(viewNamed));
 
-  /** True while every view is in the top bar in the usual order: then ↺ has nothing to do. */
-  protected readonly viewsUsual = computed(
-    () =>
-      this.settings.hiddenViews().length === 0 &&
-      this.settings.viewOrder().every((name, at) => name === DEFAULT_VIEW_ORDER[at]),
-  );
+  /** True while the top bar has the views of the start (every one but Notes), in the usual order: then ↺ has nothing to do. */
+  protected readonly viewsUsual = computed(() => {
+    const hidden = this.settings.hiddenViews();
+    return (
+      hidden.length === DEFAULT_HIDDEN_VIEWS.length &&
+      DEFAULT_HIDDEN_VIEWS.every((name) => hidden.includes(name)) &&
+      this.settings.viewOrder().every((name, at) => name === DEFAULT_VIEW_ORDER[at])
+    );
+  });
 
   protected viewShown(view: ViewName): boolean {
     return !this.settings.hiddenViews().includes(view);

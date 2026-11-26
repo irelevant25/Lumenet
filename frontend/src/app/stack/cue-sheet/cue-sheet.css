@@ -1,0 +1,134 @@
+/* The sheet looks like the paper it prints on: black on white, whatever the colors of the desk. */
+:host {
+  display: block;
+  min-height: 0;
+  overflow: auto;
+}
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 12px;
+}
+
+.tools button,
+.tools a {
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: var(--panel-raised);
+  color: var(--legend);
+  font: inherit;
+  font-size: 14px;
+  line-height: 28px;
+  text-decoration: none;
+}
+
+.tools .hint {
+  color: var(--legend-dim);
+  font-size: 13px;
+}
+
+.paper {
+  max-width: 1100px;
+  padding: 28px 32px;
+  border-radius: 4px;
+  background: #fff;
+  color: #111;
+  font-size: 13px;
+}
+
+header h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+}
+
+header p {
+  margin: 0 0 16px;
+  color: #444;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 5px 8px;
+  border-bottom: 1px solid #bbb;
+  text-align: left;
+  vertical-align: top;
+}
+
+thead th {
+  border-bottom: 2px solid #111;
+  font-size: 12px;
+}
+
+tbody th {
+  white-space: nowrap;
+}
+
+.number {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* room to write the call of each cue by hand */
+.write {
+  width: 22%;
+}
+
+.skipped td,
+.skipped th {
+  color: #777;
+  text-decoration: line-through;
+}
+
+.mark {
+  display: block;
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.empty {
+  margin: 0;
+}
+
+/* for screen readers only */
+.for-readers {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media print {
+  :host {
+    overflow: visible;
+  }
+
+  .tools {
+    display: none;
+  }
+
+  .paper {
+    max-width: none;
+    padding: 0;
+    border-radius: 0;
+  }
+
+  tr {
+    break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group; /* the heads again on every page */
+  }
+}

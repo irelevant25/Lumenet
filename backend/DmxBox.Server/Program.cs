@@ -92,6 +92,7 @@ internal static class Program
         AddDesk(builder.Services, builder.Configuration, box);
         AddOutputs(builder.Services, builder.Configuration, passwordFile);
         AddMidi(builder.Services, passwordFile);
+        AddOsc(builder.Services, builder.Configuration, passwordFile);
         AddHub(builder.Services, origins);
         AddLan(builder, pc, passwordFile);
 
@@ -385,6 +386,24 @@ internal static class Program
 
         // The same MIDI: the host starts and stops it, the hub asks it and tells it.
         services.AddHostedService(provider => provider.GetRequiredService<MidiControl>());
+    }
+
+    // OSC from other programs: off until a page on the PC switches it on. Its setup belongs to the PC,
+    // beside midi.json (osc.json). A test desk listens at 127.0.0.1 only ("--Osc:Bind=127.0.0.1"): no
+    // other device reaches it, and Windows asks nothing about the network.
+    private static void AddOsc(IServiceCollection services, IConfiguration settings, string passwordFile)
+    {
+        string file = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(passwordFile)) ?? "", OscSetupFile.FileName);
+        IPAddress bind = IPAddress.TryParse(Setting(settings, "Osc:Bind", IPAddress.Any.ToString()), out IPAddress? address) ? address : IPAddress.Any;
+        services.AddSingleton(provider =>
+        {
+            ILogger log = provider.GetRequiredService<ILoggerFactory>().CreateLogger<OscControl>();
+            LanAccess lan = provider.GetRequiredService<LanAccess>();
+            return new OscControl(new OscSetupFile(file, log), provider.GetRequiredService<MidiControl>(), lan.IsLocal, () => lan.On, bind, log);
+        });
+
+        // The same OSC: the host starts and stops it, the hub switches it.
+        services.AddHostedService(provider => provider.GetRequiredService<OscControl>());
     }
 
     private static void AddHub(IServiceCollection services, AllowedOrigins origins)

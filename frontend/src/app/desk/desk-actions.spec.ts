@@ -13,7 +13,7 @@ describe('the keys of the desk that can have a shortcut', () => {
   it('each have a name of their own', () => {
     const ids = DESK_ACTIONS.map((action) => action.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(actionWithId('stack.play')?.label).toBe('Play');
+    expect(actionWithId('stack.play')?.label).toBe('GO');
     expect(actionWithId('channel.512')?.group).toBe('Channel keys');
     expect(actionWithId('page.channel.64')).toBeTruthy(); // 8 channels on a page: 64 pages
     expect(actionWithId('page.memory.32')).toBeTruthy();

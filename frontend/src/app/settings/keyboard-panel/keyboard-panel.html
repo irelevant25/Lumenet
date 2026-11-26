@@ -1,17 +1,30 @@
-<h3 id="keyboard-title">Keyboard</h3>
-<p class="hint">
-  A shortcut for any key of the desk. The shortcuts belong to this device; Export takes them to
-  another one.
-  {{ mapped() }} {{ mapped() === 1 ? 'key has' : 'keys have' }} a shortcut.
-</p>
+<!-- The title, and at its right ↺: back to the usual shortcuts, as the panels of the views and the colors have
+     it. A second press does it, so a slip changes nothing. -->
+<div class="title-row">
+  <h3 id="keyboard-title">Keyboard</h3>
+  <button
+    type="button"
+    class="reset"
+    [class.asked]="resetAsked()"
+    [attr.aria-label]="resetAsked() ? 'Press again for the usual shortcuts' : 'The usual shortcuts'"
+    title="The usual shortcuts"
+    [disabled]="usual() && !resetAsked()"
+    (click)="usualShortcuts()"
+  >
+    ↺
+  </button>
+</div>
+@if (resetAsked()) {
+  <p class="ask" role="status">Press ↺ again: every key gets its usual shortcut (Space is GO), and yours go.</p>
+} @else if (resetDone()) {
+  <p class="done" role="status">Every key has its usual shortcut again.</p>
+}
 
 <div class="top">
   <button type="button" class="listen" (click)="keyboard.listen()">Listen</button>
   <p class="hint">
-    Listen shows the desk; the key you double-click there is not pressed but picked, and comes back
-    here. A single click works as always, so you can open another view or page first. Set, then
-    press the keys of the shortcut (Esc stops). Shortcuts rest while a note is typed or a window is
-    open.
+    Listen, then double-click a key of the desk to find it here. Set, then press the new shortcut
+    (Esc stops).
   </p>
   <input
     class="search"

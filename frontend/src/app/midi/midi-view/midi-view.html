@@ -3,7 +3,8 @@
   <p class="summary">
     MIDI controllers plugged into this PC: their keys press the keys of the desk, their faders and
     knobs move its faders, and the desk lights their keys and moves their motorized faders. What
-    their controls do belongs to this PC; Export takes it to another one.
+    their controls do belongs to this PC; Export takes it to another one. Other programs can work
+    the same keys and faders with OSC.
     @if (midi.state()) {
       {{ mapped() }} {{ mapped() === 1 ? 'control is' : 'controls are' }} mapped.
     }
@@ -39,6 +40,10 @@
       @if (midi.problem()) {
         <p class="error" role="alert">{{ midi.problem() }}</p>
       }
+
+      <!-- OSC from other programs: the same keys and faders, listed with the messages of the controllers -->
+      <h3 id="osc-title" class="osc-title">OSC</h3>
+      <lm-osc-panel role="group" aria-labelledby="osc-title" />
 
       <lm-midi-monitor />
     </section>

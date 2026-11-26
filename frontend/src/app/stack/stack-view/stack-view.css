@@ -55,6 +55,14 @@ h2 {
   white-space: nowrap;
 }
 
+/* Cue sheet, at the right of the head */
+.sheet {
+  flex: none;
+  margin-left: auto;
+  color: var(--legend-dim);
+  font-size: 13px;
+}
+
 /* the keys at the left (lm-stack-keys, then Add step), the three cards share the rest (lm-stack-cards) */
 .top {
   display: flex;
@@ -110,12 +118,38 @@ table.locked .grip {
   font-weight: 600;
 }
 
-.explain {
-  max-width: 96ch;
-  margin: 10px 0 0;
+/* At: a key that looks like the fields of the row, "0:31.25 of Thunder" in the color of the sounds,
+   "—" for a cue that comes with GO; a long name is cut short (the key's title has it whole) */
+.moment {
+  width: 1%;
+}
+
+.moment button {
+  box-sizing: border-box;
+  width: 170px;
+  height: 28px;
+  padding: 0 6px;
+  overflow: hidden;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: var(--panel);
   color: var(--legend-dim);
-  font-size: 13px;
-  line-height: 1.35;
+  font: inherit;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.moment button:hover {
+  border-color: var(--legend-dim);
+}
+
+.moment button.set {
+  border-color: color-mix(in srgb, var(--sound) 70%, var(--edge));
+  color: var(--legend);
 }
 
 /* for screen readers only */

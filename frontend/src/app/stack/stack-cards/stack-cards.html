@@ -1,18 +1,18 @@
-<!-- where the stack stands: the step before the one that is on, that one, and the one Play goes
+<!-- where the stack stands: the cue before the one that is on, that one, and the one GO goes
      to; each with its number big at the right -->
 <div class="card previous" [class.on]="previous()">
   <div class="text">
     <h3>Previous</h3>
     @if (previous(); as step) {
       <p class="what">{{ describe(step) }}</p>
-      <p class="how">Prev goes back to it.</p>
+      <p class="how">Back returns to it.</p>
     } @else {
       <p class="what">Nothing.</p>
       <p class="how"></p>
     }
   </div>
   @if (previous(); as step) {
-    <span class="cue"><span class="for-readers">Step </span>{{ step.cue }}</span>
+    <span class="cue"><span class="for-readers">Cue </span>{{ step.cue }}</span>
   }
 </div>
 
@@ -22,12 +22,12 @@
     @if (current(); as step) {
       <p class="what">{{ describe(step) }}</p>
     } @else {
-      <p class="what">No step is on.</p>
+      <p class="what">No cue is on.</p>
     }
     <p class="how">{{ progress() }}</p>
   </div>
   @if (current(); as step) {
-    <span class="cue"><span class="for-readers">Step </span>{{ step.cue }}</span>
+    <span class="cue"><span class="for-readers">Cue </span>{{ step.cue }}</span>
   }
 </div>
 
@@ -38,11 +38,11 @@
       <p class="what">{{ describe(step) }}</p>
       <p class="how">{{ times(step) }}</p>
     } @else {
-      <p class="what">{{ steps().length ? 'Nothing: the stack has no other step.' : 'Nothing yet.' }}</p>
+      <p class="what">{{ steps().length ? 'Nothing: the stack has no other cue.' : 'Nothing yet.' }}</p>
       <p class="how"></p>
     }
   </div>
   @if (next(); as step) {
-    <span class="cue"><span class="for-readers">Step </span>{{ step.cue }}</span>
+    <span class="cue"><span class="for-readers">Cue </span>{{ step.cue }}</span>
   }
 </div>

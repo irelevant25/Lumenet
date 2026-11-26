@@ -13,7 +13,7 @@ import { DESK_ACTIONS } from '../../desk/desk-actions';
 import { DeskMidi } from '../desk-midi';
 import { DeskStore } from '../../desk/desk-store';
 import { Keyboard } from '../../desk/keyboard';
-import type { MidiMapping, MidiMode } from '../midi';
+import { type MidiMapping, type MidiMode, oscAddress } from '../midi';
 import {
   FADER_TARGETS,
   MIDI_MODES,
@@ -49,7 +49,8 @@ interface Kind {
  * the focus on its Learn, and nothing more. Under a fader that has a control stand its options: how
  * a controller moves it (a fader, or an endless encoder of one of three kinds), whether it takes
  * over only at the desk's value, and whether the desk sends its value back (a motor, a ring of
- * lights); under a key's control, whether the desk lights it.
+ * lights); under a key's control, whether the desk lights it. While the desk receives OSC, each
+ * target shows its address under its name ("/lumenet/stack/play"), and the search finds it by that.
  */
 @Component({
   selector: 'lm-midi-targets',
@@ -65,6 +66,10 @@ export class MidiTargets {
 
   protected readonly modes = MIDI_MODES;
   protected readonly isFader = isFader;
+  protected readonly oscAddress = oscAddress;
+
+  /** True while the desk program receives OSC: each key and fader shows its address. */
+  protected readonly oscOn = computed(() => this.midi.state()?.osc?.state === 'listening');
 
   protected readonly search = signal('');
   /** The kind that is open; null while all are closed. */
@@ -243,6 +248,7 @@ export class MidiTargets {
   private matches(target: Target, words: string): boolean {
     return (
       target.label.toLowerCase().includes(words) ||
+      (this.oscOn() && oscAddress(target.id).includes(words)) ||
       this.mappingsOf(target.id).some((mapping) =>
         this.controlOf(mapping).toLowerCase().includes(words),
       )

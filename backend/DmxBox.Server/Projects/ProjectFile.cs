@@ -520,4 +520,18 @@ internal sealed class ProjectFileStep
 
     /// <summary>Seconds for the way down.</summary>
     public double? Down { get; set; }
+
+    /// <summary>Only for a cue of the stack that comes at a moment of a sound: the sound and the seconds. Written only then.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ProjectFileMoment? At { get; set; }
+}
+
+/// <summary>A moment of a sound in a project file: { "sound": 3, "seconds": 31.25 }.</summary>
+internal sealed class ProjectFileMoment
+{
+    /// <summary>The sound, 1-64.</summary>
+    public int? Sound { get; set; }
+
+    /// <summary>Seconds in its file (of a track: in the track).</summary>
+    public double? Seconds { get; set; }
 }

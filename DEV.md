@@ -742,6 +742,18 @@ state as soon as a box answers.
   (`Projects:Folder`), the folder of the examples (`Projects:Examples`, at first `examples` beside the
   program), the built page it hands out (`Ui:Folder`), the file with the LAN password (`Lan:PasswordFile`)
   and the autosave file (`Autosave:File`; the autosave's own settings go beside it).
+* **The contract of the hub** (`frontend/src/app/desk/hub-contract.ts`) is written by the desk program's
+  tests (`DmxBox.Tests/Api/TypeScriptContract.cs`): every method of the hub with its parameters and its
+  answer, every message of `IDeskClient`, and every type that goes over the wire, in TypeScript, as the
+  JSON of SignalR has them; the texts that may only be one of a few (the target of a step, a state) are
+  unions taken from the C# constants. A type named with "Sent" is what a page sends: it may leave out
+  what the desk program fills in by itself. The page's connection (`desk-connection.ts`) takes every
+  name and type from it, so a change on one side that the other does not follow is an error of the page's
+  build, and `ThePageHasTheContractOfTheHub` fails while the file is not what the hub is now (CI too).
+  After a change of the hub: `dotnet test backend/DmxBox.sln --filter TypeScriptContract -e
+  LUMENET_WRITE_CONTRACT=1`, then the page's build says where the page has to follow. The page keeps
+  its own types beside it (with their notes, and fields an older desk program may leave out); where
+  they meet the contract, the build checks that they fit.
 * **Universes:** a project has 1 to 8 (`Desk.Universes`, project file version 5: `universes`); the channels
   are numbered on through them inside, 1 to 4096, and the arrays are made for 4096 once. The user never
   sees that number: the page and the desk's messages write a channel 1 to 512 in its universe, "113 (U2)"
@@ -845,8 +857,8 @@ time. The rules of how it mixes with the rest stand at the top of `Desk.Effects.
   check. `EffectRig.cs` finds its lights in the stage plan, the channels it plays on each (the dimmers and
   the colors of every cell, pan and tilt with their fine channels, a shutter, a color wheel) and each
   light's place in the run. `EffectEngine.cs` holds the shapes, waves, colors and patterns, as plain
-  functions of the phase. `Desk.Effects.cs` plays the effects and mixes them in; `EffectPlayback.cs` is what
-  the pages get.
+  functions of the phase. `Desk.Effects.cs` plays the effects and mixes them in, frame by frame with the
+  classes of `Desk.EffectFrames.cs`; `EffectPlayback.cs` is what the pages get.
 * **Time:** the phase counts cycles since the start, at the effect's speed in cycles a minute (BPM), times
   the tempo / 120 while Rate is lit. A change of the speed or of the tempo goes on from where the effect is.
   Each light runs the phase moved on by the spread times its place in the run (order, blocks, wings,
@@ -975,7 +987,7 @@ its own without a device, so that playing, ending and the positions work the sam
   the store keeps it while the desk program runs. The page (`sound-wave`) draws it on a canvas and moves the
   line on at the sound's speed between the positions the desk program sends about 10 times a second.
 * **Steps of sounds** (`Step.SoundTarget`, "sound"): in the stack they move the sound's fader like an effect
-  step (`Fader.Sound` in `Desk.Stack.cs`); in a sequence `AddSequenceSounds` gives `SoundRun.Played`, the
+  step (`Fader.Sound` in `Desk.StackParts.cs`); in a sequence `AddSequenceSounds` gives `SoundRun.Played`, the
   higher of it and the fader counts. `Step.Continue` (sounds only) keeps a step on through steps without
   Add, in the stack (`OnAfter`) and in `SequenceTimeline` (also through the start of a round), until a
   release names it; in the stack a step whose sound has ended leaves (`LeaveEndedSounds`), Stack off stops
@@ -993,6 +1005,23 @@ its own without a device, so that playing, ending and the positions work the sam
   `SetStackStepDisabled` and `SetSequenceStepDisabled` are the only changes of stored things allowed
   while the stack is live; they refuse the step that is on (the current one of the stack, the step a
   running sequence plays). The page sends them from the box at the end of a row, also while live.
+* **Cues at moments of sounds** (`Step.At`, a `SoundTime(Sound, Seconds)`, in the file `"at": { "sound",
+  "seconds" }`, version 10; only a cue of the stack has one, a step of a sequence with one is refused):
+  `Desk.StackTimes.cs`. `FollowSoundTimes` runs in `Tick` after `SettleSounds`, so the positions are those
+  of now. While the stack is live and not paused, the next cue goes on when its sound plays
+  (`SoundRun.Voice`) at or past its moment; past several at once the stack goes straight to the last of
+  them (`GoTo` at once; `EntryAfter` never goes round). A sound whose position goes back by more than
+  `JumpBack` (0.25 s) from one round to the next (`_heard`) was sent back: the stack goes to the cue of the
+  moment it is at now (`CueOfMoment`), unless the cue that is on belongs to that moment already
+  (`BelongsTo`: it comes after it without a moment of its own). GO or Next ahead of the music sends
+  nothing back. (Until 2026-11-26, afternoon, a sound merely behind the moment of the cue that is on
+  counted as sent back, so a GO ahead of the music was undone at the next round.)
+  `AdvanceStack` lets no wait take the stack on to a cue with a moment. `SetStackStepAt` works while the
+  stack is live. Learn (`SetStackLearning`): `StackPlay` goes on also during a fade or a wait, and
+  `LearnMoment` stores the position of the sound that started last (`SoundRun.StartOrder`, a counter: two
+  sounds can start in the same tick) into the cue it went to, as one step of the history; Stack off ends
+  Learn. The page: the At column with `CueMomentDialog`, the key Learn (`stack.learn` for shortcuts and
+  MIDI), the moments in the cards and on the cue sheet, and marks on the wave (`SoundWaveStrip.marks`).
 * **The editor** sends a sound at once and then at most every 60 ms while it keeps changing (a slider), the
   newest each time; the history makes one step of them. A list of the sounds that comes meanwhile leaves the
   sound being sent as the page has it.
@@ -1004,10 +1033,13 @@ its own without a device, so that playing, ending and the positions work the sam
   Export to `POST /api/export/pack?name=` and saves the ZIP it gets (the file of Export and "<Name> sounds/");
   Import sends a ZIP to `POST /api/import/unpack`, which takes its sound files into the store and gives
   back the file of Export. An example with sounds has them in "<Name> sounds" beside it too: `examples/8
-  Sounds sounds`, made from noise, filters and sine waves by `backend/ExampleSounds` (`dotnet run
+  Playing sounds sounds`, made from noise, filters and sine waves by `backend/ExampleSounds` (`dotnet run
   --project backend/ExampleSounds -- <folder>`, on Windows, whose own encoder makes the MP3 files; no part
-  of the solution). It gives the same files byte for byte; the loops are WAV, so that they go round
-  without a gap, the rest MP3. DmxBox.Server copies them with the examples, Lumenet.exe carries
+  of the solution). It gives the same files byte for byte (one random generator for all, in a fixed order:
+  a new sound goes last, so the others stay as they are); the loops are WAV, so that they go round
+  without a gap, the rest MP3. "Puppet dance" of example 10 (120 BPM, a bar every 2 seconds) has its
+  sections at 0:08, 0:16, 0:24 and 0:28, claps at 0:26 and 0:27 and a last chord at 0:36: its cues come there.
+  The Load window lists the examples by the numbers they start with (`ProjectStore.Examples`: 10 after 9). DmxBox.Server copies them with the examples, Lumenet.exe carries
   them as resources and unpacks them into the examples' folder, and opening the example takes them in.
 * **The hub:** GetSounds, SetSound (the file must be in the store, a track needs none; a file name another
   sound uses for another file gets "(2)"), DeleteSound, CopySound, SetSoundControl ("go", "toggle", "level"
@@ -1158,6 +1190,36 @@ and only on localhost or HTTPS, and a controller belongs to the PC it is plugged
   to 15 on channel 1 (8 below the key's own; 0 off, 1 on, 2 blinking), the Compact by the note 16 below the
   key's own on channel 2 with 2 for on. A knob of either is set, with its ring, by its own controller.
 
+### OSC
+
+OSC from other programs (`backend/DmxBox.Server/Osc`) works the same targets as MIDI, by their names:
+
+* **`OscMessage.cs`** reads the packets of OSC 1.0 (`OscPacket.Read`): a message, or a bundle of messages
+  and bundles (their time tags are not waited for), with the arguments i, h, f, d, s, S, c, b, t, r, m, T, F,
+  N, I and arrays; a whole number comes out as a long, a float as a double. Read leniently: what is no OSC
+  gives nothing, a message with a kind of argument it does not know is passed over, a sender without type
+  tags or without the last zeros is understood. `OscPacket.Write` and `Bundle` make packets, for the tests.
+* **`OscInput.cs`** turns a message into a key or fader: the address after `/lumenet` (which may be left
+  out), slashes for dots, is a `ControlTarget` name. A key: no argument (an impulse, nil, a text) presses it
+  and lets it go, above 0 or true presses it, 0 or false lets it go (held keys are kept, `LetGo` lets them
+  go when OSC goes off). A fader: a double 0 to 1 or a long 0 to 255, at once, without pickup. The keys go
+  through `MidiControl.PressKey`, so the page on the PC used last presses them; `MidiControl.HandleOsc` does
+  it under the MIDI lock and lists the message as from "OSC from <address>". A name like a key's that the
+  page does not have goes to it all the same (the page passes it over, and its list says "The desk has no
+  key").
+* **`OscControl.cs`** (a hosted service) holds the UDP port while OSC is on (exclusively, so that no other
+  program shares it), with `osc.json` beside `midi.json` (`OscSetupFile`, off and port 8000 at first). A
+  message of this PC (`LanAccess.IsLocal`) always counts, one of another device only while LAN is on; the
+  others are listed as refused. `MidiState.Osc` (`OscView`: on, port, off/listening/failed, the problem)
+  goes to the pages with the MIDI; the hub's `SetOsc(on, port)` works only on the PC. `--Osc:Bind=127.0.0.1`
+  keeps a test desk on the loopback (the tests' server has it).
+* **The page:** `osc-panel` on the MIDI view (the switch, the port, what it does, where to send), the
+  addresses in `midi-targets` while OSC listens (`oscAddress`), and `isKnownTarget` for the list.
+* Nothing goes back over OSC yet (no feedback to TouchOSC).
+* Windows may hold the first packet of a new flow (a sender and this port) back for a moment while its
+  firewall looks at it, and drop what comes meanwhile; after that everything arrives. The tests keep one
+  sender for the whole test: a sender closed right after its send can lose its packet altogether.
+
 ### Lumenet.exe and its releases
 
 `publish.cmd` (with `publish.mjs`) builds the page and then publishes `backend/Lumenet` as one self-contained
@@ -1183,7 +1245,7 @@ publish.cmd        # builds the page, then publish\Lumenet.exe
 
 ### Tests
 
-`dotnet test backend/DmxBox.sln` (844 tests: the client, also against the simulator with two outputs, the
+`dotnet test backend/DmxBox.sln` (883 tests: the client, also against the simulator with two outputs, the
 desk, solo, sequences and the stack with a clock the tests set by hand, the rate and its tempo, undo and the autosave, the
 stage plan and its picture, fixtures, their attributes, their steps and their notes, the notes, the
 universes, project files with Export and Import, the examples, the import of show files, the links to the
@@ -1209,8 +1271,14 @@ again, PLAYER L/R at the bottom while a stopped track sounds on), a jump in a tr
 tracks playing side by side, the finder of mixers, tracks in the project and the hub, a playlist's tracks
 added as sounds; levels in decibels and files with the volume in per cent and the
 category of before; LISTEN from any page; one pair of outputs; seeking in a file, the fader of a sound down with its end, Prev and Next at once and a
-step played by mistake taken back, and the sound keys of the independents), and in `frontend/`:
-`npm test -- --watch=false` (295 tests of the page; for the sounds the SOUND section with LISTEN and its
+step played by mistake taken back, and the sound keys of the independents; the cues at moments of sounds
+with the clock set by hand: followed, jumped to, waited for, learned, in a project file of version 10; OSC:
+its packets byte by byte, the keys and faders of its addresses, the port on 127.0.0.1 with the LAN gate, a
+port another program has, osc.json, and a fader moved through the whole desk program; and the contract of
+the hub, `hub-contract.ts`), and in `frontend/`:
+`npm test -- --watch=false` (306 tests of the page; OSC on the MIDI view with its addresses; the window of a cue's moment, Learn, the moments in
+the cards and on the cue sheet, the cue sheet itself, the setups of the first start and the usual shortcuts
+with their reset; for the sounds the SOUND section with LISTEN and its
 volume in decibels (-20 dB at first), every sound in one color, the row on Main with
 Copy and Del, the Sounds view with a file added, its editor with sliders that send while they move, the wave,
 the device and Listen on, Export and Import of a ZIP; Copy and Del of the Memories, Sequences and Effects
@@ -1223,7 +1291,9 @@ that seeks with a double click and with keys, the wave over the Stack view, RECO
 Memories and Sequences views, and the sound keys of the independents; for MIDI the
 keys of a controller pressed as shortcuts with their locks and holds, the keys of the pages shown, the lamps
 and pages told, the panel, Listen, and Export and Import; for sequences Add, Release and Effect in the table,
-the releases following their steps, and the steps that are on).
+the releases following their steps, and the steps that are on). `npm run lint` checks the page with ESLint:
+the rules of angular-eslint, the accessibility of the templates among them (`frontend/eslint.config.js`).
+The release workflow lints the page and runs both kinds of tests before it makes Lumenet.exe.
 
 On Windows the first packets of a new UDP flow (a socket and a receiver) can be held back for a moment while
 the firewall looks at the flow, and what follows meanwhile is dropped. The tests of the network outputs
@@ -1413,8 +1483,15 @@ receivers listen at 5568 and the desk sends from a port of its own.
   already work out each cell by where it is on the stage, so either would be one more pattern); a cycle given
   in beats of the tempo rather than in BPM of its own; where the heads point in degrees in the preview, for
   kinds of lights whose pan and tilt ranges are known.
-* **More for MIDI:** MIDI clock, MIDI timecode and MIDI Show Control (with the beat and the sound), MIDI sent
-  to other programs, and OSC on the same names of targets ([MIDI controllers](#midi-controllers)).
+* **More for MIDI and OSC:** MIDI clock, MIDI timecode and MIDI Show Control (with the beat and the sound), MIDI
+  sent to other programs, and OSC sent back, so that a layout of TouchOSC shows the desk's levels and lamps
+  ([MIDI controllers](#midi-controllers), [OSC](#osc)).
+* **Sounds on more than one pair of outputs:** today every sound goes out on one pair (left and right) of
+  one device, as the Sound part of Settings chooses. With a sound box of four outputs or more, a sound could
+  have a pair of its own: a click or a backing track on 3 and 4 for the in-ears of a band while the audience
+  hears 1 and 2, or a speaker hidden in the set, so that a phone rings where it stands. The owner's theatre
+  needs none of it now (the PC's jack into the mixer, two speakers, the monitors from the mixer); a good idea
+  for later, in the owner's words.
 * **A boot loader for dmxbox 2,** so that a new firmware goes on over USB without the programmer.
 * **Pushed state:** a "subscribe" message, so the box sends live output to your UI.
 * **Fabrication files for the carrier board**, so it can be ordered instead of hand-wired.
@@ -1978,6 +2055,39 @@ receivers listen at 5568 and the desk sends from a port of its own.
   sound 20 (a track) played together; Settings showed no switch of a mode, no outputs for two, and Find.
   Find on this PC took 0.9 s and found the owner's Ui16 ("ui16, firmware 1.0.7548-ui16") and nothing else,
   asking it only what it is. No error on the page.
+* **Folders, the contract of the hub, the usual words and keys, the cue sheet and cues at moments of sounds
+  (2026-11-26):** the owner's words: the files in folders; generated types; a linter; split the biggest
+  files; words a user of other software feels at home with (GO and cues); default keys as other software
+  has them, with a way back to them; the first-run setup; the printable cue sheet; the timeline (cues at
+  sound times); OSC with the names of MIDI. The page has a folder per feature and the desk program a
+  namespace per folder; ESLint passes; `hub-contract.ts` is written by the tests. The backend passes 879
+  tests and the page 306. On a test copy, in Edge headless: a fresh device got the window of the setups; the cue sheet of example 9 printed black on white (the corner of the PDF 255, 255, 255). With
+  example 9 and moments of 2.5 s and 5 s of "Calm night" on cues 2.0 and 3.0, the stack went to 2.0 and
+  to 3.0 by itself as the sound reached them; the wave showed both marks, the Current card said "The stack
+  waits for 0:02.50 of Calm night, or GO.", Now took 0:01.22 while the sound played, and "9:99" was
+  refused. OSC switched on in the MIDI view (port 9123, the copy bound to 127.0.0.1): messages sent with
+  Node moved the master to 128 and channel 3 to 200, pressed and let go memory key 2, and a slip
+  (`/lumenet/stack/ply`) was listed as "The desk has no key"; of five messages sent at once at the start
+  only the first came, the others were dropped while Windows held the first packet of the new flow (with a
+  pause after the first, all came). No error on the page. Not yet used by the owner, nor with QLab or
+  TouchOSC.
+* **Shorter texts, Notes off at first, the independents without a jump, the examples again (2026-11-26,
+  afternoon):** the owner's words: take out the long texts of the Stack view, the colors and the keyboard,
+  shorten two others, a better key for the usual shortcuts, Notes unticked at first in every setup, the IND
+  section that is drawn in one column first and then jumps, and a new example with the new features, the
+  others gone through and named better. ↺ beside the title of Keyboard gives the usual shortcuts; Notes is
+  left out of the top bar at first; `lmKeyColumns` sets its columns before the browser paints. Measured
+  in Edge headless on a test copy, frame by frame after each paint, with 64 independent keys: before, Main
+  showed the section one column and 69 pixels wide and then four columns and 229 pixels; now four columns
+  from the first frame, also after going back to Main, and no error. The examples have new names (1 Looks
+  and cues, 2 Chases and sequences, 3 LED lights and groups, 4 Moving heads, 5 A whole theatre show, 6 A
+  whole concert, 7 Effects, 8 Playing sounds, 9 Light and sound cues) and notes in the words of now (GO,
+  Back, cues, Rate as a tempo, decibels, the Sound part of Settings), saved by the desk itself; the new
+  "10 Cues on the music" has its cues at moments of "Puppet dance". All ten were opened and played on the
+  test copy; with example 10 its cues followed the music when it was sent on to 0:08, 0:16, 0:26, 0:27,
+  0:28 and 0:36. That check found a fault of the morning's timeline: Next or GO ahead of the music was
+  undone at the next round (see Cues at moments of sounds); fixed, with tests. The backend passes 883 tests
+  and the page 306. Not yet used by the owner.
 * **dmxbox 2 on paper (2026-11-23):** both versions (two outputs and one) are drawn from their `circuit.py`,
   and each drawing passed its check against it: the schematic, the breadboard plan, the perfboard plan (38 and
   26 insulated wires, with SW1 at the cut left edge and the holes around the four screws kept empty;

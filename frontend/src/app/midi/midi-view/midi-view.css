@@ -37,6 +37,11 @@ h3 {
   margin-bottom: 10px;
 }
 
+/* OSC under the controllers, with room above it */
+h3.osc-title {
+  margin-top: 16px;
+}
+
 .summary {
   max-width: 120ch;
   margin: 0;

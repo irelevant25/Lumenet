@@ -210,7 +210,7 @@ export class SoundOutputPanel {
   private async ask(): Promise<void> {
     try {
       this.output.set(
-        (await this.connection.invoke<SoundOutput | undefined>('GetSoundOutput')) ?? null,
+        (await this.connection.invoke('GetSoundOutput')) ?? null,
       );
     } catch {
       this.output.set(null);
@@ -232,7 +232,7 @@ export class SoundOutputPanel {
     };
     try {
       this.output.set(
-        (await this.connection.invoke<SoundOutput | undefined>('SetSoundOutput', setup)) ?? old,
+        (await this.connection.invoke('SetSoundOutput', setup)) ?? old,
       );
     } catch (error) {
       this.store.tell((error as Error).message);

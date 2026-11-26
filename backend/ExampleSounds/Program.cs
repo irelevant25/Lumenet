@@ -1,11 +1,11 @@
-// The sound files of the example projects "8 Sounds" and "9 Sounds in the stack", made from nothing:
-// noise, filters and sine waves, no recordings and no samples. Rain and wind are loops (WAV, so that
-// they go round without a gap); thunder, a church bell, applause and a short piece of music are MP3,
-// made by Windows' own encoder (so this runs on Windows only).
+// The sound files of the example projects "8 Playing sounds", "9 Light and sound cues" and "10 Cues on
+// the music", made from nothing: noise, filters and sine waves, no recordings and no samples. Rain and
+// wind are loops (WAV, so that they go round without a gap); thunder, a church bell, applause and two
+// short pieces of music are MP3, made by Windows' own encoder (so this runs on Windows only).
 //
 //     dotnet run --project backend/ExampleSounds -- <folder>
 //
-// writes the six files into the folder, and says of each how long it is and its hash (the start of
+// writes the seven files into the folder, and says of each how long it is and its hash (the start of
 // its SHA-256, as the desk program keeps it). The same seed gives the same sounds; the MP3 encoder of
 // another Windows may give other bytes, and so other hashes than the project files of the examples
 // name: then open each example in the desk with its folder of sounds, and save it again.
@@ -32,6 +32,7 @@ try
     Save("church-bell.mp3", Bell(random), 44100, 1, 96000, -1.5);
     Save("applause.mp3", Applause(random), 44100, 1, 96000, -2);
     Save("calm-night.mp3", Music(random), 44100, 2, 128000, -1);
+    Save("puppet-dance.mp3", Dance(random), 44100, 2, 128000, -1);   // last: the others stay as they were
 }
 finally
 {
@@ -321,6 +322,165 @@ static float[] Music(Random random)
 
     FadeOut(result, rate, 2, 2.5);
     return result;
+}
+
+// "Puppet dance", for the cues that come at moments of the music: A minor, F, C, G at 120 beats a minute,
+// a bar every 2 seconds. A soft intro, the bass and a kick from 0:08, claps, hi-hats and a tune from 0:16,
+// a break that rises from 0:24 with a clap at 0:26 and at 0:27, the last chorus with a crash from 0:28, and
+// a chord at 0:36 that dies away. Stereo, about 40 seconds.
+static float[] Dance(Random random)
+{
+    const int rate = 44100;
+    const double beat = 0.5, bar = 2, tail = 3.5;
+    const int bars = 18;
+    int[][] pads = [[57, 60, 64], [57, 60, 65], [55, 60, 64], [55, 59, 62]];
+    int[] basses = [45, 41, 48, 43];
+    int[][] arps = [[69, 72, 76, 81], [65, 69, 72, 77], [67, 72, 76, 79], [67, 71, 74, 79]];
+    (double Beat, int Note)[][] tune =
+    [
+        [(0, 76), (1, 72), (2, 69), (3, 72), (3.5, 76)],
+        [(0, 77), (1, 76), (2, 72), (3, 69)],
+        [(0, 79), (1, 76), (2, 72), (3, 76), (3.5, 79)],
+        [(0, 74), (1, 71), (2, 67), (3, 71), (3.5, 74)],
+    ];
+    int[] order = [0, 1, 2, 3, 2, 1, 2, 3];
+    int frames = (int)((bars * bar + tail) * rate);
+    var left = new double[frames];
+    var right = new double[frames];
+    for (int b = 0; b < bars; b++)
+    {
+        int chord = b % 4;
+        double start = b * bar;
+        bool intro = b < 4, verse = b is >= 4 and < 8, pause = b is 12 or 13, full = b is >= 8 and < 12 or >= 14;
+        foreach (int note in pads[pause ? 0 : chord])
+            Pad(left, right, rate, Hz(note), start, bar + 0.25, pause ? 0.03 : 0.04);
+
+        if (!intro && !pause)
+        {
+            Bass(left, right, rate, Hz(basses[chord]), start, beat * 2 - 0.05, 0.3);
+            Bass(left, right, rate, Hz(basses[chord]), start + beat * 2, beat * 2 - 0.05, 0.25);
+        }
+
+        // plucked notes: quarters from the third bar of the intro, eighths after it, none in the break
+        if (!pause && b >= 2)
+        {
+            int notes = intro ? 4 : 8;
+            for (int k = 0; k < notes; k++)
+            {
+                double at = start + k * (intro ? beat : beat / 2);
+                double velocity = (k % 2 == 0 ? 0.9 : 0.65) * (intro ? 0.11 : 0.13);
+                Pluck(left, right, rate, Hz(arps[chord][intro ? k : order[k]]), at, velocity, k % 2 == 0 ? -0.35 : 0.35);
+            }
+        }
+
+        if (verse)
+        {
+            Kick(left, right, rate, start, 0.45);
+            Kick(left, right, rate, start + 2 * beat, 0.4);
+        }
+
+        if (full)
+        {
+            for (int k = 0; k < 4; k++)
+            {
+                Kick(left, right, rate, start + k * beat, 0.45);
+                Hat(left, right, rate, random, start + k * beat + beat / 2, 0.16);
+            }
+
+            Clap(left, right, rate, random, start + beat, 0.5);
+            Clap(left, right, rate, random, start + 3 * beat, 0.5);
+            foreach ((double at, int note) in tune[chord])
+                Pluck(left, right, rate, Hz(note), start + at * beat, 0.2, 0);
+        }
+    }
+
+    // the break: a rise from 0:24 to 0:28, and a clap with a kick at 0:26 and at 0:27
+    Riser(left, right, rate, random, 12 * bar, 2 * bar, 0.22);
+    foreach (double at in new[] { 13 * bar, 13 * bar + 2 * beat })
+    {
+        Clap(left, right, rate, random, at, 0.65);
+        Kick(left, right, rate, at, 0.45);
+    }
+
+    // the last chorus starts with a crash; the end is a chord of A minor that dies away
+    Crash(left, right, rate, random, 14 * bar, 2.5, 0.3);
+    double end = bars * bar;
+    foreach (int note in pads[0])
+        Pad(left, right, rate, Hz(note), end, 1.2, 0.05);
+    foreach (int note in arps[0])
+        Pluck(left, right, rate, Hz(note), end, 0.13, 0);
+    Bass(left, right, rate, Hz(45), end, 2, 0.35);
+    Kick(left, right, rate, end, 0.5);
+    Crash(left, right, rate, random, end, 3.2, 0.35);
+
+    var result = new float[frames * 2];
+    for (int i = 0; i < frames; i++)
+    {
+        result[i * 2] = (float)left[i];
+        result[i * 2 + 1] = (float)right[i];
+    }
+
+    FadeOut(result, rate, 2, 1.5);
+    return result;
+}
+
+// A clap: a short burst of noise around 1.2 kHz, opening in three quick hits, as hands that do not meet at once.
+static void Clap(double[] left, double[] right, int rate, Random random, double start, double volume)
+{
+    Biquad band = Biquad.BandPass(rate, 1200, 0.9);
+    int from = (int)(start * rate), count = (int)(0.22 * rate);
+    for (int i = 0; i < count && from + i < left.Length; i++)
+    {
+        double t = i / (double)rate;
+        double hits = t < 0.015 ? 0.55 + 0.45 * Math.Abs(Math.Sin(t / 0.015 * Math.PI * 3)) : 1;
+        double s = band.Run((float)(random.NextDouble() * 2 - 1)) * Math.Exp(-t / 0.05) * hits * volume;
+        left[from + i] += s;
+        right[from + i] += s;
+    }
+}
+
+// A closed hi-hat: very short, high noise, a little to the right.
+static void Hat(double[] left, double[] right, int rate, Random random, double start, double volume)
+{
+    Biquad high = Biquad.HighPass(rate, 7000, 0.7);
+    int from = (int)(start * rate), count = (int)(0.06 * rate);
+    for (int i = 0; i < count && from + i < left.Length; i++)
+    {
+        double t = i / (double)rate;
+        double s = high.Run((float)(random.NextDouble() * 2 - 1)) * Math.Exp(-t / 0.015) * volume;
+        left[from + i] += s * 0.8;
+        right[from + i] += s;
+    }
+}
+
+// A crash cymbal: bright noise, different on each side, dying away over "seconds".
+static void Crash(double[] left, double[] right, int rate, Random random, double start, double seconds, double volume)
+{
+    Biquad highLeft = Biquad.HighPass(rate, 3500, 0.6), highRight = Biquad.HighPass(rate, 3500, 0.6);
+    int from = (int)(start * rate), count = (int)(seconds * rate);
+    for (int i = 0; i < count && from + i < left.Length; i++)
+    {
+        double t = i / (double)rate;
+        double env = Math.Exp(-t / (seconds / 3)) * Math.Min(1, t / 0.002) * volume;
+        left[from + i] += highLeft.Run((float)(random.NextDouble() * 2 - 1)) * env;
+        right[from + i] += highRight.Run((float)(random.NextDouble() * 2 - 1)) * env;
+    }
+}
+
+// A riser: noise through a band that climbs from 300 Hz, growing louder over "seconds".
+static void Riser(double[] left, double[] right, int rate, Random random, double start, double seconds, double volume)
+{
+    var band = new Biquad();
+    int from = (int)(start * rate), count = (int)(seconds * rate);
+    for (int i = 0; i < count && from + i < left.Length; i++)
+    {
+        double share = i / (double)count;
+        if (i % 32 == 0)
+            band.SetBandPass(rate, 300 * Math.Pow(20, share), 2);
+        double s = band.Run((float)(random.NextDouble() * 2 - 1)) * share * share * volume;
+        left[from + i] += s;
+        right[from + i] += s;
+    }
 }
 
 static double Hz(int note) => 440 * Math.Pow(2, (note - 69) / 12.0);

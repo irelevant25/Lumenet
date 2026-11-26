@@ -24,6 +24,7 @@
     <Using Include="DmxBox.Server.Import" />
     <Using Include="DmxBox.Server.Lan" />
     <Using Include="DmxBox.Server.Midi" />
+    <Using Include="DmxBox.Server.Osc" />
     <Using Include="DmxBox.Server.Outputs" />
     <Using Include="DmxBox.Server.Projects" />
     <Using Include="DmxBox.Server.Sequences" />

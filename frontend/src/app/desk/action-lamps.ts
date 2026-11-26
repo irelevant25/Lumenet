@@ -125,6 +125,9 @@ function stackLamp(name: string, store: DeskStore): ActionLamp {
       return store.stackRunning() ? LIT : FAINT;
     case 'pause':
       return store.stackPaused() ? { level: 3, blink: true } : FAINT;
+    // Learn blinks while it is on, as on the Stack view: each GO then changes a cue
+    case 'learn':
+      return store.stackLearning() ? { level: 3, blink: true } : FAINT;
     default:
       return FAINT;
   }

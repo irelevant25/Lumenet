@@ -159,7 +159,7 @@ internal sealed class ProjectStore
         }
     }
 
-    // The names of the examples, in the order of their names (they start with a number).
+    // The names of the examples, in the order of the numbers they start with (10 after 9), then of the names.
     private string[] Examples()
     {
         if (_examples is null || !Directory.Exists(_examples))
@@ -170,13 +170,23 @@ internal sealed class ProjectStore
             return new DirectoryInfo(_examples)
                 .EnumerateFiles("*" + Extension)
                 .Select(file => Path.GetFileNameWithoutExtension(file.Name))
-                .Order(StringComparer.Ordinal)
+                .OrderBy(LeadingNumber)
+                .ThenBy(name => name, StringComparer.Ordinal)
                 .ToArray();
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
             throw new DeskException($"The examples in {_examples} cannot be read. {e.Message}");
         }
+    }
+
+    // The number a name starts with ("10 Cues on the music": 10); a name without one comes after all that have one.
+    private static int LeadingNumber(string name)
+    {
+        int digits = 0;
+        while (digits < name.Length && digits < 6 && char.IsAsciiDigit(name[digits]))
+            digits++;
+        return digits == 0 ? int.MaxValue : int.Parse(name.AsSpan(0, digits), System.Globalization.CultureInfo.InvariantCulture);
     }
 
     /// <summary>

@@ -7,10 +7,11 @@ import { DeskStore } from './desk/desk-store';
 import { Keyboard } from './desk/keyboard';
 import { viewNamed } from './desk/views';
 import { TopBar } from './top-bar/top-bar';
+import { WelcomeDialog } from './welcome/welcome-dialog/welcome-dialog';
 
 /** The frame of the desk: the top bar, and under it the view that is chosen there. */
 @Component({
-  imports: [RouterOutlet, TopBar],
+  imports: [RouterOutlet, TopBar, WelcomeDialog],
   selector: 'lm-root',
   styleUrl: './app.css',
   templateUrl: './app.html',

@@ -1,0 +1,30 @@
+@if (known()) {
+  <div class="row">
+    <label class="switch">
+      <input type="checkbox" [checked]="osc().on" (change)="toggle($event)" />
+      Receive OSC
+    </label>
+    <label class="port">
+      UDP port
+      <input
+        type="text"
+        inputmode="numeric"
+        maxlength="5"
+        autocomplete="off"
+        [value]="osc().port"
+        (change)="setPort($event)"
+        (keydown.enter)="finish($event)"
+      />
+    </label>
+    <span class="state" role="status" [class.failed]="osc().state === 'failed'">{{ said() }}</span>
+  </div>
+  <p class="hint">
+    Other programs (QLab, TouchOSC, a show controller) work the desk with OSC. The address of a key
+    or a fader is its name with slashes: <code>/lumenet/stack/play</code> is GO,
+    <code>/lumenet/fader/master 0.5</code> puts the master half way (a number with a point from 0 to
+    1, or a whole number from 0 to 255). A key takes 1 to press and 0 to let go, or nothing for both.
+    While OSC is on, the list at the right shows every address. {{ where() }}
+  </p>
+} @else {
+  <p class="hint">The desk program is older than this page and knows no OSC.</p>
+}

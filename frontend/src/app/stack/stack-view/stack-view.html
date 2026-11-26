@@ -1,25 +1,42 @@
 <header>
   <h2>Stack</h2>
   <p class="summary" role="status">{{ summary() }}</p>
+  <!-- the stack on paper: every cue with its times, to print -->
+  <a class="sheet" routerLink="/cue-sheet">Cue sheet</a>
 </header>
 
 <div class="top">
-  <!-- Stack, Prev, Play, Pause, Next: the Stage view has the same keys; MUTE of the sound right after Next -->
+  <!-- Stack, Back, GO, Pause, Next: the Stage view has the same keys; MUTE of the sound right after Next -->
   <lm-stack-keys />
 
   <button
     lmLamp
     type="button"
     tone="add-step"
-    aria-label="Add a step"
+    aria-label="Add a cue"
     data-action="stack.add"
     [disabled]="live()"
     (click)="addStep()"
   >
-    Add<br />step
+    Add<br />cue
   </button>
 
-  <!-- where the stack stands: the step before the one that is on, that one, and the one Play goes to -->
+  <!-- Learn: in a rehearsal with the music, each GO stores where the sound that plays is into the cue it goes to -->
+  <button
+    lmLamp
+    type="button"
+    tone="learn"
+    aria-label="Learn: GO stores the moment of the sound that plays"
+    data-action="stack.learn"
+    [level]="learning() ? 3 : 1"
+    [blink]="learning()"
+    [attr.aria-pressed]="learning()"
+    (click)="store.toggleStackLearning()"
+  >
+    Learn
+  </button>
+
+  <!-- where the stack stands: the cue before the one that is on, that one, and the one GO goes to -->
   <lm-stack-cards />
 </div>
 
@@ -37,14 +54,14 @@
 <div class="table-box">
   <table class="steps" [class.locked]="live()">
     <caption>
-      The steps of the stack
+      The cues of the stack
     </caption>
     <thead>
       <tr>
         <th scope="col"><span class="for-readers">Drag to move</span></th>
-        <th scope="col">Step</th>
+        <th scope="col">Cue</th>
         <th scope="col" title="On top of what is on, taking nothing down">Add</th>
-        <th scope="col" title="A sound plays on through the steps after it, until its end or a release">Continue</th>
+        <th scope="col" title="A sound plays on through the cues after it, until its end or a release">Continue</th>
         <th scope="col">Kind</th>
         <th scope="col">Number</th>
         <th scope="col">Notes</th>
@@ -52,8 +69,9 @@
         <th scope="col">Up (s)</th>
         <th scope="col">Wait (s)</th>
         <th scope="col">Down (s)</th>
-        <th scope="col"><span class="for-readers">Move, add a step after, or take out</span></th>
-        <th scope="col" title="Skipped: the stack and the sequence pass over the step; it can be switched while the stack is live, not for the step that is on">Disabled</th>
+        <th scope="col" title="The moment of a sound the cue comes at, instead of GO">At</th>
+        <th scope="col"><span class="for-readers">Move, add a cue after, or take out</span></th>
+        <th scope="col" title="Skipped: the stack passes over the cue; it can be switched while the stack is live, not for the cue that is on">Disabled</th>
       </tr>
     </thead>
     <tbody>
@@ -61,7 +79,7 @@
         <tr
           lmStepRow
           [step]="step"
-          [label]="'Step ' + step.cue"
+          [label]="'Cue ' + step.cue"
           [choices]="choices()"
           [self]="step.id"
           [note]="noteOf(step)"
@@ -71,7 +89,7 @@
           [class.on]="on().has(step.id)"
           [class.next]="step.id === next()?.id"
           [class.skipped]="step.disabled === true"
-          [attr.title]="step.disabled ? 'Disabled: the stack passes over this step' : null"
+          [attr.title]="step.disabled ? 'Disabled: the stack passes over this cue' : null"
           [class.drop-before]="dropMark()?.id === step.id && !dropMark()?.after"
           [class.drop-after]="dropMark()?.id === step.id && dropMark()?.after"
           (stepChange)="changeStep(step.id, $event)"
@@ -85,7 +103,7 @@
             class="grip"
             aria-hidden="true"
             [attr.draggable]="live() ? null : 'true'"
-            [attr.title]="live() ? null : 'Drag to move this step'"
+            [attr.title]="live() ? null : 'Drag to move this cue'"
             (dragstart)="onDragStart($event, step)"
             (dragend)="onDragEnd()"
           >
@@ -99,7 +117,7 @@
               autocomplete="off"
               [disabled]="live()"
               [value]="step.cue"
-              [attr.aria-label]="'Number of step ' + step.cue"
+              [attr.aria-label]="'Number of cue ' + step.cue"
               (change)="renumber(step, $event)"
               (keydown.enter)="finish($event)"
             />
@@ -111,7 +129,7 @@
                 type="checkbox"
                 [checked]="step.add === true"
                 [disabled]="live()"
-                [attr.aria-label]="'Step ' + step.cue + ' adds on top of what is on'"
+                [attr.aria-label]="'Cue ' + step.cue + ' adds on top of what is on'"
                 (change)="setAdd(step, $event)"
               />
             }
@@ -123,15 +141,27 @@
                 type="checkbox"
                 [checked]="step.continue === true"
                 [disabled]="live()"
-                [attr.aria-label]="'Step ' + step.cue + ' plays its sound on through the steps after it'"
+                [attr.aria-label]="'Cue ' + step.cue + ' plays its sound on through the cues after it'"
                 (change)="setContinue(step, $event)"
               />
             }
           </td>
+          <!-- At: the moment of a sound the cue comes at. Also while the stack is live: a rehearsal sets them. -->
+          <td after class="moment">
+            <button
+              type="button"
+              [class.set]="step.at"
+              [attr.aria-label]="momentLabel(step)"
+              [attr.title]="step.at ? momentOf(step.at) : 'Comes with GO: press to give it a moment of a sound'"
+              (click)="pickMoment(step)"
+            >
+              {{ step.at ? momentOf(step.at) : '—' }}
+            </button>
+          </td>
           <td after class="row-keys">
             <button
               type="button"
-              [attr.aria-label]="'Move step ' + step.cue + ' up'"
+              [attr.aria-label]="'Move cue ' + step.cue + ' up'"
               [disabled]="$first || live()"
               (click)="moveUp($index)"
             >
@@ -139,7 +169,7 @@
             </button>
             <button
               type="button"
-              [attr.aria-label]="'Move step ' + step.cue + ' down'"
+              [attr.aria-label]="'Move cue ' + step.cue + ' down'"
               [disabled]="$last || live()"
               (click)="moveDown($index)"
             >
@@ -148,7 +178,7 @@
             <button
               type="button"
               class="add"
-              [attr.aria-label]="'Add a step after step ' + step.cue"
+              [attr.aria-label]="'Add a cue after cue ' + step.cue"
               [disabled]="live()"
               (click)="store.addStackStepAfter(step)"
             >
@@ -157,7 +187,7 @@
             <button
               type="button"
               class="delete"
-              [attr.aria-label]="'Take step ' + step.cue + ' out'"
+              [attr.aria-label]="'Take cue ' + step.cue + ' out'"
               [disabled]="live()"
               (click)="store.deleteStackStep(step.id)"
             >
@@ -170,34 +200,22 @@
               type="checkbox"
               [checked]="step.disabled === true"
               [disabled]="live() && step.id === current()?.id"
-              [attr.aria-label]="'Step ' + step.cue + ' is skipped'"
+              [attr.aria-label]="'Cue ' + step.cue + ' is skipped'"
               (change)="setDisabled(step, $event)"
             />
           </td>
         </tr>
       } @empty {
         <tr>
-          <td class="empty" colspan="13">No steps yet. Add step puts in the first one.</td>
+          <td class="empty" colspan="14">No cues yet. Add cue puts in the first one.</td>
         </tr>
       }
     </tbody>
   </table>
-
-  <p class="explain">
-    Stack takes the stack live: every fader goes to zero and the first step starts. Up: seconds
-    the fader takes to its value. Wait: with 0 the stack stays on the step until Play; with more
-    it goes on by itself after that many seconds. Down: seconds the fader takes back to zero when
-    the stack leaves the step. A light that both steps give at the same level stays up; the others
-    rise with the new step's up time and fall with the old step's down time. Add: the step comes
-    up on top of what is on and takes nothing down; the next step without Add takes everything
-    down that it does not give itself. Release takes one step that is on down, in its own down
-    time, and leaves the rest. Sound brings the fader of a sound up, which plays it; with Continue
-    it plays on through the steps after it until its end or a release, and Stack off stops it. The steps that are on are marked green. After the last step comes
-    the first. A step keeps its number when another is moved; type a number to change it. + puts
-    a new step right after its row. Disabled skips a step without taking it out: the stack passes
-    over it, also when it is switched while the stack is live (not for the step that is on).
-  </p>
 </div>
 
 <!-- the color of a step of a fixture or a group -->
 <lm-step-color-dialog />
+
+<!-- the moment of a sound a cue comes at -->
+<lm-cue-moment-dialog />

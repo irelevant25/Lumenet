@@ -1,0 +1,622 @@
+{
+  "format": "lumenet-project",
+  "version": 10,
+  "universes": 1,
+  "notes": "<div><font size=\"5\"><b>Cues on the music</b></font></div><div>A dance of the puppets on the stage of example 3, lit on the beats of its music. After GO starts the music, the cues come by themselves when it reaches their moments: the verse at 0:08, the chorus at 0:16, the break at 0:24 with a flash on each clap at 0:26 and 0:27, the last chorus at 0:28 and the final chord at 0:36.</div><div><b><font color=\"#ffb020\">What is in it</font></b></div><ul><li>Sound 1, \"Puppet dance\": 40 seconds at 120 beats a minute, made for this example from tones and noise alone, so it is free to use. Its file lies in the folder of sounds beside the project, named after it.</li><li>Memories 1 to 6: the looks Intro, Verse, Chorus, Break, Finale and Bows. Effect 1 chases the back lights, effect 2 pulses the front.</li><li>The stack: 1.0 brings the intro and waits for GO. 1.1 starts the music with <b>Continue</b>, so that it plays on through the cues after it. 2.0 to 6.0 each have a moment of the music in the <b>At</b> column; 3.0 and 5.0 go on by themselves to the effects 3.1 and 5.1. 7.0 waits for GO after the music: a <b>release</b> of the bows, and the stage goes dark.</li><li>1.2, the haze, is skipped (<b>Disabled</b>): take its tick away where the theatre allows haze.</li></ul><div><b><font color=\"#ffb020\">Try it</font></b></div><ol><li>Press <b>Stack</b>: the intro comes up. Press <b>GO</b>: the music starts and the cues follow it. The wave over the cues has a thin line at each moment, and the Current card says which moment the stack waits for.</li><li>Double click the wave further on, at the break say: the stack goes to the cue of that moment. Double click further back: it goes back with the music.</li><li><b>GO</b> still goes earlier: the next cue with a moment then waits for its own.</li><li>Set the moments anew in a rehearsal: with the stack live, press <b>Learn</b> (it blinks), then <b>GO</b> wherever a cue is to come. Each GO stores where the music is into the cue it goes to, and <b>Undo</b> takes one back. Press <b>Learn</b> again to stop.</li><li><b>At</b> of a cue opens a window to type its moment (0:16, or 16), to take where the music is with <b>Now</b>, or to take the moment away with <b>None</b>.</li><li><b>Cue sheet</b> on the <b>Stack</b> view prints the cues with their moments.</li></ol>",
+  "memories": [
+    {
+      "number": 1,
+      "levels": {
+        "23": 200,
+        "26": 200,
+        "29": 200,
+        "32": 200,
+        "35": 60,
+        "38": 60,
+        "41": 60,
+        "44": 60
+      }
+    },
+    {
+      "number": 2,
+      "levels": {
+        "1": 180,
+        "2": 255,
+        "3": 140,
+        "5": 90,
+        "6": 180,
+        "7": 255,
+        "8": 140,
+        "10": 90,
+        "11": 180,
+        "12": 255,
+        "13": 140,
+        "15": 90,
+        "16": 180,
+        "17": 255,
+        "18": 140,
+        "20": 90,
+        "23": 160,
+        "26": 160,
+        "29": 160,
+        "32": 160
+      }
+    },
+    {
+      "number": 3,
+      "levels": {
+        "1": 255,
+        "2": 255,
+        "3": 180,
+        "5": 200,
+        "6": 255,
+        "7": 255,
+        "8": 180,
+        "10": 200,
+        "11": 255,
+        "12": 255,
+        "13": 180,
+        "15": 200,
+        "16": 255,
+        "17": 255,
+        "18": 180,
+        "20": 200,
+        "21": 220,
+        "23": 200,
+        "24": 220,
+        "26": 200,
+        "27": 220,
+        "29": 200,
+        "30": 220,
+        "32": 200,
+        "33": 255,
+        "37": 255,
+        "41": 255,
+        "42": 255,
+        "43": 255,
+        "44": 255
+      }
+    },
+    {
+      "number": 4,
+      "levels": {
+        "23": 40,
+        "26": 40,
+        "29": 40,
+        "32": 40,
+        "33": 90,
+        "36": 90,
+        "39": 90,
+        "42": 90
+      }
+    },
+    {
+      "number": 5,
+      "levels": {
+        "1": 255,
+        "2": 255,
+        "3": 255,
+        "4": 255,
+        "5": 255,
+        "6": 255,
+        "7": 255,
+        "8": 255,
+        "9": 255,
+        "10": 255,
+        "11": 255,
+        "12": 255,
+        "13": 255,
+        "14": 255,
+        "15": 255,
+        "16": 255,
+        "17": 255,
+        "18": 255,
+        "19": 255,
+        "20": 255,
+        "21": 255,
+        "22": 255,
+        "23": 255,
+        "24": 255,
+        "25": 255,
+        "26": 255,
+        "27": 255,
+        "28": 255,
+        "29": 255,
+        "30": 255,
+        "31": 255,
+        "32": 255,
+        "33": 255,
+        "34": 255,
+        "35": 255,
+        "36": 255,
+        "37": 255,
+        "38": 255,
+        "39": 255,
+        "40": 255,
+        "41": 255,
+        "42": 255,
+        "43": 255,
+        "44": 255
+      }
+    },
+    {
+      "number": 6,
+      "levels": {
+        "1": 255,
+        "2": 255,
+        "3": 200,
+        "4": 120,
+        "5": 255,
+        "6": 255,
+        "7": 255,
+        "8": 200,
+        "9": 120,
+        "10": 255,
+        "11": 255,
+        "12": 255,
+        "13": 200,
+        "14": 120,
+        "15": 255,
+        "16": 255,
+        "17": 255,
+        "18": 200,
+        "19": 120,
+        "20": 255
+      }
+    }
+  ],
+  "channelNotes": {},
+  "memoryNotes": {
+    "1": "Intro",
+    "2": "Verse",
+    "3": "Chorus",
+    "4": "Break",
+    "5": "Finale",
+    "6": "Bows"
+  },
+  "independents": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32
+  ],
+  "memoryIndependents": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32
+  ],
+  "sequences": [],
+  "stack": [
+    {
+      "cue": "1.0",
+      "target": "memory",
+      "number": 1,
+      "value": 255,
+      "up": 2,
+      "wait": 0,
+      "down": 2
+    },
+    {
+      "cue": "1.1",
+      "target": "sound",
+      "number": 1,
+      "add": true,
+      "continue": true,
+      "value": 255,
+      "up": 0,
+      "wait": 0.1,
+      "down": 3
+    },
+    {
+      "cue": "1.2",
+      "target": "channel",
+      "number": 45,
+      "add": true,
+      "disabled": true,
+      "value": 100,
+      "up": 3,
+      "wait": 0,
+      "down": 3
+    },
+    {
+      "cue": "2.0",
+      "target": "memory",
+      "number": 2,
+      "value": 255,
+      "up": 1,
+      "wait": 0,
+      "down": 1,
+      "at": {
+        "sound": 1,
+        "seconds": 8
+      }
+    },
+    {
+      "cue": "3.0",
+      "target": "memory",
+      "number": 3,
+      "value": 255,
+      "up": 0.2,
+      "wait": 0.1,
+      "down": 0.5,
+      "at": {
+        "sound": 1,
+        "seconds": 16
+      }
+    },
+    {
+      "cue": "3.1",
+      "target": "effect",
+      "number": 1,
+      "add": true,
+      "value": 255,
+      "up": 0.5,
+      "wait": 0,
+      "down": 0.5
+    },
+    {
+      "cue": "4.0",
+      "target": "memory",
+      "number": 4,
+      "value": 255,
+      "up": 0.5,
+      "wait": 0,
+      "down": 0.3,
+      "at": {
+        "sound": 1,
+        "seconds": 24
+      }
+    },
+    {
+      "cue": "4.1",
+      "target": "group",
+      "number": 1,
+      "add": true,
+      "color": "#ffffff",
+      "value": 100,
+      "up": 0,
+      "wait": 0,
+      "down": 0.3,
+      "at": {
+        "sound": 1,
+        "seconds": 26
+      }
+    },
+    {
+      "cue": "4.2",
+      "target": "group",
+      "number": 1,
+      "add": true,
+      "color": "#ffffff",
+      "value": 200,
+      "up": 0,
+      "wait": 0,
+      "down": 0.3,
+      "at": {
+        "sound": 1,
+        "seconds": 27
+      }
+    },
+    {
+      "cue": "5.0",
+      "target": "memory",
+      "number": 5,
+      "value": 255,
+      "up": 0,
+      "wait": 0.1,
+      "down": 1,
+      "at": {
+        "sound": 1,
+        "seconds": 28
+      }
+    },
+    {
+      "cue": "5.1",
+      "target": "effect",
+      "number": 2,
+      "add": true,
+      "value": 255,
+      "up": 0.2,
+      "wait": 0,
+      "down": 0.5
+    },
+    {
+      "cue": "6.0",
+      "target": "memory",
+      "number": 6,
+      "value": 255,
+      "up": 0,
+      "wait": 0,
+      "down": 4,
+      "at": {
+        "sound": 1,
+        "seconds": 36
+      }
+    },
+    {
+      "cue": "7.0",
+      "target": "release",
+      "number": 0,
+      "releases": "6.0",
+      "value": 0,
+      "up": 0,
+      "wait": 0,
+      "down": 4
+    }
+  ],
+  "effects": [
+    {
+      "number": 1,
+      "name": "Back chase",
+      "kind": "intensity",
+      "shape": "sine",
+      "group": 2,
+      "speed": 60,
+      "size": 100,
+      "spread": 100
+    },
+    {
+      "number": 2,
+      "name": "Front pulse",
+      "kind": "intensity",
+      "shape": "pulse",
+      "group": 1,
+      "speed": 120,
+      "size": 100,
+      "spread": 100,
+      "blocks": 2,
+      "duty": 30
+    }
+  ],
+  "effectIndependents": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32
+  ],
+  "sounds": [
+    {
+      "number": 1,
+      "name": "Puppet dance",
+      "file": "puppet-dance.mp3",
+      "hash": "e3bf918104503100d41e25c63981e52d",
+      "seconds": 39.459,
+      "decibels": -3,
+      "fadeOut": 3
+    }
+  ],
+  "stage": {
+    "width": 14,
+    "depth": 9,
+    "lights": [
+      {
+        "name": "Front 1",
+        "address": 1,
+        "channels": "DRGBW",
+        "x": 2,
+        "y": 11,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Front 2",
+        "address": 6,
+        "channels": "DRGBW",
+        "x": 5.3,
+        "y": 11,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Front 3",
+        "address": 11,
+        "channels": "DRGBW",
+        "x": 8.6,
+        "y": 11,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Front 4",
+        "address": 16,
+        "channels": "DRGBW",
+        "x": 11.9,
+        "y": 11,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Back 1",
+        "address": 21,
+        "channels": "RGB",
+        "x": 2,
+        "y": 1,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Back 2",
+        "address": 24,
+        "channels": "RGB",
+        "x": 5.3,
+        "y": 1,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Back 3",
+        "address": 27,
+        "channels": "RGB",
+        "x": 8.6,
+        "y": 1,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "Back 4",
+        "address": 30,
+        "channels": "RGB",
+        "x": 11.9,
+        "y": 1,
+        "angle": 0,
+        "shape": "round",
+        "width": 1,
+        "depth": 1
+      },
+      {
+        "name": "LED bar",
+        "address": 33,
+        "channels": "RGBRGBRGBRGB",
+        "x": 7,
+        "y": 6,
+        "angle": 0,
+        "shape": "square",
+        "width": 4,
+        "depth": 1
+      },
+      {
+        "name": "Hazer",
+        "address": 45,
+        "channels": "X",
+        "x": 13.5,
+        "y": 8,
+        "angle": 0,
+        "shape": "square",
+        "width": 1,
+        "depth": 1
+      }
+    ],
+    "groups": [
+      {
+        "name": "Front",
+        "lights": [
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      {
+        "name": "Back",
+        "lights": [
+          5,
+          6,
+          7,
+          8
+        ]
+      },
+      {
+        "name": "All washes",
+        "lights": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      }
+    ]
+  }
+}

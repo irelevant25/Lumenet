@@ -8,6 +8,7 @@ global using DmxBox.Server.Effects;
 global using DmxBox.Server.Import;
 global using DmxBox.Server.Lan;
 global using DmxBox.Server.Midi;
+global using DmxBox.Server.Osc;
 global using DmxBox.Server.Outputs;
 global using DmxBox.Server.Projects;
 global using DmxBox.Server.Sequences;

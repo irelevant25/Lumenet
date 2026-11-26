@@ -38,10 +38,23 @@ export const ZOOM_MAX = 2;
 export const ZOOM_STEP = 0.1;
 
 /**
- * Shortcuts every desk has until its owner changes them: undo and redo, as everywhere. A key
- * whose shortcut was taken away keeps none (an empty text stands for that).
+ * Shortcuts every desk has until its owner changes them, as in other programs: the space bar plays
+ * the stack (GO), as in QLab and most programs that play cues; undo, redo, save and open as
+ * everywhere; and a letter for the keys an evening needs most. A key whose shortcut was taken away
+ * keeps none (an empty text stands for that).
  */
 export const DEFAULT_SHORTCUTS: Readonly<Record<string, string>> = {
+  'stack.play': 'Space',
+  'stack.pause': 'KeyP',
+  'stack.next': 'KeyN',
+  'stack.previous': 'Backspace',
+  'stack.live': 'KeyS',
+  'master.blackout': 'KeyB',
+  'master.tempo': 'KeyT',
+  'sound.mute': 'KeyM',
+  'sound.listen': 'KeyL',
+  'project.save': 'Ctrl+KeyS',
+  'project.load': 'Ctrl+KeyO',
   'project.undo': 'Ctrl+KeyZ',
   'project.redo': 'Ctrl+KeyY',
 };
@@ -85,6 +98,12 @@ export interface DeskSettingsData {
   readonly stagePanel: boolean;
 }
 
+/**
+ * The views left out of the top bar at first, on a new device and after ↺ of the views: Notes, which
+ * a show needs only when its notes are written there. Settings shows it with a tick.
+ */
+export const DEFAULT_HIDDEN_VIEWS: readonly ViewName[] = ['notes'];
+
 export const DEFAULT_SETTINGS: DeskSettingsData = {
   channelSize: 'auto',
   channelRows: 2,
@@ -99,7 +118,7 @@ export const DEFAULT_SETTINGS: DeskSettingsData = {
   zoom: 1,
   shortcuts: DEFAULT_SHORTCUTS,
   colors: {},
-  hiddenViews: [],
+  hiddenViews: DEFAULT_HIDDEN_VIEWS,
   viewOrder: DEFAULT_VIEW_ORDER,
   stagePanel: true,
 };
@@ -166,7 +185,9 @@ export function settingsOf(raw: unknown): DeskSettingsData {
     shortcuts: shortcuts(kept['shortcuts']),
     // settings kept before 2026-11-21 name the colors in the British spelling: read, never written
     colors: colors(kept['colors'] ?? kept['colours']),
-    hiddenViews: hiddenViewsOf(kept['hiddenViews']),
+    // a device that never chose the views has those of the start; one that did keeps its choice
+    hiddenViews:
+      'hiddenViews' in kept ? hiddenViewsOf(kept['hiddenViews']) : [...DEFAULT_HIDDEN_VIEWS],
     viewOrder: viewOrderOf(kept['viewOrder']),
     stagePanel:
       typeof kept['stagePanel'] === 'boolean' ? kept['stagePanel'] : DEFAULT_SETTINGS.stagePanel,
@@ -231,6 +252,12 @@ export function shortcuts(value: unknown): Record<string, string> {
 @Service()
 export class DeskSettings {
   private readonly data = signal<DeskSettingsData>(DeskSettings.read());
+
+  /**
+   * True while this device keeps no settings of its own: the page was never set up here. The page
+   * then offers the setups (welcome/setups.ts); choosing one, or Later, keeps the settings.
+   */
+  readonly fresh = signal(DeskSettings.isFresh());
 
   readonly channelSize = computed(() => this.data().channelSize);
   readonly channelRows = computed(() => this.data().channelRows);
@@ -315,9 +342,27 @@ export class DeskSettings {
     this.change({ viewOrder: order });
   }
 
-  /** Every view in the top bar again, in the usual order. */
+  /** The views of the start in the top bar again (every one but Notes), in the usual order. */
   resetViews(): void {
-    this.change({ hiddenViews: [], viewOrder: DEFAULT_VIEW_ORDER });
+    this.change({ hiddenViews: [...DEFAULT_HIDDEN_VIEWS], viewOrder: DEFAULT_VIEW_ORDER });
+  }
+
+  /**
+   * A setup for a kind of show (welcome/setups.ts): the views of the top bar, in the usual order,
+   * and the rows of effect and sound faders on Main. The rest stays as it is.
+   */
+  useSetup(views: readonly ViewName[], effectRows: EffectRowCount, soundRows: EffectRowCount): void {
+    this.change({
+      hiddenViews: hiddenViewsOf(DEFAULT_VIEW_ORDER.filter((name) => !views.includes(name))),
+      viewOrder: DEFAULT_VIEW_ORDER,
+      effectRows: oneOf(effectRows, EFFECT_ROW_COUNTS, this.data().effectRows),
+      soundRows: oneOf(soundRows, EFFECT_ROW_COUNTS, this.data().soundRows),
+    });
+  }
+
+  /** The setups were offered (one was chosen, or Later): this device keeps its settings from now on. */
+  welcomed(): void {
+    this.keep();
   }
 
   setChannelRows(rows: RowCount): void {
@@ -396,11 +441,21 @@ export class DeskSettings {
   }
 
   private keep(): void {
+    this.fresh.set(false);
     try {
       localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(this.data()));
     } catch {
       // A browser that keeps nothing (a private window, storage switched off): the settings
       // last until the page is closed.
+    }
+  }
+
+  // No settings kept on this device yet. A browser that keeps nothing is not asked every time.
+  private static isFresh(): boolean {
+    try {
+      return localStorage.getItem(SETTINGS_STORAGE_KEY) === null;
+    } catch {
+      return false;
     }
   }
 

@@ -65,7 +65,7 @@ public sealed class DeskStackTests
     {
         var error = Assert.Throws<DeskException>(() => _desk.SetStackLive(true));
 
-        Assert.Equal("The stack has no steps yet. Add a step first.", error.Message);
+        Assert.Equal("The stack has no cues yet. Add a cue first.", error.Message);
         Assert.False(_desk.GetPlayback().Stack.Live);
     }
 
@@ -563,7 +563,7 @@ public sealed class DeskStackTests
         Assert.Equal("4.0", Cues()[^1]);              // after the last one: the next whole number, as at the end
 
         var error = Assert.Throws<DeskException>(() => _desk.AddStackStep(new Step("channel", 9, 255, 0, 0, 0), afterId: 9999));
-        Assert.Equal("That step is not in the stack any more.", error.Message);
+        Assert.Equal("That cue is not in the stack any more.", error.Message);
         Assert.Equal(6, Cues().Length);              // nothing was put in
     }
 

@@ -1,0 +1,64 @@
+/* The switch, the port and what OSC is doing on one line (they wrap on a narrow screen), and under
+   them how other programs reach the desk. */
+:host {
+  display: block;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+}
+
+label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.switch input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--key-play);
+  cursor: pointer;
+}
+
+.port input {
+  box-sizing: border-box;
+  width: 72px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--legend);
+  font: inherit;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.state {
+  color: var(--legend-dim);
+  font-size: 13px;
+}
+
+.state.failed {
+  color: var(--danger);
+}
+
+.hint {
+  max-width: 80ch;
+  margin: 8px 0 12px;
+  color: var(--legend-dim);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+code {
+  color: var(--legend);
+  font-size: 12px;
+}

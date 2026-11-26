@@ -12,7 +12,6 @@ import {
 import { heldMemory, itemWaits, memoryBlinks } from '../../desk/function-mode';
 import { LampLevel } from '../../desk/lamps';
 import { storedMemoryPages } from '../../memories/memory-pages';
-import { noteInOneLine } from '../../desk/notes';
 import { DragScroll } from '../../shared/drag-scroll';
 import { PressedInSight } from '../../shared/pressed-in-sight';
 import { MAX_EFFECTS } from '../../effects/effects';

@@ -1,0 +1,74 @@
+<dialog #dialog lmDialog aria-labelledby="cue-moment-title" (dismiss)="close()">
+  <form class="body" (submit)="use($event)">
+    <h2 id="cue-moment-title">{{ title() }}</h2>
+
+    <!-- the labels in a column, the fields beside them -->
+    <div class="fields">
+      <label for="cue-moment-sound">Sound</label>
+      <select id="cue-moment-sound" [disabled]="sounds().length === 0" (change)="chooseSound($event)">
+        @for (each of sounds(); track each.number) {
+          <option [value]="each.number" [selected]="each.number === sound()">
+            {{ each.number }}{{ each.name ? ': ' + each.name : '' }}
+          </option>
+        }
+      </select>
+
+      <label for="cue-moment-time">Moment</label>
+      <div class="time">
+        <input
+          id="cue-moment-time"
+          type="text"
+          inputmode="decimal"
+          maxlength="12"
+          autocomplete="off"
+          placeholder="0:31.25"
+          aria-describedby="cue-moment-hint"
+          [value]="typed()"
+          (input)="type($event)"
+        />
+        <!-- where the sound is while it plays: Now takes it -->
+        <button
+          lmLamp
+          type="button"
+          tone="system"
+          aria-label="Now: the moment the sound is at"
+          [level]="position() === null ? 1 : 2"
+          [disabled]="position() === null"
+          (click)="now()"
+        >
+          Now
+        </button>
+        <span class="where">{{ where() }}</span>
+      </div>
+    </div>
+
+    <p id="cue-moment-hint" class="hint" [class.problem]="problem() !== null" aria-live="polite">
+      @if (problem(); as said) {
+        {{ said }}
+      } @else {
+        While the stack is live and the cue before this one is on, the cue comes when the sound reaches
+        this moment; GO still goes earlier. A jump in the sound takes the stack to the cue of that moment.
+      }
+    </p>
+
+    <div class="actions">
+      @if (had()) {
+        <button lmLamp type="button" tone="system" aria-label="None: the cue waits for GO again" (click)="none()">
+          None
+        </button>
+      }
+      <button lmLamp type="button" tone="system" (click)="close()">Cancel</button>
+      <button
+        lmLamp
+        type="submit"
+        tone="system"
+        aria-label="Use this moment"
+        [level]="usable() ? 3 : 1"
+        [disabled]="!usable()"
+      >
+        Use
+      </button>
+    </div>
+  </form>
+  <button type="button" class="dialog-close" aria-label="Close the window" title="Close" (click)="close()">✕</button>
+</dialog>

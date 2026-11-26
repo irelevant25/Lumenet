@@ -161,7 +161,7 @@ public sealed class PlaybackHubTests
         JsonElement steps = (await ui.InvokeAsync("GetStack")).GetProperty("steps");
         Assert.Equal(["1.0", "1.1", "2.0"], steps.EnumerateArray().Select(item => item.GetProperty("cue").GetString()));
         Assert.Equal(added, steps[1].GetProperty("id").GetInt32());
-        Assert.Equal("""{"undo":"a new step after step 1.0 of the stack","redo":null}""", (await ui.InvokeAsync("GetHistory")).GetRawText());
+        Assert.Equal("""{"undo":"a new cue after cue 1.0 of the stack","redo":null}""", (await ui.InvokeAsync("GetHistory")).GetRawText());
 
         await ui.InvokeAsync("Undo");
         steps = (await ui.InvokeAsync("GetStack")).GetProperty("steps");
@@ -220,7 +220,7 @@ public sealed class PlaybackHubTests
 
         var step = new { target = "channel", number = 7, value = 255, up = 900, wait = 0, down = 0 };
         var noSteps = await Assert.ThrowsAsync<HubCallException>(() => ui.InvokeAsync("SetStackLive", true));
-        Assert.Contains("The stack has no steps yet. Add a step first.", noSteps.Message);
+        Assert.Contains("The stack has no cues yet. Add a cue first.", noSteps.Message);
         var notLive = await Assert.ThrowsAsync<HubCallException>(() => ui.InvokeAsync("StackPlay"));
         Assert.Contains("The stack is not live. Press Stack first.", notLive.Message);
 
@@ -386,7 +386,7 @@ public sealed class PlaybackHubTests
     [InlineData("""  "sequences": [ { "number": 5, "steps": [ { "target": "channel", "number": 5000, "value": 1 } ] } ]  """, "Step 1 of the sequence of memory 5")]
     [InlineData("""  "sequences": [ { "number": 5, "steps": [ { "target": "channel", "number": 600, "value": 1 } ] } ]  """, "The project has 1 universe, but step 1 of the sequence of memory 5 is on channel 88 (U2).")]
     [InlineData("""  "sequences": [ { "number": 5, "speed": 0.05, "steps": [] } ]  """, "The speed of a sequence must be from 0.1 to 10")]
-    [InlineData("""  "stack": [ { "cue": "1.0", "target": "channel", "number": 1, "value": 1 }, { "cue": "1", "target": "channel", "number": 2, "value": 1 } ]  """, "step 1.0 of the stack twice")]
+    [InlineData("""  "stack": [ { "cue": "1.0", "target": "channel", "number": 1, "value": 1 }, { "cue": "1", "target": "channel", "number": 2, "value": 1 } ]  """, "cue 1.0 of the stack twice")]
     [InlineData("""  "stack": [ { "cue": "first", "target": "channel", "number": 1, "value": 1 } ]  """, "looks like 3 or 2.1")]
     [InlineData("""  "stack": [ { "cue": "1.0", "target": "channel", "number": 1 } ]  """, "is not complete")]
     [InlineData("""  "stack": [ { "cue": "1.0", "target": "channel", "number": 1, "value": 1, "up": -2 } ]  """, "The up time")]

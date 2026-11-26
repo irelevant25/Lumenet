@@ -67,7 +67,7 @@ describe('the targets of MIDI controls', () => {
   });
 
   it('are called as the desk calls them', () => {
-    expect(targetLabel('stack.play')).toBe('Play');
+    expect(targetLabel('stack.play')).toBe('GO');
     expect(targetLabel('channel.625')).toBe('Channel key 113 (U2)');
     expect(targetLabel('fader.channel.625')).toBe('Channel fader 113 (U2)');
     expect(targetLabel('fader.slot.memory.2')).toBe('Memory fader 2 of the page shown');
@@ -88,7 +88,7 @@ describe('the targets of MIDI controls', () => {
     expect(controlText({ message: 'program', number: 5, channel: 1 })).toBe('Program 5, channel 1');
 
     expect(resultText(line({}))).toBe('Not mapped');
-    expect(resultText(line({ target: 'stack.play', result: 'down' }))).toBe('Play pressed');
+    expect(resultText(line({ target: 'stack.play', result: 'down' }))).toBe('GO pressed');
     expect(resultText(line({ target: 'fader.master', result: 'moved', value: 128 }))).toBe(
       'Master to 128',
     );

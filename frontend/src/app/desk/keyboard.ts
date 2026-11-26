@@ -236,6 +236,9 @@ export class Keyboard {
     }
 
     if (event.repeat || typing(event.target) || document.querySelector('dialog[open]')) return;
+    // A box or a choice keeps its own space bar: it ticks it. (A key of the desk does not: the space
+    // bar is GO also when the key clicked last still has the focus.)
+    if (event.code === 'Space' && ticks(event.target)) return;
 
     // The shortcut with the sides of its Ctrl and Alt first, then the one kept without a side (see shortcutsOf).
     const shortcuts = Object.entries(this.settings.shortcuts());
@@ -433,6 +436,11 @@ function keyOf(element: Element): string | null {
   if (fader !== null) return FADER_NAME.test(fader) ? fader : null;
   const id = element.getAttribute('data-action');
   return id !== null && actionWithId(id) ? id : null;
+}
+
+/** True for a checkbox or a radio button, which the space bar ticks. */
+function ticks(target: EventTarget | null): boolean {
+  return target instanceof HTMLInputElement && (target.type === 'checkbox' || target.type === 'radio');
 }
 
 /** True while the keyboard types into a field: then a shortcut must not take the key. */

@@ -1,0 +1,59 @@
+<div class="tools">
+  <button type="button" (click)="print()">Print</button>
+  <a routerLink="/stack">Back to the Stack view</a>
+  <span class="hint">The browser's printing can also save it as a PDF.</span>
+</div>
+
+<article class="paper">
+  <header>
+    <h2>{{ store.project().name }}: cue sheet</h2>
+    <p>{{ count() }}. Made {{ made }}.</p>
+  </header>
+
+  @if (lines().length) {
+    <table>
+      <caption class="for-readers">
+        The cues of the stack
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Cue</th>
+          <th scope="col">What</th>
+          <th scope="col">Note</th>
+          <th scope="col" class="number">Value</th>
+          <th scope="col">With</th>
+          <th scope="col" class="number">Up</th>
+          <th scope="col" class="number" title="GO: it waits for GO; a time: it goes on by itself">
+            Wait
+          </th>
+          <th scope="col" class="number">Down</th>
+          <th scope="col" title="The moment of a sound the cue comes at, instead of GO">At</th>
+          <th scope="col" class="write">Called on</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (line of lines(); track line.id) {
+          <tr [class.skipped]="line.skipped">
+            <th scope="row">
+              {{ line.cue }}
+              @if (line.skipped) {
+                <span class="mark">skipped</span>
+              }
+            </th>
+            <td>{{ line.what }}</td>
+            <td>{{ line.note }}</td>
+            <td class="number">{{ line.value }}</td>
+            <td>{{ line.with }}</td>
+            <td class="number">{{ line.up }}</td>
+            <td class="number">{{ line.wait }}</td>
+            <td class="number">{{ line.down }}</td>
+            <td>{{ line.at }}</td>
+            <td class="write"></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  } @else {
+    <p class="empty">The stack has no cues yet. The Stack view makes them.</p>
+  }
+</article>

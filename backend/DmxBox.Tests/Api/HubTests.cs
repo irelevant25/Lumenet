@@ -865,15 +865,15 @@ public sealed class HubTests
 
         JsonElement list = await ui.InvokeAsync("GetProjects");
         string[] examples = [.. list.GetProperty("examples").EnumerateArray().Select(name => name.GetString()!)];
-        Assert.Contains("5 Theatre show", examples);
+        Assert.Contains("5 A whole theatre show", examples);
 
-        JsonElement project = await ui.InvokeAsync("LoadExample", "5 Theatre show");
-        Assert.Equal("""{"name":"5 Theatre show","path":null,"unsaved":false}""", project.GetRawText());
+        JsonElement project = await ui.InvokeAsync("LoadExample", "5 A whole theatre show");
+        Assert.Equal("""{"name":"5 A whole theatre show","path":null,"unsaved":false}""", project.GetRawText());
         Assert.NotEqual("", (await ui.InvokeAsync("GetNotes")).GetString());
 
         // Saving asks for a name: the example is not the project's file.
         await AssertRefusedAsync("This project has no file yet. Save it under a name.", ui, "SaveProject", (string?)null);
-        await AssertRefusedAsync("There is no example \"..\\5 Theatre show\".", ui, "LoadExample", "..\\5 Theatre show");
+        await AssertRefusedAsync("There is no example \"..\\5 A whole theatre show\".", ui, "LoadExample", "..\\5 A whole theatre show");
     }
 
     [Fact]

@@ -93,6 +93,16 @@ public sealed record Step(string Target, int Number, int Value, double Up, doubl
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public bool Disabled { get; init; }
 
+    /// <summary>
+    /// Only for a cue of the stack: the moment of a sound it comes at. While the stack is live and
+    /// on the cue before it, the stack goes to it when that sound plays and reaches the moment, as
+    /// GO would (GO still takes it there earlier); a jump in the sound takes the stack to the cue of
+    /// the moment it jumped to (Desk.FollowSoundTimes). Null for a cue that waits for GO or for the
+    /// wait of the cue before it; a step of a sequence has none. The UIs get the field only when set.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public SoundTime? At { get; init; }
+
     /// <summary>True for a step that stands for a memory.</summary>
     internal bool IsMemory => Target == Memory;
 
@@ -162,7 +172,7 @@ public sealed record Step(string Target, int Number, int Value, double Up, doubl
         return this with
         {
             Up = Seconds(Up, "up"), Wait = Seconds(Wait, "wait"), Down = Seconds(Down, "down"), Color = color, Add = Add && !IsRelease,
-            Continue = Continue && IsSound,
+            Continue = Continue && IsSound, At = At?.Checked(),
         };
     }
 

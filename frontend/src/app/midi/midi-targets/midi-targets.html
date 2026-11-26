@@ -65,7 +65,12 @@
                     [class.learning]="learning() === target.id"
                     [class.picked]="keyboard.midiPicked() === target.id"
                   >
-                    <th scope="row">{{ target.label }}</th>
+                    <th scope="row">
+                      {{ target.label }}
+                      @if (oscOn()) {
+                        <span class="osc">{{ oscAddress(target.id) }}</span>
+                      }
+                    </th>
                     <td class="control">
                       @if (learning() === target.id) {
                         <span class="waiting">Press or move a control…</span>

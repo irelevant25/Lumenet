@@ -1,0 +1,98 @@
+/* The element takes no room in the view: only the window it opens is ever seen. */
+:host {
+  display: contents;
+}
+
+dialog {
+  width: min(480px, calc(100vw / var(--zoom) - 40px));
+  padding: 0;
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  background: var(--panel-raised);
+  color: var(--legend);
+}
+
+dialog::backdrop {
+  background: rgb(0 0 0 / 60%);
+}
+
+.body {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+}
+
+h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* the labels in a column, the fields beside them */
+.fields {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 10px 12px;
+}
+
+label {
+  color: var(--legend-dim);
+  font-size: 13px;
+}
+
+input,
+select {
+  box-sizing: border-box;
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: var(--well);
+  color: var(--legend);
+  font: inherit;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+select {
+  cursor: pointer;
+}
+
+/* the moment, Now, and where the sound is */
+.time {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.time input {
+  width: 120px;
+}
+
+.where {
+  color: var(--legend-dim);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hint {
+  min-height: 4em; /* three lines: the window does not jump while the moment is typed */
+  margin: 0;
+  color: var(--legend-dim);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.hint.problem {
+  color: #ff8f87;
+}
+
+/* the same square keys as on the desk */
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--strip-gap);
+}

@@ -54,11 +54,12 @@ export const KEY_COLORS: readonly KeyColor[] = [
   key('listen', 'Sound', 'Listen (on the device to listen on)', '#8ab4ff'),
 
   color('stack', 'Stack', 'Stack (live), and the Live mark in the top bar', '--live', '#ff5247'),
-  key('prev', 'Stack', 'Prev', AMBER),
-  key('play', 'Stack', 'Play, and the step that is on', '#3ddc84'),
+  key('prev', 'Stack', 'Back', AMBER),
+  key('play', 'Stack', 'GO, and the cue that is on', '#3ddc84'),
   key('pause', 'Stack', 'Pause', WHITE),
-  key('next', 'Stack', 'Next, and the step Play goes to', AMBER),
-  key('add-step', 'Stack', 'Add step (Stack view)', AMBER),
+  key('next', 'Stack', 'Next, and the cue GO goes to', AMBER),
+  key('add-step', 'Stack', 'Add cue (Stack view)', AMBER),
+  key('learn', 'Stack', 'Learn (Stack view)', AMBER),
 
   key('save', 'Record', 'Save mem', AMBER),
   key('edit', 'Record', 'Edit mem', AMBER),

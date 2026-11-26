@@ -946,7 +946,7 @@ public sealed class DeskTests
         desk.SetSequence(1, loop: true, []);
 
         int step = desk.AddStackStep(new Step("channel", 513, 255, 1, 0, 1));
-        AssertRefused("step 1.0 of the stack", () => desk.SetUniverses(1));
+        AssertRefused("cue 1.0 of the stack", () => desk.SetUniverses(1));
         desk.DeleteStackStep(step);
 
         desk.SetStage(new StagePlan(16, 10, [new StageLight(1, "Wash", 1000, "RGB", null, 0, 0, 0)]));

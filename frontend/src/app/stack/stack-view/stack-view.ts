@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal, viewChild } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { DeskStore } from '../../desk/desk-store';
-import { StackStep, TimedStep } from '../../desk/desk-types';
+import { SoundTime, StackStep, TimedStep } from '../../desk/desk-types';
 import { MAX_EFFECTS } from '../../effects/effects';
 import { MAX_SOUNDS, tracksPlaylist } from '../../sounds/sounds';
 import { StepChoices, channelChoices, effectChoices, lightChoices, soundChoices, stepChoices } from '../step-choices';
@@ -8,6 +9,8 @@ import { LampButton } from '../../shared/lamp-button/lamp-button';
 import { MasterSection } from '../../main/master-section/master-section';
 import { SoundMaster } from '../../sounds/sound-master/sound-master';
 import { SoundNow } from '../../sounds/sound-now/sound-now';
+import { CueMomentDialog } from '../cue-moment-dialog/cue-moment-dialog';
+import { momentWords } from '../moments';
 import { StackCards } from '../stack-cards/stack-cards';
 import { StackKeys } from '../stack-keys/stack-keys';
 import { StepColorDialog } from '../step-color-dialog/step-color-dialog';
@@ -35,7 +38,18 @@ interface DropMark {
  */
 @Component({
   host: { '[class.sounding]': 'sounding()' },
-  imports: [LampButton, MasterSection, SoundMaster, SoundNow, StackCards, StackKeys, StepColorDialog, StepRow],
+  imports: [
+    CueMomentDialog,
+    LampButton,
+    MasterSection,
+    RouterLink,
+    SoundMaster,
+    SoundNow,
+    StackCards,
+    StackKeys,
+    StepColorDialog,
+    StepRow,
+  ],
   selector: 'lm-stack-view',
   styleUrl: './stack-view.css',
   templateUrl: './stack-view.html',
@@ -43,6 +57,10 @@ interface DropMark {
 export class StackView {
   protected readonly store = inject(DeskStore);
   private readonly colorDialog = viewChild.required(StepColorDialog);
+  private readonly momentDialog = viewChild.required(CueMomentDialog);
+
+  /** True while Learn is on: each GO stores the moment of the sound that plays into the cue it goes to. */
+  protected readonly learning = this.store.stackLearning;
 
   protected readonly steps = computed(() => this.store.stack().steps);
 
@@ -88,13 +106,33 @@ export class StackView {
       return 'The desk program is older than this page and knows no stack. Start run.cmd again.';
     }
     const count = this.steps().length;
-    if (count === 0) return 'The stack is empty. Add step puts in the first step.';
+    if (count === 0) return 'The stack is empty. Add cue puts in the first cue.';
 
-    const size = `The stack has ${count} ${count === 1 ? 'step' : 'steps'}.`;
+    const size = `The stack has ${count} ${count === 1 ? 'cue' : 'cues'}.`;
+    if (this.learning()) {
+      return `${size} Learn is on: each GO stores where the sound that plays is into the cue it goes to.`;
+    }
     return this.live()
       ? `${size} It is live: nothing that is stored can be changed until Stack is pressed again.`
-      : `${size} Stack takes it live: every fader goes to zero and the first step starts.`;
+      : `${size} Stack takes it live: every fader goes to zero and the first cue starts.`;
   });
+
+  /** A moment of a sound in words: "0:31.25 of Thunder". */
+  protected momentOf(at: SoundTime): string {
+    return momentWords(at, this.store.soundsByNumber());
+  }
+
+  /** What a screen reader calls the key of a cue's moment. */
+  protected momentLabel(step: StackStep): string {
+    return step.at
+      ? `Cue ${step.cue} comes at ${this.momentOf(step.at)}: change the moment`
+      : `Cue ${step.cue} comes with GO: give it a moment of a sound`;
+  }
+
+  /** The key of a cue's moment was pressed: the window asks for the sound and the moment. */
+  protected pickMoment(step: StackStep): void {
+    this.momentDialog().open(`Moment of cue ${step.cue}`, step.at, (at) => this.store.setStackStepAt(step.id, at));
+  }
 
   /** The note under the fader of the step's channel or memory, or the name of its fixture or group, in one line. */
   protected noteOf(step: TimedStep): string {
@@ -103,7 +141,7 @@ export class StackView {
 
   /** The color of a step of a fixture or a group was pressed: the window asks for another. */
   protected pickColor(step: StackStep): void {
-    this.colorDialog().open(`Color of step ${step.cue}`, step.color ?? null, (color) => this.changeStep(step.id, { ...step, color }));
+    this.colorDialog().open(`Color of cue ${step.cue}`, step.color ?? null, (color) => this.changeStep(step.id, { ...step, color }));
   }
 
   /** Puts a step at the end: the first one, or one like the last on the next channel or memory. */
@@ -114,14 +152,16 @@ export class StackView {
   /**
    * A row hands back its step with one field changed. Only the step itself goes to the desk, not
    * its name and number; whether it adds only when it does (a release never does), whether it plays
-   * on only for a sound that does.
+   * on only for a sound that does; its moment of a sound when it has one (the desk takes the step as
+   * it is sent: without it, the moment would be gone).
    */
   protected changeStep(id: number, step: TimedStep): void {
-    const { target, number, value, up, wait, down, color, add } = step;
+    const { target, number, value, up, wait, down, color, add, at } = step;
     const sent: TimedStep = color === undefined ? { target, number, value, up, wait, down } : { target, number, value, up, wait, down, color };
     const adds = add && target !== 'release' ? { ...sent, add: true } : sent;
     const plays = step.continue && target === 'sound' ? { ...adds, continue: true } : adds;
-    this.store.updateStackStep(id, step.disabled ? { ...plays, disabled: true } : plays);
+    const timed = at ? { ...plays, at } : plays;
+    this.store.updateStackStep(id, step.disabled ? { ...timed, disabled: true } : timed);
   }
 
   /** The Disabled box of a step: checked, the stack passes over it. Also while the stack is live. */

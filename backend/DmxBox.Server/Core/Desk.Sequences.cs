@@ -77,7 +77,7 @@ internal sealed partial class Desk
 
         Sequence checkedSequence = sequence with
         {
-            Steps = Array.ConvertAll(steps, step => (step ?? throw new DeskException("A step is missing.")).Checked()),
+            Steps = Array.ConvertAll(steps, step => WithoutMoment((step ?? throw new DeskException("A step is missing.")).Checked())),
             Speed = Sequence.CheckedSpeed(sequence.Speed),
         };
         RequireReleasesFit(checkedSequence.Steps);
@@ -224,7 +224,7 @@ internal sealed partial class Desk
     public void AddSequenceStep(int memory, Step? step)
     {
         RequireMemory(memory);
-        Step checkedStep = (step ?? throw new DeskException("A step is missing.")).Checked();
+        Step checkedStep = WithoutMoment((step ?? throw new DeskException("A step is missing.")).Checked());
 
         lock (_lock)
         {

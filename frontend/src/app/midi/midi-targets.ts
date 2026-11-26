@@ -149,6 +149,14 @@ export function isFader(target: string): boolean {
 }
 
 /**
+ * True for a key or fader this page has. The desk program takes any name of a key from outside (an
+ * address of OSC), and this page passes over a key it does not have: the list says so.
+ */
+export function isKnownTarget(target: string): boolean {
+  return /^(fader\.)?channel\.\d+$/.test(target) || FADERS_BY_ID.has(target) || KEYS_BY_ID.has(target);
+}
+
+/**
  * What a target is called: a key as the Keyboard panel calls it ("Channel key 113 (U2)", "Play"),
  * a key of the pages shown and a fader as SLOT_KEYS and FADER_TARGETS do. A name the page does not
  * know is said as it is.
@@ -189,6 +197,9 @@ export const MIDI_MODES: readonly { readonly mode: MidiMode; readonly label: str
 /** What became of a message that came in, in words: "Memory key 5 pressed". */
 export function resultText(line: MidiMonitorLine): string {
   const what = line.target === null ? '' : targetLabel(line.target);
+  if (line.target !== null && !isKnownTarget(line.target) && ['down', 'up', 'no-page'].includes(line.result)) {
+    return `The desk has no key "${line.target}"`;
+  }
   switch (line.result) {
     case 'unmapped':
       return 'Not mapped';

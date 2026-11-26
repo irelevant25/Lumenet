@@ -1,5 +1,15 @@
 import { Service, signal } from '@angular/core';
 import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
+import type { DeskClientEvents, DeskHubMethods, DeskHubStreams } from './hub-contract';
+
+/** A method of the hub, by its name in the contract the desk program writes (hub-contract.ts). */
+export type HubMethod = keyof DeskHubMethods;
+
+/** What a method of the hub takes, in order. */
+export type HubArgs<M extends HubMethod> = Parameters<DeskHubMethods[M]>;
+
+/** What a method of the hub answers. */
+export type HubAnswer<M extends HubMethod> = ReturnType<DeskHubMethods[M]>;
 
 /** Where the backend's SignalR hub is. The dev server passes this path on to the backend (proxy.conf.json). */
 const HUB_URL = '/hub/desk';
@@ -50,16 +60,19 @@ export class DeskConnection {
   }
 
   /** Listens for a message the backend sends on its own. */
-  on<Args extends unknown[]>(event: string, handler: (...args: Args) => void): void {
+  on<Event extends keyof DeskClientEvents>(event: Event, handler: DeskClientEvents[Event]): void {
     this.hub.on(event, handler as (...args: unknown[]) => void);
   }
 
   /** Calls a method of the backend and waits for its answer. Fails with a plain message. */
-  async invoke<Result>(method: string, ...args: unknown[]): Promise<Result> {
+  async invoke<Method extends HubMethod>(
+    method: Method,
+    ...args: HubArgs<Method>
+  ): Promise<HubAnswer<Method>> {
     try {
-      return await this.hub.invoke<Result>(method, ...args);
+      return await this.hub.invoke<HubAnswer<Method>>(method, ...args);
     } catch (error) {
-      throw new Error(plainMessage(error));
+      throw new Error(plainMessage(error), { cause: error });
     }
   }
 
@@ -69,7 +82,11 @@ export class DeskConnection {
    * takes long (the search for Art-Net nodes) answers so, and the page's faders and keys go on
    * meanwhile. Fails with a plain message.
    */
-  ask<Result>(method: string, ...args: unknown[]): Promise<Result | undefined> {
+  ask<Method extends keyof DeskHubStreams>(
+    method: Method,
+    ...args: Parameters<DeskHubStreams[Method]>
+  ): Promise<ReturnType<DeskHubStreams[Method]> | undefined> {
+    type Result = ReturnType<DeskHubStreams[Method]>;
     return new Promise((resolve, reject) => {
       let answer: Result | undefined;
       this.hub.stream<Result>(method, ...args).subscribe({
@@ -81,7 +98,7 @@ export class DeskConnection {
   }
 
   /** Calls a method of the backend without waiting. While offline the call is simply dropped. */
-  send(method: string, ...args: unknown[]): void {
+  send<Method extends HubMethod>(method: Method, ...args: HubArgs<Method>): void {
     if (!this.online()) return;
     this.hub.send(method, ...args).catch(() => {
       // The connection went away in this moment. The page reloads everything when it is back.

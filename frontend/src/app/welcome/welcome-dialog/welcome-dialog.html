@@ -1,0 +1,69 @@
+<dialog #dialog lmDialog aria-labelledby="welcome-title" (dismiss)="later()">
+  @if (stage() === 'choose') {
+    <form (submit)="use($event)">
+      <h2 id="welcome-title">{{ first() ? 'Welcome to Lumenet' : 'Setup of this device' }}</h2>
+      <p class="hint">
+        What kind of shows do you run? The setup chooses the views in the top bar and the rows of
+        faders on Main, on this device. Settings changes each of them later.
+      </p>
+
+      <!-- the kinds of show, as wide choices: their names are too long for the desk's square keys -->
+      <div class="setups" role="group" aria-label="Kind of show">
+        @for (setup of setups; track setup.id) {
+          <button
+            type="button"
+            class="choice"
+            [class.chosen]="setup.id === chosen().id"
+            [attr.aria-pressed]="setup.id === chosen().id"
+            (click)="choose(setup)"
+          >
+            {{ setup.name }}
+          </button>
+        }
+      </div>
+      <p class="about">{{ chosen().about }}</p>
+      <p class="views"><span class="label">Views:</span> {{ views() }}</p>
+
+      <div class="actions">
+        <button lmLamp type="button" tone="system" (click)="later()">Later</button>
+        <button lmLamp type="submit" tone="system" aria-label="Use this setup" [level]="3">
+          Use
+        </button>
+      </div>
+    </form>
+  } @else {
+    <h2 id="welcome-title">Ready: {{ chosen().name }}</h2>
+    <p class="hint">Where to start:</p>
+    <ul class="first">
+      <li>
+        <button type="button" class="choice" (click)="go('/settings')">Outputs</button>
+        <span
+          >Settings, the Outputs panel: the dmxbox, an Art-Net node, sACN or a DMX USB
+          interface.</span
+        >
+      </li>
+      <li>
+        <button type="button" class="choice" (click)="go('/stage')">Lights</button>
+        <span
+          >The Stage view: Edit, then Add light, or a light from the libraries of fixtures.</span
+        >
+      </li>
+      <li>
+        <button type="button" class="choice" (click)="examples()">Examples</button>
+        <span>Load lists nine example shows under your projects, to start from or to look at.</span>
+      </li>
+    </ul>
+    <div class="actions">
+      <button lmLamp type="button" tone="system" [level]="3" (click)="close()">Done</button>
+    </div>
+  }
+  <button
+    type="button"
+    class="dialog-close"
+    aria-label="Close the window"
+    title="Close"
+    (click)="later()"
+  >
+    ✕
+  </button>
+</dialog>

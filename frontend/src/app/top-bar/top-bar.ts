@@ -1,4 +1,4 @@
-import { Component, computed, inject, viewChild } from '@angular/core';
+import { Component, computed, effect, inject, untracked, viewChild } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { DeskSettings } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
@@ -9,6 +9,7 @@ import { ImportDialog } from '../project/import-dialog/import-dialog';
 import { LampButton } from '../shared/lamp-button/lamp-button';
 import { OutputsStatus } from '../outputs/outputs-status/outputs-status';
 import { ProjectDialog } from '../project/project-dialog/project-dialog';
+import { Welcome } from '../welcome/welcome';
 
 /**
  * The strip along the top: name and version with the outputs (how many play; Settings shows them)
@@ -30,6 +31,15 @@ export class TopBar {
   protected readonly dialog = viewChild.required(ProjectDialog);
   protected readonly importDialog = viewChild.required(ImportDialog);
   protected readonly exportDialog = viewChild.required(ExportDialog);
+
+  constructor() {
+    // A first step of the setups (Examples): the Load window, with the examples under the projects.
+    const welcome = inject(Welcome);
+    effect(() => {
+      if (welcome.loadAsked() === 0) return;
+      untracked(() => void this.dialog().open('load'));
+    });
+  }
 
   /** The links to the views: in the order Settings gives them, all but those it leaves out. */
   protected readonly links = computed(() => {

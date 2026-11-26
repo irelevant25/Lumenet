@@ -21,6 +21,8 @@ export type LampTone = string;
     '[class]': 'hostClass()',
     '[style.--lamp]': 'lampColor()',
   },
+  // On a native element, which keeps its own role, focus and keys: not an element of its own.
+  // eslint-disable-next-line @angular-eslint/component-selector
   selector: '[lmLamp]',
   styleUrl: './lamp-button.css',
   templateUrl: './lamp-button.html',

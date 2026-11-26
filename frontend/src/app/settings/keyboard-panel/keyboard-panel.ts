@@ -1,5 +1,6 @@
 import {
   Component,
+  DestroyRef,
   ElementRef,
   Injector,
   afterNextRender,
@@ -16,12 +17,15 @@ import {
   actionWithId,
   shortcutName,
 } from '../../desk/desk-actions';
-import { DeskSettings } from '../../desk/desk-settings';
+import { DeskSettings, shortcuts } from '../../desk/desk-settings';
 import { DeskStore } from '../../desk/desk-store';
 import { MEMORY_COUNT, UNIVERSE_SIZE } from '../../desk/desk-types';
 import { Keyboard } from '../../desk/keyboard';
 import { bringToMiddle } from '../../shared/scroll';
 import { channelLabel } from '../../desk/universes';
+
+/** How long a first press on ↺ (the usual shortcuts) waits for the second one that sets them. */
+const SECOND_PRESS_MS = 4000;
 
 /** One kind of keys: how many there are, how many have a shortcut, and how many the search finds. */
 interface Kind {
@@ -54,6 +58,11 @@ export class KeyboardPanel {
   private readonly injector = inject(Injector);
 
   protected readonly search = signal('');
+  /** True after a first press on ↺: a second one within a moment sets the usual shortcuts. */
+  protected readonly resetAsked = signal(false);
+  /** True once the usual shortcuts were set, for the message under the title. */
+  protected readonly resetDone = signal(false);
+  private resetTimer: ReturnType<typeof setTimeout> | null = null;
   /** The kind of keys that is open; null while all are closed. */
   protected readonly openGroup = signal<ActionGroup | null>(null);
   // The kind that was open when a search began: open again when it ends.
@@ -115,12 +124,19 @@ export class KeyboardPanel {
     return open ? (this.found().get(open) ?? []) : [];
   });
 
-  /** How many keys have a shortcut. (An empty one is a usual shortcut that was taken away.) */
-  protected readonly mapped = computed(
-    () => Object.values(this.settings.shortcuts()).filter((keys) => keys !== '').length,
-  );
+  /** True while every key has its usual shortcut and no other: ↺ has nothing to do. */
+  protected readonly usual = computed(() => {
+    const now = this.settings.shortcuts();
+    const usual = shortcuts({});
+    const keys = Object.keys(now);
+    return keys.length === Object.keys(usual).length && keys.every((key) => now[key] === usual[key]);
+  });
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => {
+      if (this.resetTimer !== null) clearTimeout(this.resetTimer);
+    });
+
     // A key picked by listening, or chosen to record: its kind opens, and its row comes into the
     // middle of the list, with the panel in sight.
     effect(() => {
@@ -141,6 +157,24 @@ export class KeyboardPanel {
         { injector: this.injector },
       );
     });
+  }
+
+  /**
+   * ↺, the usual shortcuts: every key gets the shortcut it has at first (DEFAULT_SHORTCUTS), and those
+   * set on this device go. The first press asks; a second one within SECOND_PRESS_MS does it.
+   */
+  protected usualShortcuts(): void {
+    if (this.resetTimer !== null) clearTimeout(this.resetTimer);
+    if (!this.resetAsked()) {
+      this.resetAsked.set(true);
+      this.resetDone.set(false);
+      this.resetTimer = setTimeout(() => this.resetAsked.set(false), SECOND_PRESS_MS);
+      return;
+    }
+    this.resetTimer = null;
+    this.resetAsked.set(false);
+    this.settings.setShortcuts(shortcuts({}));
+    this.resetDone.set(true);
   }
 
   /** A press on a kind opens it and closes the others; on the kind that is open, closes it. */

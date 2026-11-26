@@ -14,31 +14,31 @@
   Stack
 </button>
 
-<!-- The keys a show is run with: bigger than the other keys, Play the biggest. -->
+<!-- The keys a show is run with: bigger than the other keys, GO the biggest. -->
 <div class="transport" role="group" aria-label="Going through the stack">
   <button
     lmLamp
     type="button"
     tone="prev"
-    aria-label="Previous step"
+    aria-label="Back to the cue before"
     data-action="stack.previous"
     [disabled]="!live()"
     (click)="store.stackPrevious()"
   >
-    Prev
+    Back
   </button>
   <button
     lmLamp
     type="button"
     class="play"
     tone="play"
-    aria-label="Play"
+    aria-label="GO"
     data-action="stack.play"
     [level]="running() ? 3 : 1"
     [disabled]="!live()"
     (click)="store.stackPlay()"
   >
-    Play
+    GO
   </button>
   <button
     lmLamp
@@ -58,7 +58,7 @@
     lmLamp
     type="button"
     tone="next"
-    aria-label="Next step"
+    aria-label="Next cue"
     data-action="stack.next"
     [disabled]="!live()"
     (click)="store.stackNext()"

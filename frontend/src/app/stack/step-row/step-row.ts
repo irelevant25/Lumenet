@@ -74,6 +74,8 @@ const rowWithList = signal<StepRow | null>(null);
  */
 @Component({
   host: { '[style.--kind]': 'kindColor()' },
+  // A row of the table itself: an element of its own would break the table.
+  // eslint-disable-next-line @angular-eslint/component-selector
   selector: 'tr[lmStepRow]',
   styleUrl: './step-row.css',
   templateUrl: './step-row.html',
@@ -164,7 +166,7 @@ export class StepRow {
 
   /** What a screen reader calls the field for the number. */
   protected readonly numberLabel = computed(() =>
-    this.release() ? `${this.label()}, the step it takes down` : `${this.label()}, number of the ${this.step().target}`,
+    this.release() ? `${this.label()}, the one it takes down` : `${this.label()}, number of the ${this.step().target}`,
   );
 
   /** The step's line in the field for the kind. */

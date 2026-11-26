@@ -5,17 +5,19 @@ import { targetLabel } from '../midi-targets';
 import { MidiDevices } from '../midi-devices/midi-devices';
 import { MidiMonitor } from '../midi-monitor/midi-monitor';
 import { MidiTargets } from '../midi-targets/midi-targets';
+import { OscPanel } from '../osc-panel/osc-panel';
 
 /**
  * MIDI, a view of its own: the MIDI controllers plugged into the PC and what their controls do.
- * At the left the devices with the ready-made mappings (midi-devices), what Learn waits for, and
- * the messages that came in (midi-monitor); at the right every key and fader of the desk, kind by
- * kind, each with its controls, Learn and ✕ (midi-targets). Only the PC sets them: they belong to
+ * At the left the devices with the ready-made mappings (midi-devices), what Learn waits for, OSC
+ * from other programs (osc-panel), and the messages that came in (midi-monitor); at the right every
+ * key and fader of the desk, kind by kind, each with its controls, Learn and ✕, and its address for
+ * OSC while OSC is on (midi-targets). Only the PC sets them: they belong to
  * it (see midi/midi.ts).
  */
 @Component({
   host: { '(keydown.escape)': 'stop()' },
-  imports: [MidiDevices, MidiMonitor, MidiTargets],
+  imports: [MidiDevices, MidiMonitor, MidiTargets, OscPanel],
   selector: 'lm-midi-view',
   styleUrl: './midi-view.css',
   templateUrl: './midi-view.html',

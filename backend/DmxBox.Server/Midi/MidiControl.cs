@@ -10,8 +10,9 @@ namespace DmxBox.Server.Midi;
 /// <param name="Mappings">What the controls do.</param>
 /// <param name="Learning">The key or fader the next control that moves is to work; null while none.</param>
 /// <param name="Presets">The ready-made mappings of controllers.</param>
+/// <param name="Osc">OSC from other programs: whether the desk receives it, and on which port.</param>
 /// <remarks>Public only because <see cref="IDeskClient"/> has to be.</remarks>
-public sealed record MidiState(bool Works, MidiDeviceView[] Devices, MidiMapping[] Mappings, string? Learning, MidiPresetView[] Presets);
+public sealed record MidiState(bool Works, MidiDeviceView[] Devices, MidiMapping[] Mappings, string? Learning, MidiPresetView[] Presets, OscView Osc);
 
 /// <summary>A MIDI device, as the list of devices shows it.</summary>
 /// <param name="Name">Its name, as the PC gives it.</param>
@@ -22,7 +23,20 @@ public sealed record MidiState(bool Works, MidiDeviceView[] Devices, MidiMapping
 /// <param name="Problem">Why it cannot be opened, for "failed".</param>
 /// <param name="Simulated">True for a simulator of sim.cmd.</param>
 /// <remarks>Public only because <see cref="IDeskClient"/> has to be.</remarks>
-public sealed record MidiDeviceView(string Name, bool Input, bool Output, bool Used, string State, string? Problem, bool Simulated);
+public sealed record MidiDeviceView(string Name, bool Input, bool Output, bool Used, string State, string? Problem, bool Simulated)
+{
+    /// <summary>The desk has it open.</summary>
+    public const string Open = "open";
+
+    /// <summary>Used, but not plugged in.</summary>
+    public const string Missing = "missing";
+
+    /// <summary>It cannot be opened: <see cref="Problem"/> says why.</summary>
+    public const string Failed = "failed";
+
+    /// <summary>The desk does not use it.</summary>
+    public const string Unused = "unused";
+}
 
 /// <summary>A ready-made mapping of a controller.</summary>
 /// <param name="Id">Its name for the desk: "apc-mini-mk2".</param>
@@ -81,6 +95,8 @@ internal interface IMidiPagesOut
 /// do nothing; the faders still move.</item>
 /// <item>Learn: the next control that moves is mapped to the key or fader chosen. A controller
 /// (0-31) that the one 32 above it follows at once becomes a pair of 14 bits.</item>
+/// <item>OSC from other programs works the same keys and faders by their names
+/// (<see cref="HandleOsc"/>, <see cref="OscInput"/>), and its messages go into the same list.</item>
 /// </list>
 /// The setup belongs to the PC (midi.json, <see cref="MidiSetupFile"/>); only the pages on the PC
 /// change it.
@@ -108,6 +124,7 @@ internal sealed class MidiControl : BackgroundService
     private readonly ILogger _log;
     private readonly Func<double> _now;
     private readonly MidiMapper _mapper;
+    private readonly OscInput _osc;
     private readonly MidiFeedback _feedback = new();
     private readonly Dictionary<string, IMidiConnection> _open = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _problems = new(StringComparer.Ordinal);
@@ -121,6 +138,7 @@ internal sealed class MidiControl : BackgroundService
     private string? _learning;
     private (MidiMapping Mapping, double At)? _learned;
     private double _lookedAt = double.NegativeInfinity;
+    private OscView _oscView = OscView.None;
 
     /// <summary>Puts the MIDI together; nothing is opened until it starts (or <see cref="Look"/>).</summary>
     /// <param name="ports">The MIDI devices of the PC.</param>
@@ -141,6 +159,7 @@ internal sealed class MidiControl : BackgroundService
         _setup = file.Read();
         _mapper = new MidiMapper(desk, PressKey);
         _mapper.Use(_setup.Mappings);
+        _osc = new OscInput(desk, PressKey, _mapper.Resolve);
     }
 
     /// <summary>The MIDI as the pages show it.</summary>
@@ -330,6 +349,41 @@ internal sealed class MidiControl : BackgroundService
             else
                 _watchers.Remove(connection);
             return on ? [.. _recent] : [];
+        }
+    }
+
+    /// <summary>
+    /// An OSC message came in (<see cref="OscControl"/>): it works the key or fader its address names,
+    /// as a control of a controller would, and goes into the list of incoming messages.
+    /// </summary>
+    /// <param name="from">The address it came from, "192.168.1.20".</param>
+    /// <param name="message">The message.</param>
+    /// <param name="refused">Why it may work nothing (another device while LAN is off); null when it may.</param>
+    public void HandleOsc(string from, OscMessage message, string? refused)
+    {
+        lock (_lock)
+        {
+            _desk.Refresh();
+            MidiOutcome outcome = refused is null
+                ? _osc.Handle(message)
+                : new MidiOutcome(OscInput.TargetOf(message.Address), "refused", Reason: refused);
+            Remember(new MidiMonitorLine(
+                DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), $"OSC from {from}", message.ToString(), outcome.Target, outcome.Result, outcome.Value, outcome.Desk, outcome.Reason));
+        }
+    }
+
+    /// <summary>OSC changed (switched, another port, the port taken): every page on the PC hears of it.</summary>
+    /// <param name="view">OSC as it is now.</param>
+    public void TakeOsc(OscView view)
+    {
+        lock (_lock)
+        {
+            if (view.State != OscView.Listening)
+                _osc.LetGo();   // a key OSC held down is let go: no message can let go of it any more
+            if (_oscView == view)
+                return;
+            _oscView = view;
+            PublishLocked();
         }
     }
 
@@ -643,12 +697,15 @@ internal sealed class MidiControl : BackgroundService
             {
                 bool used = _setup.Devices.Contains(name);
                 bool there = inputs.Contains(name) || outputs.Contains(name);
-                string state = !used ? "unused" : _open.ContainsKey(name) ? "open" : there ? "failed" : "missing";
+                string state = !used ? MidiDeviceView.Unused
+                    : _open.ContainsKey(name) ? MidiDeviceView.Open
+                    : there ? MidiDeviceView.Failed
+                    : MidiDeviceView.Missing;
                 return new MidiDeviceView(
                     name, inputs.Contains(name), outputs.Contains(name), used, state, _problems.GetValueOrDefault(name), name.EndsWith(" (simulator)", StringComparison.Ordinal));
             }),
         ];
-        return new MidiState(DryWetMidiPorts.Works, devices, _setup.Mappings, _learning, MidiPresets.Views);
+        return new MidiState(DryWetMidiPorts.Works, devices, _setup.Mappings, _learning, MidiPresets.Views, _oscView);
     }
 
     private static bool Same(MidiPortList a, MidiPortList b)

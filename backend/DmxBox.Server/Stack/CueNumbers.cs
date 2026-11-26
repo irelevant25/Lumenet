@@ -14,7 +14,7 @@ internal static class CueNumbers
         if (steps.Count == 0)
             return new CueNumber(1, 0);
         if (steps[^1].Cue.Major >= CueNumber.MaxMajor)
-            throw new DeskException($"There is no whole number after {CueNumber.MaxMajor}. Give a step a lower number first.");
+            throw new DeskException($"There is no whole number after {CueNumber.MaxMajor}. Give a cue a lower number first.");
 
         return new CueNumber(steps[^1].Cue.Major + 1, 0);
     }
@@ -42,7 +42,7 @@ internal static class CueNumbers
         int before = afterId is null ? -1 : others.FindIndex(step => step.Id == afterId);
         CueNumber previous = before >= 0 ? others[before].Cue : new CueNumber(0, 0);
         if (before < 0 && others.Count > 0 && others[0].Cue <= previous)
-            throw new DeskException($"There is no number before {others[0].Cue}. Give that step another number first.");
+            throw new DeskException($"There is no number before {others[0].Cue}. Give that cue another number first.");
 
         changes[id] = OneDigitOn(previous);
         MakeWay(others, before + 1, changes[id], changes);
@@ -97,7 +97,7 @@ internal static class CueNumbers
         while (others.Any(step => step.Cue.Major == free))
             free++;
         if (free > CueNumber.MaxMajor)
-            throw new DeskException($"There is no whole number after {CueNumber.MaxMajor} for the steps that would have to move on.");
+            throw new DeskException($"There is no whole number after {CueNumber.MaxMajor} for the cues that would have to move on.");
 
         foreach ((int stepId, CueNumber cue) in others)
         {
@@ -109,7 +109,7 @@ internal static class CueNumbers
     private static CueNumber OneDigitOn(CueNumber number)
     {
         if (number.Minor >= CueNumber.MaxMinor)
-            throw new DeskException($"There is no free number after {number}. Give a step another number first.");
+            throw new DeskException($"There is no free number after {number}. Give a cue another number first.");
 
         return number with { Minor = number.Minor + 1 };
     }
@@ -122,6 +122,6 @@ internal static class CueNumbers
                 return index;
         }
 
-        throw new DeskException("That step is not in the stack any more.");
+        throw new DeskException("That cue is not in the stack any more.");
     }
 }

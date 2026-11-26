@@ -36,6 +36,12 @@ export const routes: Routes = [
     title: 'Lumenet: stack',
   },
   {
+    // the stack on paper, opened from the Stack view
+    path: 'cue-sheet',
+    loadComponent: () => import('./stack/cue-sheet/cue-sheet').then((file) => file.CueSheet),
+    title: 'Lumenet: cue sheet',
+  },
+  {
     path: 'stage',
     loadComponent: () => import('./stage/stage-view/stage-view').then((file) => file.StageView),
     title: 'Lumenet: stage',

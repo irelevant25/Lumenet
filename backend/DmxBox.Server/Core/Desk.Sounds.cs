@@ -512,6 +512,7 @@ internal sealed partial class Desk
         {
             _player.Start(sound);
             run.Voice = true;
+            run.StartOrder = ++_soundStarts;
             run.Missing = false;
             state = _player.StateOf(index + 1);
             run.Missing = state.Missing;
@@ -642,6 +643,7 @@ internal sealed partial class Desk
         public bool Ended;          // it is over while its level stayed up: it starts again from zero or by its key
         public bool Missing;        // its file could not be found or played, or its track (no mixer, or not on its stick)
         public double Position;     // where it is in its file, in seconds
+        public long StartOrder;     // which start it was, counted over all sounds: the latest is the highest (Learn)
         public double Length;       // a track of the mixer: how long it is, as the mixer said; 0 when unknown
         public bool EndFading;      // the move of the fader goes down with the end of the sound (FadeAtEnd)
     }

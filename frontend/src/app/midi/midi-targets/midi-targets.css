@@ -157,6 +157,13 @@ th {
   font-weight: 400;
 }
 
+/* the address of OSC under the name, while the desk receives OSC */
+.osc {
+  display: block;
+  color: var(--legend-dim);
+  font-size: 12px;
+}
+
 .mapping {
   display: block;
   font-weight: 600;

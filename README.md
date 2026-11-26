@@ -14,7 +14,8 @@ Pico that takes what the desk sends over USB to the DMX512 cable of the lights.
   the box, **Art-Net** nodes, **sACN** and DMX USB interfaces of the kind of the **Enttec DMX USB Pro** play the
   universes as well.
 * **Sequences**, made by hand or from a template (chase, wave, strobe, fire, storm), and a **stack**: the cues
-  of a show with their fades and waits, played one after the other.
+  of a show with their fades and waits, played one after the other with GO, or at moments of the music;
+  a cue sheet to print.
 * **Effects** worked out live from a shape: circles and swings of moving heads, chases and pulses, rainbows
   and color chases, and patterns over the cells of LED bars by where they are on the stage. Each has a key and
   a fader, live speed, size and spread, and a preview; on Main and in the stack too.
@@ -33,9 +34,12 @@ Pico that takes what the desk sends over USB to the DMX512 cable of the lights.
 * **Phones and tablets** in the same network can use the desk as well, with a password.
 * **MIDI controllers** play the desk: their keys press its keys, their faders and knobs move its faders, and
   the desk lights their keys and moves their motorized faders. Learn maps a control in two presses; the Akai
-  APC mini mk2, Korg nanoKONTROL2 and Behringer X-Touch Mini and Compact have ready-made mappings.
-* A keyboard shortcut for every key, and settings for how each device shows the desk.
-* **Nine example shows** to start from, from a few memories to a whole concert, one of effects and two of sounds.
+  APC mini mk2, Korg nanoKONTROL2 and Behringer X-Touch Mini and Compact have ready-made mappings. Other
+  programs such as QLab and TouchOSC work the same keys and faders with **OSC**.
+* A keyboard shortcut for every key, the usual ones from the start, and settings for how each device shows
+  the desk, with a setup by the kind of show on the first start.
+* **Ten example shows** to start from, from a few looks and cues to a whole concert, one of effects, two of
+  sounds and one whose cues come on the music.
 
 The desk also works without the box, on other DMX hardware or none. The box speaks Art-Net too, so other
 lighting software such as QLC+ can use it.

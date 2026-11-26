@@ -26,7 +26,7 @@ internal readonly partial record struct CueNumber(int Major, int Minor) : ICompa
         if (!match.Success)
         {
             throw new DeskException(
-                $"A step number looks like 3 or 2.1: a whole number up to {MaxMajor}, and one digit after the dot.");
+                $"A cue number looks like 3 or 2.1: a whole number up to {MaxMajor}, and one digit after the dot.");
         }
 
         int major = int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);

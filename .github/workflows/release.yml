@@ -49,6 +49,11 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      # ESLint with the rules of angular-eslint, the accessibility of the templates among them
+      - name: Lint the page
+        working-directory: frontend
+        run: npm run lint
+
       - name: Test the page
         working-directory: frontend
         run: npm test -- --watch=false

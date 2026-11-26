@@ -499,7 +499,7 @@ public sealed class ProjectStoreTests : IDisposable
     [Fact]
     public void FileOfANewerVersionIsRefused()
     {
-        AssertRefused("version 10", """{ "format": "lumenet-project", "version": 10, "memories": [] }""");
+        AssertRefused("version 11", """{ "format": "lumenet-project", "version": 11, "memories": [] }""");
     }
 
     [Fact]

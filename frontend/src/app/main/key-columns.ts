@@ -1,4 +1,14 @@
-import { DestroyRef, Directive, ElementRef, computed, inject, input, signal } from '@angular/core';
+import {
+  DestroyRef,
+  Directive,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+} from '@angular/core';
 
 /** The lowest a key in a column gets before the column goes on in another one: --key-min-h in styles.css. */
 export const KEY_MIN_HEIGHT_PX = 20;
@@ -41,29 +51,51 @@ export function keyColumns(
  * for example `grid-template-rows: repeat(var(--key-rows), ...)` with `grid-auto-flow: column`.
  * Its value is the number of keys. With lmKeyColumnsLead the first key stands alone in its row, over
  * all the columns (its style sheet places it so: `grid-column: 1 / -1`).
+ *
+ * The height comes from a watcher of sizes, which the browser calls after it laid the page out and
+ * before it shows it; the variables are set right there, not a round of Angular later. So the keys
+ * never show in one column first, and the page never jumps when they go into more. The watcher
+ * watches a marker as high as the element and not wide (more columns make the element wider, not
+ * higher): watching the element itself, its new width would make the browser call it again and
+ * complain about a loop.
  */
-@Directive({
-  selector: '[lmKeyColumns]',
-  host: {
-    '[style.--key-columns]': 'layout().columns',
-    '[style.--key-rows]': 'layout().rows',
-  },
-})
+@Directive({ selector: '[lmKeyColumns]' })
 export class KeyColumns {
   readonly count = input.required<number>({ alias: 'lmKeyColumns' });
   readonly lead = input(false, { alias: 'lmKeyColumnsLead' });
 
+  private readonly element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly height = signal(0);
   protected readonly layout = computed(() =>
     keyColumns(this.count(), this.height(), KEY_MIN_HEIGHT_PX, this.lead()),
   );
 
   constructor() {
+    // a change of the number of keys (Settings) or of the height
+    effect(() => this.apply(this.layout()));
     if (typeof ResizeObserver === 'undefined') return; // not in a browser, for example in the tests
 
-    const element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
-    const observer = new ResizeObserver(([entry]) => this.height.set(entry.contentRect.height));
-    observer.observe(element);
-    inject(DestroyRef).onDestroy(() => observer.disconnect());
+    const marker = document.createElement('span');
+    marker.setAttribute('aria-hidden', 'true');
+    marker.style.cssText =
+      'position: absolute; top: 0; bottom: 0; left: 0; width: 0; visibility: hidden; pointer-events: none';
+    this.element.style.position = 'relative';
+    this.element.append(marker);
+
+    const observer = new ResizeObserver(([entry]) => {
+      const height = entry.contentRect.height;
+      this.apply(keyColumns(untracked(this.count), height, KEY_MIN_HEIGHT_PX, untracked(this.lead)));
+      this.height.set(height);
+    });
+    observer.observe(marker);
+    inject(DestroyRef).onDestroy(() => {
+      observer.disconnect();
+      marker.remove();
+    });
+  }
+
+  private apply(layout: KeyLayout): void {
+    this.element.style.setProperty('--key-columns', String(layout.columns));
+    this.element.style.setProperty('--key-rows', String(layout.rows));
   }
 }

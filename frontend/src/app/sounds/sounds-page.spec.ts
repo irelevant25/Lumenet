@@ -229,10 +229,10 @@ describe('the desk page: sounds', () => {
     for (let time = 0; time < 5; time++) keyOn('Level', 'ArrowLeft');
     expect(sends()).toBe(1);
     expect(last().decibels).toBe(-0.1);
-    await wait(100);
-    expect(sends()).toBe(2);
+    await until(() => sends() === 2); // a moment later (SOUND_SEND_MS)
     expect(last().decibels).toBe(-0.3);
-    // what the desk program says of a change before does not move the fader back
+    // What the desk program says of a change before does not move the fader back. It comes while the
+    // newest is sent: right after it, not after a time a slow machine may overrun.
     connection.emit('SoundsChanged', [aSound(1, { name: 'Rain', decibels: -0.1 })]);
     await fixture.whenStable();
     expect(store.soundsByNumber().get(1)?.decibels).toBe(-0.3);

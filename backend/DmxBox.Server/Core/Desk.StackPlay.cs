@@ -285,6 +285,22 @@ internal partial class Desk
         }
     }
 
+    // Call with the lock held, as the stack goes off: the sounds of muted cues (Step.Muted), on or on
+    // their way down, stop too, their faders at zero. Nobody hears them, and with the stack off no cue
+    // could make them heard again; a hand on such a fader would move a sound that stays silent.
+    private void StopUnheardSounds()
+    {
+        for (int index = 0; index < _soundRuns.Length; index++)
+        {
+            if (!_soundRuns[index].Unheard)
+                continue;
+
+            var fader = new Fader(Memory: false, index + 1, Sound: true);
+            _moves.Remove(fader);
+            SetByStack(fader, 0);
+        }
+    }
+
     // Call with the lock held. Each fader the steps in "on" move, with the level it is to have and
     // the step it has that from: of two steps that use the same fader, the later one counts.
     private Dictionary<Fader, Holder> HoldersOf(List<int> on)

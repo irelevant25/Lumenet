@@ -169,7 +169,8 @@ internal sealed partial class Desk
     /// Switches the stack live or off. Going live brings every channel fader and memory fader
     /// down to 0 and goes to the first step; from then on nothing that is stored can be
     /// changed. Switching it off stops the stack where it is: no step is on any more, and the
-    /// faders stay as they are.
+    /// faders stay as they are, but for the sounds of steps that play on (Continue) and of muted
+    /// steps, which stop.
     /// </summary>
     /// <param name="on">True for live. Asking for what the stack is already changes nothing.</param>
     /// <exception cref="DeskException">The stack has no step to go live with.</exception>
@@ -194,6 +195,7 @@ internal sealed partial class Desk
             {
                 AdvanceStack(now);   // the faders stop where they are at this moment, not where they were a tick ago
                 StopContinuingSounds();
+                StopUnheardSounds();
             }
 
             StopStack();

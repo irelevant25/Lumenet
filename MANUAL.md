@@ -802,8 +802,8 @@ back to zero. A memory that holds a sequence starts running, because its fader g
   (see [Tracks of a Soundcraft Ui mixer](#tracks-of-a-soundcraft-ui-mixer)). The same on the Sequences view.
 * **Mute** (the box after Continue, only for a sound): the cue plays its sound, but nothing of it is heard;
   it runs as always, its moments for At too. It can be switched while the stack is live. A later cue of the
-  same sound without Mute is heard; the muted one stays unheard on its way down, and after Stack off until
-  it stops. A project with a muted cue is a file of version 11.
+  same sound without Mute is heard; the muted one stays unheard on its way down, and Stack off stops it. A
+  project with a muted cue is a file of version 11.
 * **At** (the column after Down) lets a cue come at a moment of a sound instead of GO. Press it, choose
   the sound and type the moment (`1:15.5`, or `75.5` in seconds), or press **Now** while the sound plays to
   take where it is; **Use** gives the cue that moment, **None** takes it away. While the stack is live and

@@ -5,7 +5,8 @@ namespace DmxBox.Tests.Sounds;
 /// stack is live, with a pretend engine and a clock the tests set by hand: Pause holds the sounds of the
 /// cues that are on (also while the stack only waits for GO) and GO lets them go on, while sounds of the
 /// hand play on; a muted cue plays its sound unheard, on its way down too, a later cue of the same sound
-/// aloud, and the mute switches while the stack is live; a step of a sequence cannot be muted; the file.
+/// aloud, the mute switches while the stack is live, and Stack off stops the sound of a muted cue; a step
+/// of a sequence cannot be muted; the file.
 /// </summary>
 public sealed class SoundPauseMuteTests
 {
@@ -146,6 +147,41 @@ public sealed class SoundPauseMuteTests
 
         DeskException notSound = Assert.Throws<DeskException>(() => _desk.SetStackStepMuted(light, true));
         Assert.Contains("only a cue of a sound can be muted", notSound.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void StackOffStopsTheSoundOfAMutedCueAndTheOthersPlayOn()
+    {
+        _desk.AddStackStep(SoundStep(1) with { Muted = true });
+        _desk.AddStackStep(SoundStep(2) with { Add = true });
+        _desk.SetStackLive(true);
+        _desk.Tick();
+        _desk.StackPlay();
+        _desk.Tick();
+        Assert.Equal(["start 1", "start 2"], _player.Calls);
+
+        _desk.SetStackLive(false);   // nobody hears the muted one: it stops; the other one's fader stays up
+        _desk.Tick();
+        Assert.Equal(["start 1", "start 2", "stop 1"], _player.Calls);
+        Assert.Equal((false, false), (Playing(1).Playing, Playing(1).Muted));
+        Assert.Equal((true, 255), (Playing(2).Playing, Playing(2).Level));
+    }
+
+    [Fact]
+    public void StackOffStopsTheSoundOfAMutedCueOnItsWayDownToo()
+    {
+        _desk.AddStackStep(SoundStep(1, down: 4) with { Muted = true });
+        _desk.AddStackStep(ChannelStep(5));
+        _desk.SetStackLive(true);
+        _desk.Tick();
+        _desk.StackPlay();   // its cue goes: the sound goes down in 4 seconds, unheard
+        _time.Pass(1);
+        _desk.Tick();
+        Assert.True(Playing(1).Playing);
+
+        _desk.SetStackLive(false);
+        _desk.Tick();
+        Assert.Equal((false, "stop 1"), (Playing(1).Playing, _player.Calls[^1]));
     }
 
     [Fact]

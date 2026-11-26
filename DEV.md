@@ -1069,7 +1069,9 @@ its own without a device, so that playing, ending and the positions work the sam
   `MarkUnheardSounds` (in `Enter`, after `LeaveEndedSounds` and in `SetStackStepMuted`) sets
   `SoundRun.Unheard` from the cue that holds the sound (`HoldersOf`), and `SettleSound` sends level 0 while
   it is set; a stop or the end of the sound clears it, and a sound no cue holds keeps it on its way down.
-  `SetStackStepMuted` works while the stack is live; the page sends it from the Mute box of a row.
+  Stack off stops every sound that plays unheard (`StopUnheardSounds`, beside `StopContinuingSounds`): with
+  no cue left to make it heard, a hand on its fader would move a silent sound. `SetStackStepMuted` works
+  while the stack is live; the page sends it from the Mute box of a row.
 * **How a sound sounds, while the stack is live:** `SetSound` takes a change then when only `Decibels`,
   `Pan`, `Speed`, `Pitch`, `Echo`, `EchoTime`, `EchoRepeats`, `Reverb` and `Room` change
   (`OnlySoundOfItChanges`); anything else needs the stack off. The editor of the page leaves those open
@@ -1295,7 +1297,7 @@ publish.cmd        # builds the page, then publish\Lumenet.exe
 
 ### Tests
 
-`dotnet test backend/DmxBox.sln` (908 tests: the client, also against the simulator with two outputs, the
+`dotnet test backend/DmxBox.sln` (910 tests: the client, also against the simulator with two outputs, the
 desk, solo, sequences and the stack with a clock the tests set by hand, the rate and its tempo, undo and the autosave, the
 stage plan and its picture, fixtures, their attributes, their steps and their notes, the notes, the
 universes, project files with Export and Import, the examples, the import of show files, the links to the
@@ -1329,7 +1331,7 @@ and of before; the backups: written whole, the oldest of their own name deleted 
 a drive that is not there, and the page's request; the updates with a pretend GitHub: newer or not, the
 download checked by size and SHA-256, the stream of its steps, a GitHub that does not answer, the desk of
 run.cmd; Pause of the stack's sounds (a paused voice of the mixer, the mixer's player paused once), muted
-cues, and how a sound sounds changed while the stack is live; and the contract of the hub,
+cues (Stack off stops them), and how a sound sounds changed while the stack is live; and the contract of the hub,
 `hub-contract.ts`), and in `frontend/`:
 `npm test -- --watch=false` (316 tests of the page; the tabs of Settings with the address and the arrow keys, the
 Backup tab (the folder of Google Drive, Back up now, a Save that backs up), the About tab (the question before
@@ -2172,7 +2174,8 @@ receivers listen at 5568 and the desk sends from a port of its own.
   open and the rest locked, and a level typed there reached the desk (-3 to -9.5 dB); the pointer on the
   wave showed 11.3 s. Pause was not heard: the test copy plays no sound, and the owner's mixer is not
   played without asking (MEDIA_PAUSE untried). Then, at the owner's word, the room size and the repeats of
-  the echo change while live as well.
+  the echo change while live as well, and Stack off stops the sound of a muted cue (it had played on
+  silent, its fader up, until it stopped); the backend then passes 910 tests.
 * **dmxbox 2 on paper (2026-11-23):** both versions (two outputs and one) are drawn from their `circuit.py`,
   and each drawing passed its check against it: the schematic, the breadboard plan, the perfboard plan (38 and
   26 insulated wires, with SW1 at the cut left edge and the holes around the four screws kept empty;

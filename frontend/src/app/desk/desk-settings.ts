@@ -1,7 +1,7 @@
 import { Service, computed, effect, signal } from '@angular/core';
 import { CHANNEL_INDEPENDENT_COUNT, MEMORY_INDEPENDENT_COUNT } from './desk-types';
-import { EFFECT_INDEPENDENT_COUNT } from './effects';
-import { SOUND_INDEPENDENT_COUNT } from './sounds';
+import { EFFECT_INDEPENDENT_COUNT } from '../effects/effects';
+import { SOUND_INDEPENDENT_COUNT } from '../sounds/sounds';
 import { KEY_COLORS, isColor, keyColorWithId } from './key-colors';
 import { ALWAYS_SHOWN, DEFAULT_VIEW_ORDER, ViewName, hiddenViewsOf, viewOrderOf } from './views';
 

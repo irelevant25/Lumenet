@@ -15,6 +15,36 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <!-- The namespaces of the desk program and of the tests' own folders, known in every test file. -->
+    <Using Include="DmxBox.Server" />
+    <Using Include="DmxBox.Server.Api" />
+    <Using Include="DmxBox.Server.Boxes" />
+    <Using Include="DmxBox.Server.Core" />
+    <Using Include="DmxBox.Server.Effects" />
+    <Using Include="DmxBox.Server.Import" />
+    <Using Include="DmxBox.Server.Lan" />
+    <Using Include="DmxBox.Server.Midi" />
+    <Using Include="DmxBox.Server.Outputs" />
+    <Using Include="DmxBox.Server.Projects" />
+    <Using Include="DmxBox.Server.Sequences" />
+    <Using Include="DmxBox.Server.Sounds" />
+    <Using Include="DmxBox.Server.Stack" />
+    <Using Include="DmxBox.Server.Stage" />
+    <Using Include="DmxBox.Tests.Api" />
+    <Using Include="DmxBox.Tests.Boxes" />
+    <Using Include="DmxBox.Tests.Client" />
+    <Using Include="DmxBox.Tests.Core" />
+    <Using Include="DmxBox.Tests.Effects" />
+    <Using Include="DmxBox.Tests.Import" />
+    <Using Include="DmxBox.Tests.Lan" />
+    <Using Include="DmxBox.Tests.Midi" />
+    <Using Include="DmxBox.Tests.Outputs" />
+    <Using Include="DmxBox.Tests.Projects" />
+    <Using Include="DmxBox.Tests.Sequences" />
+    <Using Include="DmxBox.Tests.Sounds" />
+    <Using Include="DmxBox.Tests.Stack" />
+    <Using Include="DmxBox.Tests.Stage" />
+    <Using Include="DmxBox.Tests.Support" />
   </ItemGroup>
 
   <ItemGroup>

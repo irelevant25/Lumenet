@@ -29,13 +29,13 @@ import {
   TimedStep,
   Welcome,
 } from './desk/desk-types';
-import { Effect } from './desk/effects';
-import { FoundMixer, Sound, SoundOutput, SoundSetup, newSound, newTrack, quietPlayback } from './desk/sounds';
-import { soundChoices } from './desk/step-choices';
+import { Effect } from './effects/effects';
+import { FoundMixer, Sound, SoundOutput, SoundSetup, newSound, newTrack, quietPlayback } from './sounds/sounds';
+import { soundChoices } from './stack/step-choices';
 import { actionLamp } from './desk/action-lamps';
 import { IDLE } from './desk/function-mode';
 import { Keyboard } from './desk/keyboard';
-import type { MidiLamp, MidiMapping, MidiMonitorLine, MidiSetup, MidiState } from './desk/midi';
+import type { MidiLamp, MidiMapping, MidiMonitorLine, MidiSetup, MidiState } from './midi/midi';
 import { NOTE_LINE_SEPARATOR } from './desk/notes';
 
 // The test browser (jsdom) has no modal windows. A window of the page only gets its "open" mark here.

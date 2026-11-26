@@ -1,0 +1,119 @@
+/* One section, set into the panel: the title, the rows of faders, and the page keys at the right. */
+:host {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  min-height: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: var(--panel-raised);
+}
+
+/* the title, and in a project of several universes their keys beside it */
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--strip-gap) 16px;
+}
+
+.universes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--strip-gap);
+}
+
+h2 {
+  margin: 0;
+  color: var(--legend-dim);
+  font-size: 12px;
+  font-stretch: 75%;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* the faders take the whole width, the page keys stand at the right edge */
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--gap);
+  min-height: 0;
+}
+
+/* The rows (two, or one as Settings says) share the height, and scroll sideways together when
+   they are wider than the window: with a channel size chosen in Settings that the window is too
+   narrow for. Otherwise they fit, and nothing scrolls. The memories scroll on their own. */
+.rows {
+  display: grid;
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 10px;
+  min-height: 0;
+  overflow: auto hidden; /* its scrollbar is a big one: class "big-scrollbar", styles.css */
+}
+
+/* One row of faders: 32 on a wide window, 16 on a narrower one, or as the channel size and the
+   rows of Settings have it (--line, set by the main view). A strip is --strip wide, or narrower
+   when the columns at the right take more room than --strip counts on (the independents in two
+   columns on a low window), down to the width of a key: only then do the rows scroll. */
+.row {
+  display: grid;
+  grid-template-columns: repeat(var(--line), minmax(var(--key-w), var(--strip)));
+  /* On a wide window the strips keep their width and the room between them grows. */
+  justify-content: space-between;
+  gap: var(--strip-gap);
+  min-height: 0;
+}
+
+.row > lm-fader-strip {
+  width: auto; /* as wide as its column */
+}
+
+/* a thin line between the two rows */
+.row + .row {
+  padding-top: 10px;
+  border-top: 1px solid var(--edge);
+}
+
+/* The page keys in one column, from the top, each as big as every key of the desk. When they are
+   too many for the height, the column scrolls (by the wheel, a finger or the keyboard) and keeps
+   the lit key in sight (shared/pressed-in-sight.ts). Its scrollbar is hidden: it would widen the
+   column, and the faders are made for a column one key wide. */
+.rail {
+  display: grid;
+  grid-template-columns: var(--key-w);
+  grid-auto-rows: var(--key-h);
+  align-content: start;
+  gap: var(--strip-gap);
+  min-height: 0;
+  overflow: hidden auto;
+  scrollbar-width: none;
+}
+
+/* ---- mobile: the page keys lie under the title, in the columns of the faders, and go on in
+   another line when one line cannot hold them. The faders follow under them. */
+:host-context(.mobile) .body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+:host-context(.mobile) .rail {
+  order: -1;
+  grid-auto-flow: row;
+  grid-template-columns: repeat(var(--fit-line), var(--strip));
+  grid-template-rows: none;
+  grid-auto-rows: var(--key-h);
+  justify-content: space-between;
+  justify-items: center;
+  overflow: visible;
+}
+
+:host-context(.mobile) .rows {
+  grid-auto-rows: auto;
+}
+
+/* on a phone a row of 16 is two lines of 8: more room between the lines than between the strips */
+:host-context(.mobile) .row {
+  row-gap: 14px;
+}

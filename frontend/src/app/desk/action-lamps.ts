@@ -1,7 +1,7 @@
 import { slotKey } from './desk-actions';
 import type { DeskStore } from './desk-store';
 import { MEMORY_COUNT, UNIVERSE_SIZE } from './desk-types';
-import { MAX_EFFECTS, effectLamp } from './effects';
+import { MAX_EFFECTS, effectLamp } from '../effects/effects';
 import {
   activeFunction,
   channelKeysArmed,
@@ -12,7 +12,7 @@ import {
   memoryBlinks,
 } from './function-mode';
 import { LampLevel, channelLamp, channelPageLamp, memoryLamp, memoryPageLamp } from './lamps';
-import { MAX_SOUNDS, listenLamp, soundLamp } from './sounds';
+import { MAX_SOUNDS, listenLamp, soundLamp } from '../sounds/sounds';
 import { universeStart } from './universes';
 
 /** How a key of the desk is lit: faint, half or full, and whether it blinks. */

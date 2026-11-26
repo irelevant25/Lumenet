@@ -18,7 +18,8 @@ internal sealed class LogBook : ILoggerProvider
     /// <summary>The newest lines kept; older ones go.</summary>
     public const int Capacity = 2000;
 
-    // The desk program's own names are shown without their namespace: "BoxLink".
+    // The desk program's own names are shown without their namespaces: "BoxLink", not
+    // "DmxBox.Server.Boxes.BoxLink".
     private const string OwnNamespace = "DmxBox.Server.";
 
     private readonly object _lock = new();
@@ -33,7 +34,7 @@ internal sealed class LogBook : ILoggerProvider
     {
         string text = error is null ? message : $"{message}{Environment.NewLine}{error}";
         if (category.StartsWith(OwnNamespace, StringComparison.Ordinal))
-            category = category[OwnNamespace.Length..];
+            category = category[(category.LastIndexOf('.') + 1)..];
 
         lock (_lock)
         {

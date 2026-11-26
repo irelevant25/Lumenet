@@ -4,11 +4,11 @@ import { DeskSettings } from '../desk/desk-settings';
 import { DeskStore } from '../desk/desk-store';
 import { lanAddressInUse } from '../desk/desk-types';
 import { viewNamed } from '../desk/views';
-import { ExportDialog } from '../export-dialog/export-dialog';
-import { ImportDialog } from '../import-dialog/import-dialog';
-import { LampButton } from '../lamp-button/lamp-button';
-import { OutputsStatus } from '../outputs-status/outputs-status';
-import { ProjectDialog } from '../project-dialog/project-dialog';
+import { ExportDialog } from '../project/export-dialog/export-dialog';
+import { ImportDialog } from '../project/import-dialog/import-dialog';
+import { LampButton } from '../shared/lamp-button/lamp-button';
+import { OutputsStatus } from '../outputs/outputs-status/outputs-status';
+import { ProjectDialog } from '../project/project-dialog/project-dialog';
 
 /**
  * The strip along the top: name and version with the outputs (how many play; Settings shows them)

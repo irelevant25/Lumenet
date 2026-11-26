@@ -611,7 +611,7 @@ table.steps td.empty {
 
 /* ---- windows (<dialog>) ----
    The ✕ at the top right of every window, which closes it as Cancel and Esc do (a press outside the
-   window does the same, see desk/dialog-dismiss.ts). A window is placed by the browser, so the ✕
+   window does the same, see shared/dialog-dismiss.ts). A window is placed by the browser, so the ✕
    stands in its corner. */
 .dialog-close {
   position: absolute;

@@ -1,0 +1,1122 @@
+using System.Globalization;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+
+namespace DmxBox.Tests.Api;
+
+/// <summary>
+/// The server through its front door: UIs connect to the hub with WebSockets and get the same
+/// JSON a browser would. These tests are the contract the UI is written against: the names of
+/// the methods and messages, the shape of the JSON, who is told what, and how errors look.
+/// </summary>
+public sealed class HubTests
+{
+    private static readonly JsonSerializerOptions AsOnTheWire = new()
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
+
+    // The properties of the desk on the wire, in their order.
+    private static readonly string[] DeskProperties =
+    [
+        "channels", "memoryLevels", "memoryStored", "master", "blackout", "channelNotes", "memoryNotes", "independents",
+        "memorySequence", "memoryIndependents", "bpm", "rateOn", "solo", "channelClaims", "memoryClaims", "universes",
+        "effectIndependents", "soundIndependents", "effects", "sounds", "soundDecibels", "soundMute",
+    ];
+
+    [Fact]
+    public async Task HelloDescribesTheDeskTheBoxesAndTheProject()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+
+        JsonElement hello = await ui.InvokeAsync("Hello");
+
+        Assert.Equal(["version", "desk", "boxes", "project", "outputs", "mixer", "listen"], NamesIn(hello));
+        Assert.Equal(TestServer.Version, hello.GetProperty("version").GetString());
+
+        JsonElement desk = hello.GetProperty("desk");
+        Assert.Equal(DeskProperties, NamesIn(desk));
+        Assert.Equal(new int[512], Numbers(desk.GetProperty("channels")));
+        Assert.Equal(new int[128], Numbers(desk.GetProperty("memoryLevels")));
+        Assert.Equal(new bool[128], Flags(desk.GetProperty("memoryStored")));
+        Assert.Equal(255, desk.GetProperty("master").GetInt32());
+        Assert.False(desk.GetProperty("blackout").GetBoolean());
+        Assert.Equal(Enumerable.Repeat("", 512), Texts(desk.GetProperty("channelNotes")));
+        Assert.Equal(Enumerable.Repeat("", 128), Texts(desk.GetProperty("memoryNotes")));
+        Assert.Equal(Enumerable.Range(1, 32), Numbers(desk.GetProperty("independents")));
+        Assert.Equal(Enumerable.Range(1, 32), Numbers(desk.GetProperty("memoryIndependents")));
+        Assert.Equal(1, desk.GetProperty("universes").GetInt32());
+        Assert.Equal(Enumerable.Range(1, 32), Numbers(desk.GetProperty("effectIndependents")));
+        Assert.Equal("[]", desk.GetProperty("effects").GetRawText());   // no effects, no playbacks
+
+        // The pretend box does not answer, and the project lists no boxes: there are none to show.
+        Assert.Equal("[]", hello.GetProperty("boxes").GetRawText());
+        Assert.Equal(
+            """{"name":"Untitled","path":null,"unsaved":false}""",
+            hello.GetProperty("project").GetRawText());
+        Assert.Equal("[]", hello.GetProperty("outputs").GetRawText());
+    }
+
+    [Fact]
+    public async Task FaderMovesReachTheOtherUisButNotTheOneThatMoved()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient mover = await server.ConnectAsync();
+        await using HubClient watcher = await server.ConnectAsync();
+
+        await mover.InvokeAsync("SetChannel", 5, 200);
+        await mover.InvokeAsync("SetMemoryLevel", 3, 100);
+        await mover.InvokeAsync("SetMaster", 128);
+        await mover.InvokeAsync("SetBlackout", true);   // unlike the faders, this goes to everybody
+
+        await AssertNextAsync(watcher, "ChannelChanged", "[5,200]");
+        await AssertNextAsync(watcher, "MemoryLevelChanged", "[3,100]");
+        await AssertNextAsync(watcher, "MasterChanged", "[128]");
+        await AssertNextAsync(watcher, "BlackoutChanged", "[true]");
+
+        // The first thing the mover hears is the blackout: its own fader moves did not come back.
+        await AssertNextAsync(mover, "BlackoutChanged", "[true]");
+
+        JsonElement desk = (await watcher.InvokeAsync("Hello")).GetProperty("desk");
+        Assert.Equal(200, desk.GetProperty("channels")[4].GetInt32());
+        Assert.Equal(100, desk.GetProperty("memoryLevels")[2].GetInt32());
+        Assert.Equal(128, desk.GetProperty("master").GetInt32());
+        Assert.True(desk.GetProperty("blackout").GetBoolean());
+    }
+
+    [Fact]
+    public async Task FaderMoveSentWithoutWaitingForAnAnswerWorksTheSame()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient mover = await server.ConnectAsync();
+        await using HubClient watcher = await server.ConnectAsync();
+
+        await mover.SendAsync("SetChannel", 7, 70);
+
+        await AssertNextAsync(watcher, "ChannelChanged", "[7,70]");
+    }
+
+    [Fact]
+    public async Task MistakesComeBackAsHubExceptionWithAPlainMessage()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+
+        await AssertRefusedAsync("The channel must be from 1 to 512, not 600.", ui, "SetChannel", 600, 1);
+        await AssertRefusedAsync("The level must be from 0 to 255, not 256.", ui, "SetChannel", 1, 256);
+        await AssertRefusedAsync("The memory must be from 1 to 128, not 129.", ui, "SetMemoryLevel", 129, 0);
+        await AssertRefusedAsync("The level must be from 0 to 255, not -1.", ui, "SetMaster", -1);
+        await AssertRefusedAsync("The memory must be from 1 to 128, not 0.", ui, "SaveMemory", 0);
+        await AssertRefusedAsync("Memory 5 is empty.", ui, "LoadMemory", 5);
+        await AssertRefusedAsync("Memory 1 is empty.", ui, "CopyMemory", 1, 2);
+        await AssertRefusedAsync("Memory 1 cannot be copied onto itself.", ui, "CopyMemory", 1, 1);
+        await AssertRefusedAsync("The memory must be from 1 to 128, not 129.", ui, "DeleteMemory", 129);
+        await AssertRefusedAsync("A note can have at most 24 characters.", ui, "SetChannelNote", 1, new string('a', 25));
+        await AssertRefusedAsync("A note can have at most 24 characters.", ui, "SetMemoryNote", 1, new string('a', 25));
+        await AssertRefusedAsync("A note cannot contain a tab, a line break or the like.", ui, "SetChannelNote", 1, "Front\tleft");
+        await AssertRefusedAsync("The channel must be from 1 to 512, not 513.", ui, "SetChannelNote", 513, "note");
+        await AssertRefusedAsync("The memory must be from 1 to 128, not 0.", ui, "SetMemoryNote", 0, "note");
+        await AssertRefusedAsync("The independent must be from 1 to 32, not 33.", ui, "SetIndependent", 33, 1);
+        await AssertRefusedAsync("The independent must be from 1 to 32, not 0.", ui, "SetIndependent", 0, 1);
+        await AssertRefusedAsync("The channel must be from 1 to 512, not 513.", ui, "SetIndependent", 1, 513);
+        await AssertRefusedAsync("The memory independent must be from 1 to 32, not 33.", ui, "SetMemoryIndependent", 33, 1);
+        await AssertRefusedAsync("The memory must be from 1 to 128, not 129.", ui, "SetMemoryIndependent", 1, 129);
+        await AssertRefusedAsync("This project has no file yet. Save it under a name.", ui, "SaveProject", (object?)null);
+        await AssertRefusedAsync("A project name cannot contain the character \"/\".", ui, "SaveProject", "a/b");
+        await AssertRefusedAsync("A project needs a name.", ui, "LoadProject", "");
+        await AssertRefusedAsync("There is no project \"nothing\".", ui, "LoadProject", "nothing");
+    }
+
+    [Fact]
+    public async Task RefusedRequestTellsNobodyAnything()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await using HubClient other = await server.ConnectAsync();
+
+        await Assert.ThrowsAsync<HubCallException>(() => ui.InvokeAsync("SetChannel", 600, 1));
+        await Assert.ThrowsAsync<HubCallException>(() => ui.InvokeAsync("LoadMemory", 5));
+        await ui.InvokeAsync("SetBlackout", true);
+
+        // The blackout is the first thing either of them hears.
+        await AssertNextAsync(ui, "BlackoutChanged", "[true]");
+        await AssertNextAsync(other, "BlackoutChanged", "[true]");
+    }
+
+    [Fact]
+    public async Task ArgumentOfTheWrongKindIsRefusedWithoutDetails()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+
+        // A level has to be a whole number. This is a fault in the UI, not a mistake of the
+        // user, so SignalR's own short error comes back, without a "HubException".
+        var error = await Assert.ThrowsAsync<HubCallException>(() => ui.InvokeAsync("SetChannel", 1, 12.5));
+
+        Assert.DoesNotContain("HubException", error.Message);
+    }
+
+    [Fact]
+    public async Task MemoryFunctionsSendTheWholeDeskToEveryUi()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await using HubClient other = await server.ConnectAsync();
+        HubClient[] both = [ui, other];
+
+        await ui.InvokeAsync("SetChannel", 1, 9);
+        await AssertNextAsync(other, "ChannelChanged", "[1,9]");
+
+        await ui.InvokeAsync("SaveMemory", 2);
+        foreach (HubClient client in both)
+        {
+            JsonElement desk = await NextDeskAsync(client);
+            Assert.Equal(9, desk.GetProperty("channels")[0].GetInt32());
+            Assert.True(desk.GetProperty("memoryStored")[1].GetBoolean());
+
+            // The first change of a memory also marks the project as unsaved.
+            await AssertNextAsync(client, "ProjectChanged", """[{"name":"Untitled","path":null,"unsaved":true}]""");
+        }
+
+        await ui.InvokeAsync("Clear");
+        foreach (HubClient client in both)
+        {
+            JsonElement desk = await NextDeskAsync(client);
+            Assert.Equal(0, desk.GetProperty("channels")[0].GetInt32());
+            Assert.True(desk.GetProperty("memoryStored")[1].GetBoolean());
+        }
+
+        await ui.InvokeAsync("LoadMemory", 2);
+        foreach (HubClient client in both)
+            Assert.Equal(9, (await NextDeskAsync(client)).GetProperty("channels")[0].GetInt32());
+
+        await ui.InvokeAsync("CopyMemory", 2, 3);
+        foreach (HubClient client in both)
+            Assert.True((await NextDeskAsync(client)).GetProperty("memoryStored")[2].GetBoolean());
+
+        // Every NextDeskAsync above also showed that no second "ProjectChanged" came in
+        // between: the project was unsaved already, so there was nothing new to tell.
+        await ui.InvokeAsync("DeleteMemory", 2);
+        foreach (HubClient client in both)
+            Assert.False((await NextDeskAsync(client)).GetProperty("memoryStored")[1].GetBoolean());
+    }
+
+    [Fact]
+    public async Task DeskChangedCarriesTheWholeDesk()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await ui.InvokeAsync("SetMemoryLevel", 128, 44);
+        await ui.InvokeAsync("SetMaster", 33);
+
+        await ui.InvokeAsync("SaveMemory", 128);
+
+        JsonElement desk = await NextDeskAsync(ui);
+        Assert.Equal(DeskProperties, NamesIn(desk));
+        Assert.Equal(512, Numbers(desk.GetProperty("channels")).Length);
+        Assert.Equal(44, Numbers(desk.GetProperty("memoryLevels"))[127]);
+        Assert.True(Flags(desk.GetProperty("memoryStored"))[127]);
+        Assert.Equal(33, desk.GetProperty("master").GetInt32());
+        Assert.False(desk.GetProperty("blackout").GetBoolean());
+    }
+
+    [Fact]
+    public async Task GetMemoriesGivesTheLookOfEveryStoredMemoryByItsNumber()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+
+        JsonElement none = await ui.InvokeAsync("GetMemories");
+        Assert.Empty(none.EnumerateObject());
+
+        await ui.InvokeAsync("SetChannel", 2, 200);
+        await ui.InvokeAsync("SaveMemory", 5);
+
+        JsonElement looks = await ui.InvokeAsync("GetMemories");
+        Assert.Equal(["5"], NamesIn(looks));
+        int[] look = Numbers(looks.GetProperty("5"));
+        Assert.Equal(512, look.Length);
+        Assert.Equal([0, 200, 0], look[..3]);
+    }
+
+    [Fact]
+    public async Task OneLevelOfALookChangesFromTheMemoriesViewAsAStepOfTheHistory()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await using HubClient other = await server.ConnectAsync();
+
+        // An empty memory gets a look with that one channel; every UI asks for the looks again.
+        await ui.InvokeAsync("SetMemoryChannel", 5, 3, 120);
+        Assert.True((await NextDeskAsync(other)).GetProperty("memoryStored")[4].GetBoolean());
+        await AssertNextAsync(other, "ProjectChanged", """[{"name":"Untitled","path":null,"unsaved":true}]""");
+        await AssertNextAsync(other, "HistoryChanged", """[{"undo":"channel 3 (U1) of memory 5","redo":null}]""");
+        int[] look = Numbers((await ui.InvokeAsync("GetMemories")).GetProperty("5"));
+        Assert.Equal([0, 0, 120], look[..3]);
+
+        await AssertRefusedAsync("The channel must be from 1 to 512, not 513.", ui, "SetMemoryChannel", 5, 513, 1);
+    }
+
+    [Fact]
+    public async Task NotesReachTheOtherUisButNotTheOneThatTyped()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient writer = await server.ConnectAsync();
+        await using HubClient watcher = await server.ConnectAsync();
+        string unsavedProject = """[{"name":"Untitled","path":null,"unsaved":true}]""";
+
+        await writer.InvokeAsync("SetChannelNote", 5, "  Front left ");
+        await writer.InvokeAsync("SetMemoryNote", 3, "Blue wash");
+        await writer.InvokeAsync("SetChannelNote", 5, "");
+        await writer.InvokeAsync("SetBlackout", true);
+
+        // The others get the text as it was stored: without the spaces at its ends. The first
+        // note also makes the project unsaved; after that there is nothing new to tell about it.
+        await AssertNextAsync(watcher, "ChannelNoteChanged", """[5,"Front left"]""");
+        await AssertNextAsync(watcher, "ProjectChanged", unsavedProject);
+        await AssertNextAsync(watcher, "MemoryNoteChanged", """[3,"Blue wash"]""");
+        await AssertNextAsync(watcher, "ChannelNoteChanged", """[5,""]""");
+        await AssertNextAsync(watcher, "BlackoutChanged", "[true]");
+
+        // The writer hears about the project like everybody, but its own notes do not come back.
+        await AssertNextAsync(writer, "ProjectChanged", unsavedProject);
+        await AssertNextAsync(writer, "BlackoutChanged", "[true]");
+    }
+
+    [Fact]
+    public async Task NoteSentWithoutWaitingForAnAnswerWorksTheSame()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient writer = await server.ConnectAsync();
+        await using HubClient watcher = await server.ConnectAsync();
+
+        await writer.SendAsync("SetMemoryNote", 128, "Finale");
+
+        await AssertNextAsync(watcher, "MemoryNoteChanged", """[128,"Finale"]""");
+    }
+
+    [Fact]
+    public async Task SameNoteAgainDoesNotMarkTheProjectUnsaved()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await ui.InvokeAsync("SetChannelNote", 1, "Front left");
+        await NextAsync(ui, "ProjectChanged");
+        await ui.InvokeAsync("SaveProject", "show");
+        await NextAsync(ui, "ProjectChanged");
+
+        await ui.InvokeAsync("SetChannelNote", 1, "Front left");
+        await ui.InvokeAsync("SetChannelNote", 1, " Front left ");
+        await ui.InvokeAsync("SetBlackout", true);
+
+        // The project is still saved: the next message is the blackout.
+        await AssertNextAsync(ui, "BlackoutChanged", "[true]");
+        Assert.False((await ui.InvokeAsync("Hello")).GetProperty("project").GetProperty("unsaved").GetBoolean());
+    }
+
+    [Fact]
+    public async Task DeskCarriesTheNotesAndClearLeavesThem()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await ui.InvokeAsync("SetChannelNote", 512, "Smoke machine");
+        await ui.InvokeAsync("SetMemoryNote", 1, "Blue wash");
+        await NextAsync(ui, "ProjectChanged");
+
+        JsonElement hello = (await ui.InvokeAsync("Hello")).GetProperty("desk");
+        await ui.InvokeAsync("Clear");
+        JsonElement cleared = await NextDeskAsync(ui);
+
+        foreach (JsonElement desk in new[] { hello, cleared })
+        {
+            string[] channelNotes = Texts(desk.GetProperty("channelNotes"));
+            string[] memoryNotes = Texts(desk.GetProperty("memoryNotes"));
+            Assert.Equal(512, channelNotes.Length);
+            Assert.Equal(128, memoryNotes.Length);
+            Assert.Equal("Smoke machine", channelNotes[511]);
+            Assert.Equal("", channelNotes[0]);
+            Assert.Equal("Blue wash", memoryNotes[0]);
+        }
+    }
+
+    [Fact]
+    public async Task LoadedProjectBringsItsNotes()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await ui.InvokeAsync("SetChannelNote", 1, "Front left");
+        await ui.InvokeAsync("SaveProject", "show");
+        await ui.InvokeAsync("SetChannelNote", 1, "changed");
+        await ui.InvokeAsync("SetMemoryNote", 2, "not in the file");
+        for (int message = 0; message < 3; message++)
+            await NextAsync(ui, "ProjectChanged");   // unsaved, saved, unsaved again
+
+        await ui.InvokeAsync("LoadProject", "show");
+
+        JsonElement desk = await NextDeskAsync(ui);
+        Assert.Equal("Front left", desk.GetProperty("channelNotes")[0].GetString());
+        Assert.Equal("", desk.GetProperty("memoryNotes")[1].GetString());
+        await AssertNextAsync(ui, "ProjectChanged", $"[{Project("show", Path.Combine(server.ProjectsFolder, "show.json"), unsaved: false)}]");
+    }
+
+    [Fact]
+    public async Task IndependentKeyReachesTheOtherUisButNotTheOneThatBoundIt()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient binder = await server.ConnectAsync();
+        await using HubClient watcher = await server.ConnectAsync();
+        string unsavedProject = """[{"name":"Untitled","path":null,"unsaved":true}]""";
+
+        await binder.InvokeAsync("SetIndependent", 3, 300);
+        await binder.InvokeAsync("SetIndependent", 10, 512);
+        await binder.InvokeAsync("SetIndependent", 3, 300);   // the same again: no change for the project
+        await binder.InvokeAsync("SetMemoryIndependent", 2, 128);
+        await binder.InvokeAsync("SetBlackout", true);
+
+        await AssertNextAsync(watcher, "IndependentChanged", "[3,300]");
+        await AssertNextAsync(watcher, "ProjectChanged", unsavedProject);
+        await AssertNextAsync(watcher, "IndependentChanged", "[10,512]");
+        await AssertNextAsync(watcher, "IndependentChanged", "[3,300]");
+        await AssertNextAsync(watcher, "MemoryIndependentChanged", "[2,128]");
+        await AssertNextAsync(watcher, "BlackoutChanged", "[true]");
+
+        // The binder hears about the project like everybody, but not about its own keys.
+        await AssertNextAsync(binder, "ProjectChanged", unsavedProject);
+        await AssertNextAsync(binder, "BlackoutChanged", "[true]");
+
+        JsonElement desk = (await watcher.InvokeAsync("Hello")).GetProperty("desk");
+        int[] independents = Numbers(desk.GetProperty("independents"));
+        Assert.Equal(32, independents.Length);
+        Assert.Equal(300, independents[2]);
+        Assert.Equal(512, independents[9]);
+        Assert.Equal(1, independents[0]);
+        int[] memoryKeys = Numbers(desk.GetProperty("memoryIndependents"));
+        Assert.Equal(Enumerable.Range(1, 32).Select(key => key == 2 ? 128 : key), memoryKeys);
+    }
+
+    [Fact]
+    public async Task SameChannelAgainDoesNotMarkTheProjectUnsaved()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+
+        await ui.InvokeAsync("SetIndependent", 5, 5);   // where key 5 is from the start
+        await ui.InvokeAsync("SetBlackout", true);
+
+        await AssertNextAsync(ui, "BlackoutChanged", "[true]");
+        Assert.False((await ui.InvokeAsync("Hello")).GetProperty("project").GetProperty("unsaved").GetBoolean());
+    }
+
+    [Fact]
+    public async Task ClearLeavesTheIndependentKeysAndLoadedProjectBringsItsOwn()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await ui.InvokeAsync("SetIndependent", 1, 100);
+        await ui.InvokeAsync("SaveProject", "show");
+        await ui.InvokeAsync("SetIndependent", 1, 200);
+        for (int message = 0; message < 3; message++)
+            await NextAsync(ui, "ProjectChanged");   // unsaved, saved, unsaved again
+
+        await ui.InvokeAsync("Clear");
+        Assert.Equal(200, (await NextDeskAsync(ui)).GetProperty("independents")[0].GetInt32());
+
+        await ui.InvokeAsync("LoadProject", "show");
+        Assert.Equal(100, (await NextDeskAsync(ui)).GetProperty("independents")[0].GetInt32());
+    }
+
+    [Fact]
+    public async Task NewProjectCleansTheDeskForEveryUi()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await using HubClient other = await server.ConnectAsync();
+        await ui.InvokeAsync("SetChannel", 1, 200);
+        await ui.InvokeAsync("SetMemoryLevel", 1, 150);
+        await ui.InvokeAsync("SetMaster", 100);
+        await ui.InvokeAsync("SetChannelNote", 1, "Front left");
+        await ui.InvokeAsync("SetIndependent", 1, 300);
+        await ui.InvokeAsync("SaveMemory", 1);
+        await ui.InvokeAsync("SaveProject", "show");
+        await ui.InvokeAsync("SetBlackout", true);
+        await NextAsync(ui, "ProjectChanged");     // unsaved, when the note was written
+        await NextAsync(ui, "DeskChanged");        // the memory was saved
+        await NextAsync(ui, "ProjectChanged");     // saved as "show"
+        await NextAsync(ui, "BlackoutChanged");
+        while ((await other.NextMessageAsync()).Name != "BlackoutChanged")
+        {
+            // The other UI has heard all of the above too; what counts starts after the blackout.
+        }
+
+        JsonElement answer = await ui.InvokeAsync("NewProject");
+
+        string newProject = """{"name":"Untitled","path":null,"unsaved":false}""";
+        Assert.Equal(newProject, answer.GetRawText());
+        foreach (HubClient client in new[] { ui, other })
+        {
+            JsonElement desk = await NextDeskAsync(client);
+            Assert.Equal(new int[512], Numbers(desk.GetProperty("channels")));
+            Assert.Equal(new int[128], Numbers(desk.GetProperty("memoryLevels")));
+            Assert.Equal(new bool[128], Flags(desk.GetProperty("memoryStored")));
+            Assert.Equal(Enumerable.Repeat("", 512), Texts(desk.GetProperty("channelNotes")));
+            Assert.Equal(Enumerable.Range(1, 32), Numbers(desk.GetProperty("independents")));
+            Assert.Equal(Enumerable.Range(1, 32), Numbers(desk.GetProperty("memoryIndependents")));
+            Assert.Equal(100, desk.GetProperty("master").GetInt32());    // master and blackout stay
+            Assert.True(desk.GetProperty("blackout").GetBoolean());
+            await AssertNextAsync(client, "ProjectChanged", $"[{newProject}]");
+        }
+
+        Assert.True(File.Exists(Path.Combine(server.ProjectsFolder, "show.json")));   // the saved project stays on the disk
+    }
+
+    [Fact]
+    public async Task NewProjectOnAnUntouchedDeskTellsOnlyTheDesk()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+
+        await ui.InvokeAsync("NewProject");
+        await ui.InvokeAsync("SetBlackout", true);
+
+        // The project was "Untitled", without a file and saved before, and still is: only the
+        // desk is sent, and the next message is the blackout.
+        await NextDeskAsync(ui);
+        await AssertNextAsync(ui, "BlackoutChanged", "[true]");
+    }
+
+    [Fact]
+    public async Task ProjectIsSavedListedAndLoaded()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await using HubClient other = await server.ConnectAsync();
+        string path = Path.Combine(server.ProjectsFolder, "show.json");
+        string savedProject = Project("show", path, unsaved: false);
+        string changedProject = Project("show", path, unsaved: true);
+
+        await ui.InvokeAsync("SaveMemory", 1);
+        await NextDeskAsync(other);
+        await AssertNextAsync(other, "ProjectChanged", """[{"name":"Untitled","path":null,"unsaved":true}]""");
+
+        // Save under a name: the answer and the message to everybody carry the same project.
+        JsonElement saved = await ui.InvokeAsync("SaveProject", "show");
+        Assert.Equal(savedProject, saved.GetRawText());
+        await AssertNextAsync(other, "ProjectChanged", $"[{savedProject}]");
+        Assert.True(File.Exists(path));
+
+        // The list of projects, and the examples that come with the program.
+        JsonElement list = await ui.InvokeAsync("GetProjects");
+        Assert.Equal(["folder", "projects", "examples"], NamesIn(list));
+        Assert.Equal(server.ProjectsFolder, list.GetProperty("folder").GetString());
+        JsonElement entry = Assert.Single(list.GetProperty("projects").EnumerateArray());
+        Assert.Equal(["name", "path", "modified"], NamesIn(entry));
+        Assert.Equal("show", entry.GetProperty("name").GetString());
+        Assert.Equal(path, entry.GetProperty("path").GetString());
+        AssertIsoTimeOfJustNow(entry.GetProperty("modified").GetString()!);
+
+        // A change after the save, and a save without a name to the same file.
+        await ui.InvokeAsync("DeleteMemory", 1);
+        await NextDeskAsync(other);
+        await AssertNextAsync(other, "ProjectChanged", $"[{changedProject}]");
+        JsonElement savedAgain = await ui.InvokeAsync("SaveProject", (object?)null);
+        Assert.Equal(savedProject, savedAgain.GetRawText());
+        await AssertNextAsync(other, "ProjectChanged", $"[{savedProject}]");
+
+        // Load: the memories of the file replace those of the desk.
+        await ui.InvokeAsync("SaveMemory", 5);
+        await NextDeskAsync(other);
+        await AssertNextAsync(other, "ProjectChanged", $"[{changedProject}]");
+        JsonElement loaded = await ui.InvokeAsync("LoadProject", "show");
+        Assert.Equal(savedProject, loaded.GetRawText());
+        Assert.Equal(new bool[128], Flags((await NextDeskAsync(other)).GetProperty("memoryStored")));
+        await AssertNextAsync(other, "ProjectChanged", $"[{savedProject}]");
+    }
+
+    [Fact]
+    public async Task SavingAgainWithoutAChangeTellsNobody()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await ui.InvokeAsync("SaveProject", "show");
+        await NextAsync(ui, "ProjectChanged");
+
+        await ui.InvokeAsync("SaveProject", "show");
+        await ui.InvokeAsync("SetBlackout", true);
+
+        // Name, file and "unsaved" are what they were: the next message is the blackout.
+        await AssertNextAsync(ui, "BlackoutChanged", "[true]");
+    }
+
+    [Fact]
+    public async Task ImportedShowReplacesTheProjectAndWaitsToBeSaved()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await using HubClient other = await server.ConnectAsync();
+        string imported = """{"name":"Hamlet","path":null,"unsaved":true}""";
+
+        JsonElement answer = await ui.InvokeAsync("ImportProject", "Hamlet.asc", "Cue 1\nUp 2\nChan 1 FL\nText Dawn\n");
+
+        // The answer: the project, called after the file and not saved, and the report.
+        Assert.Equal(["project", "report"], NamesIn(answer));
+        Assert.Equal(imported, answer.GetProperty("project").GetRawText());
+        Assert.Equal("Hamlet.asc: 1 cue.", Texts(answer.GetProperty("report"))[0]);
+
+        // Every UI gets the new desk and the new project, as after loading one.
+        JsonElement desk = await NextDeskAsync(other);
+        Assert.True(Flags(desk.GetProperty("memoryStored"))[0]);
+        Assert.Equal("Cue 1" + (char)0x2028 + "Dawn", Texts(desk.GetProperty("memoryNotes"))[0]);
+        await AssertNextAsync(other, "ProjectChanged", $"[{imported}]");
+        JsonElement step = Assert.Single((await ui.InvokeAsync("GetStack")).GetProperty("steps").EnumerateArray());
+        Assert.Equal(
+            """{"cue":"1.0","target":"memory","number":1,"value":255,"up":2,"wait":0,"down":2}""",
+            JsonSerializer.Serialize(new
+            {
+                cue = step.GetProperty("cue").GetString(),
+                target = step.GetProperty("target").GetString(),
+                number = step.GetProperty("number").GetInt32(),
+                value = step.GetProperty("value").GetInt32(),
+                up = step.GetProperty("up").GetDouble(),
+                wait = step.GetProperty("wait").GetDouble(),
+                down = step.GetProperty("down").GetDouble(),
+            }));
+
+        // Saved under a name, it is a project like any other.
+        JsonElement saved = await ui.InvokeAsync("SaveProject", "Hamlet");
+        Assert.Equal(Project("Hamlet", Path.Combine(server.ProjectsFolder, "Hamlet.json"), unsaved: false), saved.GetRawText());
+    }
+
+    [Fact]
+    public async Task ImportIsRefusedForAFileWithoutCuesAndWhileTheStackIsLive()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+
+        await AssertRefusedAsync(
+            "\"notes.txt\" has no cues, submasters or groups. Lumenet imports show files in the USITT ASCII format, " +
+            "the text that theatre consoles write.",
+            ui,
+            "ImportProject",
+            "notes.txt",
+            "Dear diary,");
+
+        await ui.InvokeAsync("AddStackStep", new { target = "channel", number = 1, value = 255, up = 1, wait = 0, down = 1 });
+        await ui.InvokeAsync("SetStackLive", true);
+        await AssertRefusedAsync(
+            "The stack is live, so nothing that is stored can be changed. Switch Stack off first.",
+            ui,
+            "ImportProject",
+            "show.asc",
+            "Cue 1");
+    }
+
+    [Fact]
+    public async Task ShowFileOfSomeMegabytesComesThrough()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        var text = new System.Text.StringBuilder();
+        string comment = "! " + new string('x', 1000) + "\n";
+        for (int cue = 1; cue <= 100; cue++)
+        {
+            text.Append(CultureInfo.InvariantCulture, $"Cue {cue}\nUp 3\nChan {cue} FL\n");
+            for (int line = 0; line < 30; line++)
+                text.Append(comment);
+        }
+
+        Assert.True(text.Length > 3_000_000);
+        JsonElement answer = await ui.InvokeAsync("ImportProject", "big.asc", text.ToString());
+
+        Assert.Equal("big.asc: 100 cues.", Texts(answer.GetProperty("report"))[0]);
+    }
+
+    [Fact]
+    public async Task BoxComingAndGoingIsToldToTheUis()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        string connected = """[{"address":"pretend-box","connected":true,"firmware":"1.0","outputs":1,"universes":[1],"kind":"automatic"}]""";
+        Assert.Equal("[]", (await ui.InvokeAsync("Hello")).GetProperty("boxes").GetRawText());
+
+        server.Box.PlugIn();
+        await AssertNextAsync(ui, "BoxesChanged", $"[{connected}]");
+        Assert.Equal(connected, (await ui.InvokeAsync("Hello")).GetProperty("boxes").GetRawText());
+        Assert.Equal(connected, (await ui.InvokeAsync("GetBoxes")).GetRawText());
+
+        // While the project lists no boxes, only the boxes that answer are shown.
+        server.Box.Unplug();
+        await AssertNextAsync(ui, "BoxesChanged", "[[]]");
+    }
+
+    [Fact]
+    public async Task BoxesOfTheProjectPlayAsItSaysAndAreShownAlsoWhenTheyDoNotAnswer()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await ui.InvokeAsync("SetUniverses", 2);
+        await ui.InvokeAsync("SetChannel", 1, 255);
+        server.Box.PlugIn();
+        await Wait.UntilAsync(() => server.Box.Levels[0] == 255, "The box did not play U1 by itself.");
+
+        // A box added by hand, which does not answer (nothing listens on that port).
+        await ui.InvokeAsync("SetBoxes", (object)new[] { new { address = "127.0.0.1:9", universes = new[] { 2, 1 } } });
+
+        string planned = """{"address":"127.0.0.1:9","connected":false,"firmware":null,"outputs":2,"universes":[2,1],"kind":"listed"}""";
+        string unlisted = """{"address":"pretend-box","connected":true,"firmware":"1.0","outputs":1,"universes":[0],"kind":"new"}""";
+        Assert.Equal($"[{planned},{unlisted}]", (await ui.InvokeAsync("GetBoxes")).GetRawText());
+        await Wait.UntilAsync(() => server.Box.Levels[0] == 0, "A box that the project does not list still plays.");
+        Assert.Contains("\"127.0.0.1:9\"", (await ui.InvokeAsync("ExportProject")).GetString(), StringComparison.Ordinal);
+
+        // Undo brings the automatic wiring back.
+        Assert.Equal("the boxes", (await ui.InvokeAsync("Undo")).GetString());
+        await Wait.UntilAsync(() => server.Box.Levels[0] == 255, "The box did not play U1 again after Undo.");
+        Assert.Equal(
+            """[{"address":"pretend-box","connected":true,"firmware":"1.0","outputs":1,"universes":[1],"kind":"automatic"}]""",
+            (await ui.InvokeAsync("GetBoxes")).GetRawText());
+    }
+
+    [Fact]
+    public async Task ListOfBoxesThatCannotBeUsedIsRefused()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+
+        await AssertRefusedAsync(
+            "Box 1: \"10.1\" is no address like 10.1.3.1 (or 10.1.3.1:7001).",
+            ui,
+            "SetBoxes",
+            (object)new[] { new { address = "10.1", universes = new[] { 1 } } });
+        await AssertRefusedAsync(
+            "Box 2: an output plays universe 1 to 8, or none (0), not 9.",
+            ui,
+            "SetBoxes",
+            (object)new[] { new { address = "10.1.1.1", universes = new[] { 1 } }, new { address = "10.1.2.1", universes = new[] { 9 } } });
+        await AssertRefusedAsync(
+            "The box at 10.1.1.1 is in the list twice.",
+            ui,
+            "SetBoxes",
+            (object)new[] { new { address = "10.1.1.1", universes = new[] { 1 } }, new { address = " 10.1.1.1:7000 ", universes = new[] { 2 } } });
+        Assert.Equal("[]", (await ui.InvokeAsync("GetBoxes")).GetRawText());
+    }
+
+    [Fact]
+    public async Task DeskOfTheUiReachesTheBox()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        server.Box.PlugIn();
+        await NextAsync(ui, "BoxesChanged");
+
+        await ui.InvokeAsync("SetChannel", 1, 255);
+        await ui.InvokeAsync("SetMaster", 128);
+        await Wait.UntilAsync(() => server.Box.Levels[0] == 128, "The fader move did not reach the box.");
+
+        // The blackout goes out as a dark look; the box's own blackout is that of its button.
+        await ui.InvokeAsync("SetBlackout", true);
+        await Wait.UntilAsync(() => server.Box.Levels[0] == 0, "The blackout did not reach the box.");
+        Assert.False(server.Box.BlackoutOn);
+    }
+
+    [Fact]
+    public async Task BlackoutButtonOnTheBoxReachesTheUis()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        server.Box.PlugIn();
+        await NextAsync(ui, "BoxesChanged");
+
+        server.Box.PressBlackoutButton();
+
+        await AssertNextAsync(ui, "BlackoutChanged", "[true]");
+        Assert.True((await ui.InvokeAsync("Hello")).GetProperty("desk").GetProperty("blackout").GetBoolean());
+
+        // The button switched the desk's blackout; the box lets go of its own, which darkened everything.
+        await Wait.UntilAsync(() => !server.Box.BlackoutOn, "The box kept its own blackout.");
+    }
+
+    // ---------------------------------------------------------------- undo, settings, the rate, autosave
+
+    [Fact]
+    public async Task UndoAndRedoGoThroughTheHistoryAndEveryUiHearsOfIt()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await using HubClient other = await server.ConnectAsync();
+
+        Assert.Equal("""{"undo":null,"redo":null}""", (await ui.InvokeAsync("GetHistory")).GetRawText());
+        await AssertRefusedAsync("There is nothing to undo.", ui, "Undo");
+
+        await ui.InvokeAsync("SaveMemory", 4);
+        Assert.True((await NextDeskAsync(other)).GetProperty("memoryStored")[3].GetBoolean());
+        await AssertNextAsync(other, "ProjectChanged", """[{"name":"Untitled","path":null,"unsaved":true}]""");
+        await AssertNextAsync(other, "HistoryChanged", """[{"undo":"storing memory 4","redo":null}]""");
+
+        Assert.Equal("storing memory 4", (await ui.InvokeAsync("Undo")).GetString());
+        Assert.False((await NextDeskAsync(other)).GetProperty("memoryStored")[3].GetBoolean());
+        await AssertNextAsync(other, "HistoryChanged", """[{"undo":null,"redo":"storing memory 4"}]""");
+
+        Assert.Equal("storing memory 4", (await ui.InvokeAsync("Redo")).GetString());
+        Assert.True((await NextDeskAsync(other)).GetProperty("memoryStored")[3].GetBoolean());
+        await AssertNextAsync(other, "HistoryChanged", """[{"undo":"storing memory 4","redo":null}]""");
+
+        // A new project starts with an empty history.
+        await ui.InvokeAsync("NewProject");
+        Assert.Equal("""{"undo":null,"redo":null}""", (await ui.InvokeAsync("GetHistory")).GetRawText());
+    }
+
+    [Fact]
+    public async Task NotesOfTheProjectReachTheOtherUisAndTypingIsOneStepOfTheHistory()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await using HubClient other = await server.ConnectAsync();
+
+        Assert.Equal("", (await ui.InvokeAsync("GetNotes")).GetString());
+        await ui.InvokeAsync("SetNotes", "<b>Doors</b>");
+        Assert.Equal("<b>Doors</b>", Assert.Single((await NextAsync(other, "NotesChanged")).Arguments).GetString());
+        await AssertNextAsync(other, "ProjectChanged", """[{"name":"Untitled","path":null,"unsaved":true}]""");
+
+        // Typing on, the notes go again: the same step of the history.
+        await ui.InvokeAsync("SetNotes", "<b>Doors at 7</b>");
+        Assert.Equal("""{"undo":"the notes","redo":null}""", (await ui.InvokeAsync("GetHistory")).GetRawText());
+
+        // They go into the file and come back with it; undo brings back those from before.
+        await ui.InvokeAsync("SaveProject", "show");
+        await ui.InvokeAsync("Undo");
+        Assert.Equal("", (await ui.InvokeAsync("GetNotes")).GetString());
+        await ui.InvokeAsync("LoadProject", "show");
+        Assert.Equal("<b>Doors at 7</b>", (await ui.InvokeAsync("GetNotes")).GetString());
+    }
+
+    [Fact]
+    public async Task AProjectGoesOutAsAFileAndComesBackInPlaceOfTheOpenOne()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+
+        await ui.InvokeAsync("SetChannel", 3, 200);
+        await ui.InvokeAsync("SaveMemory", 1);
+        await ui.InvokeAsync("SetNotes", "Cue 1 at the bell");
+        await ui.InvokeAsync("SaveProject", "Evening");
+
+        // Export hands the project over as its file says it, and changes nothing.
+        string file = (await ui.InvokeAsync("ExportProject")).GetString()!;
+        Assert.Contains("\"format\": \"lumenet-project\"", file, StringComparison.Ordinal);
+        Assert.Equal(
+            File.ReadAllText(Path.Combine(server.ProjectsFolder, "Evening.json")).Replace("\r\n", "\n", StringComparison.Ordinal),
+            file.Replace("\r\n", "\n", StringComparison.Ordinal));
+        Assert.False((await ui.InvokeAsync("Hello")).GetProperty("project").GetProperty("unsaved").GetBoolean());
+
+        // Imported, it is the open project: called as asked, without a file, with nothing undone.
+        await ui.InvokeAsync("NewProject");
+        JsonElement project = await ui.InvokeAsync("ImportProjectFile", "Evening at home", file);
+        Assert.Equal("""{"name":"Evening at home","path":null,"unsaved":true}""", project.GetRawText());
+        Assert.Equal("Cue 1 at the bell", (await ui.InvokeAsync("GetNotes")).GetString());
+        Assert.Equal(200, (await ui.InvokeAsync("GetMemories")).GetProperty("1")[2].GetInt32());
+        Assert.Equal("""{"undo":null,"redo":null}""", (await ui.InvokeAsync("GetHistory")).GetRawText());
+
+        // A file that is no project leaves the open one as it is.
+        await AssertRefusedAsync("The project cannot be imported. The file is not a Lumenet project.", ui, "ImportProjectFile", "Other", """{"format":"something"}""");
+        Assert.Equal("Cue 1 at the bell", (await ui.InvokeAsync("GetNotes")).GetString());
+    }
+
+    [Fact]
+    public async Task AStageComesInPlaceOfTheProjectsAndIsOneStepOfTheHistory()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await using HubClient other = await server.ConnectAsync();
+
+        await ui.InvokeAsync("SetStage", new
+        {
+            width = 16,
+            depth = 10,
+            lights = new object[] { new { id = 1, name = "Old", address = 1, channels = "D", color = (string?)null, x = 1.0, y = 1.0, angle = 0 } },
+        });
+        await NextAsync(other, "StageChanged");
+        await NextAsync(other, "ProjectChanged");
+
+        // The stage as a project file has it: lights by their place, a group of them.
+        const string stage = """
+            { "width": 12, "depth": 8, "lights": [
+                { "name": "Wash left", "address": 1, "channels": "RGB", "x": 2, "y": 2 },
+                { "name": "Wash right", "address": 4, "channels": "RGB", "x": 10, "y": 2 } ],
+              "groups": [ { "name": "Washes", "lights": [ 1, 2 ] } ] }
+            """;
+        await ui.InvokeAsync("ImportStage", stage);
+        JsonElement plan = Assert.Single((await NextAsync(other, "StageChanged")).Arguments);
+        Assert.Equal(12, plan.GetProperty("width").GetInt32());
+        Assert.Equal(["Wash left", "Wash right"], plan.GetProperty("lights").EnumerateArray().Select(light => light.GetProperty("name").GetString()));
+        Assert.Equal("[1,2]", plan.GetProperty("groups")[0].GetProperty("lights").GetRawText());
+        Assert.Equal("""{"undo":"importing a stage","redo":null}""", (await ui.InvokeAsync("GetHistory")).GetRawText());
+
+        await ui.InvokeAsync("Undo");
+        Assert.Equal("Old", (await ui.InvokeAsync("GetStage")).GetProperty("lights")[0].GetProperty("name").GetString());
+
+        await AssertRefusedAsync("The stage cannot be imported. There is no stage in it.", ui, "ImportStage", "null");
+    }
+
+    [Fact]
+    public async Task AnExampleOpensAsAProjectWithoutAFileAndStaysAsItIs()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+
+        JsonElement list = await ui.InvokeAsync("GetProjects");
+        string[] examples = [.. list.GetProperty("examples").EnumerateArray().Select(name => name.GetString()!)];
+        Assert.Contains("5 Theatre show", examples);
+
+        JsonElement project = await ui.InvokeAsync("LoadExample", "5 Theatre show");
+        Assert.Equal("""{"name":"5 Theatre show","path":null,"unsaved":false}""", project.GetRawText());
+        Assert.NotEqual("", (await ui.InvokeAsync("GetNotes")).GetString());
+
+        // Saving asks for a name: the example is not the project's file.
+        await AssertRefusedAsync("This project has no file yet. Save it under a name.", ui, "SaveProject", (string?)null);
+        await AssertRefusedAsync("There is no example \"..\\5 Theatre show\".", ui, "LoadExample", "..\\5 Theatre show");
+    }
+
+    [Fact]
+    public async Task TheRateReachesTheOtherUisLikeAFaderAndIsNoStepOfTheHistory()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await using HubClient other = await server.ConnectAsync();
+
+        JsonElement desk = (await ui.InvokeAsync("Hello")).GetProperty("desk");
+        Assert.Equal(120, desk.GetProperty("bpm").GetDouble());
+        Assert.False(desk.GetProperty("rateOn").GetBoolean());
+
+        await ui.InvokeAsync("SetRate", true, 128);
+        await AssertNextAsync(other, "RateChanged", "[true,128]");
+        Assert.Equal("""{"undo":null,"redo":null}""", (await ui.InvokeAsync("GetHistory")).GetRawText());
+        await AssertRefusedAsync("The tempo must be from 30 to 300 beats per minute, not 20.", ui, "SetRate", true, 20);
+    }
+
+    [Fact]
+    public async Task TheAutosaveIsSetOnThePcAndItsUisHearOfIt()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await using HubClient other = await server.ConnectAsync();
+
+        Assert.Equal("""{"on":true,"seconds":5}""", (await ui.InvokeAsync("GetAutosave")).GetRawText());
+        Assert.Equal("""{"on":false,"seconds":60}""", (await ui.InvokeAsync("SetAutosave", false, 60)).GetRawText());
+        await AssertNextAsync(other, "AutosaveChanged", """[{"on":false,"seconds":60}]""");
+        await AssertRefusedAsync("The autosave can keep the work every 5, 30, 60, 300 seconds, not every 7.", ui, "SetAutosave", true, 7);
+    }
+
+    // ---------------------------------------------------------------- the stage plan
+
+    [Fact]
+    public async Task TheStagePlanReachesEveryUiIsAStepOfTheHistoryAndGoesWithTheProject()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await using HubClient other = await server.ConnectAsync();
+
+        const string empty = """{"width":16,"depth":10,"lights":[],"pictureId":null,"pictureOpacity":0.6,"pictureOver":"stage","types":[],"groups":[]}""";
+        Assert.Equal(empty, (await ui.InvokeAsync("GetStage")).GetRawText());
+
+        var plan = new
+        {
+            width = 20,
+            depth = 12,
+            lights = new object[]
+            {
+                new { id = 1, name = " LED bar ", address = 30, channels = "rgbrgb", color = (string?)null, x = 8.0, y = 1.0, angle = 450, shape = "Square", width = 4, depth = 1 },
+                new { id = 2, name = "Back blue 1", address = 6, channels = "D", color = (string?)"#2060FF", x = 2.0, y = 1.5, angle = 0 },
+            },
+        };
+        await ui.InvokeAsync("SetStage", plan);
+        const string kept =
+            """{"width":20,"depth":12,"lights":[""" +
+            """{"id":1,"name":"LED bar","address":30,"channels":"RGBRGB","color":null,"x":8,"y":1,"angle":90,"shape":"square","width":4,"depth":1,"type":null,"limit":100,"note":""},""" +
+            """{"id":2,"name":"Back blue 1","address":6,"channels":"D","color":"#2060ff","x":2,"y":1.5,"angle":0,"shape":"round","width":1,"depth":1,"type":null,"limit":100,"note":""}]""" +
+            ""","pictureId":null,"pictureOpacity":0.6,"pictureOver":"stage","types":[],"groups":[]}""";
+        await AssertNextAsync(other, "StageChanged", $"[{kept}]");
+        await AssertNextAsync(other, "ProjectChanged", """[{"name":"Untitled","path":null,"unsaved":true}]""");
+        await AssertNextAsync(other, "HistoryChanged", """[{"undo":"the stage plan","redo":null}]""");
+
+        await AssertRefusedAsync(
+            "Light 1 of the plan at address 510 (U1) with 6 channels reaches past channel 512 (U1), the end of its universe: all channels of a light must be in one universe.",
+            ui,
+            "SetStage",
+            new { width = 20, depth = 12, lights = new[] { new { id = 1, name = "", address = 510, channels = "RGBRGB", x = 0.0, y = 0.0, angle = 0 } } });
+        await AssertRefusedAsync(
+            "The light \"Wash\" ends on channel 3 (U2), and the project has 1 universe. Add universes in Settings first.",
+            ui,
+            "SetStage",
+            new { width = 20, depth = 12, lights = new[] { new { id = 1, name = "Wash", address = 513, channels = "RGB", x = 0.0, y = 0.0, angle = 0 } } });
+
+        // Undo takes it back, redo brings it again.
+        Assert.Equal("the stage plan", (await ui.InvokeAsync("Undo")).GetString());
+        Assert.Equal(empty, (await ui.InvokeAsync("GetStage")).GetRawText());
+        await ui.InvokeAsync("Redo");
+        Assert.Equal(kept, (await ui.InvokeAsync("GetStage")).GetRawText());
+
+        // It goes into the file. A new project has an empty stage; loading brings the project's.
+        await ui.InvokeAsync("SaveProject", "rig");
+        await ui.InvokeAsync("NewProject");
+        Assert.Equal(empty, (await ui.InvokeAsync("GetStage")).GetRawText());
+        await ui.InvokeAsync("LoadProject", "rig");
+        Assert.Equal(kept, (await ui.InvokeAsync("GetStage")).GetRawText());
+    }
+
+    // ---------------------------------------------------------------- solo
+
+    [Fact]
+    public async Task KeysHeldForASoloReachEveryUiAndGoWhenTheirUiGoes()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        HubClient ui = await server.ConnectAsync(); // goes away during the test, see below
+        await using HubClient other = await server.ConnectAsync();
+
+        const string none = """{"up":[],"down":[]}""";
+        Assert.Equal(none, (await ui.InvokeAsync("Hello")).GetProperty("desk").GetProperty("solo").GetRawText());
+
+        await ui.InvokeAsync("HoldSolo", true, "channel", 5, true);
+        await AssertNextAsync(other, "SoloChanged", """[{"up":[{"target":"channel","number":5}],"down":[]}]""");
+        await ui.InvokeAsync("HoldSolo", true, "channel", 5, true); // held already: nothing to tell
+        await ui.InvokeAsync("HoldSolo", false, "memory", 2, true);
+        await AssertNextAsync(
+            other,
+            "SoloChanged",
+            """[{"up":[{"target":"channel","number":5}],"down":[{"target":"memory","number":2}]}]""");
+
+        await ui.InvokeAsync("HoldSolo", true, "channel", 5, false);
+        await AssertNextAsync(other, "SoloChanged", """[{"up":[],"down":[{"target":"memory","number":2}]}]""");
+        await AssertRefusedAsync("The channel must be from 1 to 512, not 600.", ui, "HoldSolo", true, "channel", 600, true);
+        await AssertRefusedAsync("A solo is for a channel or a memory, not \"stage\".", ui, "HoldSolo", true, "stage", 1, true);
+
+        // The UI goes while it holds a key: the key is let go, and the others hear of it.
+        await ui.DisposeAsync();
+        await AssertNextAsync(other, "SoloChanged", $"[{none}]");
+    }
+
+    [Fact]
+    public async Task APictureUnderThePlanReachesEveryUiByItsNameAndGoesWithTheProject()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+        await using HubClient other = await server.ConnectAsync();
+
+        const string picture = "data:image/png;base64,iVBORw0KGgo=";
+        Assert.Equal(JsonValueKind.Null, (await ui.InvokeAsync("GetStagePicture")).ValueKind);
+        await ui.InvokeAsync("SetStagePicture", picture);
+
+        // The plan names the picture; the picture itself comes when a UI asks for it.
+        JsonElement plan = Assert.Single((await NextAsync(other, "StageChanged")).Arguments);
+        string id = plan.GetProperty("pictureId").GetString()!;
+        Assert.Equal(16, id.Length);
+        Assert.Equal(picture, (await other.InvokeAsync("GetStagePicture")).GetString());
+
+        // A plan from a UI keeps the picture, whatever it says about it.
+        await ui.InvokeAsync("SetStage", new { width = 16, depth = 10, lights = Array.Empty<object>(), pictureId = (string?)null, pictureOpacity = 0.3 });
+        JsonElement kept = await ui.InvokeAsync("GetStage");
+        Assert.Equal(id, kept.GetProperty("pictureId").GetString());
+        Assert.Equal(0.3, kept.GetProperty("pictureOpacity").GetDouble());
+
+        await AssertRefusedAsync("The picture must be a JPEG, PNG or WebP image.", ui, "SetStagePicture", "data:image/svg+xml;base64,PHN2Zz4=");
+
+        // It goes into the file, and undo takes it away again.
+        await ui.InvokeAsync("SaveProject", "with picture");
+        await ui.InvokeAsync("SetStagePicture", (string?)null);
+        Assert.Equal(JsonValueKind.Null, (await ui.InvokeAsync("GetStage")).GetProperty("pictureId").ValueKind);
+        Assert.Equal("taking the picture of the stage away", (await ui.InvokeAsync("Undo")).GetString());
+        Assert.Equal(picture, (await ui.InvokeAsync("GetStagePicture")).GetString());
+        await ui.InvokeAsync("SetStagePicture", (string?)null);
+        await ui.InvokeAsync("LoadProject", "with picture");
+        Assert.Equal(picture, (await ui.InvokeAsync("GetStagePicture")).GetString());
+    }
+
+    [Fact]
+    public async Task NothingWasBroughtBackAtAStartWithoutAnAutosaveFile()
+    {
+        await using TestServer server = await TestServer.StartAsync();
+        await using HubClient ui = await server.ConnectAsync();
+
+        Assert.Equal(JsonValueKind.Null, (await ui.InvokeAsync("GetRecovered")).ValueKind);
+    }
+
+    // The names of an object's properties, in the order they have in the JSON.
+    private static string[] NamesIn(JsonElement element)
+    {
+        return element.EnumerateObject().Select(property => property.Name).ToArray();
+    }
+
+    // Fails if the element is not a list of whole numbers: levels must not arrive as base64 text.
+    private static int[] Numbers(JsonElement list)
+    {
+        return list.EnumerateArray().Select(item => item.GetInt32()).ToArray();
+    }
+
+    private static bool[] Flags(JsonElement list)
+    {
+        return list.EnumerateArray().Select(item => item.GetBoolean()).ToArray();
+    }
+
+    // Fails if an item is not a text: a fader without a note has to arrive as "", not as null.
+    private static string[] Texts(JsonElement list)
+    {
+        return list.EnumerateArray().Select(TextOf).ToArray();
+    }
+
+    private static string TextOf(JsonElement item)
+    {
+        Assert.Equal(JsonValueKind.String, item.ValueKind);
+        return item.GetString()!;
+    }
+
+    // A project the way it is on the wire. SignalR writes characters like "+" or letters
+    // beyond ASCII as they are; a path in somebody's user folder may have them.
+    private static string Project(string name, string path, bool unsaved)
+    {
+        return JsonSerializer.Serialize(new { name, path, unsaved }, AsOnTheWire);
+    }
+
+    // The next message of the server with this name. What undo and redo would do comes along with
+    // many changes; a test that does not ask for it by name passes over it, the others see it in
+    // its place.
+    private static async Task<HubMessage> NextAsync(HubClient ui, string expectedName)
+    {
+        HubMessage message = await ui.NextMessageAsync();
+        while (message.Name is "HistoryChanged" && message.Name != expectedName)
+            message = await ui.NextMessageAsync();
+
+        Assert.Equal(expectedName, message.Name);
+        return message;
+    }
+
+    // Checks the next message of the server: its name, and its arguments as the JSON on the wire.
+    private static async Task AssertNextAsync(HubClient ui, string expectedName, string expectedArguments)
+    {
+        HubMessage message = await NextAsync(ui, expectedName);
+        string arguments = "[" + string.Join(",", message.Arguments.Select(argument => argument.GetRawText())) + "]";
+        Assert.Equal(expectedArguments, arguments);
+    }
+
+    private static async Task<JsonElement> NextDeskAsync(HubClient ui)
+    {
+        HubMessage message = await NextAsync(ui, "DeskChanged");
+        return Assert.Single(message.Arguments);
+    }
+
+    // SignalR puts a sentence of its own in front of the message. The UI cuts it off after "HubException: ".
+    private static async Task AssertRefusedAsync(
+        string expectedMessage, HubClient ui, string method, params object?[] arguments)
+    {
+        var error = await Assert.ThrowsAsync<HubCallException>(() => ui.InvokeAsync(method, arguments));
+        Assert.Equal(
+            $"An unexpected error occurred invoking '{method}' on the server. HubException: {expectedMessage}",
+            error.Message);
+    }
+
+    // ISO 8601 in universal time, like "2026-11-18T15:04:05.1234567Z".
+    private static void AssertIsoTimeOfJustNow(string text)
+    {
+        Assert.Matches(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$", text);
+        DateTimeOffset time = DateTimeOffset.Parse(text, CultureInfo.InvariantCulture);
+        Assert.InRange(time, DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddMinutes(1));
+    }
+}

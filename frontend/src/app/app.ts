@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter, take } from 'rxjs';
-import { DeskMidi } from './desk/desk-midi';
+import { DeskMidi } from './midi/desk-midi';
 import { DeskSettings } from './desk/desk-settings';
 import { DeskStore } from './desk/desk-store';
 import { Keyboard } from './desk/keyboard';

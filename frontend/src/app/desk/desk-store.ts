@@ -86,7 +86,7 @@ import {
   shutterOpening,
   stepLights,
   typeOf,
-} from './fixtures';
+} from '../fixtures/fixtures';
 import { noteInOneLine } from './notes';
 import { channelLabel, universeOf, universeStart } from './universes';
 import {
@@ -97,7 +97,7 @@ import {
   EffectPreview,
   MAX_EFFECTS,
   withEffectLevels,
-} from './effects';
+} from '../effects/effects';
 import {
   DEFAULT_SOUND_DECIBELS,
   MAX_DECIBELS,
@@ -116,7 +116,7 @@ import {
   newTrack,
   quietPlayback,
   tracksPlaylist,
-} from './sounds';
+} from '../sounds/sounds';
 
 /**
  * While a sequence is recorded: for every channel, memory, fixture and group it uses, the

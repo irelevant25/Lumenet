@@ -1,5 +1,5 @@
-import { type EffectLevels, type EffectPlayback, MAX_EFFECTS } from './effects';
-import { type ListenView, MAX_SOUNDS, type MixerView, type SoundPlayback } from './sounds';
+import { type EffectLevels, type EffectPlayback, MAX_EFFECTS } from '../effects/effects';
+import { type ListenView, MAX_SOUNDS, type MixerView, type SoundPlayback } from '../sounds/sounds';
 
 /**
  * Sizes of the desk. A universe is the 512 channels one DMX cable carries; a project has 1 to 8

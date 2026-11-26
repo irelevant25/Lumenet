@@ -7,9 +7,9 @@ import {
   MEMORY_INDEPENDENT_COUNT,
   UNIVERSE_SIZE,
 } from './desk-types';
-import { EFFECT_INDEPENDENT_COUNT, MAX_EFFECTS } from './effects';
+import { EFFECT_INDEPENDENT_COUNT, MAX_EFFECTS } from '../effects/effects';
 import type { FunctionName } from './function-mode';
-import { MAX_SOUNDS, SOUND_INDEPENDENT_COUNT } from './sounds';
+import { MAX_SOUNDS, SOUND_INDEPENDENT_COUNT } from '../sounds/sounds';
 import { universeStart } from './universes';
 
 /** What an action needs when its key is not on the view that is shown. */

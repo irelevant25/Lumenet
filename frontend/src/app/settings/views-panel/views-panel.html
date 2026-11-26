@@ -1,0 +1,60 @@
+<div class="head">
+  <h3 id="views-title">Views in the top bar</h3>
+  <button
+    type="button"
+    class="setup"
+    title="The views and rows for a kind of show: Theatre, Theatre with moving lights, Concert or Everything"
+    (click)="welcome.open()"
+  >
+    Setup…
+  </button>
+  <button
+    type="button"
+    aria-label="The usual views"
+    title="The views of the start, in the usual order"
+    [disabled]="viewsUsual()"
+    (click)="settings.resetViews()"
+  >
+    ↺
+  </button>
+</div>
+<ul class="views" aria-labelledby="views-title">
+  @for (view of orderedViews(); track view.name; let first = $first, last = $last) {
+    <li>
+      <label>
+        <input
+          type="checkbox"
+          [checked]="viewShown(view.name)"
+          [disabled]="view.name === alwaysShown"
+          (change)="onViewShown(view.name, $event)"
+        />
+        {{ view.label }}
+        @if (view.name === alwaysShown) {
+          <span class="note">always there</span>
+        }
+      </label>
+      <button
+        type="button"
+        class="move"
+        title="One place to the left in the top bar"
+        [attr.data-move]="view.name + ':-1'"
+        [attr.aria-label]="'Move ' + view.label + ' up'"
+        [disabled]="first"
+        (click)="moveView(view.name, -1)"
+      >
+        ▲
+      </button>
+      <button
+        type="button"
+        class="move"
+        title="One place to the right in the top bar"
+        [attr.data-move]="view.name + ':1'"
+        [attr.aria-label]="'Move ' + view.label + ' down'"
+        [disabled]="last"
+        (click)="moveView(view.name, 1)"
+      >
+        ▼
+      </button>
+    </li>
+  }
+</ul>

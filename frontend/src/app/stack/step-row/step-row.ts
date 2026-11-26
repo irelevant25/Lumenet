@@ -219,9 +219,10 @@ export class StepRow {
   protected onTarget(event: Event): void {
     const [kind, universe] = (event.target as HTMLSelectElement).value.split(':');
     const target = kind as StepKind;
-    // only a step of a sound plays on: another kind leaves Continue behind
-    const { color, continue: playsOn, ...rest } = this.step();
+    // only a step of a sound plays on or is muted: another kind leaves Continue and Mute behind
+    const { color, continue: playsOn, muted, ...rest } = this.step();
     if (target === 'sound' && playsOn) Object.assign(rest, { continue: true });
+    if (target === 'sound' && muted) Object.assign(rest, { muted: true });
     const number =
       target === 'channel' ? this.channelIn(Number(universe))
       : target === 'release' ? this.stepAbove()

@@ -1,6 +1,6 @@
 <dialog #dialog lmDialog aria-labelledby="import-dialog-title" (dismiss)="close()">
   <!-- the system's own window for choosing a file, opened by the File key -->
-  <input #picker type="file" hidden [accept]="accept()" (change)="onPicked($event)" />
+  <input #picker type="file" hidden accept=".zip,.json,.asc,.txt" (change)="onPicked($event)" />
 
   <form (submit)="confirm($event)">
     @if (report(); as lines) {
@@ -15,40 +15,41 @@
       </div>
     } @else {
       <h2 id="import-dialog-title">Import</h2>
-      <p class="hint">What to take from a file of this device: one that Export made, or a project file.</p>
-
-      <fieldset class="parts">
-        <legend>Import</legend>
-        @for (part of parts; track part.part) {
-          <label>
-            <input
-              type="checkbox"
-              [checked]="chosen().has(part.part)"
-              [disabled]="note(part) !== ''"
-              (change)="onCheck(part.part, $event)"
-            />
-            {{ part.label }}
-            <small>{{ note(part) || part.hint }}</small>
-          </label>
-        }
-        <label>
-          <input type="checkbox" [checked]="asc()" (change)="onCheckAsc($event)" />
-          .ASC
-          <small>
-            the show file of a theatre console (USITT ASCII), as ETC Eos, Ion, SmartFade and others write it: its looks
-            become memories and its cues the cues of the stack. A file of its own, so it is taken alone.
-          </small>
-        </label>
-      </fieldset>
-
-      @if (losesChanges()) {
-        <p class="hint">The open project has changes that are not saved. Importing a project drops them.</p>
-      }
+      <p class="hint">A file that Export made, a backup, a project file, or the show file of a theatre console (.ASC).</p>
 
       <div class="file">
         <button lmLamp type="button" tone="system" aria-label="Choose a file" (click)="choose()">File</button>
         <span class="file-name">{{ file()?.name ?? 'No file chosen' }}</span>
       </div>
+
+      @if (reading()) {
+        <p class="hint" role="status">Reading the file…</p>
+      } @else if (asc() && !error()) {
+        <p class="hint">
+          The show of a theatre console (USITT ASCII), as ETC Eos, Ion, SmartFade and others write it: its looks
+          become memories and its cues the cues of the stack.
+        </p>
+      } @else if (source()) {
+        <fieldset class="parts">
+          <legend>Take from the file</legend>
+          @for (part of parts; track part.part) {
+            <label>
+              <input
+                type="checkbox"
+                [checked]="chosen().has(part.part)"
+                [disabled]="!can(part)"
+                (change)="onCheck(part.part, $event)"
+              />
+              {{ part.label }}
+              <small>{{ said(part) }}</small>
+            </label>
+          }
+        </fieldset>
+      }
+
+      @if (losesChanges()) {
+        <p class="hint">The open project has changes that are not saved. Importing a project drops them.</p>
+      }
 
       @if (error()) {
         <p class="error" role="alert">{{ error() }}</p>

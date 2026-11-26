@@ -15,3 +15,4 @@ global using DmxBox.Server.Sequences;
 global using DmxBox.Server.Sounds;
 global using DmxBox.Server.Stack;
 global using DmxBox.Server.Stage;
+global using DmxBox.Server.Update;

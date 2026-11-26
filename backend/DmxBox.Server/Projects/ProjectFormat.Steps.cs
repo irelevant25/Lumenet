@@ -30,6 +30,8 @@ internal static partial class ProjectFormat
             {
                 if (read[index].At is not null)
                     throw Bad($"Step {index + 1} {where} in the file comes at a moment of a sound: only a cue of the stack can.");
+                if (read[index].Muted)
+                    throw Bad($"Step {index + 1} {where} in the file is muted: only a cue of the stack can be.");
                 if (read[index].IsRelease && (read[index].Number > read.Length || read[index].Number == index + 1))
                     read[index] = read[index] with { Number = 0 };
             }
@@ -118,6 +120,7 @@ internal static partial class ProjectFormat
                 Add = entry.Add == true,
                 Continue = entry.Continue == true,
                 Disabled = entry.Disabled == true,
+                Muted = entry.Muted == true,
                 At = entry.At is { } at ? new SoundTime(at.Sound ?? 0, at.Seconds ?? double.NaN) : null,
             };
             return step.Checked();
@@ -165,6 +168,7 @@ internal static partial class ProjectFormat
             Add = step.Add ? true : null,
             Continue = step.Continue ? true : null,
             Disabled = step.Disabled ? true : null,
+            Muted = step.Muted ? true : null,
             At = step.At is { } at ? new ProjectFileMoment { Sound = at.Sound, Seconds = at.Seconds } : null,
         };
     }

@@ -100,6 +100,12 @@ export class DeskStore extends DeskStoreProject {
   protected async refresh(): Promise<void> {
     try {
       const welcome = await this.connection.invoke('Hello');
+      // Another version came back (an update, or run.cmd again): its page is another one too.
+      const before = this.version();
+      if (before && welcome.version && welcome.version !== before) {
+        this.reloadPage();
+        return;
+      }
       this.version.set(welcome.version);
       this.takeDesk(welcome.desk);
       this.boxes.set(welcome.boxes ?? []);
@@ -115,6 +121,11 @@ export class DeskStore extends DeskStoreProject {
     } catch {
       // The connection dropped again before the answer arrived. The next connect asks again.
     }
+  }
+
+  /** Loads the page again, from the desk program that answers now. */
+  protected reloadPage(): void {
+    location.reload();
   }
 
   protected takeDesk(desk: DeskState): void {

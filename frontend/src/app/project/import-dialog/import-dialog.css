@@ -72,6 +72,12 @@ small {
   line-height: 1.3;
 }
 
+/* a part the file does not have */
+label:has(input:disabled) {
+  color: var(--legend-dim);
+  cursor: default;
+}
+
 input[type='checkbox'] {
   width: 18px;
   height: 18px;

@@ -126,22 +126,25 @@ internal sealed partial class Desk
 
     /// <summary>
     /// Stores a sound under its number, new or in place of the one there. One that plays goes on
-    /// with what changed; with another file it starts again, from its start.
+    /// with what changed; with another file it starts again, from its start. While the stack is live
+    /// only how it sounds can change: its level, pan, speed, pitch, echo (with its repeats) and reverb
+    /// (with its room size), for a sound the audience laughs over, say; not what it plays.
     /// </summary>
     /// <param name="sound">The sound.</param>
     /// <returns>The sound as the desk keeps it.</returns>
-    /// <exception cref="DeskException">Something about it cannot be used, or the stack is live.</exception>
+    /// <exception cref="DeskException">Something about it cannot be used, or the stack is live and more than how it sounds changes.</exception>
     public Sound SetSound(Sound? sound)
     {
         Sound checkedSound = (sound ?? throw new DeskException("The sound is missing.")).Checked();
 
         lock (_lock)
         {
-            RequireUnlocked();
             int index = checkedSound.Number - 1;
             Sound? old = _sounds[index];
             if (old == checkedSound)
                 return old;
+            if (old is null || !OnlySoundOfItChanges(old, checkedSound))
+                RequireUnlocked();
 
             _sounds[index] = checkedSound;
             SoundRun run = _soundRuns[index];
@@ -488,6 +491,8 @@ internal sealed partial class Desk
 
             run.Voice = false;
             run.Ended = false;   // from zero it can start again
+            run.Paused = false;
+            run.Unheard = false;
             return;
         }
 
@@ -497,6 +502,8 @@ internal sealed partial class Desk
             // over: played to its end, or its file could not be played
             run.Voice = false;
             run.Ended = true;
+            run.Paused = false;
+            run.Unheard = false;
             run.Missing = state.Missing;
             if (!state.Missing && !sound.Loop && FaderOfHand(index))
             {
@@ -512,6 +519,7 @@ internal sealed partial class Desk
         {
             _player.Start(sound);
             run.Voice = true;
+            run.Paused = false;   // a start ends a pause
             run.StartOrder = ++_soundStarts;
             run.Missing = false;
             state = _player.StateOf(index + 1);
@@ -520,7 +528,8 @@ internal sealed partial class Desk
 
         if (run.Voice)
         {
-            _player.SetLevel(index + 1, level);
+            // a sound that a muted cue plays runs on as ever, but nothing of it goes out
+            _player.SetLevel(index + 1, run.Unheard ? 0 : level);
             run.Position = state.Position;
             run.Length = state.Length;
             FadeAtEnd(index, sound, run, now);
@@ -611,6 +620,8 @@ internal sealed partial class Desk
             Position = Math.Round(run.Position, 2),
             Missing = run.Missing,
             Length = Math.Round(run.Length, 2),
+            Paused = run.Paused && run.Voice,
+            Muted = run.Unheard && run.Voice,
         };
     }
 
@@ -627,6 +638,24 @@ internal sealed partial class Desk
     private static void RequireSoundNumber(int number)
     {
         RequireRange("sound", number, 1, Sound.MaxSounds);
+    }
+
+    // True when a sound changes only in how it sounds: its level, pan, speed, pitch, echo with its
+    // repeats, and reverb with its room size, which may change while the stack is live.
+    private static bool OnlySoundOfItChanges(Sound old, Sound changed)
+    {
+        return old with
+        {
+            Decibels = changed.Decibels,
+            Pan = changed.Pan,
+            Speed = changed.Speed,
+            Pitch = changed.Pitch,
+            Echo = changed.Echo,
+            EchoTime = changed.EchoTime,
+            EchoRepeats = changed.EchoRepeats,
+            Reverb = changed.Reverb,
+            Room = changed.Room,
+        } == changed;
     }
 
     // The playback of a sound: none of it is stored in the project.
@@ -646,5 +675,7 @@ internal sealed partial class Desk
         public long StartOrder;     // which start it was, counted over all sounds: the latest is the highest (Learn)
         public double Length;       // a track of the mixer: how long it is, as the mixer said; 0 when unknown
         public bool EndFading;      // the move of the fader goes down with the end of the sound (FadeAtEnd)
+        public bool Paused;         // Pause of the stack holds it where it is, silent, until GO (Desk.StackPlay)
+        public bool Unheard;        // a muted cue of the stack plays it: its level goes out as nothing (Step.Muted)
     }
 }

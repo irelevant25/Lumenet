@@ -84,6 +84,12 @@ internal sealed class Tray : ApplicationContext
         _windows.Post(_ => OpenPage(), null);
     }
 
+    /// <summary>Ends Lumenet as Exit does, from another thread (an update put a new Lumenet in its place).</summary>
+    public void ExitSoon()
+    {
+        _windows.Post(_ => Exit(), null);
+    }
+
     private void ShowLog()
     {
         if (_logWindow is null || _logWindow.IsDisposed)

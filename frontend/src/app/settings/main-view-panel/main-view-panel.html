@@ -1,0 +1,171 @@
+<h3 id="layout-title">Main view</h3>
+
+<div class="field">
+  <label for="channel-size">Channels on a page</label>
+  <select id="channel-size" (change)="onSize($event)">
+    @for (size of sizes; track size) {
+      <option [value]="size" [selected]="size === settings.channelSize()">
+        {{ sizeName(size) }}
+      </option>
+    }
+  </select>
+</div>
+<div class="field">
+  <label for="channel-rows">Rows of channel faders</label>
+  <select id="channel-rows" (change)="onChannelRows($event)">
+    @for (count of rowCounts; track count) {
+      <option [value]="count" [selected]="count === settings.channelRows()">
+        {{ rowsName(count) }}
+      </option>
+    }
+  </select>
+</div>
+<div class="field">
+  <label for="memory-rows">Rows of memory faders</label>
+  <select id="memory-rows" (change)="onMemoryRows($event)">
+    @for (count of rowCounts; track count) {
+      <option [value]="count" [selected]="count === settings.memoryRows()">
+        {{ rowsName(count) }}
+      </option>
+    }
+  </select>
+</div>
+<div class="field">
+  <label for="effect-rows">Row of effect faders</label>
+  <select id="effect-rows" (change)="onEffectRows($event)">
+    <option value="0" [selected]="settings.effectRows() === 0">None</option>
+    <option value="1" [selected]="settings.effectRows() === 1">1</option>
+  </select>
+</div>
+<div class="field">
+  <label for="sound-rows">Row of sound faders</label>
+  <select id="sound-rows" (change)="onSoundRows($event)">
+    <option value="0" [selected]="settings.soundRows() === 0">None</option>
+    <option value="1" [selected]="settings.soundRows() === 1">1</option>
+  </select>
+</div>
+<div class="field">
+  <label for="wheel-size">Cues the stack wheel shows</label>
+  <select id="wheel-size" (change)="onWheelSize($event)">
+    @for (size of wheelSizes; track size) {
+      <option [value]="size" [selected]="size === settings.wheelSize()">{{ size }}</option>
+    }
+  </select>
+</div>
+<div class="field">
+  <label for="channel-keys">Channel keys of the independents</label>
+  <input
+    id="channel-keys"
+    type="number"
+    min="0"
+    [max]="maxChannelKeys"
+    step="1"
+    [value]="settings.channelKeys()"
+    (change)="onChannelKeys($event)"
+  />
+</div>
+<div class="field">
+  <label for="memory-keys">Memory keys of the independents</label>
+  <input
+    id="memory-keys"
+    type="number"
+    min="0"
+    [max]="maxMemoryKeys"
+    step="1"
+    [value]="settings.memoryKeys()"
+    (change)="onMemoryKeys($event)"
+  />
+</div>
+<div class="field">
+  <label for="effect-keys">Effect keys of the independents</label>
+  <input
+    id="effect-keys"
+    type="number"
+    min="0"
+    [max]="maxEffectKeys"
+    step="1"
+    [value]="settings.effectKeys()"
+    (change)="onEffectKeys($event)"
+  />
+</div>
+<div class="field">
+  <label for="sound-keys">Sound keys of the independents</label>
+  <input
+    id="sound-keys"
+    type="number"
+    min="0"
+    [max]="maxSoundKeys"
+    step="1"
+    [value]="settings.soundKeys()"
+    (change)="onSoundKeys($event)"
+  />
+</div>
+
+<!-- the universes belong to the project, the zoom to every view: here, as the owner wants them -->
+<h4 id="universes-title">Universes</h4>
+<div class="field">
+  <label for="universes">Universes of the project</label>
+  <select id="universes" [disabled]="store.live()" (change)="onUniverses($event)">
+    @for (count of universeCounts; track count) {
+      <option [value]="count" [selected]="count === store.universes()">
+        {{ count }} ({{ count * universeSize }} channels)
+      </option>
+    }
+  </select>
+</div>
+
+<h4 id="zoom-title">Zoom</h4>
+<div class="scale" role="group" aria-label="Zoom of the page">
+  <button
+    type="button"
+    class="step"
+    aria-label="Zoom out"
+    [disabled]="settings.zoom() <= smallest"
+    (click)="settings.stepZoom(-1)"
+  >
+    −
+  </button>
+  <output class="value" aria-live="polite">{{ zoomSaid() }}</output>
+  <button
+    type="button"
+    class="step"
+    aria-label="Zoom in"
+    [disabled]="settings.zoom() >= biggest"
+    (click)="settings.stepZoom(1)"
+  >
+    +
+  </button>
+  <button type="button" [disabled]="settings.zoom() === 1" (click)="settings.resetZoom()">
+    Reset
+  </button>
+</div>
+
+<!-- the autosave belongs to the desk program; only the PC changes it -->
+<h4 id="autosave-title">Autosave</h4>
+@if (autosave(); as autosave) {
+  <div class="field">
+    <label for="autosave-on">Keep the work that is not saved</label>
+    <select id="autosave-on" (change)="onAutosaveOn($event)">
+      <option value="on" [selected]="autosave.on">On</option>
+      <option value="off" [selected]="!autosave.on">Off</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="autosave-every">How often</label>
+    <select id="autosave-every" [disabled]="!autosave.on" (change)="onAutosaveEvery($event)">
+      @for (seconds of autosaveIntervals; track seconds) {
+        <option [value]="seconds" [selected]="seconds === autosave.seconds">
+          Every {{ intervalName(seconds) }}
+        </option>
+      }
+    </select>
+  </div>
+} @else {
+  <p class="hint">
+    @if (store.lan() && !store.lan()?.local) {
+      Only the PC the desk program runs on can set the autosave.
+    } @else {
+      The desk program is older than this page and has no autosave to set.
+    }
+  </p>
+}

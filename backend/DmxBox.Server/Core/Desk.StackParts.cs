@@ -85,6 +85,7 @@ internal partial class Desk
                 Add = Step.Add,
                 Continue = Step.Continue,
                 Disabled = Step.Disabled,
+                Muted = Step.Muted,
                 At = Step.At,
             };
         }

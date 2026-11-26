@@ -220,6 +220,12 @@ internal sealed class UiMixer : IDisposable
         Send("MEDIA_STOP");
     }
 
+    /// <summary>The player holds a pause where it is, or goes on from there.</summary>
+    public void PausePlayer(bool pause)
+    {
+        Send(pause ? "MEDIA_PAUSE" : "MEDIA_PLAY");
+    }
+
     /// <summary>The player goes on from this part of its track, 0 (its start) to 1 (its end).</summary>
     public void JumpTo(double part)
     {

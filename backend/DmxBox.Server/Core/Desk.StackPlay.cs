@@ -34,7 +34,10 @@ internal partial class Desk
         }
     }
 
-    /// <summary>Pause: holds a running fade or wait where it is, until Play.</summary>
+    /// <summary>
+    /// Pause: holds a running fade or wait where it is, and the sounds of the cues that are on (or on
+    /// their way down) where they are, silent, until Play. Sounds of the hand or of a sequence play on.
+    /// </summary>
     /// <exception cref="DeskException">The stack is not live.</exception>
     public void StackPause()
     {
@@ -43,11 +46,50 @@ internal partial class Desk
             RequireLive();
             double now = Now;
             AdvanceStack(now);
-            if (!_paused && (_moves.Count > 0 || _phase is Fading or Waiting))
+            int[] sounds = StackSoundsThatPlay();
+            if (!_paused && (_moves.Count > 0 || _phase is Fading or Waiting || sounds.Length > 0))
             {
                 _paused = true;
                 _pausedAt = now;
+                foreach (int number in sounds)
+                {
+                    _player.Pause(number, true);
+                    _soundRuns[number - 1].Paused = true;
+                }
             }
+        }
+    }
+
+    // Call with the lock held. The sounds that play whose faders the stack has: those of the cues that
+    // are on, and those it moves (on their way down after their cue went).
+    private int[] StackSoundsThatPlay()
+    {
+        IEnumerable<int> held = HoldersOf(_on).Keys.Concat(_moves.Keys).Where(fader => fader.Sound).Select(fader => fader.Number);
+        return [.. held.Distinct().Where(number => _soundRuns[number - 1].Voice)];
+    }
+
+    // Call with the lock held. The sounds Pause held go on from where they are.
+    private void ResumeSounds()
+    {
+        for (int index = 0; index < _soundRuns.Length; index++)
+        {
+            if (!_soundRuns[index].Paused)
+                continue;
+
+            _soundRuns[index].Paused = false;
+            _player.Pause(index + 1, false);
+        }
+    }
+
+    // Call with the lock held. The sounds the cues that are on hold play unheard while the cue that holds
+    // them is muted (Step.Muted), and aloud again under one that is not. A sound no cue holds any more
+    // keeps what it had on its way down.
+    private void MarkUnheardSounds()
+    {
+        foreach ((Fader fader, Holder holder) in HoldersOf(_on))
+        {
+            if (fader.Sound)
+                _soundRuns[fader.Number - 1].Unheard = holder.Entry.Step.Muted;
         }
     }
 
@@ -107,7 +149,8 @@ internal partial class Desk
         _crossfade = null;
     }
 
-    // Call with the lock held: no step is on, nothing is paused, and no fader is being moved.
+    // Call with the lock held: no step is on, nothing is paused, and no fader is being moved. The sounds
+    // Pause held go on, where their faders keep them up.
     private void StopStack()
     {
         _moves.Clear();
@@ -116,6 +159,7 @@ internal partial class Desk
         _on.Clear();
         _phase = Idle;
         _paused = false;
+        ResumeSounds();
     }
 
     // Call with the lock held. Goes on to the step behind the current one: on top of what is on,
@@ -217,6 +261,8 @@ internal partial class Desk
             _moves.Remove(fader);
             SetByStack(fader, 0);
         }
+
+        MarkUnheardSounds();
     }
 
     // Call with the lock held. True when the sound of a step has played to its end and is over.
@@ -315,6 +361,7 @@ internal partial class Desk
             StartCrossfade(leaving, coming, [.. moving], comeIn, at);
         _on.Clear();
         _on.AddRange(after);
+        MarkUnheardSounds();
         _currentId = target.Id;
         _phase = Fading;
         _phaseEnd = at + comeIn;
@@ -599,5 +646,6 @@ internal partial class Desk
 
         _phaseEnd += gap;
         _paused = false;
+        ResumeSounds();
     }
 }

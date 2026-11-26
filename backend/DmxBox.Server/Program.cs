@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
 
@@ -93,6 +94,8 @@ internal static class Program
         AddOutputs(builder.Services, builder.Configuration, passwordFile);
         AddMidi(builder.Services, passwordFile);
         AddOsc(builder.Services, builder.Configuration, passwordFile);
+        AddBackups(builder.Services, passwordFile);
+        AddUpdate(builder.Services, builder.Configuration);
         AddHub(builder.Services, origins);
         AddLan(builder, pc, passwordFile);
 
@@ -189,8 +192,9 @@ internal static class Program
             }
         });
 
-        // POST /api/export/pack?name=Concert: the text of Export in the body; the answer is a ZIP of it
-        // with the sound files of its project (SoundPack). Made in a file of its own that goes when sent.
+        // POST /api/export/pack?name=Concert: the text of Export in the body; the answer is the ZIP of
+        // Export, each part a JSON file of its own, with the sound files of its project (SoundPack). Made
+        // in a file of its own that goes when sent.
         app.MapPost("/api/export/pack", async (HttpContext context, SoundStore store) =>
         {
             if (context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } limit)
@@ -204,7 +208,7 @@ internal static class Program
             var pack = new FileStream(Path.GetTempFileName(), FileMode.Create, FileAccess.ReadWrite, FileShare.None, 81920, FileOptions.DeleteOnClose);
             try
             {
-                string[] missing = await Task.Run(() => SoundPack.Write(pack, name, json, store), context.RequestAborted);
+                string[] missing = await Task.Run(() => SoundPack.Write(pack, json, store), context.RequestAborted);
                 if (missing.Length > 0)
                     context.Response.Headers["X-Missing-Sounds"] = Uri.EscapeDataString(string.Join("\n", missing));
                 pack.Position = 0;
@@ -213,6 +217,31 @@ internal static class Program
             catch (DeskException e)
             {
                 await pack.DisposeAsync();
+                return Results.BadRequest(new { message = e.Message });
+            }
+        });
+
+        // POST /api/backup?name=Concert: the text of Export with every part in the body, from the page on
+        // the PC; the desk program writes it as a ZIP into the folder of the backups (Backups) and answers
+        // with what it wrote. Not from another device: the backups belong to the PC.
+        app.MapPost("/api/backup", async (HttpContext context, Backups backups, LanAccess lan) =>
+        {
+            if (!lan.IsLocal(context.Connection.RemoteIpAddress))
+                return Results.Json(new { message = "The backups are made on the PC." }, statusCode: StatusCodes.Status403Forbidden);
+            if (context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } limit)
+                limit.MaxRequestBodySize = SoundPack.MaxJsonBytes;
+
+            string json;
+            using (var reader = new StreamReader(context.Request.Body, Encoding.UTF8))
+                json = await reader.ReadToEndAsync(context.RequestAborted);
+
+            try
+            {
+                string project = context.Request.Query["name"].ToString();
+                return Results.Ok(await Task.Run(() => backups.Write(json, project), context.RequestAborted));
+            }
+            catch (DeskException e)
+            {
                 return Results.BadRequest(new { message = e.Message });
             }
         });
@@ -404,6 +433,30 @@ internal static class Program
 
         // The same OSC: the host starts and stops it, the hub switches it.
         services.AddHostedService(provider => provider.GetRequiredService<OscControl>());
+    }
+
+    // The backups of the PC: where they go and how many are kept belongs to the PC, beside midi.json
+    // (backup.json); a test desk with a password file of its own has a setup of its own too.
+    private static void AddBackups(IServiceCollection services, string passwordFile)
+    {
+        string file = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(passwordFile)) ?? "", BackupSetupFile.FileName);
+        services.AddSingleton(provider => new Backups(
+            new BackupSetupFile(file, provider.GetRequiredService<ILoggerFactory>().CreateLogger<Backups>()),
+            provider.GetRequiredService<SoundStore>()));
+    }
+
+    // The updates of Lumenet: the newest release of the repository "Update:Repository" names ("owner/name";
+    // a Lumenet.exe of a release on GitHub knows its own, see backend/Lumenet). Lumenet.exe puts a new
+    // version in its own place (ISelfReplace); the desk of run.cmd has no such way: git brings it the new one.
+    // The tests put in one of their own first, with a pretend GitHub.
+    private static void AddUpdate(IServiceCollection services, IConfiguration settings)
+    {
+        string? repository = settings["Update:Repository"];
+        services.TryAddSingleton(provider => new AppUpdate(
+            new HttpClient { Timeout = TimeSpan.FromMinutes(30) },
+            repository,
+            provider.GetService<ISelfReplace>(),
+            AppInfo.Version));
     }
 
     private static void AddHub(IServiceCollection services, AllowedOrigins origins)

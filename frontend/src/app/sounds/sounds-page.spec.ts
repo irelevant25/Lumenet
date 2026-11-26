@@ -14,7 +14,7 @@ describe('the desk page: sounds', () => {
   let fixture: ComponentFixture<App>;
   let page: HTMLElement;
   let store: DeskStore;
-  const { show, button, buttonIn, memoryKey, press, stackStands, until, wait, aSound } =
+  const { show, button, buttonIn, memoryKey, press, stackStands, until, wait, aSound, textOf } =
     deskPageHelpers(() => ({ connection, fixture, page, store }));
 
   beforeEach(async () => {
@@ -353,7 +353,7 @@ describe('the desk page: sounds', () => {
     const headers = [...page.querySelectorAll('lm-stack-view thead th')].map((header) =>
       header.textContent?.trim(),
     );
-    expect(headers.slice(1, 5)).toEqual(['Cue', 'Add', 'Continue', 'Kind']);
+    expect(headers.slice(1, 6)).toEqual(['Cue', 'Add', 'Continue', 'Mute', 'Kind']);
     const box = page.querySelector<HTMLInputElement>(
       'input[aria-label="Cue 1.0 plays its sound on through the cues after it"]',
     )!;
@@ -394,6 +394,138 @@ describe('the desk page: sounds', () => {
     );
   });
 
+  it('Mute of a cue of a sound plays it unheard, switched also while the stack is live; a change of the cue keeps it', async () => {
+    connection.emit('SoundsChanged', [aSound(2, { name: 'Rain' })]);
+    connection.emit('StackChanged', {
+      steps: [
+        { id: 11, cue: '1.0', ...step(2, 255, { target: 'sound', wait: 0 }) },
+        { id: 12, cue: '2.0', ...step(2, 128, { target: 'memory', wait: 3 }) },
+      ],
+    });
+    await show('/stack');
+    const mute = (cue: string) =>
+      page.querySelector<HTMLInputElement>(
+        `input[aria-label="Cue ${cue} plays its sound unheard"]`,
+      );
+    expect(mute('2.0')).toBeNull(); // only a cue of a sound
+    expect(mute('1.0')!.checked).toBe(false);
+
+    // live: the box still works, for a rehearsal
+    await stackStands({
+      currentId: 11,
+      nextId: 12,
+      state: 'holding',
+      paused: false,
+      remaining: 0,
+      live: true,
+    });
+    expect(mute('1.0')!.disabled).toBe(false);
+    await press(mute('1.0'));
+    expect(connection.last('SetStackStepMuted')).toEqual([11, true]);
+    expect(mute('1.0')!.checked).toBe(true);
+    expect(page.querySelector('lm-stack-cards .card.current .what')?.textContent).toContain(
+      'Sound 2 (Rain), muted',
+    );
+
+    // not live: another change of the cue keeps it muted (the desk takes the cue as it is sent)
+    await stackStands({
+      currentId: null,
+      nextId: 11,
+      state: 'idle',
+      paused: false,
+      remaining: 0,
+      live: false,
+    });
+    await press(
+      page.querySelector<HTMLInputElement>(
+        'input[aria-label="Cue 1.0 plays its sound on through the cues after it"]',
+      ),
+    );
+    expect(connection.last('UpdateStackStep')).toEqual([
+      11,
+      {
+        target: 'sound',
+        number: 2,
+        value: 255,
+        up: 1,
+        wait: 0,
+        down: 1,
+        continue: true,
+        muted: true,
+      },
+    ]);
+  });
+
+  it('the wave tells the time where the pointer is, and stands still while Pause of the stack holds the sound', async () => {
+    connection.emit('SoundsChanged', [aSound(1, { name: 'Rain' })]);
+    connection.emit('SoundPlaybackChanged', {
+      number: 1,
+      playing: true,
+      level: 255,
+      fading: false,
+      position: 3,
+      paused: true,
+    });
+    await show('/sounds');
+    const well = page.querySelector<HTMLElement>('lm-sounds-view lm-sound-wave .well')!;
+    Object.defineProperty(well, 'getBoundingClientRect', {
+      value: () => ({
+        left: 100,
+        width: 200,
+        top: 0,
+        height: 56,
+        right: 300,
+        bottom: 56,
+        x: 100,
+        y: 0,
+      }),
+    });
+    well.dispatchEvent(new MouseEvent('pointermove', { clientX: 150, bubbles: true }));
+    await fixture.whenStable();
+    expect(textOf('lm-sound-wave .hover')).toBe('3.1 s'); // a quarter of 12.5 s
+    expect(page.querySelector<HTMLElement>('lm-sound-wave .hover')?.style.left).toBe('25%');
+
+    well.dispatchEvent(new MouseEvent('pointerleave', { bubbles: true }));
+    await fixture.whenStable();
+    expect(page.querySelector('lm-sound-wave .hover')).toBeNull();
+  });
+
+  it('while the stack is live the level, pan, speed, pitch, echo and reverb of a sound (with its repeats and room) still change, and nothing else', async () => {
+    connection.emit('SoundsChanged', [aSound(1, { name: 'Rain', echo: 20, reverb: 30 })]);
+    await stackStands({
+      currentId: null,
+      nextId: 11,
+      state: 'holding',
+      paused: false,
+      remaining: 0,
+      live: true,
+    });
+    await show('/sounds');
+    const editor = page.querySelector('lm-sound-editor')!;
+    const field = (id: string) => editor.querySelector<HTMLInputElement>(`#${id}`)!;
+    for (const id of [
+      'sound-level',
+      'sound-pan',
+      'sound-speed',
+      'sound-pitch',
+      'sound-echo',
+      'sound-reverb',
+      'sound-room',
+    ])
+      expect(field(id).disabled, id).toBe(false);
+    const repeats = editor.querySelectorAll<HTMLInputElement>('input[aria-label*="repeat"]');
+    expect([...repeats].map((input) => input.disabled)).toEqual([false, false]);
+    for (const id of ['sound-name', 'sound-fade-in', 'sound-fade-out', 'sound-loop'])
+      expect(field(id).disabled, id).toBe(true);
+    expect(editor.querySelectorAll('lm-fader.off').length).toBe(0);
+
+    const level = field('sound-level');
+    level.value = '-4.5';
+    level.dispatchEvent(new Event('change'));
+    await until(() => connection.methods().includes('SetSound'));
+    expect(connection.last('SetSound')![0]).toMatchObject({ number: 1, decibels: -4.5 });
+  });
+
   it('Settings sets the device of the sound, its outputs and the device to listen on, on the PC', async () => {
     connection.soundOutput = {
       devices: [
@@ -412,7 +544,7 @@ describe('the desk page: sounds', () => {
       mixer: '',
       playlist: '',
     };
-    await show('/settings');
+    await show('/settings#sound');
     await until(() => !!page.querySelector('#sound-device'));
     const device = page.querySelector<HTMLSelectElement>('#sound-device')!;
     expect([...device.options].map((option) => option.textContent?.trim())).toEqual([
@@ -516,7 +648,7 @@ describe('the desk page: sounds', () => {
       mixerName: '',
     };
     connection.mixerPlaylists = ['Show', '~all~'];
-    await show('/settings');
+    await show('/settings#sound');
     await until(() => !!page.querySelector('#sound-mixer'));
     expect(page.querySelector('#sound-player')).toBeNull(); // no player mode: each sound plays where it belongs
     expect(page.querySelector('#sound-outputs')).toBeNull(); // two outputs: nothing to choose

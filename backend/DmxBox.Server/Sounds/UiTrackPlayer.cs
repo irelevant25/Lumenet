@@ -78,6 +78,7 @@ internal sealed class UiTrackPlayer : IDisposable
     private double _sentFader = double.NaN;   // the place of PLAYER L/R the mixer has, as far as the desk knows
     private double _sentAt = double.NegativeInfinity;
     private bool _waiting;        // a place waits for its turn: it goes a moment later
+    private bool _held;           // the desk paused the track that plays (Pause of the stack)
     private bool _quiet;          // PLAYER L/R held at the bottom after the desk stopped a track (see the remarks)
     private long _quietSince;     // since when, Environment.TickCount64
     private string _link = UiMixer.None;   // the state of the link as the player saw it last
@@ -153,6 +154,7 @@ internal sealed class UiTrackPlayer : IDisposable
             _track = track;
             _startedAt = _now();
             _heard = false;
+            _held = false;
             _position = 0;
             _length = 0;
             _decibels = track.Decibels;
@@ -217,7 +219,24 @@ internal sealed class UiTrackPlayer : IDisposable
                 return;
 
             _track = null;
+            _held = false;
             StopQuietly();
+        }
+    }
+
+    /// <summary>
+    /// The track that plays holds a pause where it is, or goes on from there (the mixer's player): once
+    /// each way, so that a pause the desk did not make is never undone by it.
+    /// </summary>
+    public void Pause(int number, bool pause)
+    {
+        lock (_lock)
+        {
+            if (_track?.Number != number || !_mixer.IsConnected || _held == pause)
+                return;
+
+            _held = pause;
+            _mixer.PausePlayer(pause);
         }
     }
 

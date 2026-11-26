@@ -31,6 +31,10 @@ public sealed record StackStep(int Id, string Cue, string Target, int Number, in
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public bool Disabled { get; init; }
 
+    /// <summary>True for a cue of a sound whose sound plays unheard, see <see cref="Step.Muted"/>. Sent only when it is true.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Muted { get; init; }
+
     /// <summary>The moment of a sound the cue comes at, see <see cref="Step.At"/>. Sent only when it has one.</summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public SoundTime? At { get; init; }
@@ -52,7 +56,7 @@ public sealed record StackState(StackStep[] Steps);
 /// the stack goes on by itself when its wait is over. "holding": it is up, and the stack waits
 /// for Play.
 /// </param>
-/// <param name="Paused">True while Pause holds a fade or a wait.</param>
+/// <param name="Paused">True while Pause holds a fade, a wait or the sounds of the cues that are on.</param>
 /// <param name="Remaining">Seconds left of the fade or of the wait; 0 otherwise.</param>
 /// <param name="Live">
 /// True while the stack is live: it runs, and nothing that is stored can be changed. While it
@@ -143,6 +147,17 @@ public sealed record SoundPlayback(int Number, bool Playing, int Level)
 
     /// <summary>For a track of the mixer: how long it is, in seconds, as the mixer says while it plays; 0 when unknown.</summary>
     public double Length { get; init; }
+
+    /// <summary>True while Pause of the stack holds it where it is, silent, until GO. Sent only when it is true.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Paused { get; init; }
+
+    /// <summary>
+    /// True while it plays unheard: a muted cue of the stack plays it (<see cref="Step.Muted"/>). Sent only
+    /// when it is true.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Muted { get; init; }
 }
 
 /// <summary>A fader the stack has moved, to be told to the UIs.</summary>

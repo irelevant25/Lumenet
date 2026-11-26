@@ -10,7 +10,8 @@ namespace Lumenet;
 /// Lumenet.exe: the desk program in the notification area of the taskbar, with the page and the
 /// examples inside it (see Lumenet.csproj and Tray). It takes the settings of the desk program, on
 /// the command line ("Lumenet.exe --Box:Host=127.0.0.1") or in an appsettings.json beside the exe,
-/// and one of its own: "--Tray:OpenPage=false" starts it without opening the page.
+/// and one of its own: "--Tray:OpenPage=false" starts it without opening the page. It updates
+/// itself from the About tab of Settings (SelfReplace).
 /// </summary>
 internal static class TrayProgram
 {
@@ -23,6 +24,9 @@ internal static class TrayProgram
     [STAThread]
     private static int Main(string[] args)
     {
+        // Started by an update: the Lumenet before ends first, and leaves its port, icon and signal.
+        SelfReplace.WaitForTheOneBefore(args);
+
         using var openPage = new EventWaitHandle(false, EventResetMode.AutoReset, OpenPageSignal, out bool first);
         if (!first)
         {
@@ -38,10 +42,11 @@ internal static class TrayProgram
         Application.ThreadException += (_, e) =>
             log.Add(LogLevel.Error, BuiltIn.LogName, "Something in the tray or the log window failed.", e.Exception);
 
+        var self = new SelfReplace(args);
         WebApplication desk;
         try
         {
-            desk = DmxBox.Server.Program.Build(args, adjust: builder => BuiltIn.Adjust(builder, log));
+            desk = DmxBox.Server.Program.Build(args, adjust: builder => BuiltIn.Adjust(builder, log, self));
         }
         catch (Exception e)
         {
@@ -71,9 +76,11 @@ internal static class TrayProgram
 
         string page = PageAddress(desk);
         log.Add(LogLevel.Information, BuiltIn.LogName, $"Lumenet {AppInfo.Version} runs; the page is at {page}");
+        self.CleanUp();
 
         using (var tray = new Tray(page, AppInfo.Version, log))
         {
+            self.UseExit(tray.ExitSoon);
             RegisteredWaitHandle waiting = ThreadPool.RegisterWaitForSingleObject(
                 openPage, (_, _) => tray.OpenPageSoon(), null, Timeout.Infinite, executeOnlyOnce: false);
 

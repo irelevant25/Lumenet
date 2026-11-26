@@ -4,6 +4,7 @@ import { DeskStore } from '../../desk/desk-store';
 import { NEW_PROJECT_NAME, ProjectFile } from '../../desk/desk-types';
 import { DialogDismiss } from '../../shared/dialog-dismiss';
 import { LampButton } from '../../shared/lamp-button/lamp-button';
+import { DeskBackups } from '../desk-backups';
 
 /** What the window is asked to do. */
 export type ProjectTask = 'save' | 'load' | 'new';
@@ -20,6 +21,7 @@ export type ProjectTask = 'save' | 'load' | 'new';
 })
 export class ProjectDialog {
   private readonly store = inject(DeskStore);
+  private readonly backups = inject(DeskBackups);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
 
   protected readonly task = signal<ProjectTask>('save');
@@ -109,8 +111,11 @@ export class ProjectDialog {
     this.error.set('');
     try {
       if (this.task() === 'new') await this.store.newProject();
-      else if (this.task() === 'save') await this.store.saveProject(name);
-      else if (this.example()) await this.store.loadExample(name);
+      else if (this.task() === 'save') {
+        await this.store.saveProject(name);
+        // a backup follows by itself, when the backups say so (Settings, Backup)
+        void this.backups.afterSave(`Project "${name}" saved`);
+      } else if (this.example()) await this.store.loadExample(name);
       else await this.store.loadProject(name);
       this.close();
     } catch (error) {

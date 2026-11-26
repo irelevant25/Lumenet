@@ -1,12 +1,12 @@
-/* A panel of Settings like the others, two of their columns wide (settings-view.css): the table of
+/* The Outputs tab of Settings, a section as wide as the others (settings-view.css): the table of
    outputs, the nodes the search found, the line that adds an output, and what needs saying about
-   all of them. As high as the room of the panels (100cqh), as the colors and the keyboard are,
-   also in a row of its own; what is more scrolls in it. On a small screen the page scrolls. */
+   all of them. As high as what it holds and at most as high as the room of the tab (100cqh), as the
+   colors and the keyboard are; what is more scrolls in it. On a small screen the page scrolls. */
 :host {
   display: block;
   box-sizing: border-box;
   min-width: 0;
-  height: 100cqh;
+  max-height: 100cqh;
   padding: 10px 14px 12px;
   overflow: auto;
   border: 1px solid var(--edge);
@@ -17,7 +17,7 @@
 }
 
 :host-context(.mobile) {
-  height: auto;
+  max-height: none;
   overflow: visible;
 }
 

@@ -7,8 +7,9 @@ import type { SoundFileInfo, SoundWave } from './sounds';
  */
 
 /**
- * Asks the desk program for a file of Export with the sounds of its project (POST /api/export/pack):
- * a ZIP of the text as "name.json" and the files in "name sounds/". Fails with what it said.
+ * Asks the desk program for the file of Export (POST /api/export/pack): a ZIP with each part of the
+ * text as a JSON file of its own, and the files of the sounds of its project in "sounds/". Fails with
+ * what it said.
  */
 export async function packExport(name: string, text: string): Promise<Response> {
   const response = await fetch(`/api/export/pack?name=${encodeURIComponent(name)}`, {

@@ -410,6 +410,16 @@ public sealed class LanTests
 
         var autosave = await Assert.ThrowsAsync<HubCallException>(() => phone.InvokeAsync("SetAutosave", false, 5));
         Assert.Contains("The autosave can only be set on the PC.", autosave.Message);
+
+        // the backups and the updates of Lumenet belong to the PC as well
+        var backups = await Assert.ThrowsAsync<HubCallException>(() => phone.InvokeAsync("GetBackup"));
+        Assert.Contains("The backups can only be set on the PC.", backups.Message);
+        HttpResponseMessage backup = await browser.PostAsync("/api/backup?name=Show", new StringContent("{}"));
+        Assert.Equal(HttpStatusCode.Forbidden, backup.StatusCode);
+        var update = await Assert.ThrowsAsync<HubCallException>(async () => await phone.StreamResultAsync(await phone.StartStreamAsync("CheckUpdate")));
+        Assert.Contains("Lumenet can only be updated on the PC.", update.Message);
+        var install = await Assert.ThrowsAsync<HubCallException>(async () => await phone.StreamResultAsync(await phone.StartStreamAsync("InstallUpdate")));
+        Assert.Contains("Lumenet can only be updated on the PC.", install.Message);
     }
 
     // ---------------------------------------------------------------- the server's own page and names

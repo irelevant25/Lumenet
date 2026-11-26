@@ -94,6 +94,15 @@ public sealed record Step(string Target, int Number, int Value, double Up, doubl
     public bool Disabled { get; init; }
 
     /// <summary>
+    /// Only for a cue of the stack that plays a sound: true for one whose sound plays unheard. It runs as
+    /// ever (its fader, its moments, its end), but nothing of it goes out, for a rehearsal of the light
+    /// without it. It can be switched while the stack is live too. A step of a sequence has none; the UIs
+    /// get the field only when it is true.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Muted { get; init; }
+
+    /// <summary>
     /// Only for a cue of the stack: the moment of a sound it comes at. While the stack is live and
     /// on the cue before it, the stack goes to it when that sound plays and reaches the moment, as
     /// GO would (GO still takes it there earlier); a jump in the sound takes the stack to the cue of
@@ -168,11 +177,11 @@ public sealed record Step(string Target, int Number, int Value, double Up, doubl
             throw new DeskException($"\"{Color}\" is no color like #ff2000.");
 
         // A release takes down and adds nothing: it never counts as a step that adds. Only a sound
-        // plays on: Continue is kept for its steps alone.
+        // plays on, and only a sound is muted: Continue and Muted are kept for its steps alone.
         return this with
         {
             Up = Seconds(Up, "up"), Wait = Seconds(Wait, "wait"), Down = Seconds(Down, "down"), Color = color, Add = Add && !IsRelease,
-            Continue = Continue && IsSound, At = At?.Checked(),
+            Continue = Continue && IsSound, Muted = Muted && IsSound, At = At?.Checked(),
         };
     }
 

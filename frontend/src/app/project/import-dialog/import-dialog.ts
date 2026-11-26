@@ -6,17 +6,28 @@ import { IMPORT_LIMIT_BYTES } from '../../desk/desk-types';
 import type { MidiSetup } from '../../midi/midi';
 import { readShowFile } from '../show-file';
 import { unpackImport } from '../../sounds/sound-files';
-import { TRANSFER_PARTS, TransferPart, TransferPartView, missingParts, pcPartNote, readImportFile } from '../transfer';
+import {
+  ImportKind,
+  ImportSource,
+  TRANSFER_PARTS,
+  TransferPart,
+  TransferPartView,
+  importKind,
+  partsIn,
+  pcPartNote,
+  readImportFile,
+} from '../transfer';
 import { DialogDismiss } from '../../shared/dialog-dismiss';
 import { LampButton } from '../../shared/lamp-button/lamp-button';
 
 /**
- * The window of Import: what to take from a file of this device, each with a checkbox, none of
- * them checked at first. The project, the stage, the settings of this device, its keyboard
- * shortcuts and (on the PC) the MIDI controllers come from a file that Export made (or a project
- * file); .ASC is the show of a theatre
- * console in the USITT ASCII format, a file of its own, so it is taken alone. Once it is done the
- * window says what became of the file.
+ * The window of Import: a file first, then what to take from it. A ZIP that Export made (a backup is
+ * one too), a file of Export of before, or a project file lists its parts: the project, the stage,
+ * the settings of this device, its keyboard shortcuts and (on the PC) the MIDI controllers, each with
+ * a checkbox, none checked at first; a part the file does not have cannot be checked. A ZIP goes to
+ * the desk program as it is chosen, which takes its sounds and gives back its parts. The show file
+ * of a theatre console (.asc, .txt: USITT ASCII) is taken whole. Once it is done the window says what
+ * became of the file.
  */
 @Component({
   imports: [DialogDismiss, LampButton],
@@ -35,59 +46,79 @@ export class ImportDialog {
 
   protected readonly parts = TRANSFER_PARTS;
   protected readonly chosen = signal<ReadonlySet<TransferPart>>(new Set());
-  /** True for the show file of a theatre console. */
-  protected readonly asc = signal(false);
   protected readonly file = signal<File | null>(null);
+  /** What the chosen file is; null before one is chosen. */
+  protected readonly kind = signal<ImportKind | null>(null);
+  /** The parts the file has to offer, once it is read; null before, and for the show of a console. */
+  protected readonly source = signal<ImportSource | null>(null);
+  /** True while the file is read (a ZIP: while the desk program unpacks it). */
+  protected readonly reading = signal(false);
   protected readonly error = signal('');
   protected readonly busy = signal(false);
   /** What became of the file, sentence by sentence; null until it is imported. */
   protected readonly report = signal<string[] | null>(null);
 
-  /** A ZIP of Export: a file of Export with the sounds of its project. */
-  private readonly zip = computed(() => /\.zip$/i.test(this.file()?.name ?? ''));
+  /** The files of a ZIP that are no sounds the desk program can play. */
+  private leftOut: readonly string[] = [];
 
-  /** A file larger than the desk takes in one go; a ZIP brings its sounds, and the desk program takes it in pieces. */
-  private readonly tooLarge = computed(() => !this.zip() && (this.file()?.size ?? 0) > IMPORT_LIMIT_BYTES);
+  /** The show file of a theatre console, taken whole. */
+  protected readonly asc = computed(() => this.kind() === 'asc');
+
+  /** The parts the file has. */
+  protected readonly inFile = computed(() => {
+    const source = this.source();
+    return source ? partsIn(source) : new Set<TransferPart>();
+  });
 
   /** A project or a show in place of the open project throws away what was changed and not saved. */
-  protected readonly losesChanges = computed(() => (this.asc() || this.chosen().has('project')) && this.store.project().unsaved);
-
-  /** The kinds of files the system's window offers. */
-  protected readonly accept = computed(() => (this.asc() ? '.asc,.txt' : '.json,.zip'));
-
-  protected readonly canImport = computed(
-    () => this.file() !== null && !this.tooLarge() && !this.busy() && (this.asc() || this.chosen().size > 0),
+  protected readonly losesChanges = computed(
+    () => (this.asc() || this.chosen().has('project')) && this.store.project().unsaved,
   );
 
-  /** Opens the window with nothing checked and no file. */
+  /** A file larger than the desk takes in one go; a ZIP brings its sounds, and the desk program takes it in pieces. */
+  private readonly tooLarge = computed(
+    () => this.kind() !== 'zip' && (this.file()?.size ?? 0) > IMPORT_LIMIT_BYTES,
+  );
+
+  protected readonly canImport = computed(
+    () =>
+      this.file() !== null &&
+      !this.tooLarge() &&
+      !this.reading() &&
+      !this.busy() &&
+      (this.asc() || this.chosen().size > 0),
+  );
+
+  /** Opens the window with no file. */
   open(): void {
     this.chosen.set(new Set());
-    this.asc.set(false);
     this.file.set(null);
+    this.kind.set(null);
+    this.source.set(null);
+    this.leftOut = [];
+    this.reading.set(false);
     this.error.set('');
     this.busy.set(false);
     this.report.set(null);
     this.dialog().nativeElement.showModal();
   }
 
-  /** Why a part of the PC cannot be checked here: on a phone, or with a desk program without MIDI; empty when it can. */
-  protected note(part: TransferPartView): string {
-    return pcPartNote(part, this.store.lan()?.local !== false, this.midi.state() !== null);
+  /** True when a part can be checked: the file has it, and this page may take it. */
+  protected can(part: TransferPartView): boolean {
+    return this.inFile().has(part.part) && this.note(part) === '';
+  }
+
+  /** What the list says beside a part: why it cannot be checked, or what it holds. */
+  protected said(part: TransferPartView): string {
+    if (!this.inFile().has(part.part)) return 'not in this file';
+    return this.note(part) || part.hint;
   }
 
   protected onCheck(part: TransferPart, event: Event): void {
-    const checked = (event.target as HTMLInputElement).checked;
     const chosen = new Set(this.chosen());
-    if (checked) chosen.add(part);
+    if ((event.target as HTMLInputElement).checked) chosen.add(part);
     else chosen.delete(part);
     this.chosen.set(chosen);
-    if (checked && this.asc()) this.takeAsc(false);
-  }
-
-  protected onCheckAsc(event: Event): void {
-    const checked = (event.target as HTMLInputElement).checked;
-    if (checked) this.chosen.set(new Set());
-    this.takeAsc(checked);
   }
 
   protected choose(): void {
@@ -96,16 +127,36 @@ export class ImportDialog {
     picker.click();
   }
 
-  protected onPicked(event: Event): void {
+  protected async onPicked(event: Event): Promise<void> {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return; // the choice was cancelled: the file chosen before stays
 
+    const kind = importKind(file.name);
     this.file.set(file);
-    this.error.set(
-      this.tooLarge()
-        ? `"${file.name}" has ${megabytes(file.size)} MB. A file can have up to ${megabytes(IMPORT_LIMIT_BYTES)} MB.`
-        : '',
-    );
+    this.kind.set(kind);
+    this.source.set(null);
+    this.chosen.set(new Set());
+    this.leftOut = [];
+    this.error.set('');
+    if (this.tooLarge()) {
+      this.error.set(
+        `"${file.name}" has ${megabytes(file.size)} MB. A file can have up to ${megabytes(IMPORT_LIMIT_BYTES)} MB.`,
+      );
+      return;
+    }
+    if (kind === 'asc') return; // read when it is imported
+
+    this.reading.set(true);
+    try {
+      const unpacked = kind === 'zip' ? await unpackImport(file) : null;
+      if (this.file() !== file) return; // another file was chosen meanwhile
+      this.leftOut = unpacked?.leftOut ?? [];
+      this.source.set(readImportFile(file.name, unpacked?.text ?? (await readShowFile(file))));
+    } catch (error) {
+      if (this.file() === file) this.error.set(error instanceof Error ? error.message : String(error));
+    } finally {
+      if (this.file() === file) this.reading.set(false);
+    }
   }
 
   protected async confirm(event: Event): Promise<void> {
@@ -116,7 +167,12 @@ export class ImportDialog {
     this.busy.set(true);
     this.error.set('');
     try {
-      this.report.set(this.asc() ? await this.store.importShow(file.name, await readShowFile(file)) : await this.importParts(file));
+      const source = this.source();
+      this.report.set(
+        this.asc() || !source
+          ? await this.store.importShow(file.name, await readShowFile(file))
+          : await this.importParts(source),
+      );
       // The Import key is gone with the question; the key that closes the window takes the focus.
       afterNextRender(() => this.okKey()?.nativeElement.focus(), { injector: this.injector });
     } catch (error) {
@@ -130,26 +186,17 @@ export class ImportDialog {
     this.dialog().nativeElement.close();
   }
 
-  // .ASC on or off: a file of the other kind that was chosen goes.
-  private takeAsc(on: boolean): void {
-    if (this.asc() === on) return;
-    this.asc.set(on);
-    this.file.set(null);
-    this.error.set('');
+  /** Why a part of the PC cannot be checked here: on a phone, or with a desk program without MIDI; empty when it can. */
+  private note(part: TransferPartView): string {
+    return pcPartNote(part, this.store.lan()?.local !== false, this.midi.state() !== null);
   }
 
-  // The checked parts from a file of Export or a project file: all of them, or none when the file lacks one.
-  // A ZIP of Export goes to the desk program first, which takes its sounds and gives back its file of Export.
-  private async importParts(file: File): Promise<string[]> {
-    const unpacked = this.zip() ? await unpackImport(file) : null;
-    const source = readImportFile(file.name, unpacked?.text ?? (await readShowFile(file)));
+  // The checked parts of the file, each as the desk takes it.
+  private async importParts(source: ImportSource): Promise<string[]> {
     const chosen = this.chosen();
-    const missing = missingParts(chosen, source);
-    if (missing) throw new Error(`"${file.name}" does not have ${missing}. Nothing was imported.`);
-
     const report: string[] = [];
-    if (unpacked?.leftOut.length) {
-      report.push(`These files of the ZIP are no sounds the desk program can play: ${unpacked.leftOut.join(', ')}.`);
+    if (this.leftOut.length) {
+      report.push(`These files of the ZIP are no sounds the desk program can play: ${this.leftOut.join(', ')}.`);
     }
     if (chosen.has('project') && source.project !== null) {
       await this.store.importProjectFile(source.name, source.project);

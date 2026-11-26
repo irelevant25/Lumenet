@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using NAudio.Wave;
 
 namespace DmxBox.Tests.Sounds;
@@ -338,23 +339,61 @@ public sealed class SoundDeskTests : IDisposable
             info = await here.AddAsync(wave, "tone.wav", CancellationToken.None);
         string json = ExportWithSounds(info.Hash);
 
-        // the file of Export at the top, each file of a sound once, one the store lacks left out
+        // what it holds at the top, each part a file of its own, each file of a sound once, one the store lacks left out
         using var pack = new MemoryStream();
-        Assert.Equal(["gone.mp3"], SoundPack.Write(pack, "Show: export", json, here));
+        Assert.Equal(["gone.mp3"], SoundPack.Write(pack, json, here));
         pack.Position = 0;
         using (var zip = new ZipArchive(pack, ZipArchiveMode.Read, leaveOpen: true))
-            Assert.Equal(["Show export.json", "Show export sounds/tone.wav"], zip.Entries.Select(entry => entry.FullName));
+        {
+            Assert.Equal(["lumenet-export.json", "project.json", "sounds/tone.wav"], zip.Entries.Select(entry => entry.FullName));
+            using var manifest = JsonDocument.Parse(zip.GetEntry("lumenet-export.json")!.Open());
+            Assert.Equal(["project"], manifest.RootElement.GetProperty("parts").EnumerateArray().Select(part => part.GetString()));
+            Assert.Equal("Show", manifest.RootElement.GetProperty("name").GetString());
+        }
 
-        // another desk program: the files go into its store, the file of Export comes back as it was
+        // another desk program: the files go into its store, the parts come back as the text of Export
         pack.Position = 0;
         (string read, string[] leftOut) = await SoundPack.ReadAsync(pack, there, CancellationToken.None);
-        Assert.Equal(json, read);
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse(json), JsonNode.Parse(read)));
         Assert.Empty(leftOut);
         Assert.NotNull(there.PathOf(info.Hash));
 
+        // a ZIP of before 2026-11-26: the text of Export at its top, the sounds in "Name sounds/"
+        using var before = new MemoryStream();
+        using (var zip = new ZipArchive(before, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            using (var writer = new StreamWriter(zip.CreateEntry("Show export.json").Open()))
+                writer.Write(json);
+            using Stream sound = zip.CreateEntry("Show export sounds/tone.wav").Open();
+            using FileStream from = File.OpenRead(Wave());
+            from.CopyTo(sound);
+        }
+
+        before.Position = 0;
+        var third = new SoundStore(Path.Combine(_folder.FullName, "third"));
+        (string old, _) = await SoundPack.ReadAsync(before, third, CancellationToken.None);
+        Assert.Equal(json, old);
+        Assert.NotNull(third.PathOf(info.Hash));
+
         DeskException notZip = await Assert.ThrowsAsync<DeskException>(() => SoundPack.ReadAsync(new MemoryStream([1, 2, 3]), there, CancellationToken.None));
         Assert.Equal("The file is no ZIP of Export.", notZip.Message);
-        Assert.Throws<DeskException>(() => SoundPack.Write(new MemoryStream(), "Show", "not json", here));
+        Assert.Throws<DeskException>(() => SoundPack.Write(new MemoryStream(), "not json", here));
+    }
+
+    [Fact]
+    public async Task APackOfANewerLumenetIsRefused()
+    {
+        using var pack = new MemoryStream();
+        using (var zip = new ZipArchive(pack, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            using var writer = new StreamWriter(zip.CreateEntry("lumenet-export.json").Open());
+            writer.Write("""{ "format": "lumenet-export", "version": 3, "name": "Show", "parts": [] }""");
+        }
+
+        pack.Position = 0;
+        var store = new SoundStore(Path.Combine(_folder.FullName, "store"));
+        DeskException newer = await Assert.ThrowsAsync<DeskException>(() => SoundPack.ReadAsync(pack, store, CancellationToken.None));
+        Assert.Equal("A newer Lumenet made the ZIP: this one cannot read it.", newer.Message);
     }
 
     [Fact]
@@ -377,7 +416,7 @@ public sealed class SoundDeskTests : IDisposable
         HttpResponseMessage unpacked = await http.PostAsync("/api/import/unpack", new ByteArrayContent(zip));
         Assert.True(unpacked.IsSuccessStatusCode, await unpacked.Content.ReadAsStringAsync());
         using JsonDocument got = JsonDocument.Parse(await unpacked.Content.ReadAsStringAsync());
-        Assert.Equal(json, got.RootElement.GetProperty("text").GetString());
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse(json), JsonNode.Parse(got.RootElement.GetProperty("text").GetString()!)));
         Assert.Equal(0, got.RootElement.GetProperty("leftOut").GetArrayLength());
 
         HttpResponseMessage bad = await http.PostAsync("/api/import/unpack", new ByteArrayContent([1, 2, 3]));

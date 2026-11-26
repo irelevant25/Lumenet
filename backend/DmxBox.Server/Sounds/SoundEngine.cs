@@ -23,6 +23,12 @@ internal interface ISoundPlayer
     /// <summary>A sound that plays goes on from another place, in seconds of its file (of its track).</summary>
     void Seek(int number, double seconds);
 
+    /// <summary>
+    /// A sound that plays holds where it is, silent (Pause of the stack), or goes on from there. A start
+    /// or a stop of the sound ends the pause.
+    /// </summary>
+    void Pause(int number, bool pause);
+
     /// <summary>The master volume as a gain, 0 to 1 (0 dB), and MUTE.</summary>
     void SetMaster(double volume, bool mute);
 
@@ -54,6 +60,10 @@ internal sealed class NoSoundPlayer : ISoundPlayer
     public void Stop(int number) => _playing[number - 1] = false;
 
     public void Seek(int number, double seconds)
+    {
+    }
+
+    public void Pause(int number, bool pause)
     {
     }
 
@@ -212,6 +222,7 @@ internal sealed class SoundEngine : ISoundPlayer, IHostedService, IDisposable
     public void Start(Sound sound)
     {
         int number = sound.Number;
+        _mixer.Pause(number, false);
         Volatile.Write(ref _onMixer[number - 1], sound.IsTrack);
         if (sound.IsTrack)
         {
@@ -278,6 +289,7 @@ internal sealed class SoundEngine : ISoundPlayer, IHostedService, IDisposable
     {
         _tracks.Stop(number);
         StopVoice(number);
+        _mixer.Pause(number, false);
     }
 
     public void Seek(int number, double seconds)
@@ -286,6 +298,15 @@ internal sealed class SoundEngine : ISoundPlayer, IHostedService, IDisposable
             _tracks.Seek(number, seconds);
         else
             _mixer.Post(() => _mixer.Seek(number, seconds));
+    }
+
+    // A file holds in the mixer, silent; a track pauses the mixer's player.
+    public void Pause(int number, bool pause)
+    {
+        if (Volatile.Read(ref _onMixer[number - 1]))
+            _tracks.Pause(number, pause);
+        else
+            _mixer.Pause(number, pause);
     }
 
     public void SetMaster(double volume, bool mute)

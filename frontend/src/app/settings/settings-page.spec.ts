@@ -11,7 +11,7 @@ describe('the desk page: Settings', () => {
   let fixture: ComponentFixture<App>;
   let page: HTMLElement;
   let store: DeskStore;
-  const { show, button, press, stackStands, until, textOf } = deskPageHelpers(() => ({
+  const { show, button, buttonIn, press, stackStands, until, textOf } = deskPageHelpers(() => ({
     connection,
     fixture,
     page,
@@ -233,7 +233,7 @@ describe('the desk page: Settings', () => {
     const sentColors = () =>
       (JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}') as { colors?: object })
         .colors;
-    await show('/settings');
+    await show('/settings#colors');
 
     // A press on a color offers the colors of the desk; one of them is taken, and they close.
     const pause = button('Color of Pause');
@@ -410,31 +410,247 @@ describe('the desk page: Settings', () => {
     expect(page.querySelectorAll('lm-channel-section lm-fader-strip').length).toBe(16);
   });
 
-  it('Settings has five panels: the main view with the universes, the zoom, the autosave and LAN; the views with the sound; the colors; the keyboard; the outputs', async () => {
+  it('Settings has tabs, each a part with the whole width; the address names the tab shown', async () => {
+    const router = TestBed.inject(Router);
     await show('/settings');
-    const panels = [...page.querySelectorAll('lm-settings-view .panels > *')];
-    const titles = (panel: Element, level: string) =>
-      [...panel.querySelectorAll(level)].map((title) => title.textContent?.trim());
-    expect(panels.map((panel) => titles(panel, 'h3')[0])).toEqual([
-      'Main view',
-      'Views in the top bar',
-      'Colors of the keys',
+    const tabs = [...page.querySelectorAll<HTMLButtonElement>('lm-settings-view [role="tab"]')];
+    expect(tabs.map((tab) => tab.textContent?.trim())).toEqual([
+      'General',
+      'LAN',
+      'Sound',
+      'Colors',
       'Keyboard',
       'Outputs',
+      'Backup',
+      'About',
     ]);
-    expect(titles(panels[0], 'h4')).toEqual(['Universes', 'Zoom', 'Autosave', 'Network (LAN)']);
-    expect(titles(panels[1], 'h4')).toEqual(['Sound']);
-    expect(panels[1].querySelector('lm-sound-output')).toBeTruthy();
-    expect(page.querySelector('#universes')?.closest('.panel')).toBe(panels[0]);
-    // fields only, no sentences about them, until the autosave and LAN, which keep theirs
-    const autosave = panels[0].querySelector('#autosave-title')!;
-    const hints = [...panels[0].querySelectorAll('.hint')];
-    expect(hints.length).toBeGreaterThan(0);
+    const selected = () =>
+      tabs
+        .filter((tab) => tab.getAttribute('aria-selected') === 'true')
+        .map((tab) => tab.textContent?.trim());
+    const titles = (level: string) =>
+      [...page.querySelectorAll(`lm-settings-view .panels ${level}`)].map((title) =>
+        title.textContent?.trim(),
+      );
+
+    // General at first: the main view with the universes, the zoom and the autosave, and the views
+    expect(selected()).toEqual(['General']);
+    expect(titles('h3')).toEqual(['Main view', 'Views in the top bar']);
+    expect(titles('h4')).toEqual(['Universes', 'Zoom', 'Autosave']);
+    // fields only, no sentences about them, until the autosave, which keeps its own
+    const general = page.querySelector('lm-main-view-panel')!;
+    const autosave = general.querySelector('#autosave-title')!;
     expect(
-      hints.every(
+      [...general.querySelectorAll('.hint')].every(
         (hint) => autosave.compareDocumentPosition(hint) & Node.DOCUMENT_POSITION_FOLLOWING,
       ),
     ).toBe(true);
+
+    // a press on a tab shows its part alone, and the address names it
+    await press(tabs[2]);
+    await until(() => router.url === '/settings#sound');
+    expect(selected()).toEqual(['Sound']);
+    expect(page.querySelector('lm-settings-view .panels lm-sound-output')).toBeTruthy();
+    expect(page.querySelector('#channel-size')).toBeNull();
+
+    // the arrow keys, Home and End go from tab to tab, the focus with them
+    const key = async (name: string) => {
+      (document.activeElement ?? tabs[2]).dispatchEvent(
+        new KeyboardEvent('keydown', { key: name, bubbles: true }),
+      );
+      await fixture.whenStable();
+    };
+    tabs[2].focus();
+    await key('ArrowRight');
+    await until(() => router.url === '/settings#colors');
+    expect(document.activeElement).toBe(tabs[3]);
+    await key('End');
+    await until(() => router.url === '/settings#about');
+    await key('ArrowRight');
+    await until(() => router.url === '/settings#general');
+    expect(document.activeElement).toBe(tabs[0]);
+
+    // an address with a tab opens on it
+    await show('/settings#keyboard');
+    expect(selected()).toEqual(['Keyboard']);
+    expect(page.querySelector('lm-settings-view .panels lm-keyboard-panel')).toBeTruthy();
+  });
+
+  it("Backup: a folder, Google Drive's at a press, how many to keep, and a backup now or with every save", async () => {
+    await show('/settings#backup');
+    await until(() => page.querySelector('#backup-folder') !== null);
+    const folder = page.querySelector<HTMLInputElement>('#backup-folder')!;
+    expect(folder.value).toBe('');
+    expect(button('Back up now').disabled).toBe(true); // no folder yet
+
+    // Google Drive for desktop is on the PC: its folder at a press
+    await press(button('Use its folder'));
+    await until(() => connection.last('SetBackup') !== undefined);
+    expect(connection.last('SetBackup')).toEqual([
+      { folder: 'G:\\My Drive\\Lumenet backups', onSave: true, keep: 30 },
+    ]);
+    await fixture.whenStable();
+    expect(folder.value).toBe('G:\\My Drive\\Lumenet backups');
+    expect(page.querySelector('lm-backup-panel')?.textContent).not.toContain('Use its folder');
+
+    const keep = page.querySelector<HTMLInputElement>('#backup-keep')!;
+    keep.value = '12';
+    keep.dispatchEvent(new Event('change'));
+    await until(() => (connection.last('SetBackup')?.[0] as { keep: number }).keep === 12);
+
+    // Back up now: every part goes to the desk program, which writes the ZIP into the folder
+    const asked: { url: string; body: string }[] = [];
+    const made = 'Lumenet backup - Untitled - 2026-11-26 14.05.33.zip';
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (url: string, init?: RequestInit) => {
+      asked.push({ url, body: init?.body as string });
+      return new Response(
+        JSON.stringify({
+          file: made,
+          missing: ['gone.mp3'],
+          backups: {
+            ...connection.backup,
+            count: 1,
+            last: made,
+            lastAt: Date.UTC(2026, 10, 26, 13, 5, 33),
+          },
+        }),
+        { status: 200 },
+      );
+    }) as typeof fetch;
+    try {
+      await press(button('Back up now'));
+      await until(() => page.querySelector('lm-backup-panel .done') !== null);
+      expect(asked[0].url).toBe('/api/backup?name=Untitled');
+      expect(Object.keys(JSON.parse(asked[0].body))).toEqual([
+        'format',
+        'version',
+        'name',
+        'project',
+        'stage',
+        'settings',
+        'keyboard',
+      ]); // and the MIDI, with a desk program that knows MIDI
+      expect(textOf('lm-backup-panel .done')).toBe(
+        `Backed up as "${made}", without these sound files, which the PC does not have: gone.mp3.`,
+      );
+      expect(textOf('lm-backup-panel .status')).toMatch(
+        /^1 in the folder, the newest from 26 Nov 2026/,
+      );
+
+      // a save on the PC backs up as well, and says so
+      await press(button('Save project'));
+      const name = page.querySelector<HTMLInputElement>('#project-name')!;
+      name.value = 'Evening';
+      name.dispatchEvent(new Event('input'));
+      await fixture.whenStable();
+      await press(page.querySelector<HTMLButtonElement>('lm-project-dialog button[type="submit"]'));
+      await until(() => asked.length === 2);
+      expect(asked[1].url).toBe('/api/backup?name=Evening');
+      await until(() => store.notice().includes('backed up'));
+      expect(store.notice()).toBe('Project "Evening" saved and backed up (without gone.mp3)');
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  it('Backup and About belong to the PC: a phone sets and updates nothing', async () => {
+    connection.emit('LanAccessChanged', { ...connection.lan, local: false });
+    await show('/settings#backup');
+    await until(() => textOf('lm-backup-panel .hint') !== undefined);
+    expect(textOf('lm-backup-panel .hint')).toBe(
+      'The backups belong to the PC the desk program runs on: set them there.',
+    );
+    expect(page.querySelector('#backup-folder')).toBeNull();
+
+    await show('/settings#about');
+    expect(textOf('lm-about-panel .hint')).toBe(
+      'Lumenet is updated on the PC the desk program runs on.',
+    );
+    expect(connection.calls.map((call) => call.method)).not.toContain('CheckUpdate');
+  });
+
+  it('About: the version, the newest one with what it brings, and an update after a question', async () => {
+    connection.update = {
+      current: '0.1.0',
+      latest: '0.1.45',
+      newer: true,
+      notes: '## Backups to Google Drive\n\nA folder that Drive syncs.\n\n## Settings in tabs',
+      published: Date.UTC(2026, 10, 26, 14),
+      size: 68_576_256,
+      canUpdate: true,
+      why: null,
+      problem: null,
+    };
+    await show('/settings#about');
+    await until(() => page.querySelector('lm-about-panel .news') !== null);
+    expect(textOf('lm-about-panel .version')).toBe('Lumenet 0.1.0');
+    expect(textOf('lm-about-panel .news')?.replace(/\s+/g, ' ')).toBe(
+      'Lumenet 0.1.45 is out (from 26 Nov 2026)',
+    );
+    // the notes of the release, their titles as titles
+    expect(
+      [...page.querySelectorAll('lm-about-panel .notes .text p')].map((paragraph) =>
+        paragraph.classList.contains('title')
+          ? `# ${paragraph.textContent}`
+          : paragraph.textContent,
+      ),
+    ).toEqual(['# Backups to Google Drive', 'A folder that Drive syncs.', '# Settings in tabs']);
+
+    // a question first: what the update does, and that the lights go out
+    connection.emit('ProjectChanged', { name: 'Untitled', path: null, unsaved: true });
+    await press(button('Update to 0.1.45'));
+    expect(textOf('lm-about-panel .ask')).toContain(
+      'Lumenet downloads 0.1.45 (65.4 MB) from GitHub',
+    );
+    expect(textOf('lm-about-panel .ask')).toContain('the lights go out');
+    expect(textOf('lm-about-panel .ask .problem')).toBe(
+      'The project has changes that are not saved. Save it first.',
+    );
+    await press(buttonIn('lm-about-panel', 'Cancel'));
+    expect(page.querySelector('lm-about-panel .ask')).toBeNull();
+
+    await press(button('Update to 0.1.45'));
+    await press(button('Update now'));
+    await until(() => textOf('lm-about-panel .done') !== undefined);
+    expect(connection.calls.map((call) => call.method)).toContain('InstallUpdate');
+    expect(textOf('lm-about-panel .done')).toBe(
+      'Lumenet starts again as 0.1.45. This page loads again by itself when it is back.',
+    );
+    expect(
+      [...page.querySelectorAll('lm-about-panel .parts a')].map((link) => link.textContent?.trim()),
+    ).toContain('NAudio');
+  });
+
+  it('About: GitHub that does not answer is said; the desk of run.cmd says that git brings the new version', async () => {
+    connection.update = {
+      current: '0.1.0',
+      latest: null,
+      newer: false,
+      notes: null,
+      published: null,
+      size: null,
+      canUpdate: false,
+      why: null,
+      problem: 'GitHub could not be asked: it did not answer in time.',
+    };
+    await show('/settings#about');
+    await until(() => textOf('lm-about-panel .problem') !== undefined);
+    expect(textOf('lm-about-panel .problem')).toBe(
+      'GitHub could not be asked: it did not answer in time.',
+    );
+
+    connection.update = {
+      ...connection.update,
+      latest: '0.1.45',
+      newer: true,
+      why: 'This desk runs from the source code: git pull and run.cmd bring the new version.',
+      problem: null,
+    };
+    await press(button('Check again'));
+    await until(() => page.querySelector('lm-about-panel .news') !== null);
+    expect(page.querySelector('lm-about-panel button.go')).toBeNull();
+    expect(textOf('lm-about-panel .hint')).toBe(connection.update.why!);
   });
 
   it('the rows of the channels and of the memories scroll sideways each on their own, with a big scrollbar', () => {
@@ -508,7 +724,7 @@ describe('the desk page: Settings', () => {
   });
 
   it('the LAN address and password are changed in Settings while LAN is on', async () => {
-    await show('/settings');
+    await show('/settings#lan');
     expect(page.querySelector('lm-settings-view')?.textContent).toContain('LAN is off');
 
     connection.emit('LanAccessChanged', {

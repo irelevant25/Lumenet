@@ -1,11 +1,11 @@
-/* A panel of Settings like the others, as high as the room of the panels (100cqh: settings-view.css
-   makes that room a size container): the title stays, and the colors under it, one group under the
-   other, scroll. On a phone the page scrolls instead. */
+/* A panel of Settings like the others, as high as what it holds and at most as high as the room of
+   the panels (100cqh: settings-view.css makes that room a size container): the title stays, and the
+   colors under it scroll when there are more. On a phone the page scrolls instead. */
 :host {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   box-sizing: border-box;
-  height: 100cqh;
+  max-height: 100cqh;
   min-width: 0;
   padding: 10px 14px 12px;
   border: 1px solid var(--edge);
@@ -14,7 +14,7 @@
 }
 
 :host-context(.mobile) {
-  height: auto;
+  max-height: none;
 }
 
 h3,
@@ -46,10 +46,14 @@ h4 {
   margin: 0;
 }
 
+/* the groups in columns, as many as the width of the tab holds: two in the section of Settings */
 .groups {
   display: grid;
+  flex: 1 1 auto;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
   align-content: start;
-  gap: 14px;
+  align-items: start;
+  gap: 14px 24px;
   min-height: 0;
   padding-right: 4px; /* room between the colors and the scrollbar */
   overflow: auto;

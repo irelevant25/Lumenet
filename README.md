@@ -29,8 +29,9 @@ Pico that takes what the desk sends over USB to the DMX512 cable of the lights.
   (1,781), played by intensity and color, moving heads by pan and tilt too; groups with one fader for all their
   lights.
 * **Stage:** a plan of the rig with every light in its live color, a strobe flashing too.
-* **Projects** in files, with notes for the show, undo and redo, and an autosave; export and import, also of the
-  show files of theatre consoles (USITT ASCII).
+* **Projects** in files, with notes for the show, undo and redo, an autosave, and backups into a folder that
+  Google Drive, OneDrive or Dropbox syncs; export and import as one ZIP, and import of the show files of
+  theatre consoles (USITT ASCII).
 * **Phones and tablets** in the same network can use the desk as well, with a password.
 * **MIDI controllers** play the desk: their keys press its keys, their faders and knobs move its faders, and
   the desk lights their keys and moves their motorized faders. Learn maps a control in two presses; the Akai
@@ -69,7 +70,8 @@ plan and EAGLE files, and its firmware builds, but it has not been built yet.
 **Download:** `Lumenet.exe` from the newest release on the [Releases](../../releases) page. It is the whole desk in
 one file, with nothing to install. Start it: the page opens in the browser, and Lumenet sits in the
 notification area of the taskbar, where its menu opens the page again, shows the log, and ends it. Windows may
-say that it does not know the program, as it is not signed: More info, then Run anyway.
+say that it does not know the program, as it is not signed: More info, then Run anyway. Later versions come
+from the desk itself: Settings, About, says when one is out and puts it in place at a press.
 
 **From the sources:** with the .NET 10 SDK and Node.js 22, `run.cmd` starts the desk; then open
 http://localhost:4200. `sim.cmd` starts a simulated box, Art-Net node, sACN receiver or USB interface for the

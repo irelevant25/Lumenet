@@ -35,6 +35,7 @@ import {
   type MidiState,
 } from '../midi/midi';
 import { NOTE_LINE_SEPARATOR } from '../desk/notes';
+import type { BackupSetup, BackupView, UpdateInfo, UpdateStep } from '../desk/hub-contract';
 
 // The test browser (jsdom) has no modal windows. A window of the page only gets its "open" mark here.
 if (typeof HTMLDialogElement.prototype.showModal !== 'function') {
@@ -153,6 +154,35 @@ export class FakeConnection {
   midi: MidiState | undefined = undefined;
   /** The messages that came in from the controllers, as "WatchMidi" answers. */
   midiLines: MidiMonitorLine[] = [];
+  /** The backups of the PC, as the backend answers "GetBackup" and "SetBackup": no folder yet, Google Drive found. */
+  backup: BackupView = {
+    folder: '',
+    onSave: true,
+    keep: 30,
+    last: null,
+    lastAt: null,
+    count: 0,
+    problem: null,
+    googleDrive: 'G:\\My Drive\\Lumenet backups',
+  };
+  /** The versions, as the backend answers "CheckUpdate": this one is the newest. */
+  update: UpdateInfo = {
+    current: '0.1.0',
+    latest: '0.1.0',
+    newer: false,
+    notes: null,
+    published: null,
+    size: null,
+    canUpdate: false,
+    why: null,
+    problem: null,
+  };
+  /** The steps "InstallUpdate" answers with: the download, then the version it starts again as. */
+  updateSteps: UpdateStep[] = [
+    { percent: 40, version: null },
+    { percent: 100, version: null },
+    { percent: 100, version: '0.1.45' },
+  ];
 
   start(): void {
     this.online.set(true);
@@ -188,6 +218,12 @@ export class FakeConnection {
     if (method === 'ExportProject') return this.projectFile;
     if (method === 'ImportProjectFile') return { name: args[0], path: null, unsaved: true };
     if (method === 'GetProjects') return this.projectList;
+    if (method === 'SaveProject')
+      return {
+        name: args[0],
+        path: `${this.projectList.folder}\\${String(args[0])}.json`,
+        unsaved: false,
+      };
     if (method === 'LoadExample') return { name: args[0], path: null, unsaved: false };
     if (method === 'GetHistory') return { undo: null, redo: null };
     if (method === 'GetRecovered') return this.recovered;
@@ -221,6 +257,10 @@ export class FakeConnection {
     if (method === 'PreviewEffect') return null;
     if (method === 'GetMidi') return this.midi;
     if (method === 'WatchMidi') return args[0] ? this.midiLines : undefined;
+    if (method === 'GetBackup') return this.backup;
+    if (method === 'SetBackup')
+      return (this.backup = { ...this.backup, ...(args[0] as BackupSetup) });
+    if (method === 'CheckUpdate') return this.update;
     if (this.midi) return this.midiAnswer(this.midi, method, args);
     return undefined;
   }
@@ -261,6 +301,22 @@ export class FakeConnection {
   /** A method that answers as a stream of one item (the search for Art-Net nodes): as invoke here. */
   ask(method: string, ...args: unknown[]): Promise<unknown> {
     return this.invoke(method, ...args);
+  }
+
+  /** A method that answers as a stream of several items: the steps of an update, one by one. */
+  async follow(
+    method: string,
+    next: (item: unknown) => void,
+    ...args: unknown[]
+  ): Promise<unknown> {
+    if (method !== 'InstallUpdate') {
+      const answer = await this.invoke(method, ...args);
+      next(answer);
+      return answer;
+    }
+    this.calls.push({ method, args });
+    for (const step of this.updateSteps) next(step);
+    return this.updateSteps.at(-1);
   }
 
   send(method: string, ...args: unknown[]): void {
@@ -311,6 +367,9 @@ export const QUESTIONS = [
   'ReportMidiLamps',
   'ReportMidiPages',
   'WatchMidi',
+  // the backups and the newest version, asked for when their tabs of Settings open
+  'GetBackup',
+  'CheckUpdate',
 ];
 
 /** The MIDI of the PC in the tests: a controller in use with two controls mapped, and one that is not plugged in. */

@@ -58,7 +58,7 @@ describe('the desk page: universes and outputs', () => {
     connection.emit('BoxesChanged', boxes);
     await fixture.whenStable();
     expect(textOf('lm-outputs-status')).toBe('Outputs connected: 2');
-    await show('/settings');
+    await show('/settings#outputs');
     const rows = () => [...page.querySelectorAll('lm-outputs-panel tbody tr')];
     expect(rows().map((row) => row.querySelector('.name')?.textContent?.trim())).toEqual([
       'dmxbox',
@@ -126,9 +126,48 @@ describe('the desk page: universes and outputs', () => {
     expect(connection.last('SetBoxes')).toEqual([[]]);
   });
 
+  it('the Outputs panel adds no output that is in the list already', async () => {
+    connection.emit('OutputsChanged', [
+      {
+        plan: {
+          kind: 'artnet',
+          target: '10.0.0.7',
+          ports: [{ universe: 1, address: 0 }],
+          network: '',
+          priority: 100,
+        },
+        state: 'connected',
+        detail: '',
+      },
+    ]);
+    await show('/settings#outputs');
+    const address = page.querySelector<HTMLInputElement>(
+      'lm-outputs-panel form.add input[aria-label="Address"]',
+    )!;
+    const add = page.querySelector<HTMLButtonElement>(
+      'lm-outputs-panel form.add button[type="submit"]',
+    )!;
+    address.value = ' 10.0.0.7';
+    address.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    expect(add.disabled).toBe(true);
+    expect(textOf('lm-outputs-panel form.add + p.remark')).toBe(
+      'The Art-Net node at 10.0.0.7 is in the list already.',
+    );
+    page.querySelector('lm-outputs-panel form.add')!.dispatchEvent(new Event('submit'));
+    await fixture.whenStable();
+    expect(connection.methods()).not.toContain('SetOutputs');
+
+    address.value = '10.0.0.8';
+    address.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    expect(add.disabled).toBe(false);
+    expect(page.querySelector('lm-outputs-panel form.add + p.remark')).toBeNull();
+  });
+
   it('a page loaded at Settings asks for the networks and the nodes once it is connected, not before', async () => {
     connection.online.set(false);
-    await show('/settings');
+    await show('/settings#outputs');
     const asked = (method: string) =>
       connection.calls.filter((call) => call.method === method).length;
     expect(asked('FindArtNetNodes')).toBe(0);
@@ -160,7 +199,7 @@ describe('the desk page: universes and outputs', () => {
         dmxbox: true,
       },
     ];
-    await show('/settings');
+    await show('/settings#outputs');
     // the panel asks for the networks, the serial ports and the nodes at once
     await until(() => page.querySelectorAll('lm-outputs-panel .found li').length === 2);
     expect(connection.calls.map((call) => call.method)).toEqual(

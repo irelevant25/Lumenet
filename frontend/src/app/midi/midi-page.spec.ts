@@ -345,38 +345,46 @@ describe('the desk page: MIDI controllers', () => {
   });
 
   it('Export and Import take the MIDI of the PC along; a phone cannot, and its MIDI panel says so', async () => {
-    const written: string[] = [];
     (globalThis as { showSaveFilePicker?: unknown }).showSaveFilePicker = async (options: {
       suggestedName: string;
     }) => ({
       name: options.suggestedName,
-      createWritable: async () => ({
-        write: async (text: string) => void written.push(text),
-        close: async () => undefined,
-      }),
+      createWritable: async () => new WritableStream<Uint8Array>(),
     });
+    // the desk program packs the text of Export into the ZIP
+    const posted: string[] = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (_url: string, init?: RequestInit) => {
+      posted.push(init?.body as string);
+      return new Response(new Uint8Array([80, 75, 3, 4]), { status: 200 });
+    }) as typeof fetch;
     try {
       await withMidi();
       await press(button('Export'));
       await check('lm-export-dialog', 'MIDI');
       await press(button('Export the file'));
-      await until(() => written.length > 0);
-      const file = JSON.parse(written[0]);
+      await until(
+        () => posted.length > 0 && page.querySelector('lm-export-dialog .report') !== null,
+      );
+      const file = JSON.parse(posted[0]);
       expect(file.midi).toEqual({
         devices: ['APC mini mk2', 'nanoKONTROL2'],
         mappings: MIDI.mappings,
       });
       await press(buttonIn('lm-export-dialog', 'OK'));
 
+      // the same text as a file of its own, as Export wrote it before
       await press(button('Import'));
+      await pick(new File([posted[0]], 'Lumenet - midi.json'));
+      await until(() => page.querySelector('lm-import-dialog .parts') !== null);
       await check('lm-import-dialog', 'MIDI');
-      await pick(new File([written[0]], 'Lumenet - midi.json'));
       await press(button('Import the file'));
       await until(() => page.querySelector('lm-import-dialog .report') !== null);
       expect(connection.last('SetMidiSetup')).toEqual([file.midi]);
       expect(textOf('lm-import-dialog .report')).toContain('The MIDI controllers of this PC');
       await press(buttonIn('lm-import-dialog', 'OK'));
     } finally {
+      globalThis.fetch = realFetch;
       delete (globalThis as { showSaveFilePicker?: unknown }).showSaveFilePicker;
     }
 

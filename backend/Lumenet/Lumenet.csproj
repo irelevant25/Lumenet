@@ -47,6 +47,12 @@
     <Using Remove="System.Drawing" />
   </ItemGroup>
 
+  <!-- The repository whose releases an update looks at (Settings, About): the build on GitHub names
+       it in GITHUB_REPOSITORY, and the exe carries it (BuiltIn.Adjust). An exe made on a PC has none. -->
+  <ItemGroup Condition="'$(GITHUB_REPOSITORY)' != ''">
+    <AssemblyMetadata Include="Repository" Value="$(GITHUB_REPOSITORY)" />
+  </ItemGroup>
+
   <ItemGroup>
     <Compile Include="..\DmxBox.Server\**\*.cs" Exclude="..\DmxBox.Server\bin\**;..\DmxBox.Server\obj\**" Link="DmxBox.Server\%(RecursiveDir)%(Filename)%(Extension)" />
     <PackageReference Include="NAudio" Version="3.3.0" />

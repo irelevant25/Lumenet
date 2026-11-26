@@ -88,16 +88,19 @@ namespace DmxBox.Server.Projects;
 /// Version 10 has cues of the stack that come at a moment of a sound ("at": { "sound": 3, "seconds":
 /// 31.25 }, see <see cref="Step.At"/>). An older program would let them wait for GO and drop the
 /// moments when it saves, so a project with one says version 10, and one without stays as it was.
+/// Version 11 has cues of the stack whose sound plays unheard ("muted": true, see <see cref="Step.Muted"/>).
+/// An older program would play them aloud, so a project with one says version 11.
 /// </remarks>
 internal static partial class ProjectFormat
 {
     private const string FormatName = "lumenet-project";
 
-    // The newest version this program reads, and the one it writes for a project whose cues come at
-    // moments of sounds (see the remarks). Version 9 has sounds; version 8 sequences that add, release
-    // or play effects; version 7 effects; version 6 a stack with steps that add or release; version 5
-    // the universes and the boxes.
-    private const int CurrentVersion = 10;
+    // The newest version this program reads, and the one it writes for a project with muted cues (see
+    // the remarks). Version 10 has cues at moments of sounds; version 9 sounds; version 8 sequences that
+    // add, release or play effects; version 7 effects; version 6 a stack with steps that add or release;
+    // version 5 the universes and the boxes.
+    private const int CurrentVersion = 11;
+    private const int VersionWithMoments = 10;
     private const int VersionWithSounds = 9;
     private const int VersionWithSequencesLikeTheStack = 8;
     private const int VersionWithEffects = 7;
@@ -136,7 +139,9 @@ internal static partial class ProjectFormat
         bool soundSteps = project.Stack.Any(step => step.Step.IsSound || step.Step.Disabled)
             || project.Sequences.Any(sequence => sequence is not null && sequence.Steps.Any(step => step.IsSound || step.Disabled));
         bool moments = project.Stack.Any(step => step.Step.At is not null);
-        int version = moments ? CurrentVersion
+        bool muted = project.Stack.Any(step => step.Step.Muted);
+        int version = muted ? CurrentVersion
+            : moments ? VersionWithMoments
             : sounds || soundSteps || soundKeys ? VersionWithSounds
             : sequencesLikeTheStack ? VersionWithSequencesLikeTheStack
             : effects ? VersionWithEffects

@@ -30,6 +30,8 @@ internal sealed class PretendSoundPlayer : ISoundPlayer
 
     public void Seek(int number, double seconds) => Calls.Add(FormattableString.Invariant($"seek {number} {seconds}"));
 
+    public void Pause(int number, bool pause) => Calls.Add($"{(pause ? "pause" : "resume")} {number}");
+
     public void SetMaster(double volume, bool mute) => Calls.Add(FormattableString.Invariant($"master {volume} {mute}"));
 
     public SoundVoiceState StateOf(int number) => new(_playing[number - 1], Position[number - 1], false);

@@ -129,6 +129,10 @@ export interface SoundPlayback {
   missing?: boolean;
   /** For a track of the mixer: how long it is, in seconds, as the mixer says while it plays; 0 when unknown. */
   length?: number;
+  /** True while Pause of the stack holds it where it is, silent, until GO. */
+  paused?: boolean;
+  /** True while it plays unheard: a muted cue of the stack plays it. */
+  muted?: boolean;
 }
 
 /** What a sound's playback takes: its key, or its fader. */

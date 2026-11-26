@@ -18,30 +18,18 @@ interface FileKind {
   readonly ending: string;
 }
 
-const JSON_FILE: FileKind = {
-  description: 'Lumenet file',
-  type: 'application/json',
-  ending: '.json',
-};
 const ZIP_FILE: FileKind = {
-  description: 'Lumenet file with its sounds',
+  description: 'Lumenet file',
   type: 'application/zip',
   ending: '.zip',
 };
 
 /**
- * Saves a text as a JSON file on this device: where its owner chooses, in a browser that asks
- * (Chrome and Edge on a PC, on a page of this PC), else among the downloads. Resolves to the name
+ * Saves a ZIP the desk program makes (the file of Export) on this device: where its owner chooses,
+ * in a browser that asks (Chrome and Edge on a PC, on a page of this PC), else among the downloads.
+ * The window for saving opens first, while the press that asked for it still counts; the desk
+ * program is asked after, and what it answers goes into the file as it comes. Resolves to the name
  * the file got; null when the choice of the place was cancelled.
- */
-export function saveTextFile(name: string, text: string): Promise<string | null> {
-  return saveFile(name, JSON_FILE, async () => text);
-}
-
-/**
- * Saves a ZIP the desk program makes (a file of Export with its sounds) on this device, as
- * saveTextFile does. The window for saving opens first, while the press that asked for it still
- * counts; the desk program is asked after, and what it answers goes into the file as it comes.
  */
 export function saveZipFile(name: string, made: () => Promise<Response>): Promise<string | null> {
   return saveFile(name, ZIP_FILE, made);

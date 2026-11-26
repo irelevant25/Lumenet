@@ -28,7 +28,7 @@ describe('the desk page: the Keyboard panel', () => {
   });
 
   it('the Keyboard panel of Settings lists the kinds of keys one under the other: one open at a time, none at first', async () => {
-    await show('/settings');
+    await show('/settings#keyboard');
     const total = (group: string) => DESK_ACTIONS.filter((action) => action.group === group).length;
     // "Stack 6 (4) 2": the keys, in brackets those with a shortcut, and while a search runs, those it finds
     const count = (group: string) => kind(group).querySelector('.count')?.textContent?.trim();
@@ -99,11 +99,11 @@ describe('the desk page: the Keyboard panel', () => {
 
     // The old address of the Keyboard view opens Settings.
     await show('/keyboard');
-    expect(TestBed.inject(Router).url).toBe('/settings');
+    expect(TestBed.inject(Router).url).toBe('/settings#keyboard');
   });
 
   it('a shortcut is recorded for a key, and then presses that key', async () => {
-    await show('/settings');
+    await show('/settings#keyboard');
     await press(kind('Master'));
     await press(button('Set the shortcut of Blackout'));
     expect(page.querySelector('tr[data-row="master.blackout"] .waiting')).toBeTruthy();
@@ -156,7 +156,7 @@ describe('the desk page: the Keyboard panel', () => {
     expect(connection.methods().filter((method) => method === 'SetBlackout').length).toBe(1);
 
     // The same shortcut for another key moves over to it.
-    await show('/settings');
+    await show('/settings#keyboard');
     await press(kind('General'));
     await press(button('Set the shortcut of Clear'));
     document.dispatchEvent(
@@ -202,7 +202,7 @@ describe('the desk page: the Keyboard panel', () => {
     await fixture.whenStable();
     expect(connection.last('SetBlackout')).toEqual([true]);
 
-    await show('/settings');
+    await show('/settings#keyboard');
     await press(kind('Master'));
     await press(button('Set the shortcut of Blackout'));
     pressAltGrB();
@@ -228,7 +228,7 @@ describe('the desk page: the Keyboard panel', () => {
       await new Promise((resolve) => setTimeout(resolve, 450));
       await fixture.whenStable();
     };
-    await show('/settings');
+    await show('/settings#keyboard');
     await press(button('Listen'));
     expect(router.url).toBe('/');
     expect(page.querySelector('.listening')).toBeTruthy();
@@ -250,14 +250,14 @@ describe('the desk page: the Keyboard panel', () => {
     pressOnce(edit);
     pressOnce(edit);
     await fixture.whenStable();
-    expect(router.url).toBe('/settings');
+    expect(router.url).toBe('/settings#keyboard');
     expect(page.querySelector('tr[data-row="stage.edit"]')?.classList.contains('picked')).toBe(
       true,
     );
     // Only the list scrolls to the row; the page itself stays where it is, the top bar in sight.
     expect(document.scrollingElement?.scrollTop ?? 0).toBe(0);
     await later();
-    expect(router.url).toBe('/settings'); // the picked key was not pressed after all
+    expect(router.url).toBe('/settings#keyboard'); // the picked key was not pressed after all
 
     // A locked key is picked as well: Play, while the stack is not live. It gets no click.
     await press(button('Listen'));
@@ -344,7 +344,7 @@ describe('the desk page: the Keyboard panel', () => {
 
   it('↺ beside the title gives every key the shortcut it has at first, after a second press', async () => {
     const settings = TestBed.inject(DeskSettings);
-    await show('/settings');
+    await show('/settings#keyboard');
     const reset = () => page.querySelector<HTMLButtonElement>('lm-keyboard-panel .title-row .reset')!;
     expect(reset().disabled).toBe(true); // every key has its usual shortcut: nothing to do
 

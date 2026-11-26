@@ -3,325 +3,61 @@
   <p class="summary">
     The settings and the keyboard shortcuts belong to this device: every project shows them, and
     Export takes them to another device. The number of universes and the outputs belong to the
-    project. LAN and the autosave belong to the desk program, and only the PC can change them.
+    project. LAN, the autosave and the backups belong to the desk program, and only the PC can change them.
   </p>
 </header>
 
-<div class="panels">
-  <!-- ---------------------------------------------------------------- the main view -->
-  <section class="panel" aria-labelledby="layout-title">
-    <h3 id="layout-title">Main view</h3>
+<div class="tabs" role="tablist" aria-label="Parts of the settings">
+  @for (tab of tabs; track tab.id; let index = $index) {
+    <button
+      type="button"
+      role="tab"
+      [id]="'settings-tab-' + tab.id"
+      [attr.aria-selected]="tab.id === shown()"
+      [attr.aria-controls]="'settings-part-' + tab.id"
+      [tabIndex]="tab.id === shown() ? 0 : -1"
+      (click)="show(tab.id)"
+      (keydown)="onTabKey($event, index)"
+    >
+      {{ tab.label }}
+    </button>
+  }
+</div>
 
-    <div class="field">
-      <label for="channel-size">Channels on a page</label>
-      <select id="channel-size" (change)="onSize($event)">
-        @for (size of sizes; track size) {
-          <option [value]="size" [selected]="size === settings.channelSize()">{{ sizeName(size) }}</option>
-        }
-      </select>
-    </div>
-    <div class="field">
-      <label for="channel-rows">Rows of channel faders</label>
-      <select id="channel-rows" (change)="onChannelRows($event)">
-        @for (count of rowCounts; track count) {
-          <option [value]="count" [selected]="count === settings.channelRows()">{{ rowsName(count) }}</option>
-        }
-      </select>
-    </div>
-    <div class="field">
-      <label for="memory-rows">Rows of memory faders</label>
-      <select id="memory-rows" (change)="onMemoryRows($event)">
-        @for (count of rowCounts; track count) {
-          <option [value]="count" [selected]="count === settings.memoryRows()">{{ rowsName(count) }}</option>
-        }
-      </select>
-    </div>
-    <div class="field">
-      <label for="effect-rows">Row of effect faders</label>
-      <select id="effect-rows" (change)="onEffectRows($event)">
-        <option value="0" [selected]="settings.effectRows() === 0">None</option>
-        <option value="1" [selected]="settings.effectRows() === 1">1</option>
-      </select>
-    </div>
-    <div class="field">
-      <label for="sound-rows">Row of sound faders</label>
-      <select id="sound-rows" (change)="onSoundRows($event)">
-        <option value="0" [selected]="settings.soundRows() === 0">None</option>
-        <option value="1" [selected]="settings.soundRows() === 1">1</option>
-      </select>
-    </div>
-    <div class="field">
-      <label for="wheel-size">Cues the stack wheel shows</label>
-      <select id="wheel-size" (change)="onWheelSize($event)">
-        @for (size of wheelSizes; track size) {
-          <option [value]="size" [selected]="size === settings.wheelSize()">{{ size }}</option>
-        }
-      </select>
-    </div>
-    <div class="field">
-      <label for="channel-keys">Channel keys of the independents</label>
-      <input
-        id="channel-keys"
-        type="number"
-        min="0"
-        [max]="maxChannelKeys"
-        step="1"
-        [value]="settings.channelKeys()"
-        (change)="onChannelKeys($event)"
-      />
-    </div>
-    <div class="field">
-      <label for="memory-keys">Memory keys of the independents</label>
-      <input
-        id="memory-keys"
-        type="number"
-        min="0"
-        [max]="maxMemoryKeys"
-        step="1"
-        [value]="settings.memoryKeys()"
-        (change)="onMemoryKeys($event)"
-      />
-    </div>
-    <div class="field">
-      <label for="effect-keys">Effect keys of the independents</label>
-      <input
-        id="effect-keys"
-        type="number"
-        min="0"
-        [max]="maxEffectKeys"
-        step="1"
-        [value]="settings.effectKeys()"
-        (change)="onEffectKeys($event)"
-      />
-    </div>
-    <div class="field">
-      <label for="sound-keys">Sound keys of the independents</label>
-      <input
-        id="sound-keys"
-        type="number"
-        min="0"
-        [max]="maxSoundKeys"
-        step="1"
-        [value]="settings.soundKeys()"
-        (change)="onSoundKeys($event)"
-      />
-    </div>
-
-    <!-- the universes belong to the project, the zoom to every view: here, as the owner wants them -->
-    <h4 id="universes-title">Universes</h4>
-    <div class="field">
-      <label for="universes">Universes of the project</label>
-      <select id="universes" [disabled]="store.live()" (change)="onUniverses($event)">
-        @for (count of universeCounts; track count) {
-          <option [value]="count" [selected]="count === store.universes()">
-            {{ count }} ({{ count * universeSize }} channels)
-          </option>
-        }
-      </select>
-    </div>
-
-    <h4 id="zoom-title">Zoom</h4>
-    <div class="scale" role="group" aria-label="Zoom of the page">
-      <button
-        type="button"
-        class="step"
-        aria-label="Zoom out"
-        [disabled]="settings.zoom() <= smallest"
-        (click)="settings.stepZoom(-1)"
-      >
-        −
-      </button>
-      <output class="value" aria-live="polite">{{ zoomSaid() }}</output>
-      <button
-        type="button"
-        class="step"
-        aria-label="Zoom in"
-        [disabled]="settings.zoom() >= biggest"
-        (click)="settings.stepZoom(1)"
-      >
-        +
-      </button>
-      <button type="button" class="plain" [disabled]="settings.zoom() === 1" (click)="settings.resetZoom()">
-        Reset
-      </button>
-    </div>
-
-    <!-- the autosave and LAN belong to the desk program; only the PC changes them -->
-    <h4 id="autosave-title">Autosave</h4>
-    @if (autosave(); as autosave) {
-      <div class="field">
-        <label for="autosave-on">Keep the work that is not saved</label>
-        <select id="autosave-on" (change)="onAutosaveOn($event)">
-          <option value="on" [selected]="autosave.on">On</option>
-          <option value="off" [selected]="!autosave.on">Off</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="autosave-every">How often</label>
-        <select id="autosave-every" [disabled]="!autosave.on" (change)="onAutosaveEvery($event)">
-          @for (seconds of autosaveIntervals; track seconds) {
-            <option [value]="seconds" [selected]="seconds === autosave.seconds">Every {{ intervalName(seconds) }}</option>
-          }
-        </select>
-      </div>
-    } @else {
-      <p class="hint">
-        @if (store.lan() && !store.lan()?.local) {
-          Only the PC the desk program runs on can set the autosave.
-        } @else {
-          The desk program is older than this page and has no autosave to set.
-        }
-      </p>
+<div
+  class="panels"
+  role="tabpanel"
+  [class]="shown()"
+  [id]="'settings-part-' + shown()"
+  [attr.aria-labelledby]="'settings-tab-' + shown()"
+>
+  @switch (shown()) {
+    @case ('general') {
+      <lm-main-view-panel />
+      <lm-views-panel />
     }
-
-    <h4 id="lan-title">Network (LAN)</h4>
-    @if (lan(); as lan) {
-      @if (lan.on) {
-        <div class="field">
-          <label for="lan-address">Address for phones and tablets</label>
-          <select id="lan-address" (change)="onAddress($event)">
-            <option value="" [selected]="!lan.chosen">Automatic{{ lan.addresses[0] ? ' (' + lan.addresses[0] + ')' : '' }}</option>
-            @for (address of lan.addresses; track address) {
-              <option [value]="address.split(':')[0]" [selected]="lan.chosen === address.split(':')[0]">
-                {{ address }}
-              </option>
-            }
-            @if (chosenGone()) {
-              <option [value]="lan.chosen" selected>{{ lan.chosen }} (not in the network now)</option>
-            }
-          </select>
-        </div>
-        <p class="hint">
-          @if (lan.chosen && !chosenGone()) {
-            Devices come in at {{ addressInUse() }} only.
-          } @else if (chosenGone()) {
-            This PC does not have {{ lan.chosen }} now, so devices come in at any of its addresses
-            until it has it again.
-          } @else {
-            Devices come in at any address of this PC; the top bar shows the first.
-          }
-        </p>
-
-        <div class="field">
-          <label for="lan-password">New password</label>
-          <input
-            #password
-            id="lan-password"
-            type="text"
-            autocomplete="off"
-            spellcheck="false"
-            maxlength="24"
-            [attr.placeholder]="lan.password ?? ''"
-            (keydown.enter)="setPassword(password)"
-          />
-          <button type="button" class="plain" (click)="setPassword(password)">Set</button>
-          <button type="button" class="plain" (click)="newPassword()">New random</button>
-        </div>
-        @if (passwordProblem()) {
-          <p class="problem" role="alert">{{ passwordProblem() }}</p>
-        } @else if (passwordDone()) {
-          <p class="done" role="status">{{ passwordDone() }}</p>
-        }
-        <p class="hint">
-          5 to 20 letters and digits; spaces, dashes and small letters do not count. A new password
-          logs every phone and tablet out until it gives the new one.
-        </p>
-      } @else {
-        <p class="hint">
-          LAN is off. Switch it on with the LAN key at the top left; then the address and the
-          password can be changed here.
-        </p>
-      }
-    } @else {
-      <p class="hint">
-        @if (store.lan()) {
-          Only the PC the desk program runs on can change LAN.
-        } @else {
-          The desk program is older than this page and knows no LAN settings.
-        }
-      </p>
+    @case ('lan') {
+      <lm-lan-panel />
     }
-  </section>
-
-  <!-- ---------------------------------------------------------------- views in the top bar -->
-  <section class="panel" aria-labelledby="views-title">
-    <div class="head">
-      <h3 id="views-title">Views in the top bar</h3>
-      <button
-        type="button"
-        class="setup"
-        title="The views and rows for a kind of show: Theatre, Theatre with moving lights, Concert or Everything"
-        (click)="welcome.open()"
-      >
-        Setup…
-      </button>
-      <button
-        type="button"
-        aria-label="The usual views"
-        title="All the views, in the usual order"
-        [disabled]="viewsUsual()"
-        (click)="settings.resetViews()"
-      >
-        ↺
-      </button>
-    </div>
-    <ul class="views">
-      @for (view of orderedViews(); track view.name; let first = $first, last = $last) {
-        <li>
-          <label>
-            <input
-              type="checkbox"
-              [checked]="viewShown(view.name)"
-              [disabled]="view.name === alwaysShown"
-              (change)="onViewShown(view.name, $event)"
-            />
-            {{ view.label }}
-            @if (view.name === alwaysShown) {
-              <span class="note">always there</span>
-            }
-          </label>
-          <button
-            type="button"
-            class="move"
-            title="One place to the left in the top bar"
-            [attr.data-move]="view.name + ':-1'"
-            [attr.aria-label]="'Move ' + view.label + ' up'"
-            [disabled]="first"
-            (click)="moveView(view.name, -1)"
-          >
-            ▲
-          </button>
-          <button
-            type="button"
-            class="move"
-            title="One place to the right in the top bar"
-            [attr.data-move]="view.name + ':1'"
-            [attr.aria-label]="'Move ' + view.label + ' down'"
-            [disabled]="last"
-            (click)="moveView(view.name, 1)"
-          >
-            ▼
-          </button>
-        </li>
-      }
-    </ul>
-    <p class="hint">
-      A view that is not ticked leaves the top bar; its keyboard shortcut still opens it. Settings
-      stays, so that the others can come back. ▲ and ▼ move a view to the left or right in the top
-      bar, and ↺ brings all of them back in the usual order. Without Main the desk opens on the
-      first view ticked.
-    </p>
-
-    <!-- the sound: the device, its outputs, listening, the mixer and its playlist -->
-    <lm-sound-output />
-  </section>
-
-  <!-- ---------------------------------------------------------------- colors -->
-  <lm-key-colors-panel />
-
-  <!-- ---------------------------------------------------------------- the keyboard shortcuts -->
-  <lm-keyboard-panel />
-
-  <!-- ---------------------------------------------------------------- the outputs, two columns wide -->
-  <lm-outputs-panel />
+    @case ('sound') {
+      <section class="panel" aria-labelledby="sound-output-title">
+        <lm-sound-output />
+      </section>
+    }
+    @case ('colors') {
+      <lm-key-colors-panel />
+    }
+    @case ('keyboard') {
+      <lm-keyboard-panel />
+    }
+    @case ('outputs') {
+      <lm-outputs-panel />
+    }
+    @case ('backup') {
+      <lm-backup-panel />
+    }
+    @case ('about') {
+      <lm-about-panel />
+    }
+  }
 </div>

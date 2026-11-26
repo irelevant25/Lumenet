@@ -77,6 +77,23 @@ internal partial class DeskHub
     }
 
     /// <summary>
+    /// Mutes a cue of a sound or takes it back (Muted): its sound plays unheard. Also while the stack is
+    /// live, see <see cref="Desk.SetStackStepMuted"/>.
+    /// </summary>
+    /// <param name="id">The name of the cue.</param>
+    /// <param name="muted">True to mute it.</param>
+    public Task SetStackStepMuted(int id, bool muted)
+    {
+        using (_history.Change($"{(muted ? "muting" : "unmuting")} cue {CueOf(id)} of the stack"))
+        {
+            if (!_desk.SetStackStepMuted(id, muted))
+                return Task.CompletedTask;
+        }
+
+        return TellStackAsync();
+    }
+
+    /// <summary>
     /// The moment of a sound a cue comes at instead of GO, or none (null), also while the stack is
     /// live, see <see cref="Desk.SetStackStepAt"/>.
     /// </summary>

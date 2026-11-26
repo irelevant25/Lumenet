@@ -30,9 +30,9 @@ The first time the page opens on a device (the PC, a phone, a tablet), it asks w
 
 Settings is always there too, and Notes is in none of them: Settings shows it with a tick, for a show whose
 notes are written there. **Use this setup** sets them on this device, and then offers the first steps:
-**Outputs** (Settings, where the dmxbox or another output is set up), **Lights** (the Stage view, where the
+**Outputs** (the Outputs tab of Settings, where the dmxbox or another output is set up), **Lights** (the Stage view, where the
 lights are put on the plan) and **Examples** (the Load window with the example shows). **Later** changes
-nothing. Either way the device is not asked again; **Setup…** in Settings (beside Views in the top bar)
+nothing. Either way the device is not asked again; **Setup…** in Settings (General, beside Views in the top bar)
 offers the setups any time, and Settings changes each view and row on its own.
 
 ## Lumenet.exe
@@ -59,6 +59,8 @@ page and the examples are inside it, and so is .NET. Every release on the [Relea
   them over).
 * Settings are given as for the desk program, on the command line (`Lumenet.exe --Box:Host=127.0.0.1`) or
   in an `appsettings.json` beside the exe; `--Tray:OpenPage=false` starts it without opening the page.
+* **Updates:** the About tab of Settings says when a newer release is out, and a press puts it in place of
+  this exe and starts it (see [Updates](#updates)).
 * The exe is not signed: Windows may say that it does not know it (More info, then Run anyway), and the
   firewall asks once whether it may be reached from the network (for LAN).
 
@@ -171,7 +173,7 @@ the top, one line each.
   succession (the moves of a speed fader) are one.
   Up to 100 steps are kept, for the whole desk, whichever device made a change. Loading a project, a new
   one and an import start afresh, and while the stack is live they are locked. Ctrl + Z and Ctrl + Y are
-  their shortcuts until the Keyboard panel of Settings gives them others.
+  their shortcuts until the Keyboard tab of Settings gives them others.
 * **Stack** (across the top of the three columns at the right) is the stack at hand on Main: its keys stand
   in a column at the left, over the master section. Stack takes it live, Back, GO, Pause and Next go
   through it, as on the Stack view. Beside the keys, over the other two columns, stands a wheel of the
@@ -431,24 +433,27 @@ the top, one line each.
 
 ![The Export window with its five checkboxes, none checked](docs/screenshots/export.png)
 
-* **Export** puts parts of the desk into one file on this device: **Project** (everything the project holds,
-  as its file has it), **Stage** (the stage alone: its lights, their kinds, the groups and the picture),
-  **Settings** (those of this device), **Keyboard** (its shortcuts) and **MIDI** (the MIDI controllers of the
-  PC and what their controls do; on the PC only, see [MIDI controllers](#midi-controllers)). Each has a
-  checkbox, none checked at first. Chrome and Edge on the PC ask where to save the file; other browsers put it
-  among the downloads.
-* **Import** takes parts back from such a file, here or on another device: the same checkboxes, none checked
-  at first, then **File** and **Import**. It also takes a project file of the projects folder (its project
-  and its stage). A project comes in place of the open one, as with Load, called after the file and not
-  saved until Save; a stage comes in place of the project's stage (a step of Undo), and a step that played
-  light 3 of the old stage plays light 3 of the new one; settings and shortcuts become this device's, and the
-  MIDI the PC's. When the file lacks a part that is checked, nothing is imported, and the window says which
-  part. The window then says what came in. **.ASC** is the sixth checkbox, for the show of a theatre console, a file of its
-  own, so it is taken alone (it unchecks the others): a file in the USITT ASCII format (`.asc`, up to 8 MB),
-  the plain text in which consoles such as ETC Eos, Ion and Express, the ETC (AVAB) SmartFade or the Strand
-  consoles hand a show on (on an Eos: File, Export, USITT ASCII; a SmartFade saves its shows in this format).
-  It becomes the project, like Load replacing the open one, and the window warns when that has changes that
-  are not saved and then says what came across and what was left out.
+* **Export** puts parts of the desk into one ZIP on this device: **Project** (everything the project holds,
+  as its file has it, with its sounds), **Stage** (the stage alone: its lights, their kinds, the groups and
+  the picture), **Settings** (those of this device), **Keyboard** (its shortcuts) and **MIDI** (the MIDI
+  controllers of the PC and what their controls do; on the PC only, see [MIDI controllers](#midi-controllers)).
+  Each has a checkbox, none checked at first. In the ZIP each part is a JSON file of its own (`project.json`,
+  `stage.json` and so on; `lumenet-export.json` says which it holds), and the sound files are in `sounds`.
+  Chrome and Edge on the PC ask where to save the file; other browsers put it among the downloads.
+* **Import** takes parts back from such a ZIP, here or on another device: **File** first, then the window
+  lists the parts the file holds, each with a checkbox, none checked at first (a part it does not have says
+  "not in this file"), and **Import**. It also takes a backup (see [Backup](#backup)), a file of Export of
+  before 2026-11-26 (one JSON file, or a ZIP of it with its sounds) and a project file of the projects folder
+  (its project and its stage). A ZIP goes to the desk program as it is chosen, which keeps its sounds (they
+  change nothing until a project uses them). A project comes in place of the open one, as with Load, called
+  after the file and not saved until Save; a stage comes in place of the project's stage (a step of Undo), and
+  a step that played light 3 of the old stage plays light 3 of the new one; settings and shortcuts become this
+  device's, and the MIDI the PC's. The window then says what came in. The show of a theatre console is a file
+  of its own, taken whole: a file in the USITT ASCII format (`.asc` or `.txt`, up to 8 MB), the plain text in
+  which consoles such as ETC Eos, Ion and Express, the ETC (AVAB) SmartFade or the Strand consoles hand a show
+  on (on an Eos: File, Export, USITT ASCII; a SmartFade saves its shows in this format). It becomes the
+  project, like Load replacing the open one, and the window warns when that has changes that are not saved
+  and then says what came across and what was left out.
   * **Cues:** every cue of the first cue list becomes a memory with its look, and a cue of the stack that
     brings that memory up: with the cue's number, its up time, and as down the down time of the cue after it
     (the stack takes the old cue down while the new one comes up). A follow time becomes the cue's wait,
@@ -523,10 +528,10 @@ same levels on every kind of output, and so does a box: its own master stays at 
   project lists boxes or has outputs besides them. A box counts while it answers, an Art-Net node or a USB
   interface while it answers, sACN and an Art-Net broadcast while they go out. Its light is green while they
   play, amber while one of the project's does not. The pointer on it says what each plays. The outputs
-  themselves are in **Settings**, in the **Outputs** panel after the others; the shortcut of Outputs opens
-  Settings there.
+  themselves are in **Settings**, in the **Outputs** tab; the shortcut of Outputs opens Settings
+  there.
 
-![The Outputs panel of Settings with the simulated devices of sim.cmd: two boxes, an Art-Net node found by the search, sACN to a receiver and a USB interface at SIM1](docs/screenshots/outputs.png)
+![The Outputs tab of Settings with the simulated devices of sim.cmd: two boxes, an Art-Net node found by the search, sACN to a receiver and a USB interface at SIM1](docs/screenshots/outputs.png)
 
 * **The table** has a line for every output of a box and every port of the other outputs: the output (its
   name, and under it its address), its **kind** (dmxbox, Art-Net, sACN, USB DMX), its **state** (with what it
@@ -539,7 +544,8 @@ same levels on every kind of output, and so does a box: its own master stays at 
   its own.
 * **Add an output:** an Art-Net node by its address, an Art-Net broadcast, sACN by multicast or to the address
   of a receiver, a USB DMX interface at a free serial port, or a dmxbox by its address; with how many ports
-  it has (a box: how many outputs). The sentence under it says what the kind asks for.
+  it has (a box: how many outputs). The sentence under it says what the kind asks for. One that is in the
+  list already cannot be added again: Add stays dark, and the sentence says so.
 * Under them, marked ⚠: a universe of the project that reaches no cable (and which of the outputs that
   would play it do not answer), a universe that goes out more than once, as a splitter would give it, and an
   Art-Net node that is a dmxbox.
@@ -727,8 +733,8 @@ back to zero. A memory that holds a sequence starts running, because its fader g
 ![The Stack view, live: the previous, the current and the next cue over the table of the 14 cues](docs/screenshots/stack.png)
 
 * **Cue sheet** (at the right of the view's title) shows the stack as a sheet to print, for rehearsals and
-  for whoever calls the cues: every cue with its number, what it plays and its note, its value, Add and
-  Continue, its up, wait and down (a wait of 0 says GO: the cue waits for GO), the moment of a sound it
+  for whoever calls the cues: every cue with its number, what it plays and its note, its value, Add,
+  Continue and Mute, its up, wait and down (a wait of 0 says GO: the cue waits for GO), the moment of a sound it
   comes at (At), skipped cues struck through, and a column **Called on** left empty to write in. **Print** hands it to the browser's printing, which
   can save it as a PDF too; the rest of the desk is left out, black on white.
 * **Stack** is the switch of the stack. Pressed, it is fully lit and the stack is **live**: every channel
@@ -739,10 +745,13 @@ back to zero. A memory that holds a sequence starts running, because its fader g
   memory (Save mem, Edit mem, Rec seq, Copy and Del are locked), not a sequence, not an effect, not a note,
   not the channels of the independent keys, and New and Load are locked too. The faders, the independent
   keys themselves, the playbacks of the effects (their keys, faders and live values), Clear, Black out, the
-  master and saving the project work as always.
+  master and saving the project work as always. On the Sounds view a sound's level, pan, speed, pitch, echo
+  and reverb can still be changed: one sound that the audience drowns can be made louder on its own.
 * While the stack is not live it does not run: GO, Pause, Next and Back are dark. That is the time to
   change the cues.
-* **GO** goes to the next cue, or goes on after Pause. **Pause** holds a fade or a wait where it is.
+* **GO** goes to the next cue, or goes on after Pause. **Pause** holds a fade or a wait where it is, and
+  the sounds of the cues that are on (or on their way down) where they are, silent; GO, Next, Back and
+  Stack off let them go on. Sounds played by hand or by a sequence play on.
   **Next** and **Back** go to the next or the previous cue at once, and without the cues' times: the
   new cue is there at once, the cues that go are gone at once, and so are their sounds. A fade that runs
   ends where it goes. After Back the stack stays on that cue until GO, also when the cue has a wait:
@@ -791,6 +800,10 @@ back to zero. A memory that holds a sequence starts running, because its fader g
   sound still plays. While a Soundcraft Ui mixer answers, the list of numbers offers, after the sounds,
   the tracks of its playlist that are no sound yet: one picked becomes a sound in the first free number
   (see [Tracks of a Soundcraft Ui mixer](#tracks-of-a-soundcraft-ui-mixer)). The same on the Sequences view.
+* **Mute** (the box after Continue, only for a sound): the cue plays its sound, but nothing of it is heard;
+  it runs as always, its moments for At too. It can be switched while the stack is live. A later cue of the
+  same sound without Mute is heard; the muted one stays unheard on its way down, and after Stack off until
+  it stops. A project with a muted cue is a file of version 11.
 * **At** (the column after Down) lets a cue come at a moment of a sound instead of GO. Press it, choose
   the sound and type the moment (`1:15.5`, or `75.5` in seconds), or press **Now** while the sound plays to
   take where it is; **Use** gives the cue that moment, **None** takes it away. While the stack is live and
@@ -1018,7 +1031,8 @@ Soundcraft Ui mixer, played by the mixer's own player beside the files (see
 * **The editor** changes the sound itself. Every change is stored at once and is a step of Undo; a sound
   that plays goes on with it, and follows a slider while it moves. The sliders are lying faders, as on the
   Effects view: a drag, the mouse wheel (with Shift one step at a time) and the arrow keys move them. While
-  the stack is live the editor is locked.
+  the stack is live only the level, pan, speed, pitch, echo with its repeats and reverb with its room size
+  can be changed; the rest is locked.
   * **Name:** what the key, the steps and the cards call it.
   * **File:** its name and how long it is. **Another file…** puts another file in its place and keeps the
     rest; a sound that plays starts again with it.
@@ -1043,7 +1057,7 @@ Soundcraft Ui mixer, played by the mixer's own player beside the files (see
   while it is quiet), at the right how long the file is, and a line that glides along while it plays. Before
   From and after To the wave is dim; what the sound has played is brighter than what is still to come.
   A track of the mixer has an empty wave, a flat line, with the line where it is and its length as the
-  mixer tells while it plays.
+  mixer tells while it plays. The pointer over the wave shows the time in the file where it points.
 * **To play from elsewhere,** double click the wave of a sound that plays: it goes on from that place.
   With the focus on the wave, the arrows go 5 seconds back and on, Page Up and Page Down 30, Home to its
   start. A fade at its end that had begun is taken back. The Stack view and the Stage view show the wave
@@ -1052,7 +1066,7 @@ Soundcraft Ui mixer, played by the mixer's own player beside the files (see
 
 ### The device
 
-The **Sound** part of Settings (under the views in the top bar) chooses the device the sounds play on: one
+The **Sound** tab of Settings chooses the device the sounds play on: one
 at a time. **Windows' default device** follows Windows, also when that changes. A device of more than two
 outputs (a sound card of four, say) also shows **Outputs**: the two of them the sounds go out on (1 and 2,
 3 and 4 and on); a device of two has no such field. A device chosen that is not there plays nothing until
@@ -1062,7 +1076,7 @@ tablet says where they are chosen. To play through a mixing desk, a cable from t
 mixer's line input is enough.
 
 **LISTEN** plays what goes out once more on a second device of the PC, in stereo: headphones or the
-speakers of the PC, while the device of the sound feeds a mixing desk. Choose that device in the Sound part
+speakers of the PC, while the device of the sound feeds a mixing desk. Choose that device in the Sound tab
 of Settings (**Listen on**); the key LISTEN of the sound section (Main, the Sounds view, the Stage view and
 the Stack view) switches it on and off, also from a phone: lit while it plays there, half lit while that
 device is not there. It plays every sound, under the volume of all sounds and MUTE, a moment after the
@@ -1075,7 +1089,7 @@ A Soundcraft Ui mixer (Ui12, Ui16, Ui24R) has a player of its own for the tracks
 sound can be such a track: it plays on the mixer's player, while the sounds of files play on the PC beside
 it, and each sound knows which it is. The desk works the mixer over the network (its Wi-Fi or a cable):
 
-* **Mixer** in the Sound part of Settings: the mixer's IP address (10.10.1.1 on its own Wi-Fi, else the one
+* **Mixer** in the Sound tab of Settings: the mixer's IP address (10.10.1.1 on its own Wi-Fi, else the one
   your network gave it; a port after a colon when it is not 80). **Find** looks through the networks of the
   PC for it, in about three seconds: one mixer found is taken at once, of several one is chosen, and when
   none answers Settings says so (the address can still be typed). Settings says when the mixer answers, and
@@ -1099,7 +1113,8 @@ it, and each sound knows which it is. The desk works the mixer over the network 
     mixer what the desk has. A double click on the wave jumps in the track.
   * the player plays a track and stops at its end: the desk sets it to manual, not one track after another.
   * keys, faders, the cues of the stack and the steps of sequences start and stop a track as they do a file. A
-    step offers every sound, and after them the tracks of the playlist that are no sound yet.
+    step offers every sound, and after them the tracks of the playlist that are no sound yet. Pause of the
+    stack pauses the mixer's player too.
 * **Playlist** (in the Sound part, while the mixer answers): All tracks at first, or a folder of the stick,
   or Tracks outside the folders: the tracks the steps and the Sounds view offer. **Add all its tracks**
   makes every track of it a sound named after the track, in the free numbers from 1 on; a track that is a
@@ -1143,9 +1158,8 @@ A file added on the Sounds view is kept by the desk program (in the folder sound
 under its contents: the same file added twice is kept once). Save writes the project's sounds into a folder
 beside the project's file: "Show.json" gets "Show sounds" with the files under their names. Load takes them
 from there, so a project with its folder can go to another PC. A project with sounds is a file of version 9.
-**Export** of a project with sounds saves a ZIP instead of a JSON file: the file of Export and its sounds,
-laid out the same way ("Show - project.json" and "Show - project sounds/"); **Import** takes such a ZIP,
-and the sounds come with the project, also on another PC.
+**Export** of the project takes its sounds into the ZIP (in `sounds`), and **Import** brings them back with
+the project, also on another PC.
 A sound whose file is missing stays silent: played, the line at the top of the Sounds view says that its file
 cannot be played. A track of the mixer has no file: a project keeps its playlist and its name
 ("playlist" in the file), and the ZIP of Export has nothing of it.
@@ -1228,21 +1242,23 @@ page cannot move a light. In the small-screen layout the mouse wheel scrolls the
 
 The settings and the keyboard shortcuts belong to the device: its browser keeps them, every project shows
 them, and a project that is loaded leaves them as they are. **Export** takes them to another device, and
-**Import** brings them from one (see above). The number of universes belongs to the project, the autosave and
-LAN to the desk program.
+**Import** brings them from one (see above). The number of universes belongs to the project, the autosave,
+LAN and the backups to the desk program.
 
-![The Settings view](docs/screenshots/settings.png)
+![The General tab of Settings](docs/screenshots/settings.png)
 
-Settings has five panels side by side, as many as the window has room for, each as high as the window
-lets it be and scrolling where it holds more: **Main view** (with the universes, the zoom, the autosave and
-the network under it), **Views in the top bar** (with **Sound** under the views: the device of the sounds
-and its outputs, the device to listen on, and a Soundcraft Ui mixer (typed, or found with Find) with its
-playlist, see [The device](#the-device) and [Tracks of a Soundcraft Ui mixer](#tracks-of-a-soundcraft-ui-mixer); on the PC only, a phone
-says where it is set up), **Colors of the keys** (one under the other), **Keyboard** (see
-[Keyboard](#keyboard)) and the **Outputs** of the project (see [The outputs](#the-outputs)), which is two
-columns wide for its table. Panels that do not fit beside the others go on under them, as high as what
-they hold; the panels then scroll down to them. Every label stands beside its field. The MIDI controllers
-have a view of their own (see [MIDI controllers](#midi-controllers)).
+Settings has tabs, in the middle of the window: **General** with two sections side by side (the main view
+with the universes, the zoom and the autosave, and the views in the top bar; on a phone one under the
+other), and each of the others one section of the same width: **LAN** (the address and the password for
+phones and tablets), **Sound** (the device of the sounds and its outputs, the device to listen on, and a
+Soundcraft Ui mixer, typed or found with Find, with its playlist; see [The device](#the-device) and
+[Tracks of a Soundcraft Ui mixer](#tracks-of-a-soundcraft-ui-mixer); on the PC only, a phone says where it is
+set up), **Colors** (the colors of the keys), **Keyboard** (see [Keyboard](#keyboard)), **Outputs**
+(the outputs of the project, see [The outputs](#the-outputs)), **Backup** (see [Backup](#backup)) and
+**About** (the version, an update, and what Lumenet is made with; see [Updates](#updates)). The address names
+the tab (`/settings#keyboard`), so a reload keeps it, and the arrow keys go from tab to tab. Every label
+stands beside its field. The MIDI controllers and OSC have a view of their own (see
+[MIDI controllers](#midi-controllers)).
 
 * **Channels on a page** (Main): Auto (a row of 32 or 16 by the window, as above), or 8, 16, 32, 64 or 128.
 * **Rows of channel faders** and **rows of memory faders** (Main): 1 or 2 of each, at first 2 and 1. A
@@ -1269,7 +1285,7 @@ have a view of their own (see [MIDI controllers](#midi-controllers)).
 * **Autosave:** On or Off, and how often: every 5 seconds (at first), 30 seconds, 1 minute or 5 minutes. Off,
   the desk program keeps nothing and takes away the file it kept. The desk program keeps the choice in
   `autosave-options.json` beside the autosave file. On the PC only.
-* **Network (LAN):** while LAN is on, the address phones use and the password; see above. On the PC only.
+* **LAN:** while LAN is on, the address phones use and the password; see above. On the PC only.
 * **Views in the top bar:** the views in the order of their links, each with a tick; a view that is not
   ticked leaves the top bar (its keyboard shortcut still opens it). Settings is always ticked, so that the
   others can come back. ▲ and ▼ move a view one place to the left or right in the top bar (the keyboard focus
@@ -1290,11 +1306,46 @@ have a view of their own (see [MIDI controllers](#midi-controllers)).
   and the others amber.
 
 The keys that take something out, ✕ at the end of a step in the Sequences and Stack views and of a shortcut
-in the Keyboard panel, are red.
+in the Keyboard tab, are red.
+
+### Backup
+
+A backup is one ZIP of everything Export takes: the project with its sounds, the stage, the settings and the
+keyboard of the PC, and the MIDI. The Backup tab sets where they go and when:
+
+* **Folder:** a whole path on the PC. A folder that [Google Drive for desktop](https://www.google.com/drive/download/)
+  syncs (in "My Drive") takes every backup to Google Drive by itself, and so do the folders of OneDrive and
+  Dropbox; Lumenet signs in to nothing. Where Google Drive for desktop is found, **Use its folder** fills in
+  `My Drive\Lumenet backups`.
+* **Back up when the project is saved:** On (at first) makes one with every Save on the PC; the line at the
+  top says "saved and backed up", or why it was not.
+* **Backups to keep:** 30 at first, 1 to 1000; older ones go. A backup is named after the project and the
+  time ("Lumenet backup - Concert - 2026-11-26 14.05.33.zip"), and only files named so are ever deleted.
+* **Back up now** makes one at once. Under it the tab says how many the folder holds and when the newest
+  was made.
+
+Import brings a backup back, part by part. The desk program keeps the setup in `backup.json` beside the LAN
+password. On the PC only.
+
+### Updates
+
+The About tab shows the version of Lumenet, and asks GitHub for the newest release when it opens, never
+otherwise. A newer one shows what it brings (the messages of its commits) and **Update to** its version:
+after a question, Lumenet.exe downloads it, checks it against the size and the SHA-256 that GitHub gives,
+puts it in its own place and starts it, and the page loads again once the new one answers. The desk stops
+for a few seconds and starts with every fader down, so the lights go out: update between shows, with the
+project saved. The file of the old version stays beside it as `Lumenet.exe.old` until the new one runs.
+
+* The desk of run.cmd says that it runs from the source code: git pull and run.cmd bring the new version.
+* A Lumenet.exe made on a PC (publish.cmd) does not know where its releases are, and says so.
+* A Lumenet.exe in a folder it may not write (Program Files) says so; the new file then goes there by hand.
+
+On the PC only. The tab also lists what Lumenet is made with and their licenses; the license of Lumenet
+itself is not chosen yet.
 
 ## Keyboard
 
-The Keyboard panel of Settings gives a shortcut to any key of the desk: the view links, New, Save, Load,
+The Keyboard tab of Settings gives a shortcut to any key of the desk: the view links, New, Save, Load,
 Import, Export, LAN, the boxes, Clear, Solo up, Solo down, Black out, Rate, Tempo, the keys of the stack and of
 Record, those of the Sequences view, of the Effects view and of the Stage view, Edit of the Notes view, Edit
 and every key of the independents, every page key and U key, the key under every channel, memory and effect
@@ -1322,7 +1373,7 @@ focus; a box or a choice that has the focus keeps its space bar and ticks. **↺
 gives every key the shortcut it has at first and takes away those set on this device: the first press asks (↺
 turns amber), and a second one within four seconds does it.
 
-![The Keyboard panel of Settings: the keys of the project and LAN open, Undo and Redo with their shortcuts](docs/screenshots/keyboard.png)
+![The Keyboard tab of Settings: the keys of the project and LAN open, Undo, Redo, Save and Load with their usual shortcuts](docs/screenshots/keyboard.png)
 
 * The kinds of keys stand one under the other (Views, Project and LAN, Master, General, Sound, Stack,
   Record, Sequences view, Effects view, Stage view, Notes view, Independents, Channel pages, Memory pages,
@@ -1345,7 +1396,7 @@ turns amber), and a second one within four seconds does it.
   or Alt that was already down when the page got the keyboard has none either: the page did not see which
   one went down.
 * **Listen** shows the desk; the key you double-click there is not pressed but picked, and Settings comes
-  back with its kind open in the Keyboard panel and the key chosen and scrolled into sight (Esc stops
+  back with its kind open in the Keyboard tab and the key chosen and scrolled into sight (Esc stops
   listening).
   A single click works as always, a moment later: it opens another view or page of faders, or presses the
   key, so the key to pick can be found first. Enter on a key picks it at once.
@@ -1377,12 +1428,12 @@ its left stand the controllers and the messages that came in, at its right every
   "Memory key 5 pressed", "Channel fader 1 of the page shown to 128". In amber when it did nothing: no
   mapping, no page of the desk open on the PC, a fader waiting until the control reaches the desk's value, or
   a refusal with its reason.
-* **Keys and faders:** every key and fader of the desk, kind by kind, as the Keyboard panel lists the keys
+* **Keys and faders:** every key and fader of the desk, kind by kind, as the Keyboard tab lists the keys
   (each kind with the number of its keys and faders, in brackets how many have a control, green when there
   are some, and while the search runs how many it finds, yellow when it finds some: Stack 6 (5) 2), each
   with the controls that work it, **Learn** and **✕**. **Learn**, then press or move a control: from now
   on it works that key or fader, and nothing else. Learn again, Stop or Esc stops waiting. **Listen** shows
-  the desk, as Listen of the Keyboard panel does: the key or fader double-clicked there is not pressed or
+  the desk, as Listen of the Keyboard tab does: the key or fader double-clicked there is not pressed or
   moved but shown here, its kind open, its line marked and its Learn ready (a fader does not move at all
   while Listen waits). ✕ takes all controls of that key or fader away. The search finds keys and faders by
   their names, and controls by what they are ("cc 48").
@@ -1394,7 +1445,7 @@ its left stand the controllers and the messages that came in, at its right every
 
 What a control works:
 
-* **Keys:** every key the Keyboard panel lists, as its keyboard shortcut does, on the page of the PC that was
+* **Keys:** every key the Keyboard tab lists, as its keyboard shortcut does, on the page of the PC that was
   used last (a click, a key, the focus): a locked key stays locked (while the stack is live, Record does
   nothing from a controller either), keys rest while a window is open or a key is being picked, and while
   Solo up or Solo down is lit a key held down holds its fader until it is let go. Without a page of the desk

@@ -1,0 +1,76 @@
+<h3 id="backup-title">Backup</h3>
+@if (view(); as view) {
+  <div class="field wide">
+    <label for="backup-folder">Folder</label>
+    <input
+      id="backup-folder"
+      class="folder"
+      type="text"
+      spellcheck="false"
+      autocomplete="off"
+      placeholder="G:\My Drive\Lumenet backups"
+      [value]="view.folder"
+      (change)="onFolder($event)"
+    />
+  </div>
+  @if (view.googleDrive && view.googleDrive !== view.folder) {
+    <div class="field">
+      <span class="label">Google Drive for desktop</span>
+      <button type="button" [title]="view.googleDrive" (click)="useGoogleDrive(view.googleDrive)">
+        Use its folder
+      </button>
+    </div>
+  }
+  <div class="field">
+    <label for="backup-on-save">Back up when the project is saved</label>
+    <select id="backup-on-save" (change)="onOnSave($event)">
+      <option value="on" [selected]="view.onSave">On</option>
+      <option value="off" [selected]="!view.onSave">Off</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="backup-keep">Backups to keep</label>
+    <input
+      id="backup-keep"
+      type="number"
+      min="1"
+      [max]="maxKeep"
+      step="1"
+      [value]="view.keep"
+      (change)="onKeep($event)"
+    />
+  </div>
+  <div class="actions">
+    <button type="button" class="now" [disabled]="!view.folder || busy()" (click)="backUpNow()">
+      {{ busy() ? 'Backing up…' : 'Back up now' }}
+    </button>
+  </div>
+
+  @if (problem()) {
+    <p class="problem" role="alert">{{ problem() }}</p>
+  } @else if (done()) {
+    <p class="done" role="status">{{ done() }}</p>
+  }
+  @if (view.problem) {
+    <p class="problem">{{ view.problem }}</p>
+  }
+  @if (view.count > 0) {
+    <p class="status" [title]="view.last ?? ''">
+      {{ view.count }} in the folder, the newest from {{ view.lastAt | date: 'd MMM y, HH:mm' }}.
+    </p>
+  }
+  <p class="hint">
+    A backup is one ZIP of everything Export takes, the sounds too; Import brings it back. A folder
+    that Google Drive for desktop, OneDrive or Dropbox syncs goes to the cloud by itself.
+  </p>
+  @if (!view.googleDrive) {
+    <p class="hint">
+      <a href="https://www.google.com/drive/download/" target="_blank" rel="noopener"
+        >Google Drive for desktop</a
+      >
+      is not on this PC. With it, a folder in "My Drive" goes to Google Drive.
+    </p>
+  }
+} @else {
+  <p class="hint">{{ unavailable() || 'Asking the desk program…' }}</p>
+}

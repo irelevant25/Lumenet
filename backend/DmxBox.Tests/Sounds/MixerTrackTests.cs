@@ -149,6 +149,31 @@ public sealed class MixerTrackTests : IDisposable
     }
 
     [Fact]
+    public async Task PauseOfTheStackPausesThePlayerOnceAndLetsItGoOnOnce()
+    {
+        await ConnectAsync();
+        var player = new UiTrackPlayer(_link, () => _now);
+        player.Start(Track());
+        await GotAsync("MEDIA_SWITCH_TRACK^Show^Intro.mp3", "MEDIA_PLAY");
+        _mixer.Say("SETD^var.currentState^2", "SETS^var.currentTrack^Intro.mp3", "SETD^var.currentLength^120", "SETD^var.currentTrackPos^0.5");
+        await Wait.UntilAsync(() => player.StateOf(1).Position == 60, "the position did not come");
+        _mixer.Forget();
+
+        player.Pause(1, true);
+        player.Pause(1, true);   // once
+        player.Pause(2, true);   // not the track that plays
+        await GotAsync("MEDIA_PAUSE");
+        _mixer.Say("SETD^var.currentState^3");   // the player holds a pause: the track still counts as playing
+        await Wait.UntilAsync(() => _link.Player?.State == 3, "no pause");
+        Assert.Equal(new SoundVoiceState(Playing: true, 60, Missing: false, 120), player.StateOf(1));
+
+        player.Pause(1, false);
+        await GotAsync("MEDIA_PAUSE", "MEDIA_PLAY");
+        Assert.Equal(2, _mixer.Got.Length);
+        OnlyPlayerTouched();
+    }
+
+    [Fact]
     public async Task ATrackThePlayerNeverTakesIsMissingAndAnotherTrackEndsTheOneBefore()
     {
         await ConnectAsync();

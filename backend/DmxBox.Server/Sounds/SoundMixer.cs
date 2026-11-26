@@ -24,6 +24,7 @@ internal sealed class SoundMixer : ISampleProvider
     private readonly Dictionary<int, SoundVoice> _voices = [];
     private readonly List<SoundVoice> _leaving = [];
     private readonly double[] _levels = new double[Sound.MaxSounds];
+    private readonly bool[] _paused = new bool[Sound.MaxSounds];
     private readonly SoundVoiceState[] _states = new SoundVoiceState[Sound.MaxSounds];
     private readonly Lock _statesLock = new();
     private float[] _voiceBuffer = [];
@@ -55,6 +56,15 @@ internal sealed class SoundMixer : ISampleProvider
     public void SetLevel(int number, double level)
     {
         Volatile.Write(ref _levels[number - 1], Math.Clamp(level, 0, 1));
+    }
+
+    /// <summary>
+    /// A sound holds where it is (Pause of the stack), from any thread: it fades out over one read, and
+    /// then nothing more of its file is read until it goes on, coming in again from silence.
+    /// </summary>
+    public void Pause(int number, bool pause)
+    {
+        Volatile.Write(ref _paused[number - 1], pause);
     }
 
     /// <summary>The master volume as a gain (0 to 1, which is 0 dB) and MUTE, from any thread.</summary>
@@ -199,7 +209,12 @@ internal sealed class SoundMixer : ISampleProvider
         float leaveStep = (float)(1 / (LeaveSeconds * WaveFormat.SampleRate));
         foreach ((int number, SoundVoice voice) in _voices)
         {
-            float target = (float)(Volatile.Read(ref _levels[number - 1]) * Sound.GainOf(voice.Sound.Decibels));
+            // a paused voice fades out over this read, and then holds where it is
+            bool paused = Volatile.Read(ref _paused[number - 1]);
+            if (paused && voice.Gain <= 0)
+                continue;
+
+            float target = paused ? 0 : (float)(Volatile.Read(ref _levels[number - 1]) * Sound.GainOf(voice.Sound.Decibels));
             MixVoice(voice, bus, frames, target, 0);
         }
 

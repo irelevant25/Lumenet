@@ -1,5 +1,6 @@
 import { BoxView, OutputPlan, OutputView } from '../desk/desk-types';
 import {
+  alreadyListed,
   newPlan,
   outputsSummary,
   planOfNode,
@@ -51,6 +52,31 @@ function view(plan: OutputPlan, state: OutputView['state']): OutputView {
 }
 
 describe('outputs', () => {
+  it('an output that is in the list already is not added again', () => {
+    const outputs = [view(node, 'connected'), view(sacn, 'sending')];
+    const newBox: BoxView = { ...missingBox, address: '10.1.9.1', kind: 'new' };
+    const taken = (kind: Parameters<typeof alreadyListed>[0], address = '') =>
+      alreadyListed(kind, address, [pico, newBox], outputs);
+
+    expect(taken('artnet', ' 192.168.1.50 ')).toBe(
+      'The Art-Net node at 192.168.1.50 is in the list already.',
+    );
+    expect(taken('artnet', '192.168.1.51')).toBe('');
+    expect(taken('sacn', '192.168.1.50')).toBe(''); // another kind at the same address
+    expect(taken('multicast')).toBe('The sACN multicast is in the list already.');
+    expect(taken('broadcast')).toBe('');
+    expect(taken('dmxbox', '192.168.7.1')).toBe(
+      'The dmxbox at 192.168.7.1 is in the list already.',
+    );
+    expect(taken('dmxbox', '10.1.9.1')).toBe(''); // a new box, which answers but is not in the list
+    expect(taken('artnet')).toBe(''); // nothing typed yet
+    expect(taken('usb')).toBe('');
+    // a broadcast on a network of its own leaves room for another
+    expect(
+      alreadyListed('multicast', '', [], [view({ ...sacn, network: '192.168.1.0/24' }, 'sending')]),
+    ).toBe('');
+  });
+
   it('the top bar counts the boxes and the outputs that play, of those the project has', () => {
     expect(outputsSummary([], []).text).toBe('Outputs connected: 0');
     expect(outputsSummary([{ ...pico, kind: 'automatic' }], []).text).toBe('Outputs connected: 1');

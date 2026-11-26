@@ -1,4 +1,5 @@
-import { Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import { Router, Routes } from '@angular/router';
 import { MainView } from './main/main-view/main-view';
 
 /**
@@ -68,7 +69,10 @@ export const routes: Routes = [
       import('./settings/settings-view/settings-view').then((file) => file.SettingsView),
     title: 'Lumenet: settings',
   },
-  // The keyboard shortcuts had a view of their own until 2026-11-24; they are a panel of Settings now.
-  { path: 'keyboard', redirectTo: 'settings' },
+  // The keyboard shortcuts had a view of their own until 2026-11-24; they are a tab of Settings now.
+  {
+    path: 'keyboard',
+    redirectTo: () => inject(Router).createUrlTree(['/settings'], { fragment: 'keyboard' }),
+  },
   { path: '**', redirectTo: '' },
 ];

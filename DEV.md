@@ -793,10 +793,11 @@ state as soon as a box answers.
   each with ports that play a universe at an address (the 15-bit Port-Address of Art-Net, the universe of
   sACN). `OutputNetwork` (a hosted service, beside `BoxNetwork`) plays them and keeps their states
   (`OutputsChanged`; `GetOutputs`, `SetOutputs`, `FindArtNetNodes`, `GetSerialPorts`, `GetNetworks`). The page
-  shows the boxes and these outputs in one table, the Outputs panel of Settings (`outputs-panel`: a line for
-  each output of a box and each port of the others, two columns of the panels wide, as its table needs
-  about 650 pixels; it asks for the networks, the serial ports and the nodes only once the page is
-  connected; the top left, `outputs-status`, only counts them). `FindArtNetNodes` takes a second and a
+  shows the boxes and these outputs in one table, the Outputs tab of Settings (`outputs-panel`: a line for each
+  output of a box and each port of the others; it asks for the networks,
+  the serial ports and the nodes only once the page is connected, and adds nothing that is in the list
+  already, `alreadyListed` in `outputs.ts`; the top left, `outputs-status`, only counts
+  them). `FindArtNetNodes` takes a second and a
   half and answers as a stream of one (`DeskConnection.ask`): SignalR takes one call of a page at a time,
   and a call that long would hold up that page's faders and keys, while a stream runs beside them. The
   packets are in [section 6](#6-art-net-sacn-and-the-dmx-usb-pro):
@@ -822,6 +823,38 @@ state as soon as a box answers.
   * Settings for a test desk: `--Outputs:Bind=127.0.0.1` sends from loopback only (no broadcast, no
     multicast), `--Outputs:ArtNetPort`, `--Outputs:ArtNetReplyPort` (0: any port) and `--Outputs:SacnPort`
     send to pretend receivers. The tests use these.
+* **Export, Import and backups:** the file of Export is one ZIP (`SoundPack.cs`, its version 2):
+  `lumenet-export.json` (`format`, `version`, `name`, `parts`), a JSON file for each part (`project.json`,
+  `stage.json`, `settings.json`, `keyboard.json`, `midi.json`) and the sound files of the project in `sounds/`.
+  The page still makes one text of Export (version 1 of "lumenet-export" with every part in it, `transfer.ts`)
+  and sends it to `POST /api/export/pack?name=`; `POST /api/import/unpack` takes the sounds of a ZIP into the
+  store and gives its parts back as that text. A ZIP of before 2026-11-26 (the text at its top and "<Name>
+  sounds/") and a text of Export as a file of its own are still read. Import asks for the file first and lists
+  the parts it holds (`partsIn`); a ZIP goes to the desk program as soon as it is chosen. A backup is the same
+  ZIP with every part: `Backups.cs` writes it into the folder that `backup.json` names (beside the LAN password;
+  `GetBackup`, `SetBackup`) as "Lumenet backup - <Project> - yyyy-MM-dd HH.mm.ss.zip", first under ".partial"
+  so that a sync never takes half a file, and deletes the oldest files of that name beyond the number to keep,
+  never another file. The page on the PC asks for it (`POST /api/backup?name=`, from the PC only), with Back up
+  now and after a Save (`DeskBackups.afterSave`). Google Drive for desktop is found as `<drive>:\My Drive`, or
+  `My Drive` or `Google Drive` in the user's folder.
+* **Updates** (`Update/AppUpdate.cs`): `CheckUpdate` asks `api.github.com/repos/<Update:Repository>/releases/latest`
+  (User-Agent "Lumenet/<version>" and nothing else; an answer counts for 2 minutes), and `InstallUpdate`
+  downloads its `Lumenet.exe`, checks the size and the `sha256:` digest that GitHub gives, and hands it to
+  `ISelfReplace`. Both answer as streams, so that a slow GitHub holds up none of the page's other calls, and
+  `InstallUpdate` says how far the download is (`UpdateStep`). Only Lumenet.exe has an `ISelfReplace`
+  (`backend/Lumenet/SelfReplace.cs`): it renames the running exe to `.old` (Windows lets a running program's
+  file be renamed), moves the new one in, starts it with the same command line and `--Update:WaitFor=<pid>
+  --Tray:OpenPage=false`, and ends a second later; the new one waits for that process before it takes the
+  signal of the first Lumenet and the port, and deletes `.old` once it runs. The repository comes from the
+  release build: `Lumenet.csproj` writes `$(GITHUB_REPOSITORY)` into the exe as AssemblyMetadata "Repository"
+  (`BuiltIn.Adjust` makes it the setting), so the sources name no owner; `--Update:Repository=owner/name`
+  gives one by hand. A page that finds a desk program of another version after a reconnect loads itself again
+  (`DeskStore.refresh`), as its files are those of the other version.
+* **Settings** has a tab for each part (`settings/settings-tabs.ts`): the fragment of the address names it
+  (`/settings#keyboard`), so links and shortcuts open a tab, and `/keyboard` leads to that one. The tabs
+  stand in the middle, and so do their sections of 760 pixels at most (`settings-view.css`): General two
+  side by side (one under the other on a phone), every other tab one; the panels themselves take the width
+  they are given.
 * `frontend/` is an Angular app. It only shows the desk and passes on what you do, over SignalR (`/hub/desk`).
   Because the state lives in the backend, reloading the page loses nothing.
   * **Zoom** (Settings, per device, 50 % to 200 %) is CSS `zoom` on `<html>` (`DeskSettings`), and the same
@@ -955,8 +988,8 @@ its own without a device, so that playing, ending and the positions work the sam
   volume of all sounds and MUTE; it tells `ISoundPlayer` what to start, level and stop. `SoundEngine.cs` is
   that player: the device (`sound.json` of the PC beside `midi.json`: the device's id, empty for Windows'
   default, the pair of outputs (`outputs`; the `music` of a sound.json of before is read as it), the
-  device to listen on, and the mixer and its playlist; the page's Sound part of Settings, in the panel of
-  the views, `sound-output`, which shows the outputs only for a device of more than two), watched every 2
+  device to listen on, and the mixer and its playlist; the page's Sound tab of Settings,
+  `sound-output`, which shows the outputs only for a device of more than two), watched every 2
   seconds for a
   device that went or came back. A change of the outputs or of the listening leaves the device open.
   `SoundMixer.cs` mixes on the audio thread: commands are posted to it, gains move in short ramps, the
@@ -985,7 +1018,9 @@ its own without a device, so that playing, ending and the positions work the sam
 * **The wave:** `GET /api/sounds/{hash}/wave` reads the whole file once (`SoundWave.cs`, on a thread of
   the pool) and gives the loudest sample and the mean loudness of each of 1000 parts, 0 to 255, as Base64;
   the store keeps it while the desk program runs. The page (`sound-wave`) draws it on a canvas and moves the
-  line on at the sound's speed between the positions the desk program sends about 10 times a second.
+  line on at the sound's speed between the positions the desk program sends about 10 times a second; the
+  pointer over it shows the time of the file there (`hover`), and while the sound is paused (`paused` in
+  its playback) the line stands.
 * **Steps of sounds** (`Step.SoundTarget`, "sound"): in the stack they move the sound's fader like an effect
   step (`Fader.Sound` in `Desk.StackParts.cs`); in a sequence `AddSequenceSounds` gives `SoundRun.Played`, the
   higher of it and the fader counts. `Step.Continue` (sounds only) keeps a step on through steps without
@@ -1002,8 +1037,8 @@ its own without a device, so that playing, ending and the positions work the sam
 * **Skipped steps** (`Step.Disabled`, "disabled": true, version 9): the stack's `EntryBeside` passes over
   them (Play, Next, Prev, waits, going live from the first one not skipped; all skipped refuses going
   live), `OnAt` leaves them out; `SequenceTimeline.InTurn` makes the rounds of the other steps only.
-  `SetStackStepDisabled` and `SetSequenceStepDisabled` are the only changes of stored things allowed
-  while the stack is live; they refuse the step that is on (the current one of the stack, the step a
+  `SetStackStepDisabled` and `SetSequenceStepDisabled` work while the stack is live (so do `SetStackStepAt`,
+  `SetStackStepMuted` and how a sound sounds, see below); they refuse the step that is on (the current one of the stack, the step a
   running sequence plays). The page sends them from the box at the end of a row, also while live.
 * **Cues at moments of sounds** (`Step.At`, a `SoundTime(Sound, Seconds)`, in the file `"at": { "sound",
   "seconds" }`, version 10; only a cue of the stack has one, a step of a sequence with one is refused):
@@ -1022,6 +1057,23 @@ its own without a device, so that playing, ending and the positions work the sam
   sounds can start in the same tick) into the cue it went to, as one step of the history; Stack off ends
   Learn. The page: the At column with `CueMomentDialog`, the key Learn (`stack.learn` for shortcuts and
   MIDI), the moments in the cards and on the cue sheet, and marks on the wave (`SoundWaveStrip.marks`).
+* **Pause and the sounds of the stack:** `StackPause` holds, besides the moves and the wait, the sounds of
+  the cues that are on and of those on their way down (`StackSoundsThatPlay`) with `ISoundPlayer.Pause`,
+  marked `SoundRun.Paused`; `ResumeSounds` lets them go on at the end of `Resume` (Play, Next, Prev) and in
+  `StopStack`, and a start or a stop of the sound ends the pause too. Sounds of the hand and of sequences
+  play on. `SoundMixer` takes a paused voice to silence within one read and then skips it, so it holds its
+  place; `UiTrackPlayer` sends MEDIA_PAUSE and MEDIA_PLAY, once each (`_held`; not yet tried on the
+  owner's mixer).
+* **Muted cues** (`Step.Muted`, "muted": true, version 11): only a cue of the stack that plays a sound; a
+  muted step of a sequence is refused (`AsSequenceStep`, and in a file). The sound plays unheard:
+  `MarkUnheardSounds` (in `Enter`, after `LeaveEndedSounds` and in `SetStackStepMuted`) sets
+  `SoundRun.Unheard` from the cue that holds the sound (`HoldersOf`), and `SettleSound` sends level 0 while
+  it is set; a stop or the end of the sound clears it, and a sound no cue holds keeps it on its way down.
+  `SetStackStepMuted` works while the stack is live; the page sends it from the Mute box of a row.
+* **How a sound sounds, while the stack is live:** `SetSound` takes a change then when only `Decibels`,
+  `Pan`, `Speed`, `Pitch`, `Echo`, `EchoTime`, `EchoRepeats`, `Reverb` and `Room` change
+  (`OnlySoundOfItChanges`); anything else needs the stack off. The editor of the page leaves those open
+  while live (`LIVE_KEYS`).
 * **The editor** sends a sound at once and then at most every 60 ms while it keeps changing (a slider), the
   newest each time; the history makes one step of them. A list of the sounds that comes meanwhile leaves the
   sound being sent as the page has it.
@@ -1029,10 +1081,8 @@ its own without a device, so that playing, ending and the positions work the sam
   `sounds` beside the LAN password (`--Sound:Folder`). A page sends a file with `POST /api/sounds?name=`
   (SignalR would take 10 MB at most), and `GET /api/sounds/{hash}` gives it back. Save writes the project's
   files into "<Name> sounds" beside "<Name>.json"; Load copies those the store lacks. A project with sounds
-  is a file of version 9. Export of such a project is a ZIP (`SoundPack.cs`): the page sends the text of
-  Export to `POST /api/export/pack?name=` and saves the ZIP it gets (the file of Export and "<Name> sounds/");
-  Import sends a ZIP to `POST /api/import/unpack`, which takes its sound files into the store and gives
-  back the file of Export. An example with sounds has them in "<Name> sounds" beside it too: `examples/8
+  is a file of version 9. Export takes its files into the ZIP (in `sounds/`, see Export, Import and backups),
+  and Import of a ZIP takes them into the store. An example with sounds has them in "<Name> sounds" beside it too: `examples/8
   Playing sounds sounds`, made from noise, filters and sine waves by `backend/ExampleSounds` (`dotnet run
   --project backend/ExampleSounds -- <folder>`, on Windows, whose own encoder makes the MP3 files; no part
   of the solution). It gives the same files byte for byte (one random generator for all, in a fixed order:
@@ -1177,7 +1227,7 @@ and only on localhost or HTTPS, and a controller belongs to the PC it is plugged
 * **The page:** `desk/midi.ts` (the types), `desk/desk-midi.ts` (the state, the keys it presses, the lamps and
   pages it tells), `desk/action-lamps.ts`, `desk/midi-targets.ts` (the list of the MIDI view, loaded only with
   it), and the components `midi-view` (the view, route `/midi`, after Notes), `midi-devices`, `midi-monitor`
-  and `midi-targets`. **Listen** of the MIDI view is the Keyboard panel's (`Keyboard.listen('midi')`): its
+  and `midi-targets`. **Listen** of the MIDI view is the Keyboard tab's (`Keyboard.listen('midi')`): its
   pick goes to `Keyboard.midiPicked`, which the list shows (marked, the focus on Learn) and nothing more.
   Listening for MIDI a fader can be picked too: a fader of the desk says its target as `data-fader`
   ("fader.channel.12", on the strips, the master, the rate, the speed of a sequence, the live faders of an
@@ -1241,11 +1291,11 @@ publish.cmd        # builds the page, then publish\Lumenet.exe
   desk program, then `publish.mjs`, then a release on the [Releases](../../releases) page with `Lumenet.exe` as its
   only file, named `v0.1.<number of commits>`, whose notes are the messages of the commits since the release
   before (`.github/release-notes.mjs`; the first release, those since the workflow came). When a test fails,
-  there is no release.
+  there is no release. The build there writes the repository into the exe, for its updates (see Updates).
 
 ### Tests
 
-`dotnet test backend/DmxBox.sln` (883 tests: the client, also against the simulator with two outputs, the
+`dotnet test backend/DmxBox.sln` (908 tests: the client, also against the simulator with two outputs, the
 desk, solo, sequences and the stack with a clock the tests set by hand, the rate and its tempo, undo and the autosave, the
 stage plan and its picture, fixtures, their attributes, their steps and their notes, the notes, the
 universes, project files with Export and Import, the examples, the import of show files, the links to the
@@ -1274,9 +1324,17 @@ category of before; LISTEN from any page; one pair of outputs; seeking in a file
 step played by mistake taken back, and the sound keys of the independents; the cues at moments of sounds
 with the clock set by hand: followed, jumped to, waited for, learned, in a project file of version 10; OSC:
 its packets byte by byte, the keys and faders of its addresses, the port on 127.0.0.1 with the LAN gate, a
-port another program has, osc.json, and a fader moved through the whole desk program; and the contract of
-the hub, `hub-contract.ts`), and in `frontend/`:
-`npm test -- --watch=false` (306 tests of the page; OSC on the MIDI view with its addresses; the window of a cue's moment, Learn, the moments in
+port another program has, osc.json, and a fader moved through the whole desk program; the ZIP of each part
+and of before; the backups: written whole, the oldest of their own name deleted and no other file, backup.json,
+a drive that is not there, and the page's request; the updates with a pretend GitHub: newer or not, the
+download checked by size and SHA-256, the stream of its steps, a GitHub that does not answer, the desk of
+run.cmd; Pause of the stack's sounds (a paused voice of the mixer, the mixer's player paused once), muted
+cues, and how a sound sounds changed while the stack is live; and the contract of the hub,
+`hub-contract.ts`), and in `frontend/`:
+`npm test -- --watch=false` (316 tests of the page; the tabs of Settings with the address and the arrow keys, the
+Backup tab (the folder of Google Drive, Back up now, a Save that backs up), the About tab (the question before
+an update, its steps, a GitHub that does not answer), Export as one ZIP and Import that lists the parts of a
+file; OSC on the MIDI view with its addresses; the window of a cue's moment, Learn, the moments in
 the cards and on the cue sheet, the cue sheet itself, the setups of the first start and the usual shortcuts
 with their reset; for the sounds the SOUND section with LISTEN and its
 volume in decibels (-20 dB at first), every sound in one color, the row on Main with
@@ -1291,7 +1349,9 @@ that seeks with a double click and with keys, the wave over the Stack view, RECO
 Memories and Sequences views, and the sound keys of the independents; for MIDI the
 keys of a controller pressed as shortcuts with their locks and holds, the keys of the pages shown, the lamps
 and pages told, the panel, Listen, and Export and Import; for sequences Add, Release and Effect in the table,
-the releases following their steps, and the steps that are on). `npm run lint` checks the page with ESLint:
+the releases following their steps, and the steps that are on; the Mute box of a cue, the time under the
+pointer on the wave, what of the sound editor works while the stack is live, and no output added
+twice). `npm run lint` checks the page with ESLint:
 the rules of angular-eslint, the accessibility of the templates among them (`frontend/eslint.config.js`).
 The release workflow lints the page and runs both kinds of tests before it makes Lumenet.exe.
 
@@ -2088,6 +2148,31 @@ receivers listen at 5568 and the desk sends from a port of its own.
   0:28 and 0:36. That check found a fault of the morning's timeline: Next or GO ahead of the music was
   undone at the next round (see Cues at moments of sounds); fixed, with tests. The backend passes 883 tests
   and the page 306. Not yet used by the owner.
+* **Settings in tabs, one ZIP for Export, backups and updates (2026-11-26, evening):** the owner's words:
+  Settings in tabs (General, LAN, Sound, Colors, Keyboard, Outputs, Backup, About), several parts
+  exported into one ZIP that Import lists, backups to Google Drive, Lumenet updated from Lumenet, and the
+  firmware of the outputs. The owner chose a folder that Drive syncs (no Google login), always one ZIP, and a
+  check only when About opens; the update of the firmware was dropped (the PIC32 needs a programmer), and its
+  version is shown in the Outputs tab already. The backend passes 899 tests and the page 311. On a test
+  copy in Edge headless: the eight tabs, each named in the address; a folder that is no whole path was
+  refused; Back up now wrote "Lumenet backup - 8 Playing sounds - <time>.zip" with the five parts and the
+  sounds; Export of example 8 gave one ZIP of 1.4 MB, which Import listed (MIDI "not in this file") and took
+  the keyboard from; the backup listed all five parts in Import; About asked the real GitHub (the repository
+  given on the command line, as a release carries it) and showed 0.1.42 with its notes, and that the desk of
+  run.cmd runs from the source code; nothing scrolled sideways at 390 pixels; no error on the page. **The
+  update itself (download, swap and restart of Lumenet.exe) has not run**: Lumenet.exe is not started on this
+  PC, and the first release with it can only update to the one after it. Google Drive for desktop is not on
+  this PC, so its folder was neither found nor used.
+* **Pause for sounds, muted cues, sounds changed while live (2026-11-26, night):** the owner's words: no
+  output added twice, the time where the pointer is on the wave, Pause that holds the sound too, a Mute box
+  for cues of sounds (played, but not heard), and the level, pan, speed, pitch, echo and reverb of a sound
+  changed while the stack is live ("Others can stay readonly"). The backend passes 908 tests and the page
+  316. On a test copy in Edge headless with example 9: a Mute box on each of the 7 cues of sounds, the box
+  of cue 1.1 muted it at the desk, and it switched while live too; while live the editor had those six
+  open and the rest locked, and a level typed there reached the desk (-3 to -9.5 dB); the pointer on the
+  wave showed 11.3 s. Pause was not heard: the test copy plays no sound, and the owner's mixer is not
+  played without asking (MEDIA_PAUSE untried). Then, at the owner's word, the room size and the repeats of
+  the echo change while live as well.
 * **dmxbox 2 on paper (2026-11-23):** both versions (two outputs and one) are drawn from their `circuit.py`,
   and each drawing passed its check against it: the schematic, the breadboard plan, the perfboard plan (38 and
   26 insulated wires, with SW1 at the cut left edge and the holes around the four screws kept empty;

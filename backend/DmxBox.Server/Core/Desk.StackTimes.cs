@@ -67,12 +67,15 @@ internal partial class Desk
         }
     }
 
-    // A step of a sequence: it has no moment of a sound, which only the cues of the stack come at.
-    private static Step WithoutMoment(Step step)
+    // A step of a sequence: it has no moment of a sound, which only the cues of the stack come at, and
+    // is not muted, which only a cue of the stack is.
+    private static Step AsSequenceStep(Step step)
     {
-        return step.At is null
-            ? step
-            : throw new DeskException("A step of a sequence cannot come at a moment of a sound: only a cue of the stack can.");
+        if (step.At is not null)
+            throw new DeskException("A step of a sequence cannot come at a moment of a sound: only a cue of the stack can.");
+        if (step.Muted)
+            throw new DeskException("A step of a sequence cannot be muted: only a cue of the stack can.");
+        return step;
     }
 
     // Call with the lock held, after the sounds are settled (their positions are those of now).

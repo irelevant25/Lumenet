@@ -22,6 +22,7 @@ export interface DeskHubMethods {
   ExportProject(): string;
   FindMixers(): FoundMixer[];
   GetAutosave(): AutosaveOptions;
+  GetBackup(): BackupView;
   GetBoxes(): BoxView[];
   GetEffects(): Effect[];
   GetHistory(): HistoryState;
@@ -66,6 +67,7 @@ export interface DeskHubMethods {
   SaveProject(name: string | null): ProjectInfo;
   SeekSound(number: number, seconds: number): SoundPlayback;
   SetAutosave(on: boolean, seconds: number): AutosaveOptions;
+  SetBackup(setup: BackupSetup): BackupView;
   SetBlackout(on: boolean): void;
   SetBoxes(boxes: readonly BoxPlan[]): void;
   SetChannel(channel: number, value: number): void;
@@ -103,6 +105,7 @@ export interface DeskHubMethods {
   SetStackLive(on: boolean): void;
   SetStackStepAt(id: number, at: SoundTime | null): void;
   SetStackStepDisabled(id: number, disabled: boolean): void;
+  SetStackStepMuted(id: number, muted: boolean): void;
   SetStage(plan: StagePlanSent): void;
   SetStagePicture(picture: string | null): void;
   SetUniverses(universes: number): void;
@@ -118,7 +121,9 @@ export interface DeskHubMethods {
 
 /** The methods that answer as a stream: the page takes their last item. */
 export interface DeskHubStreams {
+  CheckUpdate(): UpdateInfo;
   FindArtNetNodes(): FoundNode[];
+  InstallUpdate(): UpdateStep;
 }
 
 /** What the desk program sends to the pages on its own (IDeskClient). */
@@ -164,6 +169,23 @@ export interface DeskClientEvents {
 export interface AutosaveOptions {
   readonly on: boolean;
   readonly seconds: number;
+}
+
+export interface BackupSetup {
+  readonly folder: string;
+  readonly onSave: boolean;
+  readonly keep: number;
+}
+
+export interface BackupView {
+  readonly folder: string;
+  readonly onSave: boolean;
+  readonly keep: number;
+  readonly last: string | null;
+  readonly lastAt: number | null;
+  readonly count: number;
+  readonly problem: string | null;
+  readonly googleDrive: string | null;
 }
 
 export interface BoxPlan {
@@ -674,6 +696,8 @@ export interface SoundPlayback {
   readonly position: number;
   readonly missing: boolean;
   readonly length: number;
+  readonly paused?: boolean;
+  readonly muted?: boolean;
 }
 
 export interface SoundSent {
@@ -748,6 +772,7 @@ export interface StackStep {
   readonly add?: boolean;
   readonly continue?: boolean;
   readonly disabled?: boolean;
+  readonly muted?: boolean;
   readonly at?: SoundTime | null;
 }
 
@@ -818,6 +843,7 @@ export interface Step {
   readonly add?: boolean;
   readonly continue?: boolean;
   readonly disabled?: boolean;
+  readonly muted?: boolean;
   readonly at?: SoundTime | null;
 }
 
@@ -832,5 +858,23 @@ export interface StepSent {
   readonly add?: boolean;
   readonly continue?: boolean;
   readonly disabled?: boolean;
+  readonly muted?: boolean;
   readonly at?: SoundTime | null;
+}
+
+export interface UpdateInfo {
+  readonly current: string;
+  readonly latest: string | null;
+  readonly newer: boolean;
+  readonly notes: string | null;
+  readonly published: number | null;
+  readonly size: number | null;
+  readonly canUpdate: boolean;
+  readonly why: string | null;
+  readonly problem: string | null;
+}
+
+export interface UpdateStep {
+  readonly percent: number;
+  readonly version: string | null;
 }

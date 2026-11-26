@@ -1,5 +1,5 @@
-/* The Sound part of Settings, under the views in the top bar: a part of that panel, its title over
-   a line as the parts of the main view have it (settings-view.css). */
+/* The Sound tab of Settings: the device, its outputs, listening and the mixer, in a panel of their own
+   (settings-view.css). */
 :host {
   display: grid;
   align-content: start;
@@ -8,9 +8,7 @@
 }
 
 h4 {
-  margin: 10px 0 0;
-  padding-top: 12px;
-  border-top: 1px solid var(--edge);
+  margin: 0;
   color: var(--legend-dim);
   font-size: 12px;
   font-stretch: 75%;

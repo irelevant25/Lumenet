@@ -13,7 +13,20 @@
   [attr.title]="playing() ? 'Double click: play from there' : null"
   (dblclick)="onDoubleClick($event)"
   (keydown)="onKey($event)"
+  (pointermove)="onPointerMove($event)"
+  (pointerleave)="onPointerLeave()"
 >
   <canvas #canvas aria-hidden="true"></canvas>
+  <!-- where the pointer is: the time of the file there -->
+  @if (hover(); as hover) {
+    <span
+      class="hover"
+      [class.flip]="hover.part > 0.8"
+      [style.left.%]="hover.part * 100"
+      aria-hidden="true"
+    >
+      <span>{{ hover.time }}</span>
+    </span>
+  }
 </div>
 <span class="time total" title="How long it is">{{ total() }}</span>

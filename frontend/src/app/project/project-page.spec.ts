@@ -92,32 +92,43 @@ describe('the desk page: the project', () => {
     expect(store.notice()).toContain('(18:42) is back');
   });
 
+  /** The parts the window of Import lists for the file, and whether each can be checked. */
+  function offered(): [string, boolean][] {
+    return [...page.querySelectorAll<HTMLLabelElement>('lm-import-dialog .parts label')].map(
+      (item) => [
+        [...item.childNodes]
+          .filter((node) => node.nodeType === Node.TEXT_NODE)
+          .map((node) => node.textContent)
+          .join('')
+          .trim(),
+        !item.querySelector('input')!.disabled,
+      ],
+    );
+  }
+
   it('import: a show file (.ASC) becomes the project, and the window says what became of it', async () => {
     connection.emit('ProjectChanged', { name: 'Untitled', path: null, unsaved: true });
     await press(button('Import'));
     const dialog = page.querySelector<HTMLDialogElement>('lm-import-dialog dialog');
     expect(dialog?.open).toBe(true);
-    expect(
-      ['Project', 'Stage', 'Settings', 'Keyboard', '.ASC'].map((part) =>
-        checked('lm-import-dialog', part),
-      ),
-    ).toEqual([false, false, false, false, false]);
+    // the file first: no parts before it
+    expect(page.querySelector('lm-import-dialog .parts')).toBeNull();
     expect(textOf('lm-import-dialog .file-name')).toBe('No file chosen');
     expect(button('Import the file').disabled).toBe(true);
-
-    // .ASC is a file of its own: taken alone, the others go off.
-    await check('lm-import-dialog', 'Stage');
-    await check('lm-import-dialog', '.ASC');
-    expect(checked('lm-import-dialog', 'Stage')).toBe(false);
     expect(
       page.querySelector<HTMLInputElement>('lm-import-dialog input[type="file"]')?.accept,
-    ).toBe('.asc,.txt');
+    ).toBe('.zip,.json,.asc,.txt');
+
+    // .ASC is a file of its own: taken whole
+    await pick(new File(['Cue 1\nChan 1 FL\n'], 'Hamlet.asc'));
+    expect(textOf('lm-import-dialog .file-name')).toBe('Hamlet.asc');
+    expect(page.querySelector('lm-import-dialog .parts')).toBeNull();
+    expect(page.querySelector('lm-import-dialog')?.textContent).toContain(
+      'The show of a theatre console (USITT ASCII)',
+    );
     expect(page.querySelector('lm-import-dialog')?.textContent).toContain(
       'The open project has changes that are not saved.',
     );
-
-    await pick(new File(['Cue 1\nChan 1 FL\n'], 'Hamlet.asc'));
-    expect(textOf('lm-import-dialog .file-name')).toBe('Hamlet.asc');
     await press(button('Import the file'));
     await until(() => page.querySelector('lm-import-dialog .report') !== null);
 
@@ -128,12 +139,12 @@ describe('the desk page: the project', () => {
     expect(report).toEqual(connection.importAnswer.report);
     expect(textOf('lm-top-bar .name strong')).toBe('Hamlet');
 
-    // OK closes the window; Import again starts with nothing checked and no file.
+    // OK closes the window; Import again starts with no file.
     await press(buttonIn('lm-import-dialog', 'OK'));
     expect(dialog?.open).toBe(false);
     await press(button('Import'));
-    expect(checked('lm-import-dialog', '.ASC')).toBe(false);
     expect(textOf('lm-import-dialog .file-name')).toBe('No file chosen');
+    expect(page.querySelector('lm-import-dialog')?.textContent).not.toContain('USITT');
     await press(page.querySelector<HTMLButtonElement>('lm-import-dialog .actions button')); // Cancel
     expect(dialog?.open).toBe(false);
 
@@ -145,7 +156,6 @@ describe('the desk page: the project', () => {
   it('import says why the desk refused a file, and another one can be tried', async () => {
     connection.importRefusal = '"notes.txt" has no cues, submasters or groups.';
     await press(button('Import'));
-    await check('lm-import-dialog', '.ASC');
     await pick(new File(['Dear diary,'], 'notes.txt'));
     await press(button('Import the file'));
     await until(() => page.querySelector('lm-import-dialog .error') !== null);
@@ -155,11 +165,16 @@ describe('the desk page: the project', () => {
     );
     expect(page.querySelector<HTMLDialogElement>('lm-import-dialog dialog')?.open).toBe(true);
     expect(button('Import the file').disabled).toBe(false);
+
+    // a file that is no file of Lumenet says so as it is chosen
+    await pick(new File(['{ not json'], 'photo.json'));
+    await until(() => textOf('lm-import-dialog .error')?.includes('photo.json') === true);
+    expect(textOf('lm-import-dialog .error')).toContain('"photo.json" is no file of Lumenet');
+    expect(button('Import the file').disabled).toBe(true);
   });
 
   it('import takes no file larger than the desk takes, and sends nothing', async () => {
     await press(button('Import'));
-    await check('lm-import-dialog', '.ASC');
     const file = new File(['Cue 1'], 'huge.asc');
     Object.defineProperty(file, 'size', { value: 9 * 1024 * 1024 });
     await pick(file);
@@ -171,7 +186,7 @@ describe('the desk page: the project', () => {
     expect(connection.methods()).not.toContain('ImportProject');
   });
 
-  it('import takes the checked parts of a file that Export made, and none when one of them is missing', async () => {
+  it('import lists the parts of the file, and takes those that are checked', async () => {
     const file = JSON.stringify({
       format: 'lumenet-export',
       version: 1,
@@ -181,13 +196,22 @@ describe('the desk page: the project', () => {
       keyboard: { shortcuts: { 'stack.play': 'Space' } },
     });
     await press(button('Import'));
+    await pick(new File([file], 'Concert - project, settings, keyboard.json'));
+    await until(() => page.querySelector('lm-import-dialog .parts') !== null);
+    // the parts of the file, none checked; one it does not have cannot be
+    expect(offered()).toEqual([
+      ['Project', true],
+      ['Stage', true],
+      ['Settings', true],
+      ['Keyboard', true],
+      ['MIDI', false],
+    ]);
+    expect(textOf('lm-import-dialog .parts label:last-child small')).toBe('not in this file');
+    expect(button('Import the file').disabled).toBe(true);
+
     await check('lm-import-dialog', 'Project');
     await check('lm-import-dialog', 'Settings');
     await check('lm-import-dialog', 'Keyboard');
-    expect(
-      page.querySelector<HTMLInputElement>('lm-import-dialog input[type="file"]')?.accept,
-    ).toBe('.json,.zip');
-    await pick(new File([file], 'Concert - project, settings, keyboard.json'));
     await press(button('Import the file'));
     await until(() => page.querySelector('lm-import-dialog .report') !== null);
 
@@ -210,84 +234,28 @@ describe('the desk page: the project', () => {
       'The keyboard shortcuts of this device are those of the file.',
     ]);
 
-    // The stage of a project file: on its own, in place of the project's.
+    // A project file: its project and its stage, the stage on its own in place of the project's.
     await press(buttonIn('lm-import-dialog', 'OK'));
     await press(button('Import'));
-    await check('lm-import-dialog', 'Stage');
     await pick(new File([connection.projectFile], 'Evening.json'));
+    await until(() => page.querySelector('lm-import-dialog .parts') !== null);
+    expect(offered()).toEqual([
+      ['Project', true],
+      ['Stage', true],
+      ['Settings', false],
+      ['Keyboard', false],
+      ['MIDI', false],
+    ]);
+    await check('lm-import-dialog', 'Stage');
     await press(button('Import the file'));
     await until(() => page.querySelector('lm-import-dialog .report') !== null);
     expect(JSON.parse(connection.last('ImportStage')![0] as string).lights.length).toBe(1);
     expect(textOf('lm-import-dialog .report')).toContain(
       'The stage is that of the file, with 1 light.',
     );
-
-    // A project file has no keyboard of this device: nothing is imported.
-    await press(buttonIn('lm-import-dialog', 'OK'));
-    await press(button('Import'));
-    await check('lm-import-dialog', 'Stage');
-    await check('lm-import-dialog', 'Keyboard');
-    const imported = connection.calls.length;
-    await pick(new File([connection.projectFile], 'Evening.json'));
-    await press(button('Import the file'));
-    await until(() => page.querySelector('lm-import-dialog .error') !== null);
-    expect(textOf('lm-import-dialog .error')).toBe(
-      '"Evening.json" does not have the keyboard. Nothing was imported.',
-    );
-    expect(connection.calls.slice(imported).map((call) => call.method)).not.toContain(
-      'ImportStage',
-    );
   });
 
-  it('export puts the checked parts into one file on this device', async () => {
-    const written: string[] = [];
-    let suggested = '';
-    const picker = vi.fn(async (options: { suggestedName: string }) => {
-      suggested = options.suggestedName;
-      return {
-        name: options.suggestedName,
-        createWritable: async () => ({
-          write: async (text: string) => void written.push(text),
-          close: async () => undefined,
-        }),
-      };
-    });
-    (globalThis as { showSaveFilePicker?: unknown }).showSaveFilePicker = picker;
-    try {
-      TestBed.inject(DeskSettings).setShortcuts({ 'stack.play': 'Space' });
-      await press(button('Export'));
-      const dialog = page.querySelector<HTMLDialogElement>('lm-export-dialog dialog');
-      expect(dialog?.open).toBe(true);
-      expect(
-        ['Project', 'Stage', 'Settings', 'Keyboard'].map((part) =>
-          checked('lm-export-dialog', part),
-        ),
-      ).toEqual([false, false, false, false]);
-      expect(button('Export the file').disabled).toBe(true);
-
-      await check('lm-export-dialog', 'Stage');
-      await check('lm-export-dialog', 'Keyboard');
-      await press(button('Export the file'));
-      await until(() => written.length > 0);
-      await fixture.whenStable();
-
-      expect(suggested).toBe('Untitled - stage, keyboard.json');
-      const file = JSON.parse(written[0]);
-      expect(Object.keys(file)).toEqual(['format', 'version', 'name', 'stage', 'keyboard']);
-      expect(file.stage.lights[0].name).toBe('Wash');
-      expect(file.keyboard.shortcuts['stack.play']).toBe('Space');
-      expect(textOf('lm-export-dialog .report')).toContain(
-        'Saved as "Untitled - stage, keyboard.json"',
-      );
-      await press(buttonIn('lm-export-dialog', 'OK'));
-      expect(dialog?.open).toBe(false);
-    } finally {
-      delete (globalThis as { showSaveFilePicker?: unknown }).showSaveFilePicker;
-    }
-  });
-
-  it('Export takes the sounds of the project along in a ZIP, and Import takes such a ZIP', async () => {
-    connection.emit('SoundsChanged', [aSound(1)]);
+  it('export puts the checked parts into one ZIP on this device', async () => {
     const chunks: Uint8Array[] = [];
     let suggested = '';
     (globalThis as { showSaveFilePicker?: unknown }).showSaveFilePicker = async (options: {
@@ -304,9 +272,63 @@ describe('the desk page: the project', () => {
     const realFetch = globalThis.fetch;
     globalThis.fetch = (async (url: string, init?: RequestInit) => {
       asked.push({ url, body: init?.body });
+      return new Response(new Uint8Array([80, 75, 3, 4]), { status: 200 });
+    }) as typeof fetch;
+    try {
+      TestBed.inject(DeskSettings).setShortcuts({ 'stack.play': 'Space' });
+      await press(button('Export'));
+      const dialog = page.querySelector<HTMLDialogElement>('lm-export-dialog dialog');
+      expect(dialog?.open).toBe(true);
+      expect(
+        ['Project', 'Stage', 'Settings', 'Keyboard'].map((part) =>
+          checked('lm-export-dialog', part),
+        ),
+      ).toEqual([false, false, false, false]);
+      expect(button('Export the file').disabled).toBe(true);
+
+      await check('lm-export-dialog', 'Stage');
+      await check('lm-export-dialog', 'Keyboard');
+      await press(button('Export the file'));
+      await until(
+        () => chunks.length > 0 && page.querySelector('lm-export-dialog .report') !== null,
+      );
+
+      // the desk program packs the parts it is given, each a file of its own
+      expect(suggested).toBe('Untitled - stage, keyboard.zip');
+      expect(asked[0].url).toBe('/api/export/pack?name=Untitled%20-%20stage%2C%20keyboard');
+      const text = JSON.parse(asked[0].body as string);
+      expect(Object.keys(text)).toEqual(['format', 'version', 'name', 'stage', 'keyboard']);
+      expect(text.stage.lights[0].name).toBe('Wash');
+      expect(text.keyboard.shortcuts['stack.play']).toBe('Space');
+      expect([...chunks[0]]).toEqual([80, 75, 3, 4]);
+      expect(textOf('lm-export-dialog .report')).toContain(
+        'Saved as "Untitled - stage, keyboard.zip"',
+      );
+      await press(buttonIn('lm-export-dialog', 'OK'));
+      expect(dialog?.open).toBe(false);
+    } finally {
+      globalThis.fetch = realFetch;
+      delete (globalThis as { showSaveFilePicker?: unknown }).showSaveFilePicker;
+    }
+  });
+
+  it('Export takes the sounds of the project along, and Import takes such a ZIP', async () => {
+    connection.emit('SoundsChanged', [aSound(1)]);
+    const chunks: Uint8Array[] = [];
+    (globalThis as { showSaveFilePicker?: unknown }).showSaveFilePicker = async (options: {
+      suggestedName: string;
+    }) => ({
+      name: options.suggestedName,
+      createWritable: async () =>
+        new WritableStream<Uint8Array>({ write: (chunk) => void chunks.push(chunk) }),
+    });
+    const asked: { url: string; body: unknown }[] = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (url: string, init?: RequestInit) => {
+      asked.push({ url, body: init?.body });
       if (url.startsWith('/api/export/pack'))
         return new Response(new Uint8Array([80, 75, 3, 4]), { status: 200 });
-      // the desk program took the sounds of the ZIP, all but one, and gives back its file of Export
+      // the desk program took the sounds of the ZIP, all but one, and gives back its parts
       const exported = {
         format: 'lumenet-export',
         version: 1,
@@ -325,26 +347,26 @@ describe('the desk page: the project', () => {
       await until(
         () => chunks.length > 0 && page.querySelector('lm-export-dialog .report') !== null,
       );
-      expect(suggested).toBe('Untitled - project.zip');
       expect(asked[0].url).toBe('/api/export/pack?name=Untitled%20-%20project');
-      expect(JSON.parse(asked[0].body as string)).toMatchObject({
-        format: 'lumenet-export',
-        name: 'Untitled',
-      });
-      expect([...chunks[0]]).toEqual([80, 75, 3, 4]);
-      expect(textOf('lm-export-dialog .report')).toContain('Saved as "Untitled - project.zip"');
+      expect(JSON.parse(asked[0].body as string).project.format).toBe('lumenet-project');
       await press(buttonIn('lm-export-dialog', 'OK'));
 
-      // a ZIP is no bigger than the desk takes: it takes it in pieces
+      // a ZIP goes to the desk program as it is chosen, whatever its size: it takes it in pieces
       await press(button('Import'));
-      await check('lm-import-dialog', 'Project');
       const zip = new File([new Uint8Array([80, 75, 3, 4])], 'Concert - project.zip');
       Object.defineProperty(zip, 'size', { value: 90 * 1024 * 1024 });
       await pick(zip);
-      expect(button('Import the file').disabled).toBe(false);
+      await until(() => page.querySelector('lm-import-dialog .parts') !== null);
+      expect(asked[1]).toEqual({ url: '/api/import/unpack', body: zip });
+      expect(
+        offered()
+          .filter(([, can]) => can)
+          .map(([part]) => part),
+      ).toEqual(['Project', 'Stage']);
+      await check('lm-import-dialog', 'Project');
       await press(button('Import the file'));
       await until(() => page.querySelector('lm-import-dialog .report') !== null);
-      expect(asked[1]).toEqual({ url: '/api/import/unpack', body: zip });
+      expect(asked.length).toBe(2); // the ZIP was sent once
       expect(connection.last('ImportProjectFile')).toEqual([
         'Concert',
         JSON.stringify(JSON.parse(connection.projectFile)),

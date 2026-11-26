@@ -1,11 +1,11 @@
-/* A panel of Settings like the others, as high as their room (100cqh: settings-view.css makes that
-   room a size container): the title, Listen and the search, and under them the kinds of keys,
-   which scroll. On a phone the page scrolls instead. */
+/* A panel of Settings like the others, as high as what it holds and at most as high as the room
+   (100cqh: settings-view.css makes that room a size container): the title, Listen and the search, and
+   under them the kinds of keys, which scroll when there are more. On a phone the page scrolls instead. */
 :host {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  height: 100cqh;
+  max-height: 100cqh;
   min-width: 0;
   padding: 10px 14px 12px;
   border: 1px solid var(--edge);
@@ -14,7 +14,7 @@
 }
 
 :host-context(.mobile) {
-  height: auto;
+  max-height: none;
 }
 
 /* the title, and at its right ↺, back to the usual shortcuts (as the panels of the views and the colors) */
@@ -129,10 +129,10 @@ input::placeholder {
   width: 100%;
 }
 
-/* the kinds of keys, one under the other; the list scrolls */
+/* the kinds of keys, one under the other; the list scrolls when the panel is at its highest */
 .kinds {
   position: relative; /* for the captions that only screen readers read */
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
   margin-top: 4px;
   overflow: auto;

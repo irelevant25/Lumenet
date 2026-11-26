@@ -1,4 +1,13 @@
-import { TRANSFER_PARTS, TransferPart, exportFileName, exportText, missingParts, pcPartNote, readImportFile } from './transfer';
+import {
+  TRANSFER_PARTS,
+  TransferPart,
+  exportFileName,
+  exportText,
+  importKind,
+  partsIn,
+  pcPartNote,
+  readImportFile,
+} from './transfer';
 
 const PROJECT_FILE = JSON.stringify({
   format: 'lumenet-project',
@@ -27,10 +36,18 @@ describe('Export and Import', () => {
     expect(Object.keys(stageOnly)).toEqual(['format', 'version', 'name', 'stage']);
   });
 
-  it('name the file after the project and what it holds', () => {
-    expect(exportFileName(chosen('project'), 'Concert')).toBe('Concert - project.json');
-    expect(exportFileName(chosen('keyboard', 'stage'), 'A/B: show')).toBe('A-B- show - stage, keyboard.json');
-    expect(exportFileName(chosen('settings', 'keyboard'), 'Concert')).toBe('Lumenet - settings, keyboard.json');
+  it('name the file, a ZIP, after the project and what it holds', () => {
+    expect(exportFileName(chosen('project'), 'Concert')).toBe('Concert - project.zip');
+    expect(exportFileName(chosen('keyboard', 'stage'), 'A/B: show')).toBe('A-B- show - stage, keyboard.zip');
+    expect(exportFileName(chosen('settings', 'keyboard'), 'Concert')).toBe('Lumenet - settings, keyboard.zip');
+  });
+
+  it('tell a ZIP, the show of a console and JSON by the name of the file', () => {
+    expect(importKind('Concert - project.ZIP')).toBe('zip');
+    expect(importKind('Hamlet.asc')).toBe('asc');
+    expect(importKind('show.TXT')).toBe('asc');
+    expect(importKind('Concert - project.json')).toBe('json');
+    expect(importKind('Evening')).toBe('json');
   });
 
   it('read back every part of a file of Export', () => {
@@ -46,7 +63,9 @@ describe('Export and Import', () => {
     expect(JSON.parse(source.stage!).width).toBe(12); // the project's stage serves as the stage
     expect(source.settings).toEqual({ channelSize: 16 });
     expect(source.shortcuts).toEqual({ 'stack.play': 'Space' });
-    expect(missingParts(chosen('project', 'stage', 'settings', 'keyboard'), source)).toBe('');
+    expect([...partsIn(source)]).toEqual(['project', 'stage', 'settings', 'keyboard']);
+    // the name the file gives; else the name of the file, a ZIP's too
+    expect(readImportFile('Night.zip', '{"format":"lumenet-export","version":1}').name).toBe('Night');
   });
 
   it('take a project file of the projects folder, with the settings an earlier version kept in it', () => {
@@ -59,7 +78,7 @@ describe('Export and Import', () => {
     expect(source.shortcuts).toEqual({ 'master.clear': 'KeyC' });
 
     const now = readImportFile('Evening.json', PROJECT_FILE);
-    expect(missingParts(chosen('project', 'settings', 'keyboard'), now)).toBe('the settings and the keyboard');
+    expect([...partsIn(now)]).toEqual(['project', 'stage']);
   });
 
   it('say what is wrong with a file they cannot use', () => {
@@ -70,7 +89,7 @@ describe('Export and Import', () => {
 
     const empty = readImportFile('empty.json', '{"format":"lumenet-export","version":1}');
     expect(empty.name).toBe('empty');
-    expect(missingParts(chosen('project', 'stage', 'keyboard'), empty)).toBe('the project, the stage and the keyboard');
+    expect(partsIn(empty).size).toBe(0);
   });
 
   it('take the MIDI of the PC out and back, and only on the PC', () => {
@@ -80,12 +99,12 @@ describe('Export and Import', () => {
     };
     const text = exportText(chosen('midi'), { name: 'Concert', midi });
     expect(JSON.parse(text).midi).toEqual(midi);
-    expect(exportFileName(chosen('midi'), 'Concert')).toBe('Lumenet - midi.json');
+    expect(exportFileName(chosen('midi'), 'Concert')).toBe('Lumenet - midi.zip');
 
     const source = readImportFile('Lumenet - midi.json', text);
     expect(source.midi).toEqual(midi);
-    expect(missingParts(chosen('midi'), source)).toBe('');
-    expect(missingParts(chosen('keyboard', 'midi'), readImportFile('Evening.json', PROJECT_FILE))).toBe('the keyboard and the MIDI');
+    expect([...partsIn(source)]).toEqual(['midi']);
+    expect(partsIn(readImportFile('Evening.json', PROJECT_FILE)).has('midi')).toBe(false);
     // a MIDI part without its two lists is none
     expect(readImportFile('odd.json', '{"format":"lumenet-export","version":1,"midi":{"devices":"APC"}}').midi).toBeNull();
 

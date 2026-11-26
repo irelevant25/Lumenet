@@ -327,9 +327,13 @@
       }
     </select>
   }
-  <button lmLamp type="submit" tone="system" [disabled]="locked()">Add</button>
+  <button lmLamp type="submit" tone="system" [disabled]="locked() || addTaken() !== ''">Add</button>
 </form>
-<p class="hint">{{ addChoice().hint }}</p>
+@if (addTaken(); as taken) {
+  <p class="remark" role="status">{{ taken }}</p>
+} @else {
+  <p class="hint">{{ addChoice().hint }}</p>
+}
 
 @for (remark of remarks(); track remark) {
   <p class="remark"><span aria-hidden="true">⚠</span> {{ remark }}</p>

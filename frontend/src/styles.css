@@ -451,6 +451,11 @@ table.steps tr td.skips input {
   accent-color: var(--danger);
 }
 
+/* Mute ticks in the color of the MUTE key of the sound */
+table.steps tr td.mutes input {
+  accent-color: var(--key-mute);
+}
+
 /* a skipped step on the wheel of the stack on Main: faint, its number struck through */
 lm-stack-section li.skipped {
   opacity: 0.4;
@@ -469,9 +474,10 @@ table.steps tr.drop-after > * {
   box-shadow: inset 0 -3px 0 var(--focus);
 }
 
-/* Add, Continue and Disabled: a box in the middle of its narrow cell, not a field as wide as the cell */
+/* Add, Continue, Mute and Disabled: a box in the middle of its narrow cell, not a field as wide as the cell */
 table.steps td.adds,
 table.steps td.continues,
+table.steps td.mutes,
 table.steps td.skips {
   width: 1%;
   padding: 0 10px;
@@ -480,6 +486,7 @@ table.steps td.skips {
 
 table.steps td.adds input,
 table.steps td.continues input,
+table.steps td.mutes input,
 table.steps td.skips input {
   width: 18px;
   height: 18px;
@@ -492,6 +499,7 @@ table.steps td.skips input {
 
 table.steps td.adds input:disabled,
 table.steps td.continues input:disabled,
+table.steps td.mutes input:disabled,
 table.steps td.skips input:disabled {
   cursor: default;
 }

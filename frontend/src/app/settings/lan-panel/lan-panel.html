@@ -1,0 +1,69 @@
+<h3 id="lan-title">Network (LAN)</h3>
+@if (lan(); as lan) {
+  @if (lan.on) {
+    <div class="field">
+      <label for="lan-address">Address for phones and tablets</label>
+      <select id="lan-address" (change)="onAddress($event)">
+        <option value="" [selected]="!lan.chosen">
+          Automatic{{ lan.addresses[0] ? ' (' + lan.addresses[0] + ')' : '' }}
+        </option>
+        @for (address of lan.addresses; track address) {
+          <option [value]="address.split(':')[0]" [selected]="lan.chosen === address.split(':')[0]">
+            {{ address }}
+          </option>
+        }
+        @if (chosenGone()) {
+          <option [value]="lan.chosen" selected>{{ lan.chosen }} (not in the network now)</option>
+        }
+      </select>
+    </div>
+    <p class="hint">
+      @if (lan.chosen && !chosenGone()) {
+        Devices come in at {{ addressInUse() }} only.
+      } @else if (chosenGone()) {
+        This PC does not have {{ lan.chosen }} now, so devices come in at any of its addresses until
+        it has it again.
+      } @else {
+        Devices come in at any address of this PC; the top bar shows the first.
+      }
+    </p>
+
+    <div class="field">
+      <label for="lan-password">New password</label>
+      <input
+        #password
+        id="lan-password"
+        type="text"
+        autocomplete="off"
+        spellcheck="false"
+        maxlength="24"
+        [attr.placeholder]="lan.password ?? ''"
+        (keydown.enter)="setPassword(password)"
+      />
+      <button type="button" (click)="setPassword(password)">Set</button>
+      <button type="button" (click)="newPassword()">New random</button>
+    </div>
+    @if (passwordProblem()) {
+      <p class="problem" role="alert">{{ passwordProblem() }}</p>
+    } @else if (passwordDone()) {
+      <p class="done" role="status">{{ passwordDone() }}</p>
+    }
+    <p class="hint">
+      5 to 20 letters and digits; spaces, dashes and small letters do not count. A new password logs
+      every phone and tablet out until it gives the new one.
+    </p>
+  } @else {
+    <p class="hint">
+      LAN is off. Switch it on with the LAN key at the top left; then the address and the password
+      can be changed here.
+    </p>
+  }
+} @else {
+  <p class="hint">
+    @if (store.lan()) {
+      Only the PC the desk program runs on can change LAN.
+    } @else {
+      The desk program is older than this page and knows no LAN settings.
+    }
+  </p>
+}

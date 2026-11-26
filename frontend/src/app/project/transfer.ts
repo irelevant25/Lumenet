@@ -1,8 +1,12 @@
 /**
  * Export and Import: the parts of the desk that go into a file on this device and come back from
- * one. One file holds the parts that were chosen: the project (as its project file says it), the
- * stage on its own, the settings of this device, its keyboard shortcuts, and the MIDI controllers
- * of the PC with what their controls do (only the PC takes those out and back).
+ * one. One ZIP holds the parts that were chosen, each a JSON file of its own, and the sound files of
+ * the project: the project (as its project file says it), the stage on its own, the settings of this
+ * device, its keyboard shortcuts, and the MIDI controllers of the PC with what their controls do
+ * (only the PC takes those out and back). A backup is such a ZIP with every part.
+ *
+ * The page hands the parts to the desk program as one text, which it packs into the ZIP, and gets
+ * that text back from a ZIP (SoundPack):
  *
  * ```json
  * {
@@ -17,9 +21,10 @@
  * }
  * ```
  *
- * Import also takes a project file as the projects folder has it: its project, and its stage. One
- * that an earlier version wrote can also hold "settings" with the shortcuts in them, which were the
- * project's then: they can be taken as the settings and the keyboard of this device.
+ * Import also takes such a text as a file of its own (Export wrote one before 2026-11-26), and a
+ * project file as the projects folder has it: its project, and its stage. One that an earlier version
+ * wrote can also hold "settings" with the shortcuts in them, which were the project's then: they can
+ * be taken as the settings and the keyboard of this device.
  */
 
 export type TransferPart = 'project' | 'stage' | 'settings' | 'keyboard' | 'midi';
@@ -29,8 +34,6 @@ export interface TransferPartView {
   readonly part: TransferPart;
   readonly label: string;
   readonly hint: string;
-  /** How a sentence names it: "the keyboard". */
-  readonly said: string;
   /** True for a part that only the PC takes out and back: the MIDI controllers belong to it. */
   readonly pcOnly?: boolean;
 }
@@ -40,13 +43,12 @@ export const TRANSFER_PARTS: readonly TransferPartView[] = [
   {
     part: 'project',
     label: 'Project',
-    hint: 'everything the project holds: memories, sequences, the stack, the stage, the notes and the sounds (with sounds the file is a ZIP)',
-    said: 'the project',
+    hint: 'everything the project holds: memories, sequences, the stack, the stage, the notes and the sounds',
   },
-  { part: 'stage', label: 'Stage', hint: 'the stage alone: its lights, their kinds, the groups and the picture', said: 'the stage' },
-  { part: 'settings', label: 'Settings', hint: 'the settings of this device: layout, zoom, colors of the keys, views', said: 'the settings' },
-  { part: 'keyboard', label: 'Keyboard', hint: 'the keyboard shortcuts of this device', said: 'the keyboard' },
-  { part: 'midi', label: 'MIDI', hint: 'the MIDI controllers of this PC and what their controls do', said: 'the MIDI', pcOnly: true },
+  { part: 'stage', label: 'Stage', hint: 'the stage alone: its lights, their kinds, the groups and the picture' },
+  { part: 'settings', label: 'Settings', hint: 'the settings of this device: layout, zoom, colors of the keys, views' },
+  { part: 'keyboard', label: 'Keyboard', hint: 'the keyboard shortcuts of this device' },
+  { part: 'midi', label: 'MIDI', hint: 'the MIDI controllers of this PC and what their controls do', pcOnly: true },
 ];
 
 const FORMAT = 'lumenet-export';
@@ -87,12 +89,22 @@ export function exportText(chosen: ReadonlySet<TransferPart>, parts: ExportParts
   return JSON.stringify(file, null, 2);
 }
 
-/** The name a file of Export gets: after the project, and what it holds. "Concert - project, stage.json". */
+/** The name a file of Export gets: after the project, and what it holds. "Concert - project, stage.zip". */
 export function exportFileName(chosen: ReadonlySet<TransferPart>, projectName: string): string {
   const parts = TRANSFER_PARTS.filter((part) => chosen.has(part.part)).map((part) => part.part);
   const ofProject = chosen.has('project') || chosen.has('stage');
   const base = (ofProject ? projectName : 'Lumenet').replace(/[\\/:*?"<>|]+/g, '-').trim() || 'Lumenet';
-  return `${base} - ${parts.join(', ')}.json`;
+  return `${base} - ${parts.join(', ')}.zip`;
+}
+
+/** What a file brought for Import holds, by kind: a ZIP of Export, a JSON file, or the show of a theatre console. */
+export type ImportKind = 'zip' | 'json' | 'asc';
+
+/** What a file is, by its name: a ZIP, the show of a theatre console (.asc, .txt), else JSON. */
+export function importKind(fileName: string): ImportKind {
+  if (/\.zip$/i.test(fileName)) return 'zip';
+  if (/\.(asc|txt)$/i.test(fileName)) return 'asc';
+  return 'json';
 }
 
 /** What a file brings for Import: each part that it has, ready to be taken. */
@@ -120,7 +132,7 @@ export function readImportFile(fileName: string, text: string): ImportSource {
   } catch {
     throw new Error(`"${fileName}" is no file of Lumenet: choose one that Export made, or a project file.`);
   }
-  const named = fileName.replace(/\.json$/i, '');
+  const named = fileName.replace(/\.(json|zip)$/i, '');
   if (typeof file !== 'object' || file === null || Array.isArray(file)) throw notOurs(fileName);
   const content = file as Record<string, unknown>;
 
@@ -153,8 +165,8 @@ export function readImportFile(fileName: string, text: string): ImportSource {
   };
 }
 
-/** The chosen parts the file does not have, as "the stage and the keyboard"; empty when it has all. */
-export function missingParts(chosen: ReadonlySet<TransferPart>, source: ImportSource): string {
+/** The parts a file has, in the order the windows list them. */
+export function partsIn(source: ImportSource): ReadonlySet<TransferPart> {
   const has: Record<TransferPart, boolean> = {
     project: source.project !== null,
     stage: source.stage !== null,
@@ -162,8 +174,7 @@ export function missingParts(chosen: ReadonlySet<TransferPart>, source: ImportSo
     keyboard: source.shortcuts !== null,
     midi: source.midi !== null,
   };
-  const missing = TRANSFER_PARTS.filter((part) => chosen.has(part.part) && !has[part.part]).map((part) => part.said);
-  return missing.length <= 1 ? (missing[0] ?? '') : `${missing.slice(0, -1).join(', ')} and ${missing.at(-1)}`;
+  return new Set(TRANSFER_PARTS.filter((part) => has[part.part]).map((part) => part.part));
 }
 
 function objectOrNull(value: unknown): Record<string, unknown> | null {

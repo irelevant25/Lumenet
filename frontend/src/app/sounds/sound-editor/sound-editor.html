@@ -66,7 +66,8 @@
     />
   }
 
-  <!-- its own level: a file plays at it, and a track sets PLAYER L/R on the mixer to it -->
+  <!-- its own level: a file plays at it, and a track sets PLAYER L/R on the mixer to it. Like pan, speed,
+       pitch, echo and reverb it changes while the stack is live too -->
   <label for="sound-level">Level (dB)</label>
   <div class="pair">
     <lm-fader
@@ -74,8 +75,6 @@
       tone="sound"
       label="Level, from nothing at the left to its file as it is at the right"
       title="Double click: 0 dB"
-      [class.off]="locked()"
-      [inert]="locked()"
       [valueText]="sound().decibels + ' decibels'"
       [value]="levelPlace()"
       (valueChange)="onLevel($event)"
@@ -88,7 +87,6 @@
       [min]="minDecibels"
       [max]="maxDecibels"
       [value]="sound().decibels"
-      [disabled]="locked()"
       (change)="onNumber('decibels', $event, minDecibels, maxDecibels, 1)"
     />
   </div>
@@ -125,8 +123,6 @@
         tone="sound"
         label="Pan, from -100 all left to 100 all right"
         title="Double click: the middle"
-        [class.off]="locked()"
-        [inert]="locked()"
         [max]="200"
         [valueText]="'Pan ' + sound().pan"
         [value]="sound().pan + 100"
@@ -139,7 +135,6 @@
         min="-100"
         max="100"
         [value]="sound().pan"
-        [disabled]="locked()"
         (change)="onNumber('pan', $event, -100, 100)"
       />
       <span class="dim">-100 left, 100 right</span>
@@ -152,8 +147,6 @@
         tone="sound"
         label="Speed, from half as fast at the left to twice as fast at the right"
         title="Double click: 1×"
-        [class.off]="locked()"
-        [inert]="locked()"
         [max]="200"
         [valueText]="sound().speed + ' times'"
         [value]="speedPlace()"
@@ -167,7 +160,6 @@
         [min]="minSpeed"
         [max]="maxSpeed"
         [value]="sound().speed"
-        [disabled]="locked()"
         (change)="onNumber('speed', $event, minSpeed, maxSpeed, 2)"
       />
     </div>
@@ -179,8 +171,6 @@
         tone="sound"
         label="Pitch, semitones down at the left and up at the right"
         title="Double click: 0"
-        [class.off]="locked()"
-        [inert]="locked()"
         [max]="maxPitch * 2"
         [wheelStep]="1"
         [valueText]="sound().pitch + ' semitones'"
@@ -195,7 +185,6 @@
         [min]="-maxPitch"
         [max]="maxPitch"
         [value]="sound().pitch"
-        [disabled]="locked()"
         (change)="onNumber('pitch', $event, -maxPitch, maxPitch)"
       />
     </div>
@@ -207,8 +196,6 @@
         tone="sound"
         label="Echo, per cent"
         title="Double click: none"
-        [class.off]="locked()"
-        [inert]="locked()"
         [max]="100"
         [valueText]="sound().echo + ' per cent'"
         [value]="sound().echo"
@@ -221,7 +208,6 @@
         min="0"
         max="100"
         [value]="sound().echo"
-        [disabled]="locked()"
         (change)="onNumber('echo', $event, 0, 100)"
       />
     </div>
@@ -237,7 +223,6 @@
             [min]="minEchoTime"
             [max]="maxEchoTime"
             [value]="sound().echoTime"
-            [disabled]="locked()"
             (change)="onNumber('echoTime', $event, minEchoTime, maxEchoTime, 2)"
         /></label>
         <span class="dim">s,</span>
@@ -249,7 +234,6 @@
             aria-label="How much of the echo comes back for the next repeat, per cent"
             [max]="maxEchoRepeats"
             [value]="sound().echoRepeats"
-            [disabled]="locked()"
             (change)="onNumber('echoRepeats', $event, 0, maxEchoRepeats)"
         /></label>
         <span class="dim">% of the one before</span>
@@ -263,8 +247,6 @@
         tone="sound"
         label="Reverb, per cent"
         title="Double click: none"
-        [class.off]="locked()"
-        [inert]="locked()"
         [max]="100"
         [valueText]="sound().reverb + ' per cent'"
         [value]="sound().reverb"
@@ -277,7 +259,6 @@
         min="0"
         max="100"
         [value]="sound().reverb"
-        [disabled]="locked()"
         (change)="onNumber('reverb', $event, 0, 100)"
       />
     </div>
@@ -290,8 +271,6 @@
           tone="sound"
           label="Room size of the reverb, from a small room at the left to a big hall at the right"
           title="Double click: 50"
-          [class.off]="locked()"
-          [inert]="locked()"
           [max]="100"
           [valueText]="sound().room + ' per cent'"
           [value]="sound().room"
@@ -304,7 +283,6 @@
           min="0"
           max="100"
           [value]="sound().room"
-          [disabled]="locked()"
           (change)="onNumber('room', $event, 0, 100)"
         />
         <span class="dim">0 a small room, 100 a big hall</span>

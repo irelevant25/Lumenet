@@ -28,6 +28,8 @@ import {
   OutputView,
 } from '../../desk/desk-types';
 import {
+  AddKind,
+  alreadyListed,
   boxAbout,
   boxName,
   multicastAddress,
@@ -59,7 +61,6 @@ const PART_MAX = { net: 127, subNet: 15, universe: 15 } as const;
 type Part = keyof typeof PART_MAX;
 
 /** What "Add an output" adds, with what it asks for and the sentence under it. */
-type AddKind = 'artnet' | 'broadcast' | 'multicast' | 'sacn' | 'usb' | 'dmxbox';
 const ADD_KINDS: readonly { kind: AddKind; label: string; address: string; hint: string }[] = [
   {
     kind: 'artnet',
@@ -171,6 +172,10 @@ export class OutputsPanel {
   protected readonly addPort = signal('');
   protected readonly addChoice = computed(
     () => ADD_KINDS.find((choice) => choice.kind === this.addKind()) ?? ADD_KINDS[0],
+  );
+  /** Why the output typed is not added: the project has it already; empty while it is new. */
+  protected readonly addTaken = computed(() =>
+    alreadyListed(this.addKind(), this.addAddress(), this.store.boxes(), this.store.outputs()),
   );
 
   protected readonly locked = computed(() => this.store.live() || this.busy());
@@ -475,6 +480,7 @@ export class OutputsPanel {
   /** "Add an output": what the kind asks for, checked here as far as can be; the desk program checks addresses. */
   protected async add(event: Event): Promise<void> {
     event.preventDefault();
+    if (this.addTaken()) return; // in the list already: nothing new to add
     const kind = this.addKind();
     const address = this.addAddress().trim();
     const count = this.addCount();

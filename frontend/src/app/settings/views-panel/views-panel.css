@@ -1,0 +1,104 @@
+/* A panel of the General tab of Settings: the views in the order of their links in the top bar,
+   each ticked while its link is there, with ▲ ▼ to move it. */
+:host {
+  display: block;
+  box-sizing: border-box;
+  min-width: 0;
+  max-height: 100cqh;
+  padding: 10px 14px 12px;
+  overflow: auto;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: var(--well);
+  scrollbar-width: thin;
+}
+
+:host-context(.mobile) {
+  max-height: none;
+  overflow: visible;
+}
+
+/* the title, and at its right Setup… and ↺ */
+.head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+h3 {
+  margin: 0;
+  color: var(--legend-dim);
+  font-size: 12px;
+  font-stretch: 75%;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+button {
+  box-sizing: border-box;
+  height: 26px;
+  margin: 0;
+  padding: 0 8px;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--legend);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--legend-dim);
+}
+
+.setup {
+  margin-left: auto;
+}
+
+.views {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.views li,
+.views label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.views label {
+  flex: 1;
+  font-size: 14px;
+}
+
+.views .move {
+  width: 32px;
+  height: 30px;
+  padding: 0;
+  font-size: 12px;
+}
+
+.views input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--system);
+}
+
+.note {
+  color: var(--legend-dim);
+  font-size: 12px;
+}

@@ -25,13 +25,30 @@ import {
 const MAX_FADE = 999.9;
 
 /**
+ * What can change while the stack is live: how a sound sounds (a sound the audience laughs over, say),
+ * not what it plays.
+ */
+const LIVE_KEYS: readonly (keyof Sound)[] = [
+  'decibels',
+  'pan',
+  'speed',
+  'pitch',
+  'echo',
+  'echoTime',
+  'echoRepeats',
+  'reverb',
+  'room',
+];
+
+/**
  * The editor of a sound: its name, its file (another one can
  * take its place), where it starts and ends in the file, whether it loops, its level, its fade times,
  * pan, speed and pitch, echo and reverb, the sliders the lying faders of the desk (the wheel, the arrows
  * and a drag move them, as on the Effects view). Every change is stored at once (the store sends quick changes
- * together); nothing while the stack is live. A sound that plays goes on with the change; with another
- * file it starts again. A track of the mixer has only its name, its level and its fades:
- * the mixer's player plays it as it is, PLAYER L/R at its level.
+ * together). While the stack is live only how it sounds changes: level, pan, speed, pitch, echo and
+ * reverb with their repeats and room. A sound
+ * that plays goes on with the change; with another file it starts again. A track of the mixer has only
+ * its name, its level and its fades: the mixer's player plays it as it is, PLAYER L/R at its level.
  */
 @Component({
   imports: [Fader],
@@ -181,9 +198,10 @@ export class SoundEditor {
     (event.target as HTMLElement).blur();
   }
 
-  /** Stores the sound with the change. */
+  /** Stores the sound with the change; while the stack is live only how it sounds changes. */
   protected update(change: Partial<Sound>): void {
-    if (this.locked()) return;
+    const live = Object.keys(change).every((key) => LIVE_KEYS.includes(key as keyof Sound));
+    if (this.locked() && !live) return;
     this.store.setSound({ ...this.sound(), ...change });
   }
 }

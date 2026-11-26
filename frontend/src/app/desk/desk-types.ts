@@ -327,6 +327,11 @@ export interface TimedStep {
    */
   disabled?: boolean;
   /**
+   * Only for a cue of the stack that plays a sound: true for one whose sound plays unheard, as ever but
+   * for what goes out. It can be switched while the stack is live too. Missing means false.
+   */
+  muted?: boolean;
+  /**
    * Only for a cue of the stack: the moment of a sound it comes at instead of GO. While the stack is
    * live, it goes to this cue when that sound plays and reaches the moment; GO still goes earlier, and
    * a jump in the sound takes the stack to the cue of that moment. Missing or null for none.

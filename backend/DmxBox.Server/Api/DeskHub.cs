@@ -32,6 +32,8 @@ internal sealed partial class DeskHub : Hub<IDeskClient>
     private readonly OscControl _osc;
     private readonly SoundStore _soundFiles;
     private readonly SoundEngine _sound;
+    private readonly Backups _backups;
+    private readonly AppUpdate _update;
 
     /// <summary>SignalR makes a hub for every call and fills in the parts of the server.</summary>
     /// <param name="desk">The desk.</param>
@@ -45,6 +47,8 @@ internal sealed partial class DeskHub : Hub<IDeskClient>
     /// <param name="osc">OSC from other programs.</param>
     /// <param name="soundFiles">The sound files.</param>
     /// <param name="sound">The sound of the PC: its device.</param>
+    /// <param name="backups">The backups of the PC: their folder and setup.</param>
+    /// <param name="update">The updates of Lumenet.</param>
     public DeskHub(
         Desk desk,
         ProjectStore projects,
@@ -56,7 +60,9 @@ internal sealed partial class DeskHub : Hub<IDeskClient>
         MidiControl midi,
         OscControl osc,
         SoundStore soundFiles,
-        SoundEngine sound)
+        SoundEngine sound,
+        Backups backups,
+        AppUpdate update)
     {
         _desk = desk;
         _projects = projects;
@@ -69,6 +75,8 @@ internal sealed partial class DeskHub : Hub<IDeskClient>
         _osc = osc;
         _soundFiles = soundFiles;
         _sound = sound;
+        _backups = backups;
+        _update = update;
     }
 
     // True when the UI that calls runs on this PC, not on another device in the network.

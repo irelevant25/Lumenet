@@ -160,8 +160,14 @@ export class StackView {
     const sent: TimedStep = color === undefined ? { target, number, value, up, wait, down } : { target, number, value, up, wait, down, color };
     const adds = add && target !== 'release' ? { ...sent, add: true } : sent;
     const plays = step.continue && target === 'sound' ? { ...adds, continue: true } : adds;
-    const timed = at ? { ...plays, at } : plays;
+    const heard = step.muted && target === 'sound' ? { ...plays, muted: true } : plays;
+    const timed = at ? { ...heard, at } : heard;
     this.store.updateStackStep(id, step.disabled ? { ...timed, disabled: true } : timed);
+  }
+
+  /** The Mute box of a cue of a sound: checked, its sound plays unheard. Also while the stack is live. */
+  protected setMuted(step: StackStep, event: Event): void {
+    this.store.setStackStepMuted(step.id, (event.target as HTMLInputElement).checked);
   }
 
   /** The Disabled box of a step: checked, the stack passes over it. Also while the stack is live. */

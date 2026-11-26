@@ -5,7 +5,7 @@ import { DEFAULT_SHORTCUTS, DeskSettings } from './desk-settings';
 import { DeskStore } from './desk-store';
 
 /** Where the keyboard shortcuts are (the Keyboard panel of Settings); listening comes back to them. */
-const KEYBOARD_URL = '/settings';
+const KEYBOARD_URL = '/settings#keyboard';
 
 /** Where the MIDI controllers are set; listening for them comes back there. */
 const MIDI_URL = '/midi';

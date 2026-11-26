@@ -1,0 +1,176 @@
+/* The About tab of Settings: the version, the newest one, and what Lumenet is made with; as wide as
+   Settings makes it. */
+:host {
+  display: block;
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 10px 14px 12px;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: var(--well);
+}
+
+h3,
+h4 {
+  margin: 0 0 10px;
+  color: var(--legend-dim);
+  font-size: 12px;
+  font-stretch: 75%;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+h4 {
+  margin-top: 20px;
+  padding-top: 12px;
+  border-top: 1px solid var(--edge);
+}
+
+.version {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+
+.version strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.news {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.news span {
+  color: var(--legend-dim);
+  font-weight: 400;
+}
+
+button {
+  box-sizing: border-box;
+  height: 30px;
+  margin: 0 8px 8px 0;
+  padding: 0 10px;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--legend);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--legend-dim);
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+button.go {
+  border-color: var(--system);
+  font-weight: 600;
+}
+
+/* the notes of the release: the messages of its commits, as written */
+.notes {
+  margin: 0 0 10px;
+}
+
+.notes summary {
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.notes .text {
+  max-height: 240px;
+  margin-top: 6px;
+  padding: 8px 10px;
+  overflow: auto;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  background: var(--panel);
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  scrollbar-width: thin;
+}
+
+.notes .text p {
+  margin: 0 0 8px;
+}
+
+.notes .text p.title {
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.ask {
+  max-width: 70ch;
+  margin: 4px 0 8px;
+  padding: 8px 10px 2px;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+}
+
+.ask p {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress progress {
+  width: min(320px, 60%);
+}
+
+.hint,
+.problem,
+.done {
+  max-width: 70ch;
+  margin: 2px 0 10px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.hint {
+  color: var(--legend-dim);
+}
+
+.problem {
+  color: var(--memory);
+}
+
+.done {
+  color: var(--channel);
+}
+
+.parts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.parts a {
+  color: var(--legend);
+}
+
+.parts .license {
+  margin-left: 6px;
+  color: var(--legend-dim);
+  font-size: 13px;
+}

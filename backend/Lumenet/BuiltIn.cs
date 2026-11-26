@@ -20,7 +20,10 @@ internal static class BuiltIn
     private static readonly Assembly Self = typeof(BuiltIn).Assembly;
 
     /// <summary>Changes the desk program before it is put together (see Program.Build).</summary>
-    public static void Adjust(WebApplicationBuilder builder, LogBook log)
+    /// <param name="builder">The desk program, before it is built.</param>
+    /// <param name="log">The log window's lines.</param>
+    /// <param name="self">How this exe puts a new version in its own place.</param>
+    public static void Adjust(WebApplicationBuilder builder, LogBook log, SelfReplace self)
     {
         // Its log goes to the log window: there is no console to write to.
         builder.Logging.ClearProviders();
@@ -42,6 +45,13 @@ internal static class BuiltIn
             if (examples is not null)
                 builder.Configuration["Projects:Examples"] = examples;
         }
+
+        // Updates (Settings, About): this exe puts a new version in its own place. The release on GitHub
+        // wrote the repository of its releases into it (Lumenet.csproj); one made on a PC has none, unless
+        // the setting "Update:Repository" names one.
+        builder.Services.AddSingleton<ISelfReplace>(self);
+        if (string.IsNullOrWhiteSpace(builder.Configuration["Update:Repository"]) && StampedRepository() is { Length: > 0 } repository)
+            builder.Configuration["Update:Repository"] = repository;
     }
 
     /// <summary>Lumenet's icon, in the size closest to this one.</summary>
@@ -50,6 +60,13 @@ internal static class BuiltIn
         using Stream stream = Self.GetManifestResourceStream(IconName)
             ?? throw new FileNotFoundException($"The resource {IconName} is missing.");
         return new Icon(stream, size);
+    }
+
+    // "owner/name" of the repository whose release made this exe; null for one made on a PC.
+    private static string? StampedRepository()
+    {
+        return Self.GetCustomAttributes<AssemblyMetadataAttribute>()
+            .FirstOrDefault(attribute => attribute.Key == "Repository")?.Value;
     }
 
     private static void QuieterUnlessSet(WebApplicationBuilder builder, string category)

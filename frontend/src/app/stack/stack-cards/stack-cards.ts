@@ -51,15 +51,15 @@ export class StackCards {
 
   /**
    * A step in words: "Channel 5 (U1) (PAR 1 red)", "Fixture Spot 1", "adds" after one that comes on
-   * top of what is on, "plays on" after a sound that does; "Release of step 2.0: Memory 2 (Wash)". Its
-   * value is in the table.
+   * top of what is on, "plays on" after a sound that does, "muted" after one that plays unheard;
+   * "Release of step 2.0: Memory 2 (Wash)". Its value is in the table.
    */
   protected describe(step: TimedStep): string {
     if (step.target === 'release') {
       const released = this.store.releasedBy(step);
       return released ? `${this.store.stepName(step)}: ${this.store.stepWithNote(released)}` : this.store.stepName(step);
     }
-    return `${this.store.stepWithNote(step)}${step.add ? ', adds' : ''}${step.continue ? ', plays on' : ''}`;
+    return `${this.store.stepWithNote(step)}${step.add ? ', adds' : ''}${step.continue ? ', plays on' : ''}${step.muted ? ', muted' : ''}`;
   }
 
   /** The times of a step in words, for the "next" card; first the moment of a sound it comes at. */

@@ -621,7 +621,7 @@ describe('the desk page: the stack', () => {
     connection.emit('SoundsChanged', [aSound(2, { name: 'Rain' }), aSound(4, { name: 'Bell' })]);
     await show('/stack');
     const heads = [...page.querySelectorAll('lm-stack-view table.steps thead th')];
-    expect(heads.map((head) => head.textContent?.trim()).indexOf('At')).toBe(11); // right after Down (s)
+    expect(heads.map((head) => head.textContent?.trim()).indexOf('At')).toBe(12); // right after Down (s)
     const key = (cue: string) =>
       page.querySelector<HTMLButtonElement>(`lm-stack-view td.moment button[aria-label^="Cue ${cue} comes"]`)!;
     expect(key('2.0').textContent?.trim()).toBe('—');

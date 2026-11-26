@@ -106,6 +106,9 @@ export class SoundWaveStrip {
   protected readonly at = computed(() => Math.round(this.playback()?.position ?? 0));
   protected readonly length = computed(() => Math.max(Math.round(this.seconds()), this.at()));
 
+  /** Where the pointer is over the wave: its share of the width, and the time of the file there; null while it is elsewhere. */
+  protected readonly hover = signal<{ part: number; time: string } | null>(null);
+
   // The line's clock: where the sound was (clockPosition, seconds of its file) at a moment of the page
   // (clockAt, performance.now()); what the desk program told last; where the line stood last, unwrapped
   // (it goes on from there, never back, but for a jump).
@@ -158,6 +161,22 @@ export class SoundWaveStrip {
     destroy.onDestroy(() => cancelAnimationFrame(this.frame));
   }
 
+  /** The pointer over the wave: the time of the file where it points shows there. */
+  protected onPointerMove(event: PointerEvent): void {
+    const seconds = this.seconds();
+    const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    if (seconds <= 0 || box.width <= 0) {
+      this.hover.set(null);
+      return;
+    }
+    const part = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width));
+    this.hover.set({ part, time: timeText(part * seconds) });
+  }
+
+  protected onPointerLeave(): void {
+    this.hover.set(null);
+  }
+
   /** A double click on the wave of a sound that plays: it plays on from there. */
   protected onDoubleClick(event: MouseEvent): void {
     const seconds = this.seconds();
@@ -205,6 +224,14 @@ export class SoundWaveStrip {
       this.drawn = Number.NEGATIVE_INFINITY;
       return;
     }
+    if (playback.paused) {
+      // Pause of the stack holds it: the line stands where it is, and goes on from there
+      this.told = playback.position;
+      this.clockPosition = playback.position;
+      this.clockAt = performance.now();
+      this.drawn = playback.position;
+      return;
+    }
     if (playback.position === this.told) return; // nothing new: the clock goes on
     const now = performance.now();
     const first = Number.isNaN(this.told);
@@ -230,7 +257,7 @@ export class SoundWaveStrip {
     const track = this.track();
     const start = this.start();
     if (!playback?.playing) return start;
-    if (this.still) return playback.position;
+    if (this.still || playback.paused) return playback.position;
     const end = track ? this.seconds() : (sound.end ?? sound.seconds);
     let at = Math.max(this.clock(performance.now()), this.drawn);
     this.drawn = at;

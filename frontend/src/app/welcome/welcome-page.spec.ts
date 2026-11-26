@@ -32,11 +32,11 @@ describe('the desk page: the setups of a first start', () => {
     expect(settings.effectRows()).toBe(0);
     expect(localStorage.getItem(SETTINGS_STORAGE_KEY)).not.toBeNull(); // not asked again
 
-    // then the first steps: Outputs opens Settings
+    // then the first steps: Outputs opens their tab of Settings
     expect(title()).toBe('Ready: Theatre');
     await press(button('Outputs'));
     expect(window().open).toBe(false);
-    expect(TestBed.inject(Router).url).toBe('/settings');
+    expect(TestBed.inject(Router).url).toBe('/settings#outputs');
   });
 
   it('Later changes nothing and asks no more; Setup… of Settings offers the setups again', async () => {

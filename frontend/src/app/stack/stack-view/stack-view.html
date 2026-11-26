@@ -62,6 +62,7 @@
         <th scope="col">Cue</th>
         <th scope="col" title="On top of what is on, taking nothing down">Add</th>
         <th scope="col" title="A sound plays on through the cues after it, until its end or a release">Continue</th>
+        <th scope="col" title="The sound plays, but nothing of it is heard; it can be switched while the stack is live">Mute</th>
         <th scope="col">Kind</th>
         <th scope="col">Number</th>
         <th scope="col">Notes</th>
@@ -146,6 +147,17 @@
               />
             }
           </td>
+          <!-- Mute: the sound of the cue plays unheard. Also while the stack is live, for a rehearsal. -->
+          <td before class="mutes">
+            @if (step.target === 'sound') {
+              <input
+                type="checkbox"
+                [checked]="step.muted === true"
+                [attr.aria-label]="'Cue ' + step.cue + ' plays its sound unheard'"
+                (change)="setMuted(step, $event)"
+              />
+            }
+          </td>
           <!-- At: the moment of a sound the cue comes at. Also while the stack is live: a rehearsal sets them. -->
           <td after class="moment">
             <button
@@ -207,7 +219,7 @@
         </tr>
       } @empty {
         <tr>
-          <td class="empty" colspan="14">No cues yet. Add cue puts in the first one.</td>
+          <td class="empty" colspan="15">No cues yet. Add cue puts in the first one.</td>
         </tr>
       }
     </tbody>

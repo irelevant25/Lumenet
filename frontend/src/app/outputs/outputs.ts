@@ -305,6 +305,48 @@ export function newPlanWithPorts(
   return plan;
 }
 
+/** What "Add an output" can add: the kinds of output, a broadcast and a multicast, and a dmxbox by its address. */
+export type AddKind = 'artnet' | 'broadcast' | 'multicast' | 'sacn' | 'usb' | 'dmxbox';
+
+/**
+ * Why "Add an output" would add nothing new: the project has that output already (the same kind and
+ * address; a broadcast or a multicast on the network a new one gets), or that box plays already.
+ * Empty when it is new. A USB interface needs no check: only free ports are offered.
+ */
+export function alreadyListed(
+  kind: AddKind,
+  address: string,
+  boxes: readonly BoxView[],
+  outputs: readonly OutputView[],
+): string {
+  const typed = address.trim();
+  const same = (text: string) => text.trim().toLowerCase() === typed.toLowerCase();
+  switch (kind) {
+    case 'dmxbox':
+      return typed && boxes.some((box) => box.kind !== 'new' && same(box.address))
+        ? `The dmxbox at ${typed} is in the list already.`
+        : '';
+    case 'broadcast':
+    case 'multicast': {
+      const of = kind === 'broadcast' ? 'artnet' : 'sacn';
+      const listed = outputs.some(
+        (output) =>
+          output.plan.kind === of && output.plan.target === kind && output.plan.network === '',
+      );
+      return listed
+        ? `The ${kind === 'broadcast' ? 'Art-Net broadcast' : 'sACN multicast'} is in the list already.`
+        : '';
+    }
+    case 'usb':
+      return '';
+    default:
+      return typed &&
+        outputs.some((output) => output.plan.kind === kind && same(output.plan.target))
+        ? `The ${kind === 'artnet' ? 'Art-Net node' : 'sACN receiver'} at ${typed} is in the list already.`
+        : '';
+  }
+}
+
 /**
  * What needs saying about all outputs together: a universe that reaches no cable (with the outputs
  * that would play it but do not answer), a universe played more than once, as a splitter would

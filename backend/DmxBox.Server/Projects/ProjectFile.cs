@@ -498,6 +498,10 @@ internal sealed class ProjectFileStep
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? Disabled { get; set; }
 
+    /// <summary>Only for a cue of the stack whose sound plays unheard: true. Written only then.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? Muted { get; set; }
+
     /// <summary>
     /// Only for a release: the number of the step of the stack it takes down, like "2.1". Written
     /// only for a release of a step; a release whose step was taken out has none.

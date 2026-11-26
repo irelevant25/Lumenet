@@ -22,8 +22,8 @@ interface SheetLine {
 
 /**
  * The cue sheet: the stack on paper, for rehearsals and for whoever calls the cues. Every cue with its
- * number, what it plays and its note, its value, Add and Continue, its three times (a wait of 0: it
- * waits for GO), the moment of a sound it comes at, skipped cues struck through, and a column left
+ * number, what it plays and its note, its value, Add, Continue and Mute, its three times (a wait of 0:
+ * it waits for GO), the moment of a sound it comes at, skipped cues struck through, and a column left
  * empty to write in. On the screen it
  * looks like the paper; Print hands it to the browser's printing (Save as PDF too), which leaves out
  * the rest of the desk (styles.css, @media print).
@@ -67,7 +67,9 @@ export class CueSheet {
       what: this.store.stepName(step),
       note: release ? '' : this.store.stepNote(step),
       value: release ? '' : String(step.value),
-      with: [step.add ? 'Add' : '', step.continue ? 'Continue' : ''].filter(Boolean).join(', '),
+      with: [step.add ? 'Add' : '', step.continue ? 'Continue' : '', step.muted ? 'Muted' : '']
+        .filter(Boolean)
+        .join(', '),
       up: release ? '' : seconds(step.up),
       wait: step.wait > 0 ? seconds(step.wait) : 'GO',
       down: seconds(step.down),

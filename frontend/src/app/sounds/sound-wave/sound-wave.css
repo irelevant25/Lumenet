@@ -21,12 +21,41 @@
 }
 
 .well {
+  position: relative;
   height: var(--wave-h, 56px);
   min-width: 0;
   overflow: hidden;
   border: 1px solid var(--edge);
   border-radius: 4px;
   background: var(--well);
+}
+
+/* where the pointer is: a thin line, and the time of the file there at its top, on its right (on its
+   left near the end) */
+.hover {
+  position: absolute;
+  inset-block: 0;
+  border-left: 1px solid var(--legend);
+  pointer-events: none;
+}
+
+.hover span {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  padding: 1px 4px;
+  border-radius: 2px;
+  background: var(--well);
+  color: var(--legend);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.hover.flip span {
+  right: 3px;
+  left: auto;
 }
 
 canvas {

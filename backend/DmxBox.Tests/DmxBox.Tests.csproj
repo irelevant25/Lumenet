@@ -31,6 +31,7 @@
     <Using Include="DmxBox.Server.Sounds" />
     <Using Include="DmxBox.Server.Stack" />
     <Using Include="DmxBox.Server.Stage" />
+    <Using Include="DmxBox.Server.Update" />
     <Using Include="DmxBox.Tests.Api" />
     <Using Include="DmxBox.Tests.Boxes" />
     <Using Include="DmxBox.Tests.Client" />

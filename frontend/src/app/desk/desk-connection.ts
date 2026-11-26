@@ -86,11 +86,27 @@ export class DeskConnection {
     method: Method,
     ...args: Parameters<DeskHubStreams[Method]>
   ): Promise<ReturnType<DeskHubStreams[Method]> | undefined> {
+    return this.follow(method, () => undefined, ...args);
+  }
+
+  /**
+   * Calls a method of the backend that answers as a stream of several items, as an update tells how
+   * far its download is: each item goes to `next` as it comes, and the last one is the answer. Fails
+   * with a plain message.
+   */
+  follow<Method extends keyof DeskHubStreams>(
+    method: Method,
+    next: (item: ReturnType<DeskHubStreams[Method]>) => void,
+    ...args: Parameters<DeskHubStreams[Method]>
+  ): Promise<ReturnType<DeskHubStreams[Method]> | undefined> {
     type Result = ReturnType<DeskHubStreams[Method]>;
     return new Promise((resolve, reject) => {
       let answer: Result | undefined;
       this.hub.stream<Result>(method, ...args).subscribe({
-        next: (item) => (answer = item),
+        next: (item) => {
+          answer = item;
+          next(item);
+        },
         complete: () => resolve(answer),
         error: (error) => reject(new Error(plainMessage(error))),
       });

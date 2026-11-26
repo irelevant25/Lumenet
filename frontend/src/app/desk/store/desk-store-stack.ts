@@ -290,15 +290,33 @@ export abstract class DeskStoreStack extends DeskStoreSolo {
 
   /**
    * Changes a step of the stack. A step without `add` adds no more, one without `continue` plays on
-   * no more: the desk sends them only when they are true.
+   * no more, one without `muted` is heard again: the desk sends them only when they are true.
    */
   updateStackStep(id: number, step: TimedStep): void {
     this.stack.update((stack) => ({
       steps: stack.steps.map((old) =>
-        old.id === id ? { ...old, ...step, add: step.add, continue: step.continue } : old,
+        old.id === id
+          ? { ...old, ...step, add: step.add, continue: step.continue, muted: step.muted }
+          : old,
       ),
     }));
     this.run('UpdateStackStep', id, step);
+  }
+
+  /**
+   * Mutes a cue of a sound or takes it back (Muted): its sound plays unheard. This works while the
+   * stack is live too: a sound that plays falls silent, or is heard again, at once.
+   */
+  setStackStepMuted(id: number, muted: boolean): void {
+    this.stack.update((stack) => ({
+      steps: stack.steps.map((old) =>
+        old.id === id ? { ...old, muted: muted || undefined } : old,
+      ),
+    }));
+    this.connection.invoke('SetStackStepMuted', id, muted).catch((error: Error) => {
+      this.say(error.message);
+      void this.fetchSequencesAndStack();
+    });
   }
 
   deleteStackStep(id: number): void {

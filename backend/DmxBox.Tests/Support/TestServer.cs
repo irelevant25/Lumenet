@@ -61,7 +61,15 @@ internal sealed class TestServer : IAsyncDisposable
 
     /// <summary>Starts a server.</summary>
     /// <param name="moreSettings">Settings as on the command line, for example "--AllowedHosts=desk.example".</param>
-    public static async Task<TestServer> StartAsync(params string[] moreSettings)
+    public static Task<TestServer> StartAsync(params string[] moreSettings)
+    {
+        return StartWithAsync(_ => { }, moreSettings);
+    }
+
+    /// <summary>Starts a server with parts of the test's own, put in before the server's (see Program.Build).</summary>
+    /// <param name="adjust">Puts the parts in, for example a pretend GitHub for the updates.</param>
+    /// <param name="moreSettings">Settings as on the command line.</param>
+    public static async Task<TestServer> StartWithAsync(Action<WebApplicationBuilder> adjust, params string[] moreSettings)
     {
         DirectoryInfo folder = Directory.CreateTempSubdirectory("lumenet-test-");
         var box = new FakeBox();
@@ -84,7 +92,7 @@ internal sealed class TestServer : IAsyncDisposable
             "--Sound:Output=none",
             .. moreSettings,
         ];
-        WebApplication app = Program.Build(settings, box, pc);
+        WebApplication app = Program.Build(settings, box, pc, adjust);
 
         // Two additions the real server does not have: a log the tests can read, next to the
         // console, and a second hub whose one method always fails.

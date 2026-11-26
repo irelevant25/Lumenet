@@ -302,6 +302,33 @@ internal sealed partial class Desk
         }
     }
 
+    /// <summary>
+    /// Mutes a cue of a sound, or takes it back (Muted): its sound plays unheard, as ever but for what goes
+    /// out. Like Disabled this works while the stack is live too, for a rehearsal: a sound a cue that is on
+    /// plays falls silent, or is heard again, at once.
+    /// </summary>
+    /// <param name="id">The name of the cue.</param>
+    /// <param name="muted">True to mute it.</param>
+    /// <returns>True when the cue changed.</returns>
+    /// <exception cref="DeskException">The cue is not in the stack, or it plays no sound.</exception>
+    public bool SetStackStepMuted(int id, bool muted)
+    {
+        lock (_lock)
+        {
+            StackEntry entry = EntryWithId(id);
+            if (!entry.Step.IsSound)
+                throw new DeskException($"Cue {entry.Cue} plays no sound: only a cue of a sound can be muted.");
+            if (entry.Step.Muted == muted)
+                return false;
+
+            entry.Step = entry.Step with { Muted = muted };
+            if (_live)
+                MarkUnheardSounds();
+            _projectChanges++;
+            return true;
+        }
+    }
+
     /// <summary>Takes a step out of the stack. A release of that step releases nothing from then on.</summary>
     /// <param name="id">The name of the step.</param>
     /// <exception cref="DeskException">The step is not in the stack, or the stack is live.</exception>

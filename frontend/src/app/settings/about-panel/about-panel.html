@@ -1,0 +1,83 @@
+<h3 id="about-title">About</h3>
+<p class="version">
+  Lumenet <strong>{{ store.version() || '…' }}</strong>
+</p>
+
+@if (elsewhere()) {
+  <p class="hint">Lumenet is updated on the PC the desk program runs on.</p>
+} @else if (restarting(); as version) {
+  <p class="done" role="status">
+    Lumenet starts again as {{ version }}. This page loads again by itself when it is back.
+  </p>
+} @else if (progress() !== null) {
+  <div class="progress" role="status">
+    <progress max="100" [value]="progress()" aria-label="Download of the new Lumenet"></progress>
+    <span>Downloading {{ progress() }} %</span>
+  </div>
+} @else if (info(); as info) {
+  @if (info.problem) {
+    <p class="problem">{{ info.problem }}</p>
+    <button type="button" [disabled]="checking()" (click)="check()">Check again</button>
+  } @else if (info.newer && info.latest) {
+    <p class="news">
+      Lumenet {{ info.latest }} is out
+      @if (info.published) {
+        <span>(from {{ info.published | date: 'd MMM y' }})</span>
+      }
+    </p>
+    @if (info.notes) {
+      <details class="notes">
+        <summary>What it brings</summary>
+        <div class="text">
+          @for (paragraph of notes(); track $index) {
+            <p [class.title]="paragraph.title">{{ paragraph.text }}</p>
+          }
+        </div>
+      </details>
+    }
+    @if (info.canUpdate) {
+      @if (asking()) {
+        <div class="ask" role="group" aria-label="Update Lumenet">
+          <p>
+            Lumenet downloads {{ info.latest }}{{ size() ? ' (' + size() + ')' : '' }} from GitHub,
+            puts it in place of this one and starts it. The desk stops for a few seconds and starts
+            with every fader down: the lights go out.
+          </p>
+          @if (store.project().unsaved) {
+            <p class="problem">The project has changes that are not saved. Save it first.</p>
+          }
+          <div class="actions">
+            <button type="button" class="go" (click)="install()">Update now</button>
+            <button type="button" (click)="asking.set(false)">Cancel</button>
+          </div>
+        </div>
+      } @else {
+        <button type="button" class="go" (click)="asking.set(true)">
+          Update to {{ info.latest }}
+        </button>
+      }
+    } @else if (info.why) {
+      <p class="hint">{{ info.why }}</p>
+    }
+  } @else if (info.latest) {
+    <p class="done">This is the newest version.</p>
+  } @else if (info.why) {
+    <p class="hint">{{ info.why }}</p>
+  }
+} @else if (checking()) {
+  <p class="hint">Asking GitHub for the newest version…</p>
+}
+@if (problem()) {
+  <p class="problem" role="alert">{{ problem() }}</p>
+}
+
+<h4 id="license-title">License</h4>
+<p class="hint">The license of Lumenet itself is not chosen yet. It is made with:</p>
+<ul class="parts" aria-labelledby="license-title">
+  @for (part of madeWith; track part.name) {
+    <li>
+      <a [href]="part.url" target="_blank" rel="noopener">{{ part.name }}</a>
+      <span class="license">{{ part.license }}</span>
+    </li>
+  }
+</ul>

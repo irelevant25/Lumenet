@@ -2,7 +2,7 @@ import { Component, ElementRef, Injector, afterNextRender, computed, inject, sig
 import { DeskMidi } from '../../midi/desk-midi';
 import { DeskSettings } from '../../desk/desk-settings';
 import { DeskStore } from '../../desk/desk-store';
-import { saveTextFile, saveZipFile } from '../save-file';
+import { saveZipFile } from '../save-file';
 import { packExport } from '../../sounds/sound-files';
 import { TRANSFER_PARTS, TransferPart, TransferPartView, exportFileName, exportText, pcPartNote } from '../transfer';
 import { DialogDismiss } from '../../shared/dialog-dismiss';
@@ -11,8 +11,9 @@ import { LampButton } from '../../shared/lamp-button/lamp-button';
 /**
  * The window of Export: the parts to put into a file on this device, each with a checkbox, none
  * of them checked at first: the project, the stage on its own, the settings of this device, its
- * keyboard shortcuts, and (on the PC) the MIDI controllers with what their controls do. Import (in
- * its own window) takes them back, here or on another device.
+ * keyboard shortcuts, and (on the PC) the MIDI controllers with what their controls do. The file is
+ * one ZIP, which the desk program makes: each part a JSON file of its own, and the sound files of the
+ * project. Import (in its own window) takes them back, here or on another device.
  */
 @Component({
   imports: [DialogDismiss, LampButton],
@@ -76,13 +77,9 @@ export class ExportDialog {
         shortcuts: this.settings.shortcuts(),
         midi,
       });
-      // A project with sounds takes their files along: a ZIP of the file and of its sounds.
+      // One ZIP: each part a file of its own, and the sounds of the project with it.
       const fileName = exportFileName(chosen, name);
-      const base = fileName.replace(/\.json$/, '');
-      const saved =
-        chosen.has('project') && this.store.sounds().length > 0
-          ? await saveZipFile(`${base}.zip`, () => packExport(base, text))
-          : await saveTextFile(fileName, text);
+      const saved = await saveZipFile(fileName, () => packExport(fileName.replace(/\.zip$/, ''), text));
       if (saved === null) return; // no place was chosen: the window stays as it was
       this.saved.set(saved);
       // The Export key is gone with the question; the key that closes the window takes the focus.

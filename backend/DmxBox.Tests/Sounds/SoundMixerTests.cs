@@ -174,6 +174,24 @@ public sealed class SoundMixerTests : IDisposable
     }
 
     [Fact]
+    public void APausedSoundFallsSilentHoldsWhereItIsAndGoesOnFromThere()
+    {
+        string path = Tone(seconds: 2);
+        SoundMixer mixer = Playing(SoundOf(path) with { Seconds = 2 }, path);
+        mixer.Pause(1, true);
+        Read(mixer, 0.05);                                    // out over one read
+        double at = mixer.StateOf(1).Position;
+        Assert.Equal(0, Rms(Read(mixer, 0.5), 0), 4);         // silent
+        Assert.Equal(at, mixer.StateOf(1).Position, 3);       // held where it was, still playing
+        Assert.True(mixer.StateOf(1).Playing);
+
+        mixer.Pause(1, false);
+        Read(mixer, 0.05);                                    // in again over one read
+        Assert.InRange(Rms(Read(mixer, 0.1), 0), 0.34, 0.37);
+        Assert.InRange(mixer.StateOf(1).Position, at + 0.14, at + 0.16);
+    }
+
+    [Fact]
     public void ASoundPlaysFromItsStartToItsEndOrRoundAgainInALoop()
     {
         string path = Tone(seconds: 1);

@@ -18,10 +18,8 @@ internal static class Program
           sim.cmd <device> [options]
 
         Devices:
-          pico-1-universe     dmxbox with the Pico, one output
-          pico-2-universes    dmxbox with the Pico and two outputs (no such hardware exists yet)
-          pic32-1-universe    dmxbox 2 (PIC32) with one output
-          pic32-2-universes   dmxbox 2 (PIC32) with two outputs
+          dmxbox              dmxbox 3, one output, lights with RDM on its line
+          dmxbox-2-universes  dmxbox 3 with two outputs (no such box: for tests)
           artnet              an Art-Net node
           sacn                an sACN receiver
           enttec              an Enttec DMX USB Pro
@@ -35,6 +33,8 @@ internal static class Program
 
         Options:
           --show 16                   how many channels it writes when they change (1 to 512)
+          dmxbox: --lights 3          how many lights with RDM are on its DMX line (0 to 64)
+                  --box 0             the number on its switch (0 to 255): its Art-Net universe
           --folder <folder>           where the desk looks for simulators: "simulators" beside its LAN
                                       password, %LOCALAPPDATA%\Lumenet\simulators unless the desk was
                                       given another --Lan:PasswordFile
@@ -51,9 +51,8 @@ internal static class Program
           MIDI:   --port 8090         the port of its page on this PC (any free one unless given)
                   --no-browser        the browser does not open its page (O opens it)
 
-        Keys while it runs: U pulls it out and plugs it in again, Q ends it (Ctrl+C too); a dmxbox
-        also has B, its blackout button, and P, its preset button; a MIDI controller has O, which
-        opens its page.
+        Keys while it runs: U pulls it out and plugs it in again, Q ends it (Ctrl+C too); a MIDI
+        controller has O, which opens its page.
         """;
 
     private static int Main(string[] args)
@@ -93,8 +92,10 @@ internal static class Program
         string singular = device.EndsWith("-universe", StringComparison.Ordinal) ? device + "s" : device;
         if (BoxSimulator.Models.FirstOrDefault(model => model.Device == device || model.Device == singular) is { } box)
         {
+            int lights = options.Number("--lights", 3, 0, 64);
+            int boxNumber = options.Number("--box", 0, 0, 255);
             options.RequireAllUsed();   // before a build that may take a while
-            return new BoxSimulator(box, folder, BoxPrograms.Find(box.Program), show, Console.Out);
+            return new BoxSimulator(box, folder, BoxPrograms.Find(box.Program), show, Console.Out, lights, boxNumber);
         }
 
         if (MidiControllers.Find(device) is { } controller)
@@ -411,9 +412,9 @@ internal static class BoxPrograms
     {
         string firmware = Path.GetDirectoryName(simFolder)!;
         IEnumerable<string> sources = Directory.GetFiles(Path.Combine(firmware, "common"))
-            .Append(Path.Combine(simFolder, "sim.c"))
-            .Append(Path.Combine(firmware, "pico", "src", "config.h"))
-            .Append(Path.Combine(firmware, "pic32", "src", "config.h"))
+            .Concat(Directory.GetFiles(simFolder, "*.c"))
+            .Concat(Directory.GetFiles(simFolder, "*.h"))
+            .Append(Path.Combine(firmware, "src", "config.h"))
             .Where(File.Exists);
         return sources.Max(File.GetLastWriteTimeUtc);
     }

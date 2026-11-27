@@ -254,8 +254,12 @@ function freeUniverses(
   );
 }
 
-/** What the table of outputs calls a dmxbox: "dmxbox 2" at the address of a switch (10.1.n.1), else "dmxbox". */
+/**
+ * What the table of outputs calls a dmxbox: "dmxbox 3" for firmware 3 or newer, "dmxbox 2" at the
+ * address of a switch (10.1.n.1), else "dmxbox" (the box with the Pico).
+ */
 export function boxName(box: BoxView): string {
+  if (Number.parseInt(box.firmware ?? '', 10) >= 3) return 'dmxbox 3';
   return switchNumber(box.address) === null ? 'dmxbox' : 'dmxbox 2';
 }
 

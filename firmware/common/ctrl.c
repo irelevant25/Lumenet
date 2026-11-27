@@ -51,7 +51,11 @@ static int execute(ctrl_t *c, uint8_t type, const uint8_t *p, uint16_t plen,
         wr_be32(out + 5, now - c->boot_ms);
         wr_be16(out + 9, (uint16_t)c->bank->valid);
         wr_be16(out + 11, DMX_CHANNELS);
-        return 13;
+        // since dmxbox 3: supply voltage, what the box can do, its number
+        wr_be16(out + 13, plat_supply_mv());
+        out[15] = c->can;
+        out[16] = c->box_number;
+        return 17;
     }
     case CT_SET:
     case CT_FADE: {
@@ -124,6 +128,27 @@ static int execute(ctrl_t *c, uint8_t type, const uint8_t *p, uint16_t plen,
         if (!(c->bank->valid & (1u << p[0]))) { out[0] = ST_EMPTY_SLOT; return 1; }
         memcpy(out + 1, c->bank->data[p[0]], DMX_CHANNELS);
         return 1 + DMX_CHANNELS;
+    case CT_RDM_DISCOVER:
+        if (!c->rdm) { out[0] = ST_NOT_SUPPORTED; return 1; }
+        if (!c->rdm->discovering) rdm_start_discovery(c->rdm);
+        return 1;
+    case CT_RDM_TOD:
+        if (!c->rdm) { out[0] = ST_NOT_SUPPORTED; return 1; }
+        out[1] = c->rdm->discovering ? 1 : 0;
+        wr_be16(out + 2, c->rdm->tod_count);
+        memcpy(out + 4, c->rdm->tod, (size_t)c->rdm->tod_count * 6);
+        return 4 + c->rdm->tod_count * 6;
+    case CT_RDM_REQUEST:
+        if (!c->rdm) { out[0] = ST_NOT_SUPPORTED; return 1; }
+        if (plen < 12 || plen != 12 + p[11]) { out[0] = ST_BAD_LENGTH; return 1; }
+        if (!rdm_submit(c->rdm, RDM_OWNER_CTRL, p, rd_be16(p + 6), p[8], rd_be16(p + 9), p + 12, p[11])) {
+            out[0] = ST_BUSY;
+            return 1;
+        }
+        return -1;                           // the answer comes later (ctrl_poll)
+    case CT_BOOTLOADER:
+        plat_request_bootloader();
+        return 1;
     default:
         out[0] = ST_UNKNOWN_TYPE;
         return 1;
@@ -182,6 +207,10 @@ int ctrl_handle(ctrl_t *c, const uint8_t *pkt, int len, uint32_t now,
                 memcpy(resp, s->resp, s->resp_len);
                 return s->resp_len;
             }
+            if (d == 0 && s->pending) {      // retransmit of a request still on its way
+                c->duplicates++;
+                return 0;
+            }
             if (d < 0) { c->stale++; return 0; }  // old packet wandering the network
         } else {
             s = alloc_session(c, session, now);
@@ -190,6 +219,21 @@ int ctrl_handle(ctrl_t *c, const uint8_t *pkt, int len, uint32_t now,
 
     int n = execute(c, type, pkt + CTRL_HDR_LEN, plen, now, resp + CTRL_HDR_LEN);
     c->executed++;
+    if (n < 0) {                             // the answer comes later
+        c->deferred = 1;
+        c->deferred_new = 1;
+        memcpy(c->deferred_hdr, resp, CTRL_HDR_LEN);
+        c->deferred_session = session;
+        c->deferred_seq = seq;
+        if (s) {
+            s->last_seq = seq;
+            s->last_ms = now;
+            s->resp_len = 0;
+            s->pending = 1;
+        }
+        return 0;
+    }
+    if (s) s->pending = 0;
     wr_be16(resp + 10, (uint16_t)n);
     int total = CTRL_HDR_LEN + n;
 
@@ -198,6 +242,40 @@ int ctrl_handle(ctrl_t *c, const uint8_t *pkt, int len, uint32_t now,
         s->last_ms = now;
         s->resp_len = (uint16_t)total;
         memcpy(s->resp, resp, (size_t)total);
+    }
+    return total;
+}
+
+int ctrl_poll(ctrl_t *c, uint32_t now, uint8_t *resp, int resp_cap) {
+    if (!c->deferred || !c->rdm || resp_cap < CTRL_MAX_PKT) return 0;
+    uint8_t status;
+    const rdm_answer_t *a;
+    if (!rdm_take(c->rdm, RDM_OWNER_CTRL, &status, &a, NULL, NULL)) return 0;
+    c->deferred = 0;
+    memcpy(resp, c->deferred_hdr, CTRL_HDR_LEN);
+    uint8_t *out = resp + CTRL_HDR_LEN;
+    int n = 1;
+    if (status == RDM_DONE_OK) {
+        out[0] = ST_OK;
+        out[1] = a->response_type;
+        out[2] = a->cc;
+        wr_be16(out + 3, a->pid);
+        out[5] = a->pdl;
+        memcpy(out + 6, a->pd, a->pdl);
+        n = 6 + a->pdl;
+    } else {
+        out[0] = status == RDM_DONE_TIMEOUT ? ST_RDM_TIMEOUT : ST_RDM_BAD;
+    }
+    wr_be16(resp + 10, (uint16_t)n);
+    int total = CTRL_HDR_LEN + n;
+    if (c->deferred_session != 0) {
+        ctrl_session_t *s = find_session(c, c->deferred_session);
+        if (s && s->pending && s->last_seq == c->deferred_seq) {
+            s->pending = 0;
+            s->last_ms = now;
+            s->resp_len = (uint16_t)total;
+            memcpy(s->resp, resp, (size_t)total);
+        }
     }
     return total;
 }

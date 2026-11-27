@@ -35,7 +35,15 @@ import {
   type MidiState,
 } from '../midi/midi';
 import { NOTE_LINE_SEPARATOR } from '../desk/notes';
-import type { BackupSetup, BackupView, UpdateInfo, UpdateStep } from '../desk/hub-contract';
+import type {
+  BackupSetup,
+  BackupView,
+  RdmBoxView,
+  RdmLightChangeSent,
+  RdmLightView,
+  UpdateInfo,
+  UpdateStep,
+} from '../desk/hub-contract';
 
 // The test browser (jsdom) has no modal windows. A window of the page only gets its "open" mark here.
 if (typeof HTMLDialogElement.prototype.showModal !== 'function') {
@@ -177,6 +185,12 @@ export class FakeConnection {
     why: null,
     problem: null,
   };
+  /** The boxes as "GetRdmBoxes" answers: none unless a test gives them. */
+  rdmBoxes: RdmBoxView[] = [];
+  /** The lights with RDM as "GetRdmLight" answers them, by "<box> <id>". */
+  rdmLights: Record<string, RdmLightView> = {};
+  /** What a light refuses "SetRdmLight" with; null: it takes the change. */
+  rdmRefusal: string | null = null;
   /** The steps "InstallUpdate" answers with: the download, then the version it starts again as. */
   updateSteps: UpdateStep[] = [
     { percent: 40, version: null },
@@ -261,8 +275,29 @@ export class FakeConnection {
     if (method === 'SetBackup')
       return (this.backup = { ...this.backup, ...(args[0] as BackupSetup) });
     if (method === 'CheckUpdate') return this.update;
+    if (method === 'GetRdmBoxes') return this.rdmBoxes;
+    if (method === 'GetRdmLight') return this.rdmLights[`${String(args[0])} ${String(args[1])}`];
+    if (method === 'SetRdmLight')
+      return this.setRdmLight(args[0] as string, args[1] as string, args[2] as RdmLightChangeSent);
+    if (method === 'SearchRdm') return undefined;
     if (this.midi) return this.midiAnswer(this.midi, method, args);
     return undefined;
+  }
+
+  // A light with RDM after a change, as the desk program reads it again from the light.
+  private setRdmLight(box: string, id: string, change: RdmLightChangeSent): RdmLightView {
+    if (this.rdmRefusal) throw new Error(this.rdmRefusal);
+    const key = `${box} ${id}`;
+    const light = this.rdmLights[key];
+    const mode = change.mode ?? light.mode;
+    return (this.rdmLights[key] = {
+      ...light,
+      mode,
+      channels: light.modes[mode - 1]?.channels ?? light.channels,
+      address: change.address ?? light.address,
+      label: change.label ?? light.label,
+      identify: change.identify ?? light.identify,
+    });
   }
 
   // The answers of a desk program with MIDI: the MIDI after the change.
@@ -370,6 +405,9 @@ export const QUESTIONS = [
   // the backups and the newest version, asked for when their tabs of Settings open
   'GetBackup',
   'CheckUpdate',
+  // the boxes and their lights with RDM, asked for when the RDM tab of Settings opens
+  'GetRdmBoxes',
+  'GetRdmLight',
 ];
 
 /** The MIDI of the PC in the tests: a controller in use with two controls mapped, and one that is not plugged in. */

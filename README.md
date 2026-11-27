@@ -1,7 +1,7 @@
 # Lumenet
 
-A lighting desk in the browser, in the old style with faders, and **dmxbox**: a small box with a Raspberry Pi
-Pico that takes what the desk sends over USB to the DMX512 cable of the lights.
+A lighting desk in the browser, in the old style with faders, and **dmxbox**: a small box that takes what the
+desk sends over USB to the DMX512 cable of the lights.
 
 ![The Main view of Lumenet on a PC, with the example concert playing](docs/screenshots/main.png)
 
@@ -53,17 +53,16 @@ screen, and get in with a password.
 
 <img src="docs/screenshots/main-phone.png" alt="The Main view of Lumenet on a phone, used through LAN" width="260">
 
-**The box** is a Raspberry Pi Pico on a small board, with an isolated DMX output on a 3-pin XLR socket. One USB
-cable powers it and carries the data. Windows sees it as a network adapter, so it needs no driver (tried on
-Windows 11). It is built from through-hole parts, on a breadboard or soldered on a perfboard.
+**The box**, dmxbox 3, is an RP2040 on a board of 86 × 74.5 mm: an isolated DMX output on a 5-pin XLR socket with
+**RDM** (the desk sets the address, mode and name of a light from its Settings), **MIDI IN and OUT**, and three
+USB-C sockets: IN, OUT to the next box, so that several boxes share one USB port of the computer, and POWER for
+a charger. A switch gives each box its own number. One USB cable powers it and carries the data; the computer
+sees a network adapter and a MIDI interface, which Windows, macOS and Linux take without a driver.
 
-<img src="hardware/pico/3d/dmxbox_usb_top.png" alt="A render of the dmxbox board from above, in its box with the lid off: the Pico, two buttons, the isolated side and the XLR socket" width="560">
+<img src="hardware/3d/dmxbox3_top.png" alt="A render of the dmxbox 3 board from above: three USB-C sockets at the left, the RP2040 and its hub in the middle, the number switch at the top, the isolated DMX side at the right, the MIDI headers at the bottom" width="560">
 
-This is a render of the board's design; the boxes built so far are on a breadboard and on a perfboard.
-
-A second box, **dmxbox 2**, has two DMX outputs (one in a smaller version), a USB-C socket and a switch on its
-side that gives each box its own number, so that several work on one computer. It is drawn down to a perfboard
-plan and EAGLE files, and its firmware builds, but it has not been built yet.
+This is a render of the board's design; JLCPCB makes it and solders its parts, and none has been built yet.
+The box before it, with a Raspberry Pi Pico on a perfboard, was built and works with the desk.
 
 ## Get it
 
@@ -78,9 +77,9 @@ http://localhost:4200. `sim.cmd` starts a simulated box, Art-Net node, sACN rece
 desk to play on, or a MIDI controller to play it with, without the hardware (see
 [DEV.md](DEV.md#simulated-devices-simcmd)).
 
-**The box:** the parts are in [BOM.md](hardware/pico/BOM.md). The schematic, the plans for a breadboard and a perfboard, and
-the firmware, which is built with the Pico SDK and copied onto the Pico, are in [DEV.md](DEV.md#1-hardware).
-For dmxbox 2: [its parts](hardware/pic32/BOM.md) and [its plans and firmware](DEV.md#dmxbox-2-the-pic32-box).
+**The box:** what to order from JLCPCB and what to buy and fit yourself is in [BOM.md](hardware/BOM.md); the
+schematic, the board and the firmware, which is built with the Pico SDK, are in [DEV.md](DEV.md#1-hardware).
+The boxes before it are in [hardware/archive](hardware/archive/README.md).
 
 ## More
 

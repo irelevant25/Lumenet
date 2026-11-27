@@ -1,6 +1,7 @@
 import { BoxView, OutputPlan, OutputView } from '../desk/desk-types';
 import {
   alreadyListed,
+  boxName,
   newPlan,
   outputsSummary,
   planOfNode,
@@ -52,6 +53,13 @@ function view(plan: OutputPlan, state: OutputView['state']): OutputView {
 }
 
 describe('outputs', () => {
+  it('names a box by its firmware and its address', () => {
+    expect(boxName(pico)).toBe('dmxbox');
+    expect(boxName({ ...missingBox, firmware: '1.0' })).toBe('dmxbox 2');
+    expect(boxName({ ...missingBox, connected: true, firmware: '3.0' })).toBe('dmxbox 3');
+    expect(boxName(missingBox)).toBe('dmxbox 2'); // not answering: its address says no more
+  });
+
   it('an output that is in the list already is not added again', () => {
     const outputs = [view(node, 'connected'), view(sacn, 'sending')];
     const newBox: BoxView = { ...missingBox, address: '10.1.9.1', kind: 'new' };

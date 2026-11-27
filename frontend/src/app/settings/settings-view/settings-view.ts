@@ -2,6 +2,7 @@ import { Component, ElementRef, Injector, afterNextRender, computed, inject } fr
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { OutputsPanel } from '../../outputs/outputs-panel/outputs-panel';
+import { RdmPanel } from '../../rdm/rdm-panel/rdm-panel';
 import { SoundOutputPanel } from '../../sounds/sound-output/sound-output';
 import { AboutPanel } from '../about-panel/about-panel';
 import { BackupPanel } from '../backup-panel/backup-panel';
@@ -25,6 +26,8 @@ import { ViewsPanel } from '../views-panel/views-panel';
  * - Keyboard: the shortcuts (keyboard-panel).
  * - Outputs: the dmxboxes, Art-Net nodes, sACN and DMX USB interfaces of the project
  *   (outputs-panel). The MIDI controllers and OSC have a view of their own (midi-view).
+ * - RDM: the lights with RDM on the DMX lines of the boxes, their addresses, modes and names
+ *   (rdm-panel).
  * - Backup: a copy of everything in a folder, one that Google Drive or another cloud syncs
  *   (backup-panel).
  * - About: the version of Lumenet, a newer one to update to, and the parts it is made with
@@ -41,6 +44,7 @@ import { ViewsPanel } from '../views-panel/views-panel';
     LanPanel,
     MainViewPanel,
     OutputsPanel,
+    RdmPanel,
     SoundOutputPanel,
     ViewsPanel,
   ],

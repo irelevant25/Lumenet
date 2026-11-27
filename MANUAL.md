@@ -555,7 +555,9 @@ same levels on every kind of output, and so does a box: its own master stays at 
 
 **dmxbox.** A box has an output, a DMX socket, for each universe it sends, and says how many when the desk
 finds it. The box with the Pico has one, at 192.168.7.1. A box with a number switch answers at 10.1.n.1 for
-the number n on its switch, and the desk finds it by itself on the PC's network adapters.
+the number n on its switch, and the desk finds it by itself on the PC's network adapters. dmxbox 3 is such a
+box, with one output: its switch gives 0 to 255, and every box on one PC needs its own number. Its lights with
+RDM are in the RDM tab of Settings (see [RDM](#rdm)), and its MIDI sockets are a MIDI device of the PC.
 
 * **Automatic:** while the project lists no boxes, every box that answers plays by itself: the box with the
   Pico first, then the others in the order of the numbers on their switches, each output the next universe
@@ -609,6 +611,28 @@ and others), at a serial port of this PC: each plays one universe, or Off, which
   not answer as a DMX USB Pro does, says so.
 * The interface repeats the last frame on its cable by itself, also when the desk program ends. An Open DMX
   USB, and other interfaces without a processor of their own, do not work here yet.
+
+### RDM
+
+A light with RDM tells its dmxbox what it is, and takes its DMX address, its mode and its name from the desk,
+so nobody has to climb to it. dmxbox 3 looks for the lights with RDM on its DMX line when it starts. They are in
+**Settings**, in the **RDM** tab, a table for each box that answers.
+
+* **The table:** each light with its name (the one it was given, else its model), its maker, model and RDM
+  ID, its **address** with the channels it takes ("5 to 20"), its **mode** (the light's own names of its modes,
+  with their channels) and its **name**. A change goes to the light at once, and the table shows what the
+  light then says. What a light refuses (an address it cannot take, say) is written under it, and the field
+  shows the light's value again.
+* **Identify** makes the light show where it is (it blinks, a head moves, as its maker chose); its key is lit
+  meanwhile. A light still identifying stops when the tab is left.
+* **Search** has the box look for the lights on its line again, after lights were plugged in or out. The
+  table fills in as the lights answer, one after the other.
+* Under the table, marked in amber: two lights that take the same channels, and a light that goes beyond
+  channel 512.
+* A box without RDM (the box with the Pico) says so, and a box that does not answer too. Lights without RDM
+  play as before; they only do not show here. The names are plain letters: RDM keeps no accents, so "Predný"
+  goes to the light as "Predny". The project does not change: RDM settings live in the lights, and Undo does
+  not take them back.
 
 ## Sequences and the stack
 
@@ -1254,7 +1278,8 @@ phones and tablets), **Sound** (the device of the sounds and its outputs, the de
 Soundcraft Ui mixer, typed or found with Find, with its playlist; see [The device](#the-device) and
 [Tracks of a Soundcraft Ui mixer](#tracks-of-a-soundcraft-ui-mixer); on the PC only, a phone says where it is
 set up), **Colors** (the colors of the keys), **Keyboard** (see [Keyboard](#keyboard)), **Outputs**
-(the outputs of the project, see [The outputs](#the-outputs)), **Backup** (see [Backup](#backup)) and
+(the outputs of the project, see [The outputs](#the-outputs)), **RDM** (the lights with RDM on the lines of
+the boxes, see [RDM](#rdm)), **Backup** (see [Backup](#backup)) and
 **About** (the version, an update, and what Lumenet is made with; see [Updates](#updates)). The address names
 the tab (`/settings#keyboard`), so a reload keeps it, and the arrow keys go from tab to tab. Every label
 stands beside its field. The MIDI controllers and OSC have a view of their own (see
@@ -1412,7 +1437,9 @@ turns amber), and a second one within four seconds does it.
 A MIDI controller plugged into the PC (an Akai APC mini, a Korg nanoKONTROL2, a Behringer X-Touch and many
 others) plays the desk: its keys press the desk's keys, its faders and knobs move its faders, and the desk
 lights its keys and moves its motorized faders back. The desk program takes the controller, not the page, so it
-works whichever pages are open, on Windows and macOS (on Linux only the simulators below).
+works whichever pages are open, on Windows and macOS (on Linux only the simulators below). A controller with a
+DIN cable goes into MIDI IN of a dmxbox 3: the box is a MIDI device of the PC ("dmxbox 3"), and what comes
+in there reaches the desk as from any other device; what the desk sends to it goes out of the box's MIDI OUT.
 
 ![The MIDI view: two simulated controllers in use and the messages that came in at the left, the faders of the pages shown with their controls at the right](docs/screenshots/midi.png)
 

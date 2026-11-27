@@ -39,6 +39,10 @@ public class DmxBoxException : Exception
         3 => "UNKNOWN_TYPE",
         4 => "STORAGE_ERROR",
         5 => "EMPTY_SLOT",
+        6 => "RDM_TIMEOUT",
+        7 => "RDM_BAD",
+        8 => "BUSY",
+        9 => "NOT_SUPPORTED",
         _ => $"status {statusCode}",
     };
 }

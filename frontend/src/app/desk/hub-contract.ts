@@ -37,6 +37,8 @@ export interface DeskHubMethods {
   GetOutputs(): OutputView[];
   GetPlayback(): Playback;
   GetProjects(): ProjectList;
+  GetRdmBoxes(): RdmBoxView[];
+  GetRdmLight(box: string, id: string): RdmLightView;
   GetRecovered(): string | null;
   GetSequences(): Record<number, Sequence>;
   GetSerialPorts(): string[];
@@ -65,6 +67,7 @@ export interface DeskHubMethods {
   ReportMidiPages(pages: MidiPages): void;
   SaveMemory(memory: number): void;
   SaveProject(name: string | null): ProjectInfo;
+  SearchRdm(box: string): void;
   SeekSound(number: number, seconds: number): SoundPlayback;
   SetAutosave(on: boolean, seconds: number): AutosaveOptions;
   SetBackup(setup: BackupSetup): BackupView;
@@ -91,6 +94,7 @@ export interface DeskHubMethods {
   SetOsc(on: boolean, port: number): MidiState;
   SetOutputs(outputs: readonly OutputPlanSent[]): void;
   SetRate(on: boolean, bpm: number): void;
+  SetRdmLight(box: string, id: string, change: RdmLightChangeSent): RdmLightView;
   SetSequence(memory: number, sequence: SequenceSent): void;
   SetSequenceSpeed(memory: number, speed: number): void;
   SetSequenceStepDisabled(memory: number, step: number, disabled: boolean): void;
@@ -615,6 +619,41 @@ export interface ProjectList {
   readonly folder: string;
   readonly projects: ProjectEntry[];
   readonly examples: string[];
+}
+
+export interface RdmBoxView {
+  readonly address: string;
+  readonly number: number | null;
+  readonly rdm: boolean;
+  readonly searching: boolean;
+  readonly lights: string[];
+  readonly error: string | null;
+}
+
+export interface RdmLightChangeSent {
+  readonly label?: string | null;
+  readonly address?: number | null;
+  readonly mode?: number | null;
+  readonly identify?: boolean | null;
+}
+
+export interface RdmLightView {
+  readonly box: string;
+  readonly id: string;
+  readonly maker: string;
+  readonly model: string;
+  readonly label: string;
+  readonly address: number;
+  readonly channels: number;
+  readonly mode: number;
+  readonly modes: RdmModeView[];
+  readonly identify: boolean;
+  readonly error: string | null;
+}
+
+export interface RdmModeView {
+  readonly channels: number;
+  readonly name: string;
 }
 
 export interface Sequence {

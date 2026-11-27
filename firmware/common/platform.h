@@ -13,6 +13,20 @@ void plat_unlock(void);
 // Persist the preset bank. Called WITHOUT the lock held. May block ~150 ms.
 bool plat_save_presets(const preset_bank_t *bank);
 
+// The RDM line (rdm.c). plat_rdm_send starts one transaction: the packet from
+// its start code on, and what comes back (RDM_EXPECT_...). plat_rdm_poll returns
+// 0 while it runs and 1 when it is over: `raw` then holds what came back (n = 0:
+// nothing), and `garbled` is true if the line showed errors (a collision).
+void plat_rdm_send(const uint8_t *pkt, int len, uint8_t expect);
+int  plat_rdm_poll(uint8_t *raw, int cap, int *n, bool *garbled);
+
+// The supply voltage in millivolts, 0 if the box cannot measure it.
+uint16_t plat_supply_mv(void);
+
+// Restart into the USB boot loader for a firmware update, a moment after the
+// answer has gone out. Boxes without one ignore it.
+void plat_request_bootloader(void);
+
 // ---- small big/little endian helpers shared by the protocol code
 static inline uint16_t rd_be16(const uint8_t *p) { return (uint16_t)((p[0] << 8) | p[1]); }
 static inline uint32_t rd_be32(const uint8_t *p) {

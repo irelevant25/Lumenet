@@ -421,6 +421,7 @@ describe('the desk page: Settings', () => {
       'Colors',
       'Keyboard',
       'Outputs',
+      'RDM',
       'Backup',
       'About',
     ]);

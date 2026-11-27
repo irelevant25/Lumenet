@@ -6,36 +6,41 @@ Lumenet is and how to get it; the [manual](MANUAL.md) describes the desk.
 
 ## The dmxbox in short
 
-A small box with a **USB socket** on one end and a **3-pin XLR DMX output** on the other.
-One USB cable powers it and carries the data.
+**dmxbox 3** is a small box with three **USB-C sockets** on one side (IN to the computer, OUT to the next box,
+POWER for a charger when the computer's port gives too little) and, in its wall, a **5-pin XLR DMX output** and
+**MIDI IN and OUT**. One USB cable powers it and carries the data; boxes hang one behind the other, so several
+need only one USB port of the computer.
 
-When you plug it in, the computer sees a new network adapter with exactly one device behind it: the box,
-at **192.168.7.1**. So the box is controlled over UDP like a network device, but there is no network to set up:
+When you plug it in, the computer sees a new network adapter with exactly one device behind it: the box, at
+**10.1.n.1**, where n is the number set on its switch (0 to 255). It sees a MIDI interface "dmxbox 3" too. So the
+box is controlled over UDP like a network device, but there is no network to set up:
 
-* **Art-Net** (UDP 6454) is supported, so QLC+ and other lighting software work with it.
+* **Art-Net** (UDP 6454) is supported, RDM included, so QLC+ and other lighting software work with it.
 * The **DX protocol** (UDP 7000) is a custom, reliable command protocol. It uses sequence numbers, ACKs,
-  retransmits and duplicate detection. Fades run on the Pico, so they stay smooth even if the PC hiccups.
+  retransmits and duplicate detection. Fades run on the box, so they stay smooth even if the PC hiccups.
+* **RDM:** the box finds the lights with RDM on its DMX line by itself and passes the desk's requests to them:
+  their address, mode and name, and Identify (the RDM tab of Settings).
 
 ```
- PC ──USB──► Pico core 0: USB network link, protocols, buttons, flash
-             Pico core 1: fade engine ──► PIO + DMA ──► 6N137 ──► SN75176 ──► XLR-3
+ PC ──USB──► hub ──► RP2040 core 0: USB network adapter and MIDI, protocols, RDM, flash
+              │      RP2040 core 1: fade engine ──► PIO + DMA ──► 6N137 ──► ST485 ──► XLR-5
+              └──► OUT: the next box                  RDM answers ◄── 6N137 ◄──┘
 ```
 
-A second box, **dmxbox 2**, is drawn and its firmware builds, but it has not been built yet: a PIC32
-microcontroller in a DIP socket instead of the Pico, a USB-C socket, **two DMX outputs** ready for RDM, and a
-switch that gives each box its own number and address (10.1.n.1), so that several boxes can work on one
-computer. See [dmxbox 2: the PIC32 box](#dmxbox-2-the-pic32-box).
+The boxes before it, the box with the Pico (built, and still played by the desk at 192.168.7.1) and dmxbox 2
+with a PIC32 (drawn only), are in the archive: [hardware/archive](hardware/archive/README.md).
 
 ## What is where
 
 | Folder / file | Contents |
 |---|---|
-| `firmware/common/` | The C code both boxes share: the network stack, the address server, Art-Net, the DX protocol, the fade engine, the presets and the USB network adapter. |
-| `firmware/pico/` | The box with the Pico: a Pico SDK project (C). Builds `dmxbox.uf2`; `flash.cmd` puts it onto the Pico. `test/` tests the network code on a PC. |
-| `firmware/pic32/` | The PIC32 box with two outputs (dmxbox 2): its own C code (board, DMX outputs, flash) and `build.cmd`, which builds `dmxbox2.hex` with Microchip's XC32. |
-| `firmware/sim/` | The **same** engine and protocol C code as the firmware, running on a PC over normal sockets: the box with the Pico and dmxbox 2, each with one output and with two. Use them to develop software before the hardware exists. |
+| `firmware/` | The firmware of dmxbox 3, a Pico SDK project (C): `build.cmd` builds `dmxbox.uf2`, `flash.cmd` puts it onto a box. `src/` is the RP2040's own code (main program, DMX and RDM line, board, MIDI, flash, the board file for the SDK). |
+| `firmware/common/` | The C code without SDK calls, which the simulator and the tests run too: the network stack, the address server, Art-Net, the DX protocol, RDM, the MIDI bytes, the fade engine, the presets and the USB tables. |
+| `firmware/sim/` | The **same** C code as the firmware, running on a PC over normal sockets, with lights that answer RDM in its memory: dmxbox 3, and a box with two outputs for the tests. Use it to develop software before the hardware exists. |
+| `firmware/test/` | The firmware's tests on a PC: the network code and the whole main program on pretend hardware, RDM and MIDI. |
+| `firmware/archive/` | The firmware of the boxes before: the box with the Pico (`pico/`) and dmxbox 2 (`pic32/`). |
 | `backend/` | .NET: the `DmxBox` library, the `dmxbox` command-line tool, the server of the Lumenet desk, `Lumenet.exe` (`backend/Lumenet`), the simulated devices of `sim.cmd` (`backend/DmxBox.Sim`), and the tests. |
-| `backend/DmxBox.Server/` | The desk program, a folder for each part, each folder a namespace of its own: `Core/` (the desk itself: `Desk.cs` and its parts `Desk.Stack.cs`, `Desk.Sounds.cs` ..., its clock and its undo), `Api/` (the hub the page talks to, and its answers), `Stack/`, `Sequences/`, `Effects/`, `Stage/` (the stage plan and the fixtures on it), `Sounds/` (with the Soundcraft Ui mixer), `Midi/`, `Boxes/` (the dmxboxes), `Outputs/` (Art-Net, sACN and the DMX USB interfaces), `Lan/` (who may use the desk), `Projects/` (the project files and the autosave) and `Import/` (show files of other desks). `Program.cs` starts it, and `GlobalUsings.cs` makes the namespace of every folder known in every file. |
+| `backend/DmxBox.Server/` | The desk program, a folder for each part, each folder a namespace of its own: `Core/` (the desk itself: `Desk.cs` and its parts `Desk.Stack.cs`, `Desk.Sounds.cs` ..., its clock and its undo), `Api/` (the hub the page talks to, and its answers), `Stack/`, `Sequences/`, `Effects/`, `Stage/` (the stage plan and the fixtures on it), `Sounds/` (with the Soundcraft Ui mixer), `Midi/`, `Boxes/` (the dmxboxes), `Rdm/` (the lights with RDM through the boxes), `Outputs/` (Art-Net, sACN and the DMX USB interfaces), `Lan/` (who may use the desk), `Projects/` (the project files and the autosave) and `Import/` (show files of other desks). `Program.cs` starts it, and `GlobalUsings.cs` makes the namespace of every folder known in every file. |
 | `backend/DmxBox.Tests/` | The tests, in the folders of what they test; `Support/` holds what many tests share (the test server, the client of the hub, a clock set by hand), and `Client/` the tests of the `DmxBox` library against the simulated box. |
 | `frontend/` | Angular: the page of the Lumenet fader desk. `src/app` has a folder for each view and each part of the desk, see [its README](frontend/README.md#where-things-are). |
 | `run.cmd` | Starts the Lumenet desk: backend and frontend together. |
@@ -44,11 +49,9 @@ computer. See [dmxbox 2: the PIC32 box](#dmxbox-2-the-pic32-box).
 | `.github/` | The workflow that makes `Lumenet.exe` after every push to `main` and puts it on the Releases page. |
 | `examples/` | The example projects of the desk, which its Load window lists, and an example show file of a theatre console, to import. |
 | `docs/` | The screenshots of the README and the manual. |
-| `hardware/pico/` | The box with the Pico: `schematic-1-universe/` (the schematic, the breadboard plan and the perfboard plan in SVG, PNG and PDF for printing, and the scripts that draw them), `3d/` (Blender model, renders, and a drawing of the board's tracks) and [BOM.md](hardware/pico/BOM.md), the parts list for ordering. |
-| `hardware/pic32/` | The PIC32 box (dmxbox 2): `schematic-2-universes/` and `schematic-1-universe/` (for two outputs and for one: the net list, the schematic, the breadboard plan, the perfboard plan, the EAGLE files, and the scripts that draw and check them), `3d/` (Blender model of the finished box and its pictures) and [BOM.md](hardware/pic32/BOM.md). |
-| `hardware/eagle.py` | Writes EAGLE schematics and boards; the scripts of both boxes use it. |
-| `hardware/datasheets/` | Datasheets of parts of the box. |
-| `hardware/archive/` | Earlier designs with an Ethernet port. Not needed for this box. |
+| `hardware/` | dmxbox 3: the KiCad project (`dmxbox3.*`, its own footprints in `dmxbox3.pretty`), its drawings as PDF, `jlcpcb/` (what JLCPCB needs to make and fit the board), `case_print/` (the case printed in PETG: STL for the printer), `case/` (the aluminium case with its holes, for JLCMC, instead), `3d/` (Blender model and pictures), [BOM.md](hardware/BOM.md) (ordering and putting it together), and `scripts/`, which make all of it from `circuit.py`. |
+| `hardware/datasheets/` | Datasheets of parts of the boxes. |
+| `hardware/archive/` | The boxes before: the box with the Pico, dmxbox 2 with a PIC32, the designs with an Ethernet port. |
 
 Where things stand: [Verification status](#verification-status), at the end.
 
@@ -56,358 +59,92 @@ Where things stand: [Verification status](#verification-status), at the end.
 
 ## 1. Hardware
 
-Parts: see [BOM.md](hardware/pico/BOM.md). Pictures: [top](hardware/pico/3d/dmxbox_usb_top.png), [solder side](hardware/pico/3d/dmxbox_usb_bottom.png),
-[USB end](hardware/pico/3d/dmxbox_usb_usb_side.png), [DMX end](hardware/pico/3d/dmxbox_usb_dmx_side.png), [closed box](hardware/pico/3d/dmxbox_usb_closed.png).
+dmxbox 3 is a board of 86 × 74.5 mm with two layers, made and fitted by JLCPCB. What to order and buy, and how to
+put it together: [hardware/BOM.md](hardware/BOM.md). Drawings: [schematic](hardware/dmxbox3_schematic.pdf),
+[assembly](hardware/dmxbox3_assembly.pdf) (where every part goes), [copper](hardware/dmxbox3_copper.pdf).
+Pictures: [from above](hardware/3d/dmxbox3_top.png), [at an angle](hardware/3d/dmxbox3_angle.png),
+[USB side](hardware/3d/dmxbox3_usb_side.png), [DMX side](hardware/3d/dmxbox3_dmx_side.png).
 
-Schematic: [drawing](hardware/pico/schematic-1-universe/dmxbox_schematic.png). To try the circuit on a breadboard first:
-[breadboard plan](hardware/pico/schematic-1-universe/dmxbox_breadboard.png). Both are in [one PDF](hardware/pico/schematic-1-universe/dmxbox_drawings.pdf) for printing.
-To solder it on a perfboard: [perfboard plan](#building-it-on-a-perfboard).
+Every part is on the top side, and JLCPCB solders all of them. The DMX and MIDI sockets sit in the wall of the box,
+on cables to the pin headers J4, J5 and J6 (pin n is pin n of the socket).
 
-Tracks: the board is 100 × 66 mm and has every track on the solder side
-([drawing](hardware/pico/3d/dmxbox_usb_routing.png), [SVG](hardware/pico/3d/dmxbox_usb_routing.svg)).
+The box is printed in PETG: a base and a lid, 85 × 127 × 36 mm ([case_print/](hardware/case_print), how to print
+it in BOM.md). The board stands on four posts of the base with M3 heat-set inserts, held by 25 mm standoffs through
+its holes, on which the lid is screwed. The USB-C sockets are at the front wall, SW1's keys behind a slot in the
+side, DMX and MIDI in the back wall behind the board, and three light pipes bring the LEDs to the lid. Pictures:
+[front](hardware/3d/dmxbox3_print_front.png), [back](hardware/3d/dmxbox3_print_back.png),
+[opened](hardware/3d/dmxbox3_print_open.png). Instead, JLCMC's aluminium case K90-9848-H6-L120 fits the same
+board, with holes JLCMC machines from [case/dmxbox3_case.step](hardware/case/dmxbox3_case.step) and its
+[drawing](hardware/case/dmxbox3_case.pdf): there the board stands on 15 mm nylon spacers (above the ribs of the
+tube's walls) and the back plate's sockets are raised 4 mm so the XLR's solder cups pass over the board. The 4.5 mm
+the board has above SW1 are for that case: its spacers have to stay clear of the screw channels in its corners.
 
-Everything with many pins sits in a socket (Pico, 6N137, RS-485 transceiver, DC-DC converter), so it can be
-replaced. U5 can be an SN75176BP or a MAX485: same pins, same socket (see [BOM.md](hardware/pico/BOM.md)).
+### The parts of the circuit
 
-The Pico sits at the left end of the board, with its micro-USB socket at the wall of the box. The cable plugs
-straight into the Pico through an opening in the wall.
+* **Power:** IN (J1) takes 5 V from the computer or the box before; POWER (J3, through the Schottky diode D1) takes
+  it from a charger, and while it does, Q1 cuts IN's 5 V off, so the computer gives nothing. The XC6206 makes 3.3 V.
+  OUT (J2) gets 5 V through Q2 and Q3 (two P-channel MOSFETs back to back, so nothing flows back) only when the
+  RP2040 sees a device there: its 33 kΩ pull-ups on OUT's CC pins against the next box's 5.1 kΩ give about 0.44 V,
+  which the RP2040 measures (GPIO 26, 27). A computer or a charger plugged into OUT by mistake pulls nothing down
+  and gets no 5 V. Half the supply voltage goes to GPIO 28, so the desk sees it (PING).
+* **USB:** a WCH CH334F hub. Its upstream port goes to IN, port 1 to OUT (the next box), port 4 to the RP2040.
+  So each box is one hub deep: USB allows five hubs in a row behind a computer's port, which makes about five
+  boxes on one port (fewer when the computer's own port is behind a hub already).
+* **RP2040** with a W25Q128JV flash (16 MB) and a 12 MHz ABM8 crystal, as in Raspberry Pi's "minimal design".
+* **DMX, isolated:** the DC-DC module (a B0505XT-1WR3, 1 W, 1.5 kV, in Mornsun's SMD package) gives the
+  DMX side its own 5 V and ground. Three 6N137 carry the data across the gap: TX (GPIO 14), DE (GPIO 15: low =
+  listen, high = send) and RX (GPIO 13). An ST485BDR drives the line; 470 Ω up on Data+, 470 Ω down on Data− and
+  120 Ω between them keep the line at "mark" while nobody drives it, as RDM wants of a controller, and end it at
+  the box. A PSM712 guards the line. No track, via or copper crosses the 2.5 mm gap between the two sides.
+* **MIDI:** IN through an H11L1 (MIDI senders at 3.3 V give too little current for a 6N137) to UART1 RX (GPIO 5);
+  OUT from UART1 TX (GPIO 4) with 33 Ω and 10 Ω, as the 3.3 V MIDI rules (CA-033) want.
+* **SW1:** an SMD piano DIP switch (kangshen DSPV08LSGET) with 8 keys at the top edge of the board: the box
+  number 0 to 255 (GPIO 18 to 25). Key k from the left adds 2^(k−1), the number printed next to it on the board
+  (the switch's own print may count from the other end: kangshen's and JLCPCB's drawings disagree).
+* **LEDs:** green USB (GPIO 1), yellow DMX (GPIO 2), red MIDI and RDM (GPIO 3).
+* **J7, the service pins:** GND, BOOT (to GND while plugging in: the USB boot loader), RUN (to GND: a restart),
+  SWCLK and SWDIO (a debug probe), LOG (the firmware's log, 250000 baud). See BOM.md.
 
 ### Pin map
 
-| Pico pin | GPIO | Connects to |
+| GPIO | Name | What |
 |---|---|---|
-| 1 | GP0 | 6N137 pin 3 (LED cathode) |
-| 24 | GP18 | Button SW1 "blackout" to GND |
-| 25 | GP19 | Button SW2 "preset 1" to GND |
-| 36 | 3V3(OUT) | R3 (180 Ω) to 6N137 pin 2 (LED anode) |
-| 39 | VSYS | DC-DC converter U4 pin 1, and capacitor C4 |
-| 23, 28, 33 | GND | Ground. The other five ground pins have no track: the Pico joins all eight itself. |
-| 21, 22 | GP16, GP17 | Serial log (TX, RX, 115200 baud). No track; connect a serial adapter only if you want to read the log. |
-| 40 | VBUS | Not connected |
+| 0 | OUT_EN | high = 5 V on OUT |
+| 1, 2, 3 | LED_USB, LED_DMX, LED_MIDI | the three LEDs |
+| 4, 5 | MIDI_TX, MIDI_RX | UART1, 31250 baud |
+| 12 | LOG_TX | UART0 TX: the log, on J7 |
+| 13 | DMX_RX | UART0 RX: the answers of RDM |
+| 14 | DMX_TX | PIO: DMX and RDM out |
+| 15 | DMX_DE | low = listen (RDM), high = send; the line sends while the RP2040 is off |
+| 18 to 25 | N1 to N128 | SW1, ON = low |
+| 26, 27 | CC1_SENSE, CC2_SENSE | ADC: a device on OUT |
+| 28 | VSENSE | ADC: half the supply voltage |
 
-All pins can be changed in `firmware/pico/src/config.h`.
+### How the files are made
 
-### Schematic (signal level)
+Nothing in KiCad is drawn by hand: `hardware/scripts/circuit.py` lists every part (with its LCSC number and who fits
+it) and every net, and the scripts make the rest from it. Each script says at its top how to run it.
 
-![Schematic of the USB version](hardware/pico/schematic-1-universe/dmxbox_schematic.png)
+| Script | Makes |
+|---|---|
+| `make_schematic.py` | the schematic, a title sheet and three A3 sheets (power, RP2040, DMX and MIDI); it refuses to write when two nets would touch or texts overlap |
+| `check.py` | compares KiCad's net list with `circuit.py`, and reads the reports of ERC and DRC (`kicad-cli sch erc`, `kicad-cli pcb drc --schematic-parity`) |
+| `footprints.py` | the footprints KiCad does not have, in `dmxbox3.pretty`: the DC-DC module (from Mornsun's drawing), the box-number switch (from kangshen's), and the SMD pin header and socket strip with a pad on both sides of every pin, so either kind of staggered legs fits; `make_board.py` runs it |
+| `make_board.py` | the board: every part at its place, the outline, the isolation gap, the silkscreen texts, the design rules of JLCPCB |
+| `route.py` | the tracks, with FreeRouting, then the ground pours (GND left of the gap, GND_ISO right) and the vias that join each net's pours on the two layers |
+| `make_jlcpcb.py` | `jlcpcb/`: the Gerber ZIP, the BOM and the placement file, with the rotations JLCPCB's library wants |
+| `make_drawings.py` | the three PDFs |
+| `make_3d.py` | the pictures, in Blender from the board exported as GLB (and the board in its case, from `case/`) |
+| `make_print_case.py` | `case_print/`: the printed case, base and lid as STL turned as they print (labels also as bodies of their own, for a second colour), and as STEP; from where `make_board.py` puts the parts and `case_layout.Printed`. Runs with CadQuery like `make_case.py` |
+| `make_case.py` | `case/`: JLCMC's case with every hole, as STEP with its PDF drawing (`case_drawing.py`), from where `make_board.py` puts the parts; `case_layout.py` holds where the board sits in the case. Runs with CadQuery: `uv run --no-project --python 3.13 --with cadquery --with matplotlib python make_case.py` |
+| `check_parts.py` | asks JLCPCB's library whether every part is still there and in stock, and what an order of 5 costs |
 
-The same in text:
+KiCad 10 is installed for the user (no administrator needed); the scripts that need `pcbnew` run with KiCad's own
+Python. As it stands: ERC and DRC have nothing to report, and the board's nets are those of the schematic.
 
-```
-              LOGIC SIDE (Pico GND)                   ║           ISOLATED SIDE (GND2)
-                                                      ║
- USB 5 V ──►|── VSYS (Pico 39) ──┬── U4 pin 1 (+in)   ║   U4 pin 7 ── +5V_ISO ──┬── U3 pin 8 and pin 7
-     (diode on the Pico)      C4 ┴ 4.7µ               ║   (RKK-0505S/H)         ├── R4 1k ── U3 pin 6 ──► U5 pin 4 (DI)
- GND (Pico 23, 28, 33) ──────────┴── U4 pin 2 (−in)   ║                         ├── U5 pin 8, pin 3 (DE), pin 2 (/RE)
-                                                      ║                         ├── R2 270R ── GND2
- Pico 3V3 ── R3 180R ── U3 pin 2 (LED anode)          ║                         └── C1, C2 100n and C3 10µ ── GND2
- Pico GP0 ───────────── U3 pin 3 (LED cathode)        ║   U4 pin 5 ── GND2 ── U3 pin 5, U5 pin 5, XLR pin 1
- Pico GP18 ── SW1 ── GND                              ║   U5 pin 6 (A) ── XLR pin 3 (Data+)   and D1 to GND2
- Pico GP19 ── SW2 ── GND                              ║   U5 pin 7 (B) ── XLR pin 2 (Data−)   and D3 to GND2
-
- U3 = 6N137, U4 = Recom RKK-0505S/H, U5 = SN75176BP or MAX485
- D1, D3 = P6KE6.8CA, a TVS protection diode (both the same part, either way round)
-```
-
-U4 has seven pin positions, of which four have a pin: 1 and 2 on the logic side, 5 and 7 on the isolated side.
-
-How the data path works: GP0 low lights the optocoupler LED, the 6N137 output goes low, the transceiver
-drives the line low. An unlit LED means "line idle", so the line stays quiet while the Pico boots.
-DE is tied high: the box only transmits.
-
-Rules that matter:
-
-* **A = Data+ = XLR pin 3, B = Data− = XLR pin 2**, pin 1 is the common. Swapping A and B is the most common DMX build mistake.
-* **Never connect GND2 to the Pico's GND.** That would defeat the isolation. The Pico's ground is the
-  computer's ground now, so the isolation is also what protects the computer from faults on the DMX line.
-* **No 120 Ω terminator in the box.** The box is the start of the line. Terminate at the last fixture.
-* Keep the logic and the isolated side apart on the board. Only the 6N137 and the DC-DC converter bridge the gap.
-* DMX512 officially uses 5-pin XLR. Many fixtures have 3-pin; the wiring of pins 1 to 3 is the same.
-
-### Building it on a breadboard
-
-![Breadboard plan](hardware/pico/schematic-1-universe/dmxbox_breadboard.png)
-
-The picture lists every part and every wire with its holes. It is drawn for one full-size breadboard
-(830 holes, rows 1 to 63). The circuit does not fit on a half-size board (400 holes).
-
-* Lay the board with row 1 at the left and the letters a to e at the bottom. If the letters on your board
-  run the other way, go by the picture.
-* **The two power lines at the top edge are the isolated side:** red (+) is +5V_ISO, blue (−) is GND2.
-  Nothing from the Pico goes into them. The two power lines at the bottom edge stay empty.
-* The plan only uses the right half of the power lines, so it also works on boards whose lines have a break
-  in the middle.
-* The chips sit across the middle gap with the notch towards the Pico. U4 sits with its two close pins
-  towards the Pico. The buttons only work across the middle gap.
-* On the breadboard the Pico's ground comes from pins 38 and 18. Any ground pin will do: the Pico joins them.
-* A breadboard keeps the two sides only one hole apart. That is fine for a test on the desk, but it is not
-  the isolation the real board will have.
-
-A safe order:
-
-1. Put in the parts, but leave U3 and U5 out. Put in wires 1 to 20.
-2. Plug in the USB cable. Between the red and the blue line there should be about 5 V (4.6 to 5.5 V).
-   If not, unplug and check U4, C3 and wires 1, 2, 9 and 10.
-3. Unplug. Put in U3 and U5. Solder three wires to the XLR jack and plug them in (wires 21 to 23).
-4. Plug in again and measure with a multimeter (DC volts) from XLR pin 3 (red probe) to pin 2 (black probe).
-   What to expect depends on the Pico:
-   * **Without firmware** the line rests: pin 3 is 2 V or more above pin 2 (4.28 V on the first build).
-   * **With the firmware** the Pico sends DMX all the time, and the meter shows the average of it. With all
-     channels at 0 that is about −2.5 V (pin 3 *below* pin 2). Now set all channels to full, in
-     PowerShell: `dmxbox set 1 (,255 * 512)`. The reading turns positive, about +3.5 V.
-     `dmxbox set 1 (,0 * 512)` brings it back. If the reading follows like this, the whole path from the Pico
-     to the jack works. If the signs are the other way round, Data + and Data − are swapped.
-   * **A steady positive reading that never changes** although the firmware runs means the data does not
-     reach U5. First press the Pico firmly into the board: one pin without contact is enough.
-5. If the firmware is not on the Pico yet, [flash](#flash) it. Then go on with [Check that it works](#check-that-it-works).
-
-The plan is checked by the script that draws it (`hardware/pico/schematic-1-universe/draw.py`): every leg and wire end has a hole of
-its own, and the holes joined by the board and the wires give exactly the connections of the schematic.
-
-### Building it on a perfboard
-
-![Perfboard plan, parts side](hardware/pico/schematic-1-universe/dmxbox_perfboard.png)
-
-The soldered version, on a 70 × 90 mm perfboard with 26 × 31 holes (lettered A to Z, numbered 1 to 31), the
-kind where every hole has a solder pad of its own. If the pads of your board are joined in strips or in
-groups, this plan does not fit it.
-
-* [The solder side](hardware/pico/schematic-1-universe/dmxbox_perfboard_solder.png) shows the tracks, as you see them with the board
-  turned over.
-* [The lists](hardware/pico/schematic-1-universe/dmxbox_perfboard.md) give the holes of every part and every track from hole to hole.
-* [One PDF](hardware/pico/schematic-1-universe/dmxbox_perfboard.pdf) has both drawings for printing.
-
-The 50 × 70 mm board (18 × 24 holes) is not used: the Pico alone takes 8 of its 18 columns and 20 of its 24
-rows, which leaves too little room for the isolated side behind a gap.
-
-How to read the plan:
-
-* A hole is written with a dash: N-3 is column N, row 3. (C1, R3 or U4 without a dash are parts.)
-* **Columns O and P stay empty from top to bottom.** That is the isolation gap. Everything left of it belongs
-  to the Pico and the computer, everything right of it to the DMX line. Only U3 and U4 reach across.
-* The Pico stands at the left edge with its USB socket at row 1. Everything with many pins sits in a socket.
-* A track is a line of neighbouring pads joined on the solder side: lay a bare wire along them, or run solder
-  from pad to pad. A pad in a track with no leg in it is just a place the track passes.
-* One connection is an insulated wire (W1, from B-1 to M-4), because it has to get past the Pico's socket
-  strip. Run it on whichever side you like.
-* Each button has four legs. Its signal goes to one corner and ground to the opposite corner; the other two
-  legs are soldered for a firm seat but join nothing. That works whichever way the button is joined inside.
-* The screw terminal J1 has, from the top: XLR pin 2 (Data −), pin 3 (Data +), pin 1 (common).
-* U4's socket strip has seven contacts, the converter only four pins. Pull contacts 3 and 4 out of the strip
-  before soldering it in: they would stand in the gap (O-8 and P-8).
-
-A safe order:
-
-1. Solder the socket strips and sockets, then the resistors and diodes, then the capacitors, the buttons
-   and J1. Mind the notch of U3 and U5 (towards row 1) and the plus leg of C3 and C4.
-2. Join the pads track by track after the solder-side drawing, and tick each track off in the list.
-3. Before anything is plugged in, test with a multimeter set to continuity. Every track must conduct from end
-   to end. Tracks of different colors must not conduct to each other. **Nothing left of the gap may conduct
-   to anything right of it.**
-4. Plug in the Pico and U4, leave U3 and U5 out, and connect the USB cable. Between S-8 (plus) and Q-8 (minus)
-   there should be about 5 V (4.6 to 5.5 V).
-5. Unplug, put in U3 and U5 (pin 1 at the notch), wire J1 to the XLR jack, and go on with step 4 of the
-   breadboard list above: the measurement between XLR pin 3 and pin 2.
-
-How the plan is made: the places of the parts are chosen by hand, and `hardware/pico/schematic-1-universe/perfboard.py` finds the
-tracks. A separate check in the same script then confirms that the joined pads give exactly the connections
-of the schematic (whichever way the buttons are joined inside), that every leg has a hole of its own, that
-nothing reaches across the gap, and that no two parts stand in each other's way. Run with `--selftest`, the
-script plants 19 mistakes (a missing piece of track in each connection, Data + and Data − swapped at J1, U5
-turned round, a solder bridge, a track across the gap, and others) and confirms that the check notices each.
-
-### Power
-
-* **From the USB cable.** The box draws about 0.2 A (estimate: about 30 mA for the Pico and 100 to 150 mA
-  into the DC-DC converter). A normal USB port gives 0.5 A. The box tells the computer it may take up to 0.3 A,
-  so a port that only allows 0.1 A (an unpowered hub, some phones) refuses it.
-* **While the computer sleeps** the box keeps drawing its normal current and keeps the DMX line going. Strictly,
-  USB asks a sleeping device to draw almost nothing; computers do not enforce that.
-* **Without a computer:** any USB charger or power bank. The buttons and the stored presets keep working.
-* **Why U4 hangs on VSYS and not on VBUS.** VSYS is the USB voltage behind the Pico's own diode, about 4.7 V.
-  U4 is not regulated: its output follows its input and rises a few percent when little current is drawn.
-  Fed from VSYS, the isolated side ends up close to 5 V.
-* **3.3 V:** the Pico's regulator only feeds the optocoupler LED (about 9 mA).
-* **Isolated side:** R2 is a base load for U4. It keeps the output voltage from rising when the line is idle.
-
-### Box
-
-* The model's box is 108 × 75 × 38 mm outside (103 × 70 × 33 mm inside).
-* The opening for the USB plug is 12 × 8 mm, so that the plug's plastic grip fits into the wall. The Pico's
-  socket ends 0.2 mm short of the wall's inner face when the board's left edge is 1.5 mm from it.
-* One of the four board screws is under the Pico, between its pin rows. Put it in before you plug the Pico in.
-* The two buttons are on the board, inside the box. The lid in the model has no openings for them.
-
-### dmxbox 2: the PIC32 box
-
-![dmxbox 2 in its box, the lid off](hardware/pic32/3d/dmxbox2_angle.png)
-
-**Not built yet.** Everything here is drawn and checked by scripts, and the firmware compiles; none of it has
-run on a real board. It comes in two versions with the same board design:
-
-* **Two outputs** (two universes): `hardware/pic32/schematic-2-universes/`, files `dmxbox2_*`.
-* **One output** (one universe): `hardware/pic32/schematic-1-universe/`, files `dmxbox2_1_universe_*`. The same
-  box with output 2 left out (U8 to U11, R15 to R23, C15 to C17, D4, D5, J4): U1 pins 16, 17 and 18 stay free,
-  and the firmware is built with `build.cmd 1`.
-
-The box with the Pico has its drawings in `hardware/pico/schematic-1-universe/`: each folder's name says how
-many universes the box plays.
-
-* **Chip:** a Microchip PIC32MX270F256B in a 28-pin DIP socket: 256 KB flash, 64 KB RAM, full-speed USB and
-  two UARTs. It runs at 40 MHz from an 8 MHz crystal; USB gets its own 48 MHz from the same crystal.
-* **Power:** from the USB-C socket, which sits on a small breakout board, about 0.25 A. U2 (MCP1700) makes the
-  3.3 V of the chip; U3, the same Recom RKK-0505S/H as on the Pico box, the isolated 5 V of both outputs.
-* **Two outputs**, each with its own XLR jack: box n plays Art-Net universes 2n and 2n + 1, and the desk
-  gives its two outputs two universes.
-* **Ready for RDM**, which the firmware does not speak yet: each output can also listen to the line, through
-  a second optocoupler, and the chip switches the line driver between sending and listening.
-* **The box number:** switches 1 to 6 of SW1 give the box its number n and its address 10.1.n.1
-  ([BOM.md](hardware/pic32/BOM.md#the-box-number)). The desk looks for the boxes by itself. SW1 is a piano
-  DIP switch with long keys (ONPOW DPL08RGT) at the left edge of the board, which is cut off right beside
-  it: its keys reach into the box's left wall and end level with the floor of a pocket in it, so the number
-  is set from outside, with a fingernail or a pen ([picture](hardware/pic32/3d/dmxbox2_box_number.png)).
-* **Buttons and LED** as on the Pico box: SW2 blackout, SW3 preset 1, D1 the state. The two buttons share
-  the chip's programming pins: do not press them while a programmer writes the firmware.
-* **J2** is the programming header: a new PIC32 takes its first firmware only through a programmer (see
-  [flashing it](#the-pic32-box-flashing)).
-
-In each folder the drawings are made from one net list, `circuit.py`, and each script checks its drawing
-against it before writing it. The files of the box with two outputs (the other folder has the same ones):
-
-| What | Files in `hardware/pic32/schematic-2-universes/` | Made by |
-|---|---|---|
-| Schematic | [PNG](hardware/pic32/schematic-2-universes/dmxbox2_schematic.png), [PDF](hardware/pic32/schematic-2-universes/dmxbox2_schematic.pdf) | `draw.py` |
-| Breadboard plan | [parts](hardware/pic32/schematic-2-universes/dmxbox2_breadboard.png), [wires](hardware/pic32/schematic-2-universes/dmxbox2_breadboard_wires.png), [lists](hardware/pic32/schematic-2-universes/dmxbox2_breadboard.md), [PDF](hardware/pic32/schematic-2-universes/dmxbox2_breadboard.pdf) | `breadboard.py` |
-| Perfboard plan | [parts side](hardware/pic32/schematic-2-universes/dmxbox2_perfboard.png), [solder side](hardware/pic32/schematic-2-universes/dmxbox2_perfboard_solder.png), [lists](hardware/pic32/schematic-2-universes/dmxbox2_perfboard.md), [PDF](hardware/pic32/schematic-2-universes/dmxbox2_perfboard.pdf) | `perfboard.py` |
-| EAGLE files: schematic and a printed board with tracks on both sides | `dmxbox2.sch`, `dmxbox2.brd` | `eagle_export.py` |
-
-The box with one output: [schematic](hardware/pic32/schematic-1-universe/dmxbox2_1_universe_schematic.png),
-[breadboard plan](hardware/pic32/schematic-1-universe/dmxbox2_1_universe_breadboard.png),
-[perfboard plan](hardware/pic32/schematic-1-universe/dmxbox2_1_universe_perfboard.png), and
-`dmxbox2_1_universe.sch` / `.brd`.
-
-The finished box with two outputs, the printed board in it: [Blender file](hardware/pic32/3d/dmxbox2.blend),
-[from above](hardware/pic32/3d/dmxbox2_top.png), [the board from below](hardware/pic32/3d/dmxbox2_bottom.png),
-[the USB end](hardware/pic32/3d/dmxbox2_usb_side.png), [the DMX end](hardware/pic32/3d/dmxbox2_dmx_side.png),
-[the box number side](hardware/pic32/3d/dmxbox2_box_number.png), [closed](hardware/pic32/3d/dmxbox2_closed.png).
-The parts are KiCad's 3D models (SW1 is KiCad's piano DIP switch with its keys made as long as a DPL's); the
-box is 123 × 163 × 44 mm. Its left wall stands 0.3 mm from the cut edge of the board; around the window for
-SW1's keys it has a pocket 1.4 mm deep, and the lid comes down over the keys through a notch that a tab of
-the base fills below the window.
-The parts list for both versions is [BOM.md](hardware/pic32/BOM.md).
-
-Run a script with `uv run --no-project --python 3.13 --with resvg-py --with pillow python
-hardware/pic32/schematic-2-universes/<script>`. `perfboard.py` and `eagle_export.py` take a minute, because they
-look for the tracks; `perfboard.py --selftest` plants mistakes and confirms that its check notices each of them.
-
-**EAGLE files.** `.sch` and `.brd` are EAGLE's own format (XML), which EAGLE, Fusion Electronics and KiCad
-(File, Import) open; the box with the Pico has them too (`hardware/pico/schematic-1-universe/dmxbox.sch` and
-`.brd`, its carrier board from the 3D model, written by `eagle_export.py` there from `dmxbox_board.json`).
-The schematic is a working one: every part a box with its pins, joined by the names of the nets. The board of
-dmxbox 2 has the parts where the perfboard plan has them, 87.6 × 150 mm (the perfboard with its left edge cut
-off as the plan cuts it, the screw holes where the plan drills them), with plated holes and tracks on both
-sides (the router of the perfboard plan with the top side as copper); the script checks it as it checks the
-perfboard, and reads both files back and compares them with the net list. They are not fabrication data yet:
-no design rule check of a board maker, no ground plane, and they have not been opened in EAGLE here.
-
-#### Pin map of dmxbox 2
-
-| PIC pin | Port | Connects to |
-|---|---|---|
-| 26 | RB15 (UART 1 send) | output 1: U4 pin 3, the send optocoupler |
-| 25 | RB14 | output 1: direction, through R10 to U6 pin 1 |
-| 24 | RB13 (UART 1 receive) | output 1: U5 pin 6, the receive optocoupler |
-| 18 | RB9 (UART 2 send) | output 2: U8 pin 3 |
-| 16 | RB7 | output 2: direction, through R19 to U10 pin 1 |
-| 17 | RB8 (UART 2 receive) | output 2: U9 pin 6 |
-| 2, 3, 6, 7, 11, 12 | RA0, RA1, RB2, RB3, RB4, RA4 | SW1, switches 1 to 6 (the chip's own pull-ups) |
-| 4 | RB0 (PGED1) | SW2 blackout, and J2 pin 4 |
-| 5 | RB1 (PGEC1) | SW3 preset 1, and J2 pin 5 |
-| 14 | RB5 | through R5 to the LED D1 |
-| 1 | MCLR | R3 and R4 (C9 behind R4), J2 pin 1 |
-| 9, 10 | OSC1, OSC2 | the crystal Y1 with C7 and C8 |
-| 21, 22 | D+, D− | the USB-C breakout |
-| 15 | VBUS | 5 V from USB: the chip sees the cable |
-| 13, 28, 23 | VDD, AVDD, VUSB3V3 | 3.3 V, each with a 100 nF capacitor |
-| 20 | VCAP | C6, 10 µF ceramic: the chip's own core supply |
-| 8, 19, 27 | VSS, AVSS | ground |
-
-The send and receive pins are fixed by which pins the chip can give its UARTs; the others are set in
-`firmware/pic32/src/board.c`.
-
-#### One output
-
-```
- PIC send pin ──► 6N137 (send) ──────► MAX485 DI      MAX485 A ──► XLR pin 3 (Data +)
- PIC receive  ◄── 6N137 (receive) ◄─── MAX485 RO      MAX485 B ──► XLR pin 2 (Data −)
- PIC direction ─► PC817 ─────────────► MAX485 DE, /RE    GND2 ──► XLR pin 1
-```
-
-* **Direction:** low sends, high listens (the PC817 lit pulls DE and /RE down). While the chip starts, its
-  pins are not driven: the PC817 stays dark, R11 keeps the driver on and the dark send optocoupler keeps the
-  line at rest. So the line is quiet from power-up on.
-* **Bias and termination:** 560 Ω from A up to the isolated 5 V, 560 Ω from B down to GND2 and 130 Ω between
-  A and B. A line that nobody drives rests at about +0.26 V with the terminator at its far end, above the
-  0.2 V that RS-485 needs, so that the box can listen for RDM answers. The last fixture still gets its 120 Ω
-  terminator.
-* **TVS diodes** (P6KE6.8CA) from A and from B to GND2, at the jack's side.
-* The rules of the Pico box hold: A = Data + = XLR pin 3, B = Data − = XLR pin 2; GND2 never meets GND; only
-  U3 and the optocouplers cross the gap.
-
-#### dmxbox 2 on a perfboard
-
-![Perfboard plan of dmxbox 2, parts side](hardware/pic32/schematic-2-universes/dmxbox2_perfboard.png)
-
-The board is 90 × 150 mm with 33 × 57 holes, every hole with a pad of its own: columns A to Z and AA to AG,
-rows 1 to 57. Read the plan as the one of the Pico box (a hole is written with a dash, AB-12; tracks are
-joined pads on the solder side), with these differences:
-
-* **Columns S and T stay empty from top to bottom:** the gap. The logic side (USB, chip, switch, buttons) is
-  at the left, the two DMX outputs at the right.
-* **Resistors with a circle** stand upright: the body over the circled hole, the other leg bent down beside it.
-  The others lie flat.
-* **Insulated wires** (W1, W2 ...) on the parts side join what the tracks cannot: where nets have to cross on a
-  single side, a wire goes over the top, laid along the holes the plan draws and soldered into the hole at each
-  end. The plan needs 38 of them (the box with one output 26); the lists give each one's way. Lay them before
-  the parts. The printed board (the EAGLE files) needs none.
-* **J3 and J4**, the screw terminals of the XLR wires: from the top XLR pin 1, pin 3 (+), pin 2 (−); the wires
-  enter from the right edge.
-* **U3's socket strip** has seven contacts, the converter four pins: pull contacts 3 and 4 out of the strip
-  before soldering it, they would stand in the gap (S-24 and T-24).
-* **J2**, the programming header, at the top left: pin 1 (MCLR) at B-3.
-* **SW1**, the box number, at the left edge in the columns A and D: its keys towards the edge, switch 1 at the
-  top (row 11).
-* **The left edge is cut off** along the red line, 2 mm from the middle of column A's holes (the board is then
-  about 87.6 mm wide), so that SW1's keys reach the wall of the box. Its left corners go with it: **B-1 and
-  B-57 are drilled out to 3.2 mm** for the two screws at the left; the right corners keep their own holes.
-  The holes around each screw stay empty.
-* **The USB-C breakout** stands on its own six pins in row 55, straight below the PIC, its socket over the
-  bottom edge of the board: D+ and D− run straight down to it.
-
-A safe order:
-
-1. Cut the left edge off and drill B-1 and B-57, before anything is soldered (a saw or a sharp knife and a
-   file; the cut runs 1 mm beside the pads of column A). Then solder the insulated wires, then the resistors,
-   diodes and the crystal, then the sockets (without the chips),
-   the capacitors, SW1, the buttons, the terminals, J2, U2 and the USB-C breakout. Mind the notches (towards
-   row 1, or towards the bottom for U5 and U9 as the plan shows them) and the flat side of U2.
-2. Join the pads track by track after the solder-side drawing and tick each one off in the lists.
-3. Before anything is plugged in, test with a multimeter set to continuity: every track conducts from end to
-   end, tracks of different colors do not conduct to each other, and **nothing left of the gap conducts to
-   anything right of it**.
-4. Plug in the USB-C cable, still without chips and without U3. Between the socket contacts of U1 pin 13 (H-24)
-   and pin 8 (H-19) there should be 3.3 V (3.2 to 3.4 V).
-5. Unplug, put in U3 and plug in again: between the socket contacts of U7 pin 8 (AB-12) and pin 5 (AB-15)
-   about 5 V (4.6 to 5.5 V).
-6. Unplug, put in the chips (pin 1 at the notch), and [flash the firmware](#the-pic32-box-flashing).
-
-The plan is made like the Pico box's: the places of the parts by hand, the tracks found by the script, then a
-separate check of the result. The script lays the tracks on two layers, the solder side and the wires over
-the top; a wire's two ends cost it as much as a long track, so it uses as few as it can. When the nets cannot
-agree where to go, it starts again with them in another order. The check also looks at the parts themselves:
-every leg in a hole of its own, the legs of each resistor, capacitor, diode and the crystal as far apart as the
-part allows, no part standing on another (a socket covers all the holes between its pins, a screw terminal the
-two columns behind its pins), no wire over a leg or under a socket, and nothing where a screw goes.
+The boxes before dmxbox 3 (the box with the Pico, built on a perfboard; dmxbox 2 with a PIC32, drawn) are in
+`hardware/archive/`, their firmware in `firmware/archive/`, and their documentation, as it stood in this file, in
+[hardware/archive/DEV-pico-and-dmxbox2.md](hardware/archive/DEV-pico-and-dmxbox2.md).
 
 ---
 
@@ -416,9 +153,9 @@ two columns behind its pins), no wire over a leg or under a socket, and nothing 
 ### Build
 
 You need the Pico SDK (2.1.0 or newer, with its TinyUSB submodule), an ARM toolchain (`gcc-arm-none-eabi`),
-CMake, and Ninja or Make. It is built and tried with Pico SDK 2.3.1 and Arm GNU Toolchain 14.2.Rel1.
+CMake, and Ninja or Make. It is built with Pico SDK 2.3.1 and Arm GNU Toolchain 14.2.Rel1.
 
-**Windows:** `firmware\pico\build.cmd` does it in one step. It expects the tools in the folder `.pico-sdk` in your
+**Windows:** `firmware\build.cmd` does it in one step. It expects the tools in the folder `.pico-sdk` in your
 user folder, laid out the way the VS Code "Raspberry Pi Pico" extension lays them out:
 
 | Folder in `.pico-sdk` | What it holds |
@@ -439,68 +176,88 @@ PICO_SDK_PATH=/path/to/pico-sdk cmake ..
 make -j
 ```
 
-Both produce `build/dmxbox.uf2`; `build.cmd` also puts a copy into `firmware/pico/`, next to `flash.cmd`. For a
-Pico W or Pico 2 add `-DPICO_BOARD=pico_w` or `-DPICO_BOARD=pico2` after `build.cmd` or to the `cmake` line,
-and start with an empty `build` folder. On a Pico W the LED stays dark.
+Both produce `build/dmxbox.uf2` (about 56 KB of code); `build.cmd` also puts a copy into `firmware/`, next to
+`flash.cmd`. The board is `src/boards/dmxbox3.h`: the 16 MB flash, and the crystal given more time to start, as
+Raspberry Pi advises for the ABM8.
 
 ### Flash
 
-Flashing replaces whatever was on the Pico before, for example MicroPython and the scripts stored with it.
+**Windows:** `firmware\flash.cmd` does it. It takes the `dmxbox.uf2` in its own folder, so the two files can also
+be copied together to another computer.
 
-**Windows:** `firmware\pico\flash.cmd` does it. It takes the `dmxbox.uf2` in its own folder, so the two files can
-also be copied together to another computer. Start it, then unplug the box, hold **BOOTSEL** on the Pico and
-plug the USB cable in again. It finds the Pico's drive by itself (if there are several, it asks which one),
-writes the file, waits until the Pico has restarted and then until the box answers at 192.168.7.1, showing
-each of the four steps as it goes. At the end it says whether it was successful and waits for a key.
+1. A new box has an empty flash, so the RP2040 starts its USB boot loader by itself: a drive named RPI-RP2.
+2. A box that runs the firmware is asked to restart into it (DX message `BOOTLOADER`): the script finds the boxes
+   by their network adapters (10.1.n.2 is the computer's end of box n) and asks which one if there are several.
+3. If neither works: unplug the box, join BOOT and GND of J7 (a male-male jumper wire), plug it in again.
 
-**By hand:** hold **BOOTSEL** while plugging the Pico into USB. It mounts as a drive named RPI-RP2; copy
-`dmxbox.uf2` onto it. The Pico then restarts by itself and the drive disappears. If the drive stays, wait a
-few seconds and copy the file again.
+It writes the file, waits until the box has restarted and then until it answers, showing each step as it goes.
+
+**By hand:** copy `dmxbox.uf2` onto the RPI-RP2 drive. The RP2040 restarts by itself and the drive disappears.
 
 ### Configure
 
-Edit `firmware/pico/src/config.h`:
-
-* The address of the box (default **192.168.7.1**) and the address it gives the computer (192.168.7.2)
-* Art-Net universe (default 0)
-* Number of channels sent per frame (default 512)
-* Pins, and the button preset and fade time
+Edit `firmware/src/config.h`: the first two numbers of the addresses (10.1), the Art-Net universe of box 0, the
+presets, the USB names and the pins. The box number comes from SW1: box n is 10.1.n.1, gives the computer
+10.1.n.2, plays Art-Net universe n, and is "box-00n" as the USB serial number.
 
 ### Check that it works
 
-* **Plug it in.** A new network adapter appears on the computer and gets the address 192.168.7.2 from the
-  box within a few seconds.
-* **Ping:** `ping 192.168.7.1` is answered by the box.
-* **Control:** `dmxbox ping` shows the firmware version and the state of the box (see [Command line](#command-line)).
-* **Windows shows "This device cannot start (code 10)":** the firmware was built without the correction
-  described under `usb_net.c` below. Build it from the current sources.
-* **On-board LED:**
+* **Plug it in.** A new network adapter appears on the computer and gets 10.1.n.2 from the box within a few
+  seconds; a MIDI interface "dmxbox 3" appears too.
+* **Ping:** `ping 10.1.n.1` is answered by the box.
+* **Control:** `dmxbox -H 10.1.n.1 ping` shows the firmware version, the state, the supply voltage, what the box
+  can do and its number.
+* **The log:** a 3.3 V USB-serial adapter on J7 (its RX to LOG, its GND to GND) at 250000 baud shows what the
+  firmware says: its address and RDM ID at the start, the computer coming and going, the lights RDM found, 5 V
+  on OUT switched on and off.
+* **LEDs:**
 
 | LED | Meaning |
 |---|---|
-| slow blink (1 Hz) | Powered, but no computer attached (for example on a charger) |
-| on | Connected to a computer, idle |
-| flicker | Art-Net or control packets arriving |
-
-There is no USB serial port any more. The log goes to the serial pins GP16 / GP17 instead.
+| green, slow blink | Powered, but no computer uses the box (a charger, a sleeping computer) |
+| green, on | A computer uses it |
+| yellow, on | DMX goes out (always, with or without a computer) |
+| yellow, flicker | Lighting data arriving |
+| red, flicker | MIDI or RDM going on |
 
 ### How it works
 
-* **`dmx_tx.pio`:** a 9-instruction PIO program. It generates the break (176 µs), the mark-after-break (12 µs)
-  and 250 kbaud 8N2 bytes, with exact timing and no CPU involvement. DMA feeds it the 513-byte packet.
-  A full universe refreshes at **43 Hz**. Lower `DMX_CHANNELS` for a faster refresh.
-* **`usb_net.c`:** makes the Pico a USB network adapter, using the USB library that comes with the Pico SDK
-  (TinyUSB, class CDC-NCM). It only moves raw Ethernet frames between the USB cable and `net.c`.
-  One question of the computer it answers itself instead of leaving it to TinyUSB: how the blocks of frames
-  are laid out. TinyUSB up to 0.18 (the version in Pico SDK 2.3.1) gives numbers there that Windows has
-  refused since an update of September 2026.
+* **Two cores.** Core 0 runs USB, the network, the protocols, RDM, MIDI, the LEDs, the 5 V of OUT and the flash.
+  Core 1 works out each DMX frame from the engine and sends it, then carries out the RDM transactions core 0
+  handed over, then the next frame. They share the engine under a critical section, and RDM through a mailbox.
+* **`dmx_tx.pio`:** break 193 µs, mark after break 17 µs (RDM wants 176 to 352 and 12 to 88 µs of a
+  controller), then 250 kbaud 8N2 bytes, fed by DMA. A full universe refreshes at about 43 Hz.
+* **`dmx_line.c`:** after each frame, the RDM transactions waiting, for at most 20 ms: the request, and for one
+  that gets an answer the driver switched to listening (DE low), the answer read by UART0 RX, the driver back.
+  The waits are those of E1.20: an answer starts within 2.8 ms; after a search question the line stays quiet
+  5.8 ms; after a lost answer 3 ms. A break before an answer is left out; framing errors mark it as spoiled.
+* **`rdm.c` (in `common/`, so the simulator and the tests run it too):** the box is the RDM controller of its
+  line. At power-on, and when the desk or an Art-Net program asks, it searches the line: DISC_UN_MUTE to all, then
+  DISC_UNIQUE_BRANCH over ranges of the 48-bit IDs, halving a range where several answer at once, DISC_MUTE for
+  each light found. It keeps up to 64 lights (the TOD). A request from the desk or from Art-Net goes out between
+  two steps of a search, one at a time; its answer goes back to whoever asked. The box's own ID is 7FF0 (a
+  number E1.20 keeps for prototypes) and four bytes of the flash chip's serial number.
+* **`ctrl.c`:** the DX protocol, with the RDM messages. An RDM request is answered later, when the light has
+  answered: the box keeps the session and sequence, and the answer goes to the sender then; a repeat of the
+  request meanwhile gets nothing, a repeat after it the answer kept.
+* **`artnet.c`:** ArtDmx for its universe; ArtPollReply says it does RDM; ArtTodRequest gets the list,
+  ArtTodControl (flush) searches again, ArtRdm goes out on the line as it came and its answer comes back as
+  ArtRdm.
+* **`midi.c` and `midi_parse.c`:** MIDI IN (UART1, 31250 baud, read by an interrupt) becomes USB-MIDI packets
+  for the computer; running status, real-time bytes in the middle of a message and SysEx of any length are
+  taken care of. What the computer sends goes out of MIDI OUT.
+* **`board.c`:** SW1, the LEDs, the supply voltage, and the 5 V of OUT: switched on once a device has pulled a
+  CC pin to 0.2 to 1.6 V for 150 ms, off 20 ms after it is gone.
+* **`usb_descriptors.c` and `usb_net.c`:** the box is two USB functions: a CDC-NCM network adapter and a MIDI
+  interface. Windows 11, macOS and Linux bring drivers for both. One question of the computer the box answers
+  itself instead of TinyUSB: how the blocks of network frames are laid out. TinyUSB up to 0.18 (the version in
+  Pico SDK 2.3.1) gives numbers there that Windows has refused since an update of September 2026. The box asks
+  for 100 mA: it sits behind its own hub, whose ports may give that much without the computer refusing.
 * **`dhcp_server.c`:** hands the computer its address, so nothing has to be configured by hand.
 * **`net.c`:** the network stack, about 200 lines: it answers ARP and ping, and receives and sends UDP.
   The box never starts a conversation, so every packet goes straight back to where the request came from.
-  No ARP cache, no gateway setting.
 * **`engine.c`:** two layers, merged:
-  * The **cue layer** is driven by the DX protocol and the buttons. Every channel has its own fade,
-    computed in 16-bit at frame rate.
+  * The **cue layer** is driven by the DX protocol. Every channel has its own fade, computed in 16-bit at frame rate.
   * The **Art-Net layer** holds the last ArtDmx data.
   * `output = merge(cue, artnet) × master`, or 0 during blackout.
 * **Merge modes:**
@@ -508,70 +265,31 @@ There is no USB serial port any more. The log goes to the serial pins GP16 / GP1
     until you call `release-artnet`.
   * **Override:** Art-Net replaces the cue layer while packets keep arriving. After 3 s of silence, the
     cue layer takes over again.
-* **Presets:** 16 snapshots of the current look, stored in the last 12 KB of flash with a CRC.
-  They survive power cycles. While flash is being written, core 1 is paused safely (`flash_safe_execute`),
-  and the DMX line just idles for about 150 ms, which the DMX standard allows.
-* **Losing the computer:** as long as the box has power, it keeps outputting the last state. The buttons work
-  without a computer: GP18 toggles blackout, and GP19 fades to preset slot 0 in 2 s.
+* **Presets:** 16 snapshots of the current look, stored in the last 12 KB of the flash with a CRC.
+  While flash is being written, core 1 is paused safely (`flash_safe_execute`), and the DMX line just idles for
+  about 150 ms, which the DMX standard allows.
+* **Losing the computer:** as long as the box has power, it keeps sending the last state.
 
 > **The box's own master and blackout act on every channel.** That is right for dimmers and RGB PARs; with
 > moving heads a blackout of the box also sends pan and tilt to 0. Lumenet therefore does its master and
 > blackout in the levels it sends, on the light only (see the Fixtures view), and keeps the box's own
-> master at full; the box's blackout is only that of its button.
+> master at full.
 
-### Testing the network code on a PC
+### Tests on a PC
 
-`firmware\pico\test\build.cmd` (Visual Studio C compiler) builds and runs a test program. It runs the real
-network stack, the address server, the USB glue and the firmware's main program on pretend hardware, and
-checks ARP, ping, UDP, DHCP, Art-Net and the control protocol, including damaged packets (198 checks). On Linux or macOS use the `cc` line at the top of `test_net.c`.
+`firmware\test\build.cmd` (Visual Studio C compiler) builds and runs two test programs; the release workflow runs
+them too.
 
-### The PIC32 box: building the firmware
+* `test_net` runs the real network stack, the address server, the USB glue, the USB tables (network adapter and
+  MIDI, compared with what TinyUSB's own macros make) and the firmware's main program on pretend hardware, with
+  lights that answer RDM on the pretend line: ARP, ping, UDP, DHCP, Art-Net, the DX protocol, damaged packets,
+  the LEDs, the box number, RDM through the main program, the boot loader (224 checks).
+* `test_rdm` checks RDM and MIDI without hardware: packets and the coded answers of the search; searches with 0
+  to 64 lights, also with IDs from all over the 48 bits; requests, refusals, lights that do not answer, a line
+  that never reports back; RDM over the DX protocol (answers that come later, repeats, busy) and over Art-Net; the
+  MIDI bytes both ways (222 checks).
 
-`firmware\pic32\build.cmd` builds `firmware\pic32\build\dmxbox2.hex` and puts a copy next to itself. It needs
-three things, all free:
-
-| What | Where `build.cmd` looks for it | Tried with |
-|---|---|---|
-| MPLAB XC32, Microchip's C compiler | `C:\Program Files\Microchip\xc32\v...`, or the variable `XC32` set to the folder of one version | v6.00 |
-| The PIC32MX device pack (PIC32MX_DFP) | `%USERPROFILE%\.mchp_packs\Microchip\PIC32MX_DFP\...`, where MPLAB X puts its packs, or `DFP` | 1.7.380 |
-| TinyUSB, the USB library | the copy in the Pico SDK of the Pico box (`%USERPROFILE%\.pico-sdk\sdk\2.3.1\lib\tinyusb`), or `TINYUSB` | 0.18 |
-
-It compiles the shared code of `firmware/common` with the box's own files in `firmware/pic32/src`:
-
-* `config.h`: the numbers (addresses, Art-Net universes, two outputs of 512 channels, 8 presets, USB names).
-* `board.c`: the configuration bits (the crystal, 40 MHz, the USB clock, JTAG off because its pins are pins of
-  the board), the pins, the switch, the buttons, the LED, a 1 ms timer and the USB interrupt.
-* `dmx_out.c`: each output on a UART of its own, driven by interrupts, both at the same time. The break is a 0
-  sent at 50,000 baud: its nine low bits are the 180 µs break, its stop bits the 40 µs mark after it. Then the
-  start code and the 512 levels at 250,000 baud with two stop bits: about 44 frames a second.
-* `storage_flash.c`: the 8 presets, 1024 levels each, in the chip's own flash.
-* `main.c`: puts it together like the Pico's main program. The box number from the switch gives the
-  addresses, the Ethernet addresses and the USB serial number ("box-07").
-
-The firmware takes about 40 KB of the 256 KB flash and 48 KB of the 64 KB RAM (both outputs' levels and fades,
-and the USB network buffers). It builds without warnings; TinyUSB's own files get two warnings switched off.
-`build.cmd 1` builds the firmware of the box with one output, `dmxbox2-1-universe.hex` (36 KB flash, 32 KB
-RAM): it drives UART 1 only, leaves U1 pins 16 to 18 alone and tells the desk 512 channels.
-TinyUSB has a driver for the USB port of the PIC32MX, but its authors list it as untested.
-
-The simulator plays this box too: `firmware\sim\dmxbox_sim2.exe` has two outputs (`--show` prints both).
-
-### The PIC32 box: flashing
-
-A new PIC32 has no USB drive to copy the firmware to, as the Pico has. The first firmware goes on with a
-programmer, a Microchip MPLAB Snap (PG164100), PICkit 4 or PICkit 5, and MPLAB IPE, the programming tool that
-comes with the free MPLAB X IDE.
-
-1. Put the chips into their sockets and plug the box into USB: the programmer does not power it.
-2. Plug the programmer onto J2, its pin 1 (the arrow) on J2 pin 1 (MCLR, at B-3, the top of J2).
-3. In MPLAB IPE choose the device PIC32MX270F256B and Apply, then the tool and Connect. Browse to
-   `firmware\pic32\dmxbox2.hex` (the box with one output: `dmxbox2-1-universe.hex`) and press Program. Do not
-   press the box's buttons meanwhile.
-4. Unplug the programmer. The box starts: the computer finds a new network adapter, which gets 10.1.n.2 from
-   the box (n is the number on its switch).
-
-Then `dmxbox -H 10.1.0.1 ping` (for box 0) shows the firmware version and 1024 channels, and the desk finds the
-box by itself. There is no boot loader yet, so every new firmware needs the programmer.
+On Linux or macOS use the `cc` lines at the top of `test_net.c` and `test_rdm.c`.
 
 ---
 
@@ -581,11 +299,11 @@ Needs the .NET 10 SDK.
 
 ### Connection
 
-Plug the box in. There is nothing to set up: the computer gets 192.168.7.2 from the box, and the box is at
-192.168.7.1.
+Plug the box in. There is nothing to set up: the computer gets 10.1.n.2 from the box, and the box is at
+10.1.n.1 (n is the number on its switch; the box with the Pico gives 192.168.7.2 and is at 192.168.7.1).
 
 Windows 11, macOS and Linux have the driver for this kind of USB network adapter (CDC-NCM) built in.
-So far the box has been tried on one Windows 11 computer only.
+So far a box (the one with the Pico) has been tried on one Windows 11 computer only.
 Windows 10 has the driver too, but usually does not pick it by itself. The firmware sends a hint that names
 the driver. On Windows 11 that hint is what selects the driver; on Windows 10 it is untested. If the device shows as unknown, choose the driver by hand in Device Manager:
 update the driver of the unknown device, pick from the list, then Network adapters, Microsoft,
@@ -612,8 +330,8 @@ dmxbox release-artnet
 dmxbox demo cues                 # demos for 4 RGB PARs at channels 1-12 (also: demo stream)
 ```
 
-The tool talks to 192.168.7.1 unless you name another address with `-H <address>` or in the environment
-variable `DMXBOX_HOST` (for example `-H 127.0.0.1` for the simulator).
+The tool talks to 192.168.7.1 (the box with the Pico) unless you name another address with `-H <address>` or in
+the environment variable `DMXBOX_HOST`: `-H 10.1.3.1` for dmxbox 3 number 3, `-H 127.0.0.1` for the simulator.
 `dmxbox --help` lists everything. Without building first: `dotnet run --project backend/DmxBox.Cli -- ping`.
 In the first seconds after plugging in, `discover` can come back empty: try again. If it stays empty
 although `ping` works, let the program through the Windows firewall.
@@ -635,7 +353,9 @@ art.Send(frame);                                                         // up t
 ```
 
 A rejected request throws `DmxBoxException` (with the box's status, e.g. `BAD_ARG`); no answer after all
-retransmits throws `DmxBoxTimeoutException`. `backend/DmxBox.Cli/Demos.cs` has a cue demo (box-side fades) and a
+retransmits throws `DmxBoxTimeoutException`. RDM goes through the same client: `RdmLights()` (the lights the box
+found), `RdmDiscover()` (search again) and `RdmRequest(light, RdmCommandClass.Get, RdmParameter.DeviceInfo)`,
+which answers what the light answered (`RdmResponse`, with `RdmDeviceInfo.Parse` for DEVICE_INFO). `backend/DmxBox.Cli/Demos.cs` has a cue demo (box-side fades) and a
 streaming rainbow demo (Art-Net).
 
 For other DMX hardware the library has `SacnSender` (sACN, E1.31: data packets with a sequence per universe,
@@ -645,8 +365,9 @@ and the packets that end a universe) and `EnttecPro` (the messages of the Enttec
 
 ### QLC+ (or any Art-Net software)
 
-Add an Art-Net output on the network adapter with the address 192.168.7.2 (that is the box's USB link), for
-universe 0 and IP 192.168.7.1. `discover` (or QLC+'s own scan) should find a node called `dmxbox`.
+Add an Art-Net output on the network adapter with the address 10.1.n.2 (that is the box's USB link), for
+universe n and IP 10.1.n.1. `discover` (or QLC+'s own scan) should find a node called `dmxbox 3`. QLC+ also
+finds the lights with RDM on the box's line through Art-Net (its RDM manager).
 
 To control the lights from a tablet or phone over Wi-Fi, run the lighting program on the computer the box is
 plugged into and open that program's remote page on the tablet (QLC+ has a web interface for this). The box
@@ -655,7 +376,7 @@ itself cannot be connected to a router.
 ### Simulator and tests
 
 ```powershell
-firmware\sim\build.cmd                                  # builds the four box simulators (see below)
+firmware\sim\build.cmd                                  # builds the two box simulators (see below)
 firmware\sim\dmxbox_sim.exe --show 12                   # prints channel values as they change
 # another terminal:
 dmxbox -H 127.0.0.1 fade 1 255 128 0 -t 2
@@ -663,16 +384,17 @@ dmxbox -H 127.0.0.1 fade 1 255 128 0 -t 2
 dotnet test backend/DmxBox.sln                 # the client against the simulator, and the desk server
 ```
 
-The box simulators run the firmware's own engine and protocol code, built for a PC:
+The box simulators run the firmware's own engine, protocol and RDM code, built for a PC, with lights on their
+DMX line that answer RDM from memory (`rdm_lights.c`: an LED par, a moving head and a dimmer pack, in turn, at
+the addresses one after the other):
 
 | Program | Box | sim.cmd |
 |---|---|---|
-| `dmxbox_sim.exe` | the box with the Pico: one output, channels 1 to 512 | `pico-1-universe` |
-| `dmxbox_sim_pico2.exe` | a box with the Pico and two outputs (no such hardware exists yet) | `pico-2-universes` |
-| `dmxbox_sim2_1.exe` | dmxbox 2 with one output | `pic32-1-universe` |
-| `dmxbox_sim2.exe` | dmxbox 2 with two outputs: channels 1 to 1024, 513 on is output 2 | `pic32-2-universes` |
+| `dmxbox_sim.exe` | dmxbox 3: one output, channels 1 to 512 | `dmxbox` |
+| `dmxbox_sim2.exe` | the same with two outputs: channels 1 to 1024, 513 on is output 2 (no such box: for the tests) | `dmxbox-2-universes` |
 
-`--drop 0.3` loses 30 % of control packets in each direction. Use it to test the reliability layer; the test
+`--rdm-lights 5` puts 5 lights with RDM on the line (3 if not given, 0 to 64), `--box 3` gives it the number 3
+on its switch (Art-Net universe 3). `--drop 0.3` loses 30 % of control packets in each direction. Use it to test the reliability layer; the test
 suite does exactly this. `--host 127.0.0.1` binds the simulator to one address (all of them without it; on
 127.0.0.1 Windows does not ask about its firewall), and `--parent PID` ends it with that process. They are
 built with the Visual Studio C compiler; on Linux or macOS use `make -C firmware/sim`.
@@ -685,16 +407,15 @@ built the first time (and again when the firmware changed), with Visual Studio's
 
 ```powershell
 sim.cmd                        # the devices and the options
-sim.cmd pico-1-universe        # the box with the Pico; also pico-2-universes, pic32-1-universe, pic32-2-universes
+sim.cmd dmxbox --lights 5      # dmxbox 3 with 5 lights with RDM on its line (--box 3: its number); also dmxbox-2-universes
 sim.cmd artnet --ports 2       # an Art-Net node with two ports (--at 0:0:0, --name "Sim node")
 sim.cmd sacn --universes 1-4   # an sACN receiver (--multicast takes the desk's multicast too)
 sim.cmd enttec                 # an Enttec DMX USB Pro (--serial 12345678)
 sim.cmd apc-mini-mk2           # an Akai APC mini mk2; also nanokontrol2, x-touch-mini, x-touch-compact
 ```
 
-* **Keys:** U pulls the device out and plugs it in again, Q (or Ctrl+C) ends it; a box also has B, its
-  blackout button, and P, its preset button (preset 0 fades in over 2 seconds). A script can give the keys
-  as lines on the input instead ("u", "b", "q").
+* **Keys:** U pulls the device out and plugs it in again, Q (or Ctrl+C) ends it; a MIDI controller also has O,
+  which opens its page. A script can give the keys as lines on the input instead ("u", "q").
 * **What each writes:** the levels of each output, port or universe when they change (`--show 16`), and
   what happens: a box its DMX lines, the node the frames of each port and its first poll, the receiver each
   source of a universe with its name, priority and sequence, and when it ends its stream or falls silent
@@ -1272,6 +993,25 @@ OSC from other programs (`backend/DmxBox.Server/Osc`) works the same targets as 
   firewall looks at it, and drop what comes meanwhile; after that everything arrives. The tests keep one
   sender for the whole test: a sender closed right after its send can lose its packet altogether.
 
+### RDM
+
+The RDM tab of Settings (`frontend/src/app/rdm/`) reads and changes the lights with RDM on the lines of the
+boxes through `RdmService` (`backend/DmxBox.Server/Rdm/`). The service talks to each box with a `DmxBoxClient`
+of its own, so RDM never waits behind the levels the box link sends, nor they behind it; it only talks to
+boxes the desk knows (a page cannot make it send to another address), off the hub's thread.
+
+* **Hub:** `GetRdmBoxes` (each box that answers: its number, whether it does RDM, still searching, the IDs of
+  its lights), `GetRdmLight` (one light, read from the light: DEVICE_INFO, the maker, model and name, Identify,
+  and the names and channels of its modes, at most 32), `SetRdmLight` (name, address, mode, Identify; the mode
+  before the address, then the light read again) and `SearchRdm`.
+* **Requests:** asked again once when the answer came spoiled or the box was busy with another program's RDM,
+  and after the wait a light asks for (ACK_TIMER, at most a second). A refusal (NACK) is said in words ("the
+  value is out of its range"). Names go to the lights as plain ASCII, at most 32 characters: accents are
+  dropped (RDM's texts are ASCII).
+* **The page** reads the lights one after the other, so a box answers each between its DMX frames and the
+  table fills in as they come; it asks again every 600 ms while a box searches, says where two lights take the
+  same channels, and switches Identify off for the lights it lit when the tab is left.
+
 ### Lumenet.exe and its releases
 
 `publish.cmd` (with `publish.mjs`) builds the page and then publishes `backend/Lumenet` as one self-contained
@@ -1297,7 +1037,9 @@ publish.cmd        # builds the page, then publish\Lumenet.exe
 
 ### Tests
 
-`dotnet test backend/DmxBox.sln` (910 tests: the client, also against the simulator with two outputs, the
+`dotnet test backend/DmxBox.sln` (928 tests: the client, also against the simulator with two outputs, RDM
+through the client (the lights the simulator finds, GET and SET, refusals, a light that is not there, answers
+that come later over a line that loses packets) and through the hub with a simulated dmxbox 3, the
 desk, solo, sequences and the stack with a clock the tests set by hand, the rate and its tempo, undo and the autosave, the
 stage plan and its picture, fixtures, their attributes, their steps and their notes, the notes, the
 universes, project files with Export and Import, the examples, the import of show files, the links to the
@@ -1305,7 +1047,7 @@ boxes and their wiring with the blackout button, the hub, LAN with a pretend PC 
 crossfades of sequences and the stack, steps of the stack and of sequences that add and releases, at random
 in the order of each round, effects played by sequences, project files of version 8, a level of a memory changed
 from the Memories view, and the outputs besides the boxes: the packets of Art-Net, sACN and the DMX USB Pro
-byte by byte, and Art-Net and sACN on 127.0.0.1 with a pretend node and receiver, a pretend USB interface; the simulated devices of sim.cmd, the four box simulators among them, and the desk finding them;
+byte by byte, and Art-Net and sACN on 127.0.0.1 with a pretend node and receiver, a pretend USB interface; the simulated devices of sim.cmd, the two box simulators among them with their number and their lights, and the desk finding them;
 the effects: their rules frame by frame, their playback and the stack with the clock set by hand, the
 shapes, the places in the run and the pixels, and project files of version 7; MIDI: the messages and their
 bytes, the scales, 14 bits, the endless encoders, pickup, slots that follow the pages, held keys, the page
@@ -1333,7 +1075,9 @@ download checked by size and SHA-256, the stream of its steps, a GitHub that doe
 run.cmd; Pause of the stack's sounds (a paused voice of the mixer, the mixer's player paused once), muted
 cues (Stack off stops them), and how a sound sounds changed while the stack is live; and the contract of the hub,
 `hub-contract.ts`), and in `frontend/`:
-`npm test -- --watch=false` (316 tests of the page; the tabs of Settings with the address and the arrow keys, the
+`npm test -- --watch=false` (329 tests of the page; the RDM tab (the lights read one after the other, address,
+mode and name changed, a refusal, Identify switched off when the tab is left, a box without RDM, Search, a page
+not connected yet); the tabs of Settings with the address and the arrow keys, the
 Backup tab (the folder of Google Drive, Back up now, a Save that backs up), the About tab (the question before
 an update, its steps, a GitHub that does not answer), Export as one ZIP and Import that lists the parts of a
 file; OSC on the MIDI view with its addresses; the window of a cue's moment, Learn, the moments in
@@ -1355,7 +1099,8 @@ the releases following their steps, and the steps that are on; the Mute box of a
 pointer on the wave, what of the sound editor works while the stack is live, and no output added
 twice). `npm run lint` checks the page with ESLint:
 the rules of angular-eslint, the accessibility of the templates among them (`frontend/eslint.config.js`).
-The release workflow lints the page and runs both kinds of tests before it makes Lumenet.exe.
+The release workflow lints the page and runs the tests of the page, the desk program and the firmware
+(`firmware	estuild.cmd`) before it makes Lumenet.exe.
 
 On Windows the first packets of a new UDP flow (a socket and a receiver) can be held back for a moment while
 the firewall looks at the flow, and what follows meanwhile is dropped. The tests of the network outputs
@@ -1383,7 +1128,7 @@ request's session and seq, and its payload is `status u8` followed by data.
 
 | Type | Name | Request payload | ACK data |
 |---|---|---|---|
-| 0x01 | PING | none | fw major, fw minor, flags, master, uptime_ms u32, preset mask u16, channels u16 |
+| 0x01 | PING | none | fw major, fw minor, flags, master, uptime_ms u32, preset mask u16, channels u16; since dmxbox 3 also supply mV u16 (0 = not measured), can u8, box number u8 |
 | 0x10 | SET | start u16 (1-based), count u16, values[count] | none |
 | 0x11 | FADE | start u16, count u16, duration_ms u32, values[count] | none |
 | 0x20 | PRESET_SAVE | slot u8 | none |
@@ -1394,11 +1139,23 @@ request's session and seq, and its payload is `status u8` followed by data.
 | 0x32 | RELEASE_ARTNET | none | none |
 | 0x33 | MERGE_MODE | 0 = HTP, 1 = override | none |
 | 0x40 | GET_OUTPUT | start u16, count u16 | values[count] |
-| 0x41 | GET_PRESET | slot u8 | values[channels]: 512 from the Pico box, 1024 from dmxbox 2 |
+| 0x41 | GET_PRESET | slot u8 | values[channels]: 512 from one output, 1024 from two |
+| 0x50 | RDM_DISCOVER | none | none: the box searches its line again |
+| 0x51 | RDM_TOD | none | searching u8, count u16, then the IDs, 6 bytes each |
+| 0x52 | RDM_REQUEST | light's ID (6), sub-device u16, command class u8, PID u16, pdl u8, data[pdl] | response type u8, command class u8, PID u16, pdl u8, data[pdl]: what the light answered |
+| 0x60 | BOOTLOADER | none | none: the box restarts into its USB boot loader 0.3 s later |
 
 The PING flags byte: bit 0 = Art-Net live, bit 1 = blackout, bit 2 = override mode, bit 3 = Art-Net layer holding data.
+Its "can" byte: bit 0 = RDM, bit 1 = a USB MIDI port, bit 2 = a hub with OUT for the next box. A box from before
+dmxbox 3 answers 13 bytes without the last three, and UNKNOWN_TYPE to the RDM messages.
 
-Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 EMPTY_SLOT.
+Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 EMPTY_SLOT, 6 RDM_TIMEOUT (the
+light did not answer), 7 RDM_BAD (its answer came spoiled), 8 BUSY (another RDM request is on its way), 9
+NOT_SUPPORTED (no RDM).
+
+**An answer that comes later:** RDM_REQUEST waits for the light, a few tens of milliseconds, so its ACK comes
+when the light has answered; the box keeps the session and seq of the request for it. A retransmit meanwhile
+gets nothing; one after it gets the kept ACK, as any retransmit does.
 
 ### Reliability (TCP-ish, over UDP)
 
@@ -1524,8 +1281,10 @@ receivers listen at 5568 and the desk sends from a port of its own.
 
 ## 7. Ideas for later
 
-* **Wi-Fi:** a Pico W has the same size and pins and has Wi-Fi on board. With a Wi-Fi part in the firmware the
-  box could join a wireless network itself, and USB would only supply power.
+* **Linux and a Raspberry Pi image** (the owner's plan): Lumenet on a Raspberry Pi, the image ready to use,
+  LAN on from the start and switched off only on the device itself. dmxbox 3 needs no driver there: Linux
+  takes its network adapter (cdc_ncm) and its MIDI port (snd-usb-audio) as it comes. What remains is the desk:
+  a Linux build of Lumenet and the image.
 * **Open DMX USB and FTDI cables without a processor:** the PC has to make the DMX frame itself (a break, a
   mark after it, 250 kbaud 8N2). On Windows System.IO.Ports can do it through the FTDI driver's COM port
   (`BreakState`), and FTDI's D2XX would not time it better (both go through the same bus driver; D2XX may
@@ -1538,9 +1297,9 @@ receivers listen at 5568 and the desk sends from a port of its own.
 * **The second universe of a USB interface:** the desk sends label 6, the one universe every DMX USB Pro
   and compatible plays. A DMXking ultraDMX Pro plays it on all its outputs; its own labels 100 and 101 would
   give its two ports a universe each. The Enttec DMX USB Pro Mk2 has a second port too, behind an API key.
-* **More universes from one box:** the desk plays up to 8 universes on several boxes; the box with the Pico
-  sends one, [dmxbox 2](#dmxbox-2-the-pic32-box) two. Its board is ready for **RDM**: with RDM in the firmware
-  and the desk, the desk could find the fixtures on a line and set their addresses.
+* **More from RDM:** fixtures of the Fixtures view made from the lights RDM found (their model, mode and
+  address), the sensors and status messages of the lights, and the lights of the RDM tab marked on the Stage
+  plan.
 * **More for the effects:** a running text or a picture over the cells of LED bars (the pixel effects
   already work out each cell by where it is on the stage, so either would be one more pattern); a cycle given
   in beats of the tempo rather than in BPM of its own; where the heads point in degrees in the preview, for
@@ -1554,13 +1313,22 @@ receivers listen at 5568 and the desk sends from a port of its own.
   hears 1 and 2, or a speaker hidden in the set, so that a phone rings where it stands. The owner's theatre
   needs none of it now (the PC's jack into the mixer, two speakers, the monitors from the mixer); a good idea
   for later, in the owner's words.
-* **A boot loader for dmxbox 2,** so that a new firmware goes on over USB without the programmer.
 * **Pushed state:** a "subscribe" message, so the box sends live output to your UI.
-* **Fabrication files for the carrier board**, so it can be ordered instead of hand-wired.
-* **A sturdier USB socket:** a USB-B socket in the panel with a short cable to the Pico inside the box.
 
 ## Verification status
 
+* **dmxbox 3 (2026-11-27):** drawn in KiCad 10 by scripts; ERC and DRC (with the check that the board's nets
+  are the schematic's) have nothing to report, and every part JLCPCB fits was in stock. All SMD since the same
+  day: the footprint of the DC-DC module and its pins (1 GND, 2 Vin, 4 0V, 5 +Vo, 8 free) come from Mornsun's
+  datasheet of the B05_XT-1WR3 series (2022.01.08-A/5), and EVISUN's datasheet of the part JLCPCB fits (V1.0)
+  gives the same pins, pads and size; SW1's footprint comes from kangshen's drawing KE-DSPV-008-S-A. The case's
+  holes come from JLCMC's own STEP of K90-9848-H6-L120 and the drawings of the XLR-xG-C (its 3-pin version) and
+  the NYS325 (REAN's DXF); they were checked against the board in Blender's pictures, not in a real case. The
+  printed case (make_print_case.py) has not been printed yet either. The firmware builds with
+  Pico SDK 2.3.1 without a warning; its tests on a PC pass (`test_net` 224 checks, `test_rdm` 222), and so do the
+  simulator's RDM checks over the DX protocol and Art-Net. **Nothing of it has been built or run on hardware
+  yet:** the board, the hub chain, the 5 V of OUT, RDM with real lights, the timing of the line (break, the
+  switch to listening) and MIDI wait for the first boards.
 * **Pin orders:** checked against the pinout of the Pico and the datasheets of the 6N137, the SN75176BP
   (same pins as the MAX485) and the Recom RKK-0505S/H (Rev. 5-2026).
 * **Board routing:** 12 nets on 34 tracks, all on the bottom, pass a script check for clearance (0.25 mm),
@@ -1568,7 +1336,7 @@ receivers listen at 5568 and the desk sends from a port of its own.
   Pico's eight ground pins have a track. It is a drawing, not a manufacturing dataset, and no board has been built.
 * **USB socket and box:** the socket's position comes from KiCad's 3D model of the Pico. The fit of a real
   plug in a real box has not been tried.
-* **Network stack, address server and main program:** pass 198 checks on a PC (`firmware/pico/test`), built with
+* **Network stack, address server and main program:** pass 198 checks on a PC (`firmware/archive/pico/test`), built with
   the PC compiler against stand-ins for the Pico and the USB library.
 * **Engine, Art-Net and DX protocol:** pass 14 end-to-end tests of the .NET client against the simulator,
   including a run with 30 % packet loss in both directions.
@@ -1578,7 +1346,7 @@ receivers listen at 5568 and the desk sends from a port of its own.
   the `dmxbox` tool work against it: `ping`, `discover`, `set`, `get`, `fade`, `master`, `blackout`, `artnet`,
   `release-artnet`, and saving, showing and clearing a preset. Windows first refused the adapter (code 10);
   the correction in `usb_net.c` cured that.
-* **Circuit on a breadboard (2026-11-18):** built after the [breadboard plan](#building-it-on-a-breadboard).
+* **Circuit on a breadboard (2026-11-18):** built after the [breadboard plan](hardware/archive/DEV-pico-and-dmxbox2.md#building-it-on-a-breadboard).
   The isolated supply reads 5 V. A multimeter at the XLR jack (pin 3 against pin 2) shows what was calculated
   for a DMX signal with the right polarity: 4.28 V on the resting line, about −2.5 V with all channels at
   zero, and a positive reading with all channels at full. Both buttons work: SW1 switches blackout on and

@@ -23,9 +23,12 @@ public sealed class EndToEndTests
 
         PingInfo info = box.Ping();
 
-        Assert.Equal("1.0", info.Firmware);
+        Assert.Equal("3.0", info.Firmware);
         Assert.Equal(512, info.Channels);
         Assert.Equal(255, info.Master);
+        Assert.Equal(BoxAbilities.Rdm | BoxAbilities.Midi | BoxAbilities.Chain, info.Abilities);
+        Assert.Equal(0, info.BoxNumber);
+        Assert.Equal(5000, info.SupplyMillivolts);
     }
 
     [Fact]
@@ -244,7 +247,7 @@ public sealed class EndToEndTests
             port: sim.ArtNetPort);
 
         ArtNetNode node = Assert.Single(nodes);
-        Assert.Equal("dmxbox", node.ShortName);
+        Assert.Equal("dmxbox 3", node.ShortName);
         Assert.Equal(0, node.Universe);
     }
 

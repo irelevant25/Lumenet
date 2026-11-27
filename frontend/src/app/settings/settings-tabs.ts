@@ -10,6 +10,7 @@ export const SETTINGS_TABS = [
   { id: 'colors', label: 'Colors' },
   { id: 'keyboard', label: 'Keyboard' },
   { id: 'outputs', label: 'Outputs' },
+  { id: 'rdm', label: 'RDM' },
   { id: 'backup', label: 'Backup' },
   { id: 'about', label: 'About' },
 ] as const;

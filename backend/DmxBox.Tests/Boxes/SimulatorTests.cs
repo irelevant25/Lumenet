@@ -9,7 +9,7 @@ namespace DmxBox.Tests.Boxes;
 /// The simulators of sim.cmd, played in the test's own process, and the desk finding them as if
 /// they were plugged in: the registry of the simulators, a simulated box in the box network, a
 /// simulated Art-Net node in Find nodes and as an output, a simulated sACN receiver, and a
-/// simulated Enttec DMX USB Pro at a port "SIM" through a pipe. The four box simulators of
+/// simulated Enttec DMX USB Pro at a port "SIM" through a pipe. The two box simulators of
 /// firmware/sim run as their own programs.
 /// </summary>
 public sealed class SimulatorTests : IDisposable
@@ -135,10 +135,8 @@ public sealed class SimulatorTests : IDisposable
     }
 
     [Theory]
-    [InlineData("pico-1-universe", 512, "dmxbox", "dmxbox - Pico USB Art-Net node")]
-    [InlineData("pico-2-universes", 1024, "dmxbox", "dmxbox - Pico USB Art-Net node")]
-    [InlineData("pic32-1-universe", 512, "dmxbox 2", "dmxbox 2 - PIC32 USB Art-Net node with one output")]
-    [InlineData("pic32-2-universes", 1024, "dmxbox 2", "dmxbox 2 - PIC32 USB Art-Net node with two outputs")]
+    [InlineData("dmxbox", 512, "dmxbox 3", "dmxbox 3 - RP2040 USB Art-Net node with RDM and MIDI")]
+    [InlineData("dmxbox-2-universes", 1024, "dmxbox 3", "dmxbox 3 - RP2040 USB Art-Net node with RDM and MIDI")]
     public void EachBoxSimulatorIsItsBox(string device, int channels, string shortName, string longName)
     {
         BoxModel model = BoxSimulator.Models.Single(item => item.Device == device);
@@ -156,24 +154,25 @@ public sealed class SimulatorTests : IDisposable
     }
 
     [Fact]
-    public async Task ButtonsOfASimulatedBoxChangeItAsTheRealOnesDo()
+    public async Task SimulatedBoxHasItsNumberAndLightsWithRdmOnItsLine()
     {
         BoxModel model = BoxSimulator.Models[0];
-        using var box = new BoxSimulator(model, Folder, BoxProgram(model.Program), show: 0, TextWriter.Null);
+        using var box = new BoxSimulator(model, Folder, BoxProgram(model.Program), show: 0, TextWriter.Null, lights: 5, boxNumber: 9);
         box.PlugIn();
         using var client = new DmxBoxClient("127.0.0.1", box.ControlPort);
-        client.Set(1, [200]);
-        client.PresetSave(0);
-        client.Set(1, [0]);
 
-        box.Press('B');
-        Assert.True(client.Ping().Blackout);
-        box.Press('B');
-        Assert.False(client.Ping().Blackout);
+        PingInfo ping = client.Ping();
+        Assert.Equal(9, ping.BoxNumber);
+        Assert.True(ping.Abilities.HasFlag(BoxAbilities.Rdm));
+        await Wait.UntilAsync(() => client.RdmLights() is { Searching: false, Lights.Count: 5 }, "The box did not find its 5 lights.");
+        Assert.Empty(box.Keys);   // dmxbox 3 has no buttons
 
-        box.Press('P');   // preset 0 fades in over 2 seconds
-        Assert.InRange(client.GetOutput(1, 1)[0], 0, 199);
-        await Wait.UntilAsync(() => client.GetOutput(1, 1)[0] == 200, "Preset 0 did not fade in.");
+        // Box 9 plays universe 9: Art-Net for another universe does not reach it.
+        using var other = new ArtNetSender("127.0.0.1", universe: 0, port: box.ArtNetPort);
+        using var own = new ArtNetSender("127.0.0.1", universe: 9, port: box.ArtNetPort);
+        other.Send([77]);
+        own.Send([55]);
+        await Wait.UntilAsync(() => client.GetOutput(1, 1)[0] == 55, "Art-Net for universe 9 did not reach box 9.");
     }
 
     [Fact]
@@ -362,7 +361,7 @@ public sealed class SimulatorTests : IDisposable
 
     // firmware/sim/<program>.exe in the first folder above the tests that has it; the release
     // workflow builds them before the tests, as for the other tests of the box simulator.
-    private static string BoxProgram(string program)
+    internal static string BoxProgram(string program)
     {
         string relativePath = Path.Combine("firmware", "sim", OperatingSystem.IsWindows() ? $"{program}.exe" : program);
         for (DirectoryInfo? folder = new(AppContext.BaseDirectory); folder is not null; folder = folder.Parent)

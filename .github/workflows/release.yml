@@ -64,6 +64,11 @@ jobs:
         shell: cmd
         run: firmware\sim\build.cmd
 
+      # The box's own code on the PC: network, USB, the whole firmware on pretend hardware, RDM, MIDI.
+      - name: Test the box firmware
+        shell: cmd
+        run: firmware\test\build.cmd
+
       - name: Test the desk program
         run: dotnet test backend/DmxBox.sln
 

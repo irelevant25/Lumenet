@@ -351,6 +351,9 @@ internal static class Program
         // The same network as above: the host starts and stops it, the hub asks it for the boxes.
         services.AddHostedService(provider => provider.GetRequiredService<BoxNetwork>());
 
+        // RDM through the boxes, with connections of its own.
+        services.AddSingleton(provider => new RdmService(provider.GetRequiredService<BoxNetwork>()));
+
         // Lets time pass on the desk, for the sequences and the stack.
         services.AddHostedService(provider => new DeskClock(
             provider.GetRequiredService<Desk>(),

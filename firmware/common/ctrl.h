@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include "engine.h"
 #include "presets.h"
+#include "rdm.h"
 
 #define CTRL_MAGIC0  'D'
 #define CTRL_MAGIC1  'X'
@@ -28,13 +29,27 @@ enum {
     CT_MERGE_MODE     = 0x33,  // mode u8 (0 = HTP, 1 = Art-Net override)
     CT_GET_OUTPUT     = 0x40,  // start u16, count u16 -> values
     CT_GET_PRESET     = 0x41,  // slot u8 -> values[DMX_CHANNELS]
+    CT_RDM_DISCOVER   = 0x50,  // -            (starts a full search of the lights on the line)
+    CT_RDM_TOD        = 0x51,  // -            -> searching u8, count u16, ids[count][6]
+    CT_RDM_REQUEST    = 0x52,  // dest[6], sub-device u16, command class u8, pid u16, pdl u8, data[pdl]
+                               //   -> response type u8, command class u8, pid u16, pdl u8, data[pdl]
+    CT_BOOTLOADER     = 0x60,  // -            (restarts into the USB boot loader after this answer)
     CT_ACK            = 0x80,  // status u8, data...
 };
 
 enum {
     ST_OK = 0, ST_BAD_LENGTH = 1, ST_BAD_ARG = 2, ST_UNKNOWN_TYPE = 3,
     ST_STORAGE_ERROR = 4, ST_EMPTY_SLOT = 5,
+    ST_RDM_TIMEOUT = 6,        // the light did not answer
+    ST_RDM_BAD = 7,            // an answer came, but spoiled
+    ST_BUSY = 8,               // another RDM request is on its way
+    ST_NOT_SUPPORTED = 9,      // this box has no RDM
 };
+
+// What PING tells about the box (bits of its "can do" byte)
+#define CTRL_CAN_RDM   0x01
+#define CTRL_CAN_MIDI  0x02    // a USB MIDI port
+#define CTRL_CAN_CHAIN 0x04    // a USB hub with an OUT socket for the next box
 
 #define CTRL_SESSIONS 8
 
@@ -44,18 +59,33 @@ typedef struct {
     uint16_t last_seq;
     uint32_t last_ms;
     uint16_t resp_len;
+    uint8_t  pending;          // the answer to last_seq comes later (an RDM request)
     uint8_t  resp[CTRL_MAX_PKT];
 } ctrl_session_t;
 
 typedef struct {
     engine_t      *eng;
     preset_bank_t *bank;     // owned by the network core; never touched by the DMX core
+    rdm_t         *rdm;      // NULL: no RDM
+    uint8_t        can;      // CTRL_CAN_...
+    uint8_t        box_number;
     uint32_t       boot_ms;
     ctrl_session_t sess[CTRL_SESSIONS];
     uint32_t       rx_packets, executed, duplicates, stale;
+
+    // an answer that comes later: whom it is for
+    uint8_t        deferred;         // an RDM request is on its way
+    uint8_t        deferred_new;     // set by ctrl_handle: the caller notes where the answer goes
+    uint8_t        deferred_hdr[CTRL_HDR_LEN];
+    uint32_t       deferred_session;
+    uint16_t       deferred_seq;
 } ctrl_t;
 
 void ctrl_init(ctrl_t *c, engine_t *eng, preset_bank_t *bank, uint32_t now);
+
+// An answer that was not ready when its request came (CT_RDM_REQUEST): returns
+// its length once it is (0 = not yet). It goes to the sender of that request.
+int ctrl_poll(ctrl_t *c, uint32_t now, uint8_t *resp, int resp_cap);
 
 // Handle one datagram; returns length of the reply written to `resp` (0 = none).
 int ctrl_handle(ctrl_t *c, const uint8_t *pkt, int len, uint32_t now,

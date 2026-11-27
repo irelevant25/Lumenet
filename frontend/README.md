@@ -42,7 +42,7 @@ components of it (each in a folder of its own) and the plain TypeScript beside t
 | `memories/`, `sequences/`, `stack/` | Those views, with what they share: the stack's steps (`step-row`, `step-choices.ts`) are the sequences' too. |
 | `stage/`, `fixtures/` | The stage plan and the lights on it; the fixtures, their library and their faders. |
 | `effects/`, `sounds/`, `notes/`, `midi/` | Those views with their editors, and the rules behind them (`effects.ts`, `sounds.ts` ...). |
-| `settings/`, `outputs/` | The Settings view and its panels; the outputs and their status in the top bar. |
+| `settings/`, `outputs/`, `rdm/` | The Settings view and its panels; the outputs and their status in the top bar; the RDM tab, the lights with RDM on the lines of the boxes (`rdm.ts` holds its rules). |
 | `project/` | Load, Save, Import and Export, and the show files of other desks. |
 
 Every component has its own `.ts`, `.html` and `.css` file, and its tests beside it as `.spec.ts`. The

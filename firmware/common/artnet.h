@@ -1,4 +1,5 @@
-// Minimal Art-Net 4 node: ArtDmx in, ArtPoll -> ArtPollReply out.
+// Minimal Art-Net 4 node: ArtDmx in, ArtPoll -> ArtPollReply out, and RDM:
+// ArtTodRequest -> ArtTodData, ArtTodControl (flush: search again), ArtRdm both ways.
 //
 // A box with several outputs listens to as many universes, one after the
 // other: output 1 to `universe`, output 2 to `universe` + 1, and so on. They
@@ -7,6 +8,7 @@
 #pragma once
 #include <stdint.h>
 #include "engine.h"
+#include "rdm.h"
 
 #define ARTNET_REPLY_LEN 239
 
@@ -19,6 +21,10 @@ typedef struct {
     uint32_t  last_dmx_ms[DMX_OUTPUTS];
     uint32_t  dmx_packets;               // statistics
     uint32_t  poll_packets;
+    rdm_t    *rdm;                       // NULL: no RDM
+    uint8_t   rdm_waiting;               // an ArtRdm is on the line: its answer goes back later
+    uint8_t   tod_waiting;               // ArtTodControl asked for a new search: ArtTodData follows it
+    uint8_t   deferred_new;              // set by artnet_handle: the caller notes where the answer goes
 } artnet_node_t;
 
 // Handle one received UDP datagram. If a reply must be sent back to the
@@ -26,3 +32,7 @@ typedef struct {
 // otherwise returns 0. Takes plat_lock() internally while touching the engine.
 int artnet_handle(artnet_node_t *n, const uint8_t *pkt, int len, uint32_t now,
                   uint8_t *reply, int reply_cap);
+
+// An answer that was not ready when its request came (ArtRdm, ArtTodControl):
+// returns its length once it is (0 = not yet). It goes to the sender of that request.
+int artnet_poll(artnet_node_t *n, uint8_t *reply, int reply_cap);

@@ -133,7 +133,8 @@ public sealed class DmxBoxClient : IDisposable
     public PingInfo Ping()
     {
         // Answer: firmware major, firmware minor, flags, master, uptime in ms (u32),
-        // preset mask (u16), channel count (u16).
+        // preset mask (u16), channel count (u16); since dmxbox 3 also supply voltage in mV (u16),
+        // what the box can do (u8) and its number (u8).
         byte[] data = Request(MessageType.Ping);
         if (data.Length < 12)
             throw new InvalidDataException($"The answer to PING has {data.Length} bytes instead of 12.");
@@ -141,6 +142,7 @@ public sealed class DmxBoxClient : IDisposable
         byte flags = data[2];
         uint uptimeMilliseconds = BinaryPrimitives.ReadUInt32BigEndian(data.AsSpan(4));
         ushort presetMask = BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(8));
+        bool more = data.Length >= 16;
 
         return new PingInfo(
             Firmware: $"{data[0]}.{data[1]}",
@@ -151,7 +153,78 @@ public sealed class DmxBoxClient : IDisposable
             Master: data[3],
             Uptime: TimeSpan.FromMilliseconds(uptimeMilliseconds),
             Presets: SlotsIn(presetMask),
-            Channels: BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(10)));
+            Channels: BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(10)),
+            SupplyMillivolts: more && data[12] + data[13] > 0 ? BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(12)) : null,
+            Abilities: more ? (BoxAbilities)(data[14] & 7) : BoxAbilities.None,
+            BoxNumber: more ? data[15] : null);
+    }
+
+    /// <summary>
+    /// Starts a new search for the lights with RDM on the box's DMX line (dmxbox 3). It takes a
+    /// moment; <see cref="RdmLights"/> says when it is over. A search that runs goes on.
+    /// </summary>
+    /// <exception cref="DmxBoxException">NOT_SUPPORTED: the box has no RDM.</exception>
+    public void RdmDiscover()
+    {
+        Request(MessageType.RdmDiscover);
+    }
+
+    /// <summary>The lights with RDM the box has found on its DMX line (dmxbox 3).</summary>
+    /// <exception cref="DmxBoxException">NOT_SUPPORTED: the box has no RDM.</exception>
+    public RdmLightList RdmLights()
+    {
+        // Answer: searching (u8), count (u16), the IDs (6 bytes each).
+        byte[] data = Request(MessageType.RdmTod);
+        if (data.Length < 3)
+            throw new InvalidDataException($"The answer to RDM_TOD has {data.Length} bytes instead of 3 or more.");
+
+        int count = Math.Min(BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(1)), (data.Length - 3) / 6);
+        var lights = new RdmUid[count];
+        for (int i = 0; i < count; i++)
+            lights[i] = RdmUid.FromBytes(data.AsSpan(3 + 6 * i, 6));
+
+        return new RdmLightList(data[0] != 0, lights);
+    }
+
+    /// <summary>
+    /// One RDM request to a light on the box's line: a GET or a SET of one parameter. The box sends
+    /// it between two DMX frames and hands on what the light answered.
+    /// </summary>
+    /// <param name="light">The light's ID, from <see cref="RdmLights"/>.</param>
+    /// <param name="commandClass">GET or SET.</param>
+    /// <param name="parameter">The parameter, see <see cref="RdmParameter"/>.</param>
+    /// <param name="data">Its data: for a SET the new value, for some GETs which one; at most 231 bytes.</param>
+    /// <param name="subDevice">0 for the light itself.</param>
+    /// <exception cref="DmxBoxException">
+    /// RDM_TIMEOUT: the light did not answer; RDM_BAD: its answer came spoiled; BUSY: another
+    /// request is on its way; NOT_SUPPORTED: the box has no RDM.
+    /// </exception>
+    public RdmResponse RdmRequest(RdmUid light, RdmCommandClass commandClass, ushort parameter, ReadOnlySpan<byte> data = default, ushort subDevice = 0)
+    {
+        if (data.Length > 231)
+            throw new ArgumentException("RDM carries at most 231 bytes of data.", nameof(data));
+
+        byte[] payload = new byte[12 + data.Length];
+        light.ToBytes().CopyTo(payload, 0);
+        BinaryPrimitives.WriteUInt16BigEndian(payload.AsSpan(6), subDevice);
+        payload[8] = (byte)commandClass;
+        BinaryPrimitives.WriteUInt16BigEndian(payload.AsSpan(9), parameter);
+        payload[11] = (byte)data.Length;
+        data.CopyTo(payload.AsSpan(12));
+
+        // Answer: response type, command class, parameter (u16), data length, data.
+        byte[] answer = Request(MessageType.RdmRequest, payload);
+        if (answer.Length < 5 || answer.Length < 5 + answer[4])
+            throw new InvalidDataException($"The answer to RDM_REQUEST has {answer.Length} bytes, too few.");
+
+        return new RdmResponse(
+            (RdmResponseType)answer[0], answer[1], BinaryPrimitives.ReadUInt16BigEndian(answer.AsSpan(2)), answer[5..(5 + answer[4])]);
+    }
+
+    /// <summary>The box restarts into its USB boot loader, after its answer (dmxbox 3): new firmware can be copied on.</summary>
+    public void Bootloader()
+    {
+        Request(MessageType.Bootloader);
     }
 
     /// <summary>Snaps channels <paramref name="start"/>, start + 1, ... to <paramref name="values"/>.</summary>

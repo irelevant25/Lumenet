@@ -10,11 +10,20 @@ publish/
 .vs/
 TestResults/
 # the copies of the firmware that the build.cmd files put next to them
-firmware/pico/dmxbox.uf2
-firmware/pic32/*.hex
+firmware/dmxbox.uf2
+firmware/archive/pico/dmxbox.uf2
+firmware/archive/pic32/*.hex
 
 # Python's compiled copies of scripts
 __pycache__/
+
+# KiCad's local view settings and backups, and the in-between files of the hardware scripts
+*.kicad_prl
+*-backups/
+fp-info-cache
+_autosave-*
+*.lck
+hardware/scripts/work/
 
 # written by the simulator
 presets.bin

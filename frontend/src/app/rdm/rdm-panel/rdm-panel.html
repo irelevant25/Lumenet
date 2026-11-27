@@ -1,0 +1,158 @@
+<h3 id="rdm-title">Lights with RDM</h3>
+<p class="hint">
+  A light with RDM tells its dmxbox what it is, and takes its DMX address, mode and name from here.
+  Each box looks for the lights on its DMX line when it starts; Search looks again after lights were
+  plugged in. Lights without RDM play as before, they only do not show here.
+</p>
+
+@if (failure(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+} @else if (boxes() === null) {
+  <p class="hint" role="status">Asking the boxes…</p>
+} @else if (boxes()!.length === 0) {
+  <p class="hint" role="status">No dmxbox answers.</p>
+}
+
+@for (box of boxes() ?? []; track box.address; let boxIndex = $index) {
+  <section class="box" [attr.aria-labelledby]="'rdm-box-' + boxIndex">
+    <div class="head">
+      <h4 [id]="'rdm-box-' + boxIndex">{{ boxTitle(box) }}</h4>
+      @if (boxState(box); as state) {
+        <span class="count" role="status">{{ state }}</span>
+      }
+      @if (box.rdm) {
+        <button
+          type="button"
+          class="plain"
+          [disabled]="box.searching"
+          [attr.aria-label]="'Search the line of the ' + boxTitle(box) + ' again'"
+          (click)="search(box)"
+        >
+          Search
+        </button>
+      }
+    </div>
+
+    @if (box.error) {
+      <p class="error">{{ box.error }}</p>
+    } @else if (!box.rdm) {
+      <p class="hint">This box has no RDM: dmxbox 3 has it.</p>
+    } @else if (box.lights.length === 0) {
+      @if (!box.searching) {
+        <p class="hint">No light with RDM answers on its line.</p>
+      }
+    } @else {
+      <div class="table-box">
+        <table>
+          <caption>
+            The lights with RDM on the line of the
+            {{
+              boxTitle(box)
+            }}
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Light</th>
+              <th scope="col">Address</th>
+              <th scope="col">Mode</th>
+              <th scope="col">Name</th>
+              <th scope="col"><span class="hidden">Identify</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (id of box.lights; track id) {
+              @let light = lightOf(box, id);
+              @let refusal = refusalOf(box, id);
+              <tr [class.reading]="light === null">
+                @if (light === null) {
+                  <th scope="row">
+                    <span class="name">{{ id }}</span>
+                    <small>reading…</small>
+                  </th>
+                  <td colspan="4"></td>
+                } @else if (light.error) {
+                  <th scope="row">
+                    <span class="name">{{ light.id }}</span>
+                  </th>
+                  <td colspan="4">
+                    <span class="error">{{ light.error }}</span>
+                  </td>
+                } @else {
+                  <th scope="row">
+                    <span class="name">{{ lightName(light) }}</span>
+                    <small>{{ lightAbout(light) }}</small>
+                  </th>
+                  <td>
+                    <input
+                      type="number"
+                      class="address"
+                      min="1"
+                      max="512"
+                      [value]="light.address"
+                      [disabled]="isChanging(light) || light.address === 0"
+                      [attr.aria-label]="'DMX address of ' + lightName(light)"
+                      (change)="onAddress(light, $event)"
+                    />
+                    @if (channelsText(light); as channels) {
+                      <small>{{ channels }}</small>
+                    }
+                  </td>
+                  <td>
+                    @if (light.modes.length > 1) {
+                      <select
+                        [disabled]="isChanging(light)"
+                        [attr.aria-label]="'Mode of ' + lightName(light)"
+                        (change)="onMode(light, $event)"
+                      >
+                        @for (mode of light.modes; track $index) {
+                          <option [value]="$index + 1" [selected]="$index + 1 === light.mode">
+                            {{ modeLabel(mode, $index) }}
+                          </option>
+                        }
+                      </select>
+                    } @else if (light.modes.length === 1) {
+                      <span class="only">{{ modeLabel(light.modes[0], 0) }}</span>
+                    }
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      class="label"
+                      maxlength="32"
+                      placeholder="no name"
+                      [value]="light.label"
+                      [disabled]="isChanging(light)"
+                      [attr.aria-label]="'Name of ' + lightAbout(light)"
+                      (change)="onLabel(light, $event)"
+                    />
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="identify"
+                      [class.on]="light.identify"
+                      [attr.aria-pressed]="light.identify"
+                      [attr.aria-label]="'Identify ' + lightName(light) + ': it shows where it is'"
+                      [disabled]="isChanging(light)"
+                      (click)="identify(light)"
+                    >
+                      <span class="light" aria-hidden="true"></span>Identify
+                    </button>
+                  </td>
+                }
+              </tr>
+              @if (refusal) {
+                <tr class="refusal">
+                  <td colspan="5" role="alert">{{ refusal }}</td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+      @for (remark of remarksOf(box); track remark) {
+        <p class="remark">{{ remark }}</p>
+      }
+    }
+  </section>
+}

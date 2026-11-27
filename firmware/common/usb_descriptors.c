@@ -3,7 +3,8 @@
 //
 // The tables are written out byte by byte instead of with TinyUSB's helper
 // macros, because those macros changed between TinyUSB versions. The bytes for
-// the network adapter are the ones TinyUSB 0.18 produces for its own example.
+// the network adapter are the ones TinyUSB 0.18 produces for its own example,
+// those of the MIDI interface the ones of its TUD_MIDI_DESCRIPTOR.
 #include "usb_descriptors.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -15,7 +16,8 @@
 #define DESC_HI(x) ((uint8_t)(((x) >> 8) & 0xFF))
 
 // Numbers of the text strings the computer can ask for
-enum { STRING_LANGUAGE = 0, STRING_MANUFACTURER, STRING_PRODUCT, STRING_SERIAL, STRING_INTERFACE, STRING_MAC };
+enum { STRING_LANGUAGE = 0, STRING_MANUFACTURER, STRING_PRODUCT, STRING_SERIAL, STRING_INTERFACE, STRING_MAC,
+       STRING_MIDI };
 
 // USB endpoints = the separate "pipes" inside the cable (0x80 = towards the computer).
 // config.h can choose others: the USB port of a PIC32 cannot use one number in
@@ -31,6 +33,9 @@ enum { STRING_LANGUAGE = 0, STRING_MANUFACTURER, STRING_PRODUCT, STRING_SERIAL, 
 #endif
 #define NET_EP_SIZE   64          // packet size of full-speed USB
 #define NET_MAX_FRAME 1514        // largest Ethernet frame
+#define MIDI_EP_OUT   0x03        // MIDI from the computer (to MIDI OUT)
+#define MIDI_EP_IN    0x83        // MIDI to the computer (from MIDI IN)
+#define MIDI_EP_SIZE  64
 
 // ---------------------------------------------------------------- device
 static const uint8_t device_descriptor[18] = {
@@ -47,13 +52,20 @@ static const uint8_t device_descriptor[18] = {
 
 const uint8_t *tud_descriptor_device_cb(void) { return device_descriptor; }
 
-// ---------------------------------------------------------------- configuration: one network adapter
-#define CONFIG_DESC_LEN 94                  // all the bytes of this table
+// ---------------------------------------------------------------- configuration: network adapter and MIDI
+#if CFG_TUD_MIDI
+#define MIDI_DESC_LEN   92
+#define INTERFACES      4                   // network: control and data; MIDI: audio control and MIDI streaming
+#else
+#define MIDI_DESC_LEN   0
+#define INTERFACES      2
+#endif
+#define CONFIG_DESC_LEN (94 + MIDI_DESC_LEN)    // all the bytes of this table
 
 static const uint8_t config_descriptor[CONFIG_DESC_LEN] = {
     // Configuration header
     9, 0x02, DESC_LO(CONFIG_DESC_LEN), DESC_HI(CONFIG_DESC_LEN),
-    2,                                      // two interfaces (control and data)
+    INTERFACES,
     1,                                      // configuration number
     0,                                      // no name
     0x80,                                   // powered from the USB cable
@@ -79,6 +91,25 @@ static const uint8_t config_descriptor[CONFIG_DESC_LEN] = {
     9, 0x04, 1, 1, 2, 0x0A, 0x00, 0x01, 0,
     7, 0x05, NET_EP_IN, 0x02, DESC_LO(NET_EP_SIZE), DESC_HI(NET_EP_SIZE), 0,
     7, 0x05, NET_EP_OUT, 0x02, DESC_LO(NET_EP_SIZE), DESC_HI(NET_EP_SIZE), 0,
+#if CFG_TUD_MIDI
+    // Interface 2, audio control: class 01h "audio", subclass 01h; it only names the MIDI interface
+    9, 0x04, 2, 0, 0, 0x01, 0x01, 0x00, STRING_MIDI,
+    9, 0x24, 0x01, 0x00, 0x01, 9, 0,        // audio control header: version 1.00, 9 bytes ...
+        1, 3,                               //   one streaming interface: number 3
+    // Interface 3, MIDI streaming: subclass 03h, two bulk pipes
+    9, 0x04, 3, 0, 2, 0x01, 0x03, 0x00, 0,
+    7, 0x24, 0x01, 0x00, 0x01, 65, 0,       // MIDI streaming header: version 1.00, 65 bytes up to the end
+    // The "jacks": 1 and 4 carry what the computer sends out to MIDI OUT, 2 and 3
+    // what comes in at MIDI IN to the computer (embedded = the USB side).
+    6, 0x24, 0x02, 0x01, 1, 0,              // IN jack 1, embedded
+    6, 0x24, 0x02, 0x02, 2, 0,              // IN jack 2, external: the MIDI IN socket
+    9, 0x24, 0x03, 0x01, 3, 1, 2, 1, 0,     // OUT jack 3, embedded, fed by jack 2
+    9, 0x24, 0x03, 0x02, 4, 1, 1, 1, 0,     // OUT jack 4, external: the MIDI OUT socket, fed by jack 1
+    9, 0x05, MIDI_EP_OUT, 0x02, DESC_LO(MIDI_EP_SIZE), DESC_HI(MIDI_EP_SIZE), 0, 0, 0,
+    5, 0x25, 0x01, 1, 1,                    //   goes to jack 1
+    9, 0x05, MIDI_EP_IN, 0x02, DESC_LO(MIDI_EP_SIZE), DESC_HI(MIDI_EP_SIZE), 0, 0, 0,
+    5, 0x25, 0x01, 1, 3,                    //   comes from jack 3
+#endif
 };
 
 const uint8_t *tud_descriptor_configuration_cb(uint8_t index) {
@@ -165,6 +196,7 @@ const uint16_t *tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
     case STRING_PRODUCT:      text = USB_PRODUCT; break;
     case STRING_SERIAL:       text = serial_text; break;
     case STRING_INTERFACE:    text = USB_PRODUCT " network adapter"; break;
+    case STRING_MIDI:         text = USB_PRODUCT " MIDI"; break;
     default:
         return NULL;                                       // no such string
     }

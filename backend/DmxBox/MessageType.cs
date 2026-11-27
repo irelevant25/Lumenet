@@ -8,7 +8,8 @@ public static class MessageType
 {
     /// <summary>
     /// No payload. Answer: firmware major, firmware minor, flags, master, uptime in ms (u32),
-    /// preset mask (u16), channel count (u16).
+    /// preset mask (u16), channel count (u16); since dmxbox 3 also the supply voltage in mV (u16),
+    /// what the box can do (u8, see <see cref="BoxAbilities"/>) and its number (u8).
     /// </summary>
     public const byte Ping = 0x01;
 
@@ -44,6 +45,22 @@ public static class MessageType
 
     /// <summary>Payload: slot (u8). Answer: the 512 stored values.</summary>
     public const byte GetPreset = 0x41;
+
+    /// <summary>No payload: the box searches its DMX line for lights with RDM again (dmxbox 3).</summary>
+    public const byte RdmDiscover = 0x50;
+
+    /// <summary>No payload. Answer: searching (u8), count (u16), then the IDs, 6 bytes each.</summary>
+    public const byte RdmTod = 0x51;
+
+    /// <summary>
+    /// Payload: the light's ID (6 bytes), sub-device (u16), command class (u8), parameter (u16),
+    /// data length (u8), data. Answer, when the light has answered: response type (u8), command
+    /// class (u8), parameter (u16), data length (u8), data.
+    /// </summary>
+    public const byte RdmRequest = 0x52;
+
+    /// <summary>No payload: the box restarts into its USB boot loader after the answer, for new firmware.</summary>
+    public const byte Bootloader = 0x60;
 
     /// <summary>The box's answer to every request. Payload: status (u8), then the answer's data.</summary>
     public const byte Ack = 0x80;

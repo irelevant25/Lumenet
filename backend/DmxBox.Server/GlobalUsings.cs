@@ -11,6 +11,7 @@ global using DmxBox.Server.Midi;
 global using DmxBox.Server.Osc;
 global using DmxBox.Server.Outputs;
 global using DmxBox.Server.Projects;
+global using DmxBox.Server.Rdm;
 global using DmxBox.Server.Sequences;
 global using DmxBox.Server.Sounds;
 global using DmxBox.Server.Stack;

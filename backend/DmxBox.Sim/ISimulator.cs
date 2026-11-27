@@ -7,13 +7,13 @@ namespace DmxBox.Sim;
 /// </summary>
 internal interface ISimulator : IDisposable
 {
-    /// <summary>What it is: "dmxbox with the Pico, one output".</summary>
+    /// <summary>What it is: "dmxbox 3, one output, lights with RDM on its line".</summary>
     string Title { get; }
 
     /// <summary>How the desk finds it, a line or two.</summary>
     string Finding { get; }
 
-    /// <summary>The keys of its own beyond U and Q, with what they do: B for the blackout button.</summary>
+    /// <summary>The keys of its own beyond U and Q, with what they do (a MIDI controller: O opens its page).</summary>
     IReadOnlyList<(char Key, string What)> Keys { get; }
 
     /// <summary>True while it is plugged in.</summary>

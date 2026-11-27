@@ -1,7 +1,23 @@
 # Archive
 
 Earlier designs of the dmxbox, kept in case one of them is wanted again. Nothing in here is needed to build
-the current USB box.
+dmxbox 3, the box in `hardware/` (its firmware is in `firmware/`, the old firmware in `firmware/archive/`).
+
+## pico/
+
+The box with a Raspberry Pi Pico in sockets (2026-11-12 to 2026-11-26): one DMX output (transmit only), the Pico's
+own micro-USB, two buttons (blackout, preset). Built by the user on a breadboard and on a 70 × 90 mm perfboard, and
+it worked with a real light. Schematic, breadboard and perfboard plans, EAGLE files, 3D model and BOM. Its firmware:
+`firmware/archive/pico`.
+
+## pic32/
+
+dmxbox 2 (2026-11-23): a PIC32MX270F256B in DIP-28, one or two DMX outputs drawn ready for RDM, a USB-C breakout,
+the piano DIP switch SW1 for the box number, two buttons. Drawn for a 90 × 150 mm perfboard and as EAGLE files;
+never built. `PRICES.md` there (made by the user) priced it on a JLCPCB board; it is the example for pricing later
+boxes. Its firmware: `firmware/archive/pic32` (compiled with XC32, never run).
+
+`eagle.py` writes the EAGLE files of both.
 
 ## ethernet/
 
@@ -15,7 +31,4 @@ The box had an Ethernet (RJ45) port until 2026-11-12. Three designs were drawn, 
 
 `README.md` and `BOM.md` in that folder are the project's documents as they were on the day of the change:
 they describe the through-hole design and, as a variant, the W5500-EVB-Pico one. `firmware/` holds the
-ENC28J60 driver and its PC test, which the USB firmware no longer uses.
-
-The isolated DMX side (6N137, DC-DC converter, RS-485 transceiver, protection diodes, XLR) is the same in the
-current box.
+ENC28J60 driver and its PC test.

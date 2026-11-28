@@ -1,0 +1,4 @@
+(fp_lib_table
+	(version 7)
+	(lib (name "dmxbox4")(type "KiCad")(uri "${KIPRJMOD}/dmxbox4.pretty")(options "")(descr "dmxbox 4 footprints that KiCad does not have"))
+)

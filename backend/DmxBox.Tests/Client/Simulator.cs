@@ -8,8 +8,8 @@ namespace DmxBox.Tests.Client;
 /// <summary>
 /// A running dmxbox simulator (firmware/sim/dmxbox_sim, or dmxbox_sim2 for the box with two
 /// outputs): the firmware's engine and protocol code behind ordinary UDP sockets. Every instance
-/// has its own two UDP ports and its own presets file, so tests cannot disturb each other.
-/// Dispose stops the process and deletes the file.
+/// has its own UDP ports (Art-Net, DX, and its console's for DMX IN) and its own presets file, so
+/// tests cannot disturb each other. Dispose stops the process and deletes the file.
 /// </summary>
 internal sealed class Simulator : IDisposable
 {
@@ -21,12 +21,13 @@ internal sealed class Simulator : IDisposable
     private readonly double _drop;
     private readonly int _outputs;
     private Process? _process;
+    private Socket? _console;   // kept open: Windows may drop a datagram whose socket is closed at once
 
     private Simulator(double drop, int outputs)
     {
         _drop = drop;
         _outputs = outputs;
-        (ArtNetPort, ControlPort) = FindTwoFreeUdpPorts();
+        (ArtNetPort, ControlPort, ConsolePort) = FindThreeFreeUdpPorts();
     }
 
     /// <summary>The UDP port on which this simulator listens for Art-Net.</summary>
@@ -34,6 +35,9 @@ internal sealed class Simulator : IDisposable
 
     /// <summary>The UDP port on which this simulator listens for the DX protocol.</summary>
     public int ControlPort { get; }
+
+    /// <summary>The UDP port of its DMX IN: a datagram there is a frame from a console.</summary>
+    public int ConsolePort { get; }
 
     /// <summary>Starts a simulator and waits until it answers.</summary>
     /// <param name="drop">Fraction of the control packets that the simulator loses, in each direction.</param>
@@ -81,6 +85,14 @@ internal sealed class Simulator : IDisposable
         return new DmxBoxClient(Host, ControlPort, timeout, attempts);
     }
 
+    /// <summary>A console sends one frame to the simulator's DMX IN.</summary>
+    /// <param name="levels">1 to 512 levels, channel 1 first.</param>
+    public void Console(params byte[] levels)
+    {
+        _console ??= new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+        _console.SendTo(levels, new IPEndPoint(IPAddress.Loopback, ConsolePort));
+    }
+
     /// <summary>Creates an Art-Net sender that sends to this simulator.</summary>
     public ArtNetSender CreateArtNetSender(int universe = 0)
     {
@@ -90,6 +102,7 @@ internal sealed class Simulator : IDisposable
     public void Dispose()
     {
         Stop();
+        _console?.Dispose();
         try
         {
             _folder.Delete(recursive: true);
@@ -106,6 +119,7 @@ internal sealed class Simulator : IDisposable
         [
             "--artnet-port", $"{ArtNetPort}",
             "--ctrl-port", $"{ControlPort}",
+            "--console-port", $"{ConsolePort}",
             // The simulator reads "0.3". $"{_drop}" would write "0,3" in many languages.
             "--drop", _drop.ToString(CultureInfo.InvariantCulture),
             "--presets", Path.Combine(_folder.FullName, "presets.bin"),
@@ -186,12 +200,13 @@ internal sealed class Simulator : IDisposable
             "make -C firmware/sim (Linux, macOS), or set DMXBOX_SIM (DMXBOX_SIM2) to the path of the simulator.");
     }
 
-    // Both sockets stay open until both ports are known, so the two ports are certainly different.
-    private static (int First, int Second) FindTwoFreeUdpPorts()
+    // The sockets stay open until every port is known, so the ports are certainly different.
+    private static (int First, int Second, int Third) FindThreeFreeUdpPorts()
     {
         using Socket first = BindToFreePort();
         using Socket second = BindToFreePort();
-        return (PortOf(first), PortOf(second));
+        using Socket third = BindToFreePort();
+        return (PortOf(first), PortOf(second), PortOf(third));
     }
 
     private static Socket BindToFreePort()

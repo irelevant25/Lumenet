@@ -23,7 +23,7 @@ public sealed record MidiSetup(string[] Devices, MidiMapping[] Mappings)
 /// <summary>
 /// What one control of a controller does: it presses a key of the desk, or moves a fader. A
 /// control is a message on a channel: a note, a controller (CC), a pair of controllers for 14
-/// bits, the pitch bend, or a program change.
+/// bits, the pitch bend, or a program change; or a channel of a box's DMX IN.
 /// </summary>
 /// <remarks>Public only because <see cref="IDeskClient"/> has to be.</remarks>
 public sealed record MidiMapping
@@ -43,6 +43,15 @@ public sealed record MidiMapping
     /// <summary>A program change: it presses a key, and lets it go at once.</summary>
     public const string Program = "program";
 
+    /// <summary>
+    /// A channel of a box's DMX IN, 1-512: its level, 0-255, is the fader's; for a key, half or more
+    /// presses it (<see cref="MidiMessage.DmxPress"/>). The device is the box's DMX IN, channel 1.
+    /// </summary>
+    public const string Dmx = "dmx";
+
+    /// <summary>The highest channel of DMX IN.</summary>
+    public const int DmxChannels = 512;
+
     /// <summary>A fader that sends where it stands, 0-127.</summary>
     public const string Absolute = "absolute";
 
@@ -56,7 +65,7 @@ public sealed record MidiMapping
     public const string RelativeSign = "relative-sign";
 
     /// <summary>The kinds of messages, as <see cref="Message"/> names them.</summary>
-    public static readonly string[] Messages = [Note, Controller, Controller14, PitchBend, Program];
+    public static readonly string[] Messages = [Note, Controller, Controller14, PitchBend, Program, Dmx];
 
     /// <summary>The ways a controller (CC) moves a fader, as <see cref="Mode"/> names them.</summary>
     public static readonly string[] Modes = [Absolute, RelativeTwos, RelativeOffset, RelativeSign];
@@ -70,7 +79,10 @@ public sealed record MidiMapping
     /// <summary>The kind of message, one of <see cref="Messages"/>.</summary>
     public string Message { get; init; } = Note;
 
-    /// <summary>The note, controller or program, 0-127; for <see cref="Controller14"/> the coarse controller, 0-31; 0 for the pitch bend.</summary>
+    /// <summary>
+    /// The note, controller or program, 0-127; for <see cref="Controller14"/> the coarse controller,
+    /// 0-31; 0 for the pitch bend; the channel of DMX IN, 1-512, for <see cref="Dmx"/>.
+    /// </summary>
     public int Number { get; init; }
 
     /// <summary>What it works: a key of the desk ("memory.5") or a fader ("fader.master"), see <see cref="ControlTarget"/>.</summary>
@@ -175,14 +187,22 @@ internal static class MidiSetupCheck
         if (!MidiMapping.Messages.Contains(mapping.Message))
             throw new DeskException($"\"{mapping.Message}\" is no kind of MIDI message the desk takes.");
 
-        int highest = mapping.Message switch
+        if (mapping.Message == MidiMapping.Dmx)
         {
-            MidiMapping.Controller14 => 31,
-            MidiMapping.PitchBend => 0,
-            _ => 127,
-        };
-        if (mapping.Number < 0 || mapping.Number > highest)
-            throw new DeskException($"The number of a MIDI {mapping.Message} is 0 to {highest}, not {mapping.Number}.");
+            if (mapping.Number is < 1 or > MidiMapping.DmxChannels)
+                throw new DeskException($"A channel of DMX IN is 1 to {MidiMapping.DmxChannels}, not {mapping.Number}.");
+        }
+        else
+        {
+            int highest = mapping.Message switch
+            {
+                MidiMapping.Controller14 => 31,
+                MidiMapping.PitchBend => 0,
+                _ => 127,
+            };
+            if (mapping.Number < 0 || mapping.Number > highest)
+                throw new DeskException($"The number of a MIDI {mapping.Message} is 0 to {highest}, not {mapping.Number}.");
+        }
 
         ControlTarget target = ControlTarget.Parse(mapping.Target)
             ?? throw new DeskException($"\"{mapping.Target}\" is no key or fader of the desk.");
@@ -202,7 +222,8 @@ internal static class MidiSetupCheck
             Target = target.Name,
             Mode = mapping.Message == MidiMapping.Controller && !target.IsKey ? mapping.Mode : MidiMapping.Absolute,
             Pickup = mapping.Pickup && !relative && !target.IsKey,
-            Feedback = mapping.Feedback && mapping.Message != MidiMapping.Program,
+            Channel = mapping.Message == MidiMapping.Dmx ? 1 : mapping.Channel,
+            Feedback = mapping.Feedback && mapping.Message is not (MidiMapping.Program or MidiMapping.Dmx),
             Lights = target.IsKey ? lights : null,
         };
     }

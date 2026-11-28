@@ -194,6 +194,13 @@ internal static class Program
                 return box => Console.WriteLine(FormatChannels(start, box.GetOutput(start, count)));
             }
 
+            case "input":
+            {
+                int start = commandLine.HasWords ? NextChannelNumber(commandLine, "start") : 1;
+                int count = commandLine.HasWords ? NextChannelNumber(commandLine, "count") : 16;
+                return box => PrintInput(box.GetInput(), start, count);
+            }
+
             default:
                 throw new UsageException($"unknown command '{command}'");
         }
@@ -244,6 +251,34 @@ internal static class Program
         PrintField("uptime_s", info.Uptime.TotalSeconds.ToString("0.0##", CultureInfo.InvariantCulture));
         PrintField("presets", $"[{string.Join(", ", info.Presets)}]");
         PrintField("channels", info.Channels);
+        // what firmware 3.0 and later say too
+        if (info.Model is int model)
+            PrintField("model", $"dmxbox {model}");
+        if (info.BoxNumber is int number)
+            PrintField("box_number", number);
+        if (info.SupplyMillivolts is int supply)
+            PrintField("supply_mv", supply);
+        if (info.BoxNumber is not null)
+        {
+            (BoxAbilities Ability, string Name)[] all = [(BoxAbilities.Rdm, "rdm"), (BoxAbilities.Midi, "midi"), (BoxAbilities.Chain, "chain"), (BoxAbilities.DmxIn, "dmx-in")];
+            string[] can = [.. all.Where(item => info.Abilities.HasFlag(item.Ability)).Select(item => item.Name)];
+            PrintField("can", can.Length == 0 ? "-" : string.Join(", ", can));
+        }
+    }
+
+    // What a console sends to DMX IN: whether it sends, the last frame's number and its levels.
+    private static void PrintInput(DmxInput input, int start, int count)
+    {
+        PrintField("live", input.Live);
+        PrintField("frame", input.Frame);
+        if (input.Levels is not { } levels)
+            return;
+
+        PrintField("channels", levels.Length);
+        int first = Math.Min(start, levels.Length + 1) - 1;
+        int shown = Math.Max(0, Math.Min(count, levels.Length - first));
+        if (shown > 0)
+            Console.WriteLine(FormatChannels(start, levels[first..(first + shown)]));
     }
 
     private static void PrintField(string name, object value)

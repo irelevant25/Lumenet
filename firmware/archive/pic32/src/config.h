@@ -67,7 +67,7 @@
 
 // ---------------------------------------------------------------- pins
 // The pin numbers of the PIC32MX270F256B in its 28-pin DIP case. They are set
-// in board.c; the drawings in hardware/pic32 show the same.
+// in board.c; the drawings in boxes/box2/perfboard show the same.
 //
 //   output 1: TX RB15 (pin 26), direction RB14 (pin 25), RX RB13 (pin 24)
 //   output 2: TX RB9  (pin 18), direction RB7  (pin 16), RX RB8  (pin 17)

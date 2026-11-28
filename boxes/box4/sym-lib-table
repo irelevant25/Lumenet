@@ -1,0 +1,4 @@
+(sym_lib_table
+	(version 7)
+	(lib (name "dmxbox4")(type "KiCad")(uri "${KIPRJMOD}/dmxbox4.kicad_sym")(options "")(descr "dmxbox 4 parts that KiCad does not have"))
+)

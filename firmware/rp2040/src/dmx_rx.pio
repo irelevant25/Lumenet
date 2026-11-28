@@ -1,0 +1,24 @@
+; DMX IN receiver (dmxbox 4): 250 kbaud, 8 data bits, 2 stop bits, 8 PIO cycles a bit (the PIO
+; clock 2 MHz), as the uart_rx example of the Pico SDK.
+;
+; Every byte goes into the RX FIFO as one word: its 8 bits, LSB first, at bits 23 to 30, and bit 31
+; set when its stop bit was low (a framing error). A break shows as a 0 with that bit set; the
+; state machine then waits until the line is high again, so a long break gives one word only.
+; dmx_in_rx.c hands the words to dmx_in.c, which makes frames of them.
+
+.program dmx_rx
+start:
+    wait 0 pin 0        ; the start bit begins
+    set x, 7    [10]    ; 8 data bits; the first one read in its middle, 12 cycles after the edge
+bitloop:
+    in pins, 1
+    jmp x-- bitloop [6] ; 8 cycles a bit
+    jmp pin good_stop   ; the stop bit is high: a good byte
+    set x, 1
+    in x, 1             ; marked: a framing error (a break, or a byte that went wrong)
+    push
+    wait 1 pin 0        ; the end of the break
+    jmp start
+good_stop:
+    in null, 1          ; not marked
+    push

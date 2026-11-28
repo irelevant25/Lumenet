@@ -202,7 +202,9 @@ describe('the desk page: the RDM tab of Settings', () => {
     await show('/settings#rdm');
     await until(() => page.querySelectorAll('lm-rdm-panel section.box').length === 3);
     const sections = [...page.querySelectorAll('lm-rdm-panel section.box')];
-    expect(sections[0].textContent).toContain('This box has no RDM: dmxbox 3 has it.');
+    expect(sections[0].textContent).toContain(
+      'This box has no RDM: its firmware is older than 3.0.',
+    );
     expect(sections[0].querySelector('button')).toBeNull();
     expect(sections[1].querySelector('.error')?.textContent?.trim()).toBe(
       'The box does not answer.',

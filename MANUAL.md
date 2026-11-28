@@ -555,7 +555,7 @@ same levels on every kind of output, and so does a box: its own master stays at 
 
 **dmxbox.** A box has an output, a DMX socket, for each universe it sends, and says how many when the desk
 finds it. The box with the Pico has one, at 192.168.7.1. A box with a number switch answers at 10.1.n.1 for
-the number n on its switch, and the desk finds it by itself on the PC's network adapters. dmxbox 3 is such a
+the number n on its switch, and the desk finds it by itself on the PC's network adapters. dmxbox 4 is such a
 box, with one output: its switch gives 0 to 255, and every box on one PC needs its own number. Its lights with
 RDM are in the RDM tab of Settings (see [RDM](#rdm)), and its MIDI sockets are a MIDI device of the PC.
 
@@ -615,7 +615,7 @@ and others), at a serial port of this PC: each plays one universe, or Off, which
 ### RDM
 
 A light with RDM tells its dmxbox what it is, and takes its DMX address, its mode and its name from the desk,
-so nobody has to climb to it. dmxbox 3 looks for the lights with RDM on its DMX line when it starts. They are in
+so nobody has to climb to it. dmxbox 4 looks for the lights with RDM on its DMX line when it starts. They are in
 **Settings**, in the **RDM** tab, a table for each box that answers.
 
 * **The table:** each light with its name (the one it was given, else its model), its maker, model and RDM
@@ -1438,7 +1438,7 @@ A MIDI controller plugged into the PC (an Akai APC mini, a Korg nanoKONTROL2, a 
 others) plays the desk: its keys press the desk's keys, its faders and knobs move its faders, and the desk
 lights its keys and moves its motorized faders back. The desk program takes the controller, not the page, so it
 works whichever pages are open, on Windows and macOS (on Linux only the simulators below). A controller with a
-DIN cable goes into MIDI IN of a dmxbox 3: the box is a MIDI device of the PC ("dmxbox 3"), and what comes
+DIN cable goes into MIDI IN of a dmxbox 4: the box is a MIDI device of the PC ("dmxbox 4"), and what comes
 in there reaches the desk as from any other device; what the desk sends to it goes out of the box's MIDI OUT.
 
 ![The MIDI view: two simulated controllers in use and the messages that came in at the left, the faders of the pages shown with their controls at the right](docs/screenshots/midi.png)
@@ -1466,7 +1466,8 @@ its left stand the controllers and the messages that came in, at its right every
   their names, and controls by what they are ("cc 48").
 * A key takes a note, a controller (CC, pressed above 0) or a program change. A fader takes a controller, a
   pair of controllers for 14 bits (when the fine one, 32 above, follows at once while learning) or the pitch
-  bend (the faders of Mackie controllers). Under a fader's control stand how it moves the fader (a fader or
+  bend (the faders of Mackie controllers). A channel of DMX IN works either (see
+  [A console on DMX IN](#a-console-on-dmx-in)). Under a fader's control stand how it moves the fader (a fader or
   knob from 0 to 127, or an endless encoder of one of three kinds), **Takes over at the desk's value** and
   **Motor or lights**; under a key's control **Light**.
 
@@ -1523,13 +1524,24 @@ The faders of these work the faders of the pages shown, so the page keys choose 
 These follow the makers' manuals; the lights of the two X-Touch follow what other programs send them, as
 their manuals do not say. They were tried with the simulators below, not yet with the real controllers.
 
+### A console on DMX IN
+
+A lighting console's DMX output goes into DMX IN of a dmxbox 4, the male XLR beside DMX OUT: the console then
+plays the desk as a controller does. While the box is plugged in, the MIDI view lists its DMX IN as a device,
+"DMX IN (box 3)" for box 3: tick it, and Learn takes the console's channel you move. A channel moves a fader
+with its level (0 to 255; **Takes over at the desk's value** as for any fader), and presses a key from half
+(128) up, letting it go below. Nothing goes back to a console, so such a control has no Light or Motor. When
+the console is plugged in, its first frame only shows where its faders stand: a button held then presses
+nothing. The box goes on sending its own DMX OUT meanwhile.
+
 ### Without a controller
 
 `sim.cmd` in the source code starts a simulated controller, as if it were plugged into the PC: `sim.cmd
 apc-mini-mk2`, `nanokontrol2`, `x-touch-mini` or `x-touch-compact`. The MIDI view lists it as "APC mini mk2
 (simulator)", and the browser opens its page: pads and keys held with the mouse, faders and knobs moved, lit
 and moved by the desk as the real one would be. U pulls it out and plugs it in again, Q ends it (see
-[DEV.md](DEV.md#simulated-devices-simcmd)).
+[DEV.md](DEV.md#simulated-devices-simcmd)). `sim.cmd dmxbox --console` gives a simulated box a console on its DMX IN: 24
+faders and 8 buttons on channels 1 to 32, on a page of their own.
 
 ![A simulated APC mini mk2: the pads lit as the desk's keys, memory 1 up, channel page 2 shown, the first fader at the top](docs/screenshots/midi-simulator.png)
 

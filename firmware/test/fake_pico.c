@@ -1,4 +1,4 @@
-// Pretend hardware for the PC test of dmxbox 3: see fake_pico.h.
+// Pretend hardware for the PC test of the RP2040 firmware: see fake_pico.h.
 #include "fake_pico.h"
 
 #include <setjmp.h>
@@ -17,6 +17,7 @@
 
 #include "board.h"
 #include "config.h"
+#include "dmx_in_rx.h"
 #include "dmx_line.h"
 #include "midi.h"
 #include "platform.h"
@@ -38,7 +39,7 @@
 #define BLOCK_HEADER     (12 + 8 + 4 * (BLOCK_MAX_FRAMES + 1))
 
 // ---------------------------------------------------------------- scenario storage
-typedef enum { EV_CONNECT, EV_DISCONNECT, EV_SUSPEND, EV_FETCH, EV_BLOCK, EV_SAMPLE } ev_kind_t;
+typedef enum { EV_CONNECT, EV_DISCONNECT, EV_SUSPEND, EV_FETCH, EV_BLOCK, EV_SAMPLE, EV_CONSOLE } ev_kind_t;
 typedef struct { uint32_t ms; ev_kind_t kind; int a, b; } event_t;
 typedef struct { int offset, len; } blob_t;
 
@@ -137,6 +138,11 @@ void board_leds(bool usb, bool dmx, bool midi) {
     now_ms++;
     if (now_ms >= run_until) longjmp(main_exit, 1);
 }
+
+// ---------------------------------------------------------------- DMX IN (dmx_in_rx.h): a console
+static dmx_in_t *dmx_in;
+
+void dmx_in_rx_start(dmx_in_t *in) { dmx_in = in; }
 
 void midi_init(void) { midi_ready = true; }
 void midi_poll(void) {}
@@ -365,6 +371,9 @@ static void fire(const event_t *e) {
         usb.wait_count[usb.n_wait++] = e->b;
         break;
     case EV_SAMPLE:  sample_dmx(e->a); break;
+    case EV_CONSOLE:                                    // what the receiver of DMX IN would hand over
+        if (dmx_in) dmx_in_frame(dmx_in, arena + e->a, e->b, now_ms);
+        break;
     }
 }
 
@@ -458,6 +467,7 @@ void fake_reset(bool keep_flash) {
     box_number = 7;
     board_ready = line_ready = midi_ready = false;
     bootloader_ms = 0;
+    dmx_in = NULL;
     lights_make(0);
     rdm_packets = rdm_last_len = 0;
     rdm_waiting = false;
@@ -476,6 +486,11 @@ void fake_host_fetch(bool on) { add_event(EV_FETCH, on, 0); }
 void fake_box_number(uint8_t n) { box_number = n; }
 void fake_rdm_lights(int n) { lights_make(n); }
 void fake_sample_dmx(int slot) { add_event(EV_SAMPLE, slot, 0); }
+
+void fake_console(const uint8_t *levels, int count) {
+    blob_t b = store(levels, count);
+    add_event(EV_CONSOLE, b.offset, b.len);
+}
 
 void fake_frame(const uint8_t *frame, int len) {
     if (n_in >= MAX_IN) { violation("test: too many frames"); return; }
@@ -517,6 +532,7 @@ const char *fake_log(void) { return log_text; }
 int fake_saves(void) { return saves; }
 int fake_usb_starts(void) { return usb.inits; }
 bool fake_board_ready(void) { return board_ready && line_ready && midi_ready; }
+bool fake_dmx_in_started(void) { return dmx_in != NULL; }
 bool fake_core1_flash_ready(void) { return core1_flash_ready; }
 int fake_rdm_packets(void) { return rdm_packets; }
 const uint8_t *fake_rdm_last(int *len) { *len = rdm_last_len; return rdm_last; }

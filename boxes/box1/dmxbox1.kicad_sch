@@ -1,0 +1,162 @@
+(kicad_sch
+	(version 20250610)
+	(generator "eeschema")
+	(generator_version "9.99")
+	(uuid "1d6c0f3a-7b2e-4c59-9e14-5a8b2f7c1d01")
+	(paper "A3")
+	(title_block
+		(title "dmxbox 1: a Raspberry Pi Pico, USB to DMX with RDM")
+		(date "2026-11-28")
+		(rev "1")
+		(company "Lumenet")
+		(comment 1 "Made by boxes/box1/scripts/make_schematic.py from circuit.py: change those, not this file.")
+	)
+	(lib_symbols)
+	(sheet
+		(at 30.48 60.96)
+		(size 76.2 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0)
+		)
+		(uuid "9aea7fd7-950d-53d7-9b64-5afce02030ef")
+		(property "Sheetname" "Pico, LEDs, box number"
+			(at 30.48 60.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "dmxbox1_pico.kicad_sch"
+			(at 30.48 86.96 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+				(hide yes)
+			)
+		)
+		(instances
+			(project "dmxbox1"
+				(path "/1d6c0f3a-7b2e-4c59-9e14-5a8b2f7c1d01"
+					(page "2")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 121.92 60.96)
+		(size 76.2 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0)
+		)
+		(uuid "87f36ca8-7303-5e14-94a6-5352985983e8")
+		(property "Sheetname" "DMX with RDM"
+			(at 121.92 60.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "dmxbox1_dmx.kicad_sch"
+			(at 121.92 86.96 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+				(hide yes)
+			)
+		)
+		(instances
+			(project "dmxbox1"
+				(path "/1d6c0f3a-7b2e-4c59-9e14-5a8b2f7c1d01"
+					(page "3")
+				)
+			)
+		)
+	)
+	(text "dmxbox 1: a USB network adapter for the Lumenet desk (and any Art-Net program): a Raspberry Pi Pico with one"
+		(exclude_from_sim no)
+		(at 30.48 116.84 0)
+		(effects
+			(font
+				(size 1.778 1.778)
+			)
+			(justify left bottom)
+		)
+		(uuid "59277529-9e74-5c6e-9a56-ce14c70cb242")
+	)
+	(text "DMX output with RDM and the switch for its number. Every part is through-hole, and you solder them yourself."
+		(exclude_from_sim no)
+		(at 30.48 121.92 0)
+		(effects
+			(font
+				(size 1.778 1.778)
+			)
+			(justify left bottom)
+		)
+		(uuid "78298b01-878b-5ad4-8fa8-0bc3fc0b95f1")
+	)
+	(text "The Pico sits in two socket strips; its micro-USB is the box's USB socket. You make the cable from the pin"
+		(exclude_from_sim no)
+		(at 30.48 132.08 0)
+		(effects
+			(font
+				(size 1.778 1.778)
+			)
+			(justify left bottom)
+		)
+		(uuid "3c456afd-e07d-5588-ad74-c1cd0e8294e0")
+	)
+	(text "header J4 to the XLR socket in the box wall."
+		(exclude_from_sim no)
+		(at 30.48 137.16 0)
+		(effects
+			(font
+				(size 1.778 1.778)
+			)
+			(justify left bottom)
+		)
+		(uuid "9fd10bcb-3561-5a91-92ab-1a118c382f65")
+	)
+	(text "Made by boxes/box1/scripts/make_schematic.py from boxes/box1/scripts/circuit.py."
+		(exclude_from_sim no)
+		(at 30.48 147.32 0)
+		(effects
+			(font
+				(size 1.778 1.778)
+			)
+			(justify left bottom)
+		)
+		(uuid "a9fde262-995c-58ec-b61c-4cc2031d0681")
+	)
+	(sheet_instances
+		(path "/"
+			(page "1")
+		)
+	)
+	(embedded_fonts no)
+)

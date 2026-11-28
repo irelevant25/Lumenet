@@ -16,6 +16,38 @@ namespace DmxBox.Tests.Client;
 public sealed class EndToEndTests
 {
     [Fact]
+    public void AConsoleOnDmxInIsReadOnceForEachFrame()
+    {
+        using var sim = Simulator.Start();
+        using var box = sim.CreateClient();
+        Assert.Equal(new DmxInput(Live: false, Frame: 0, Levels: null), box.GetInput());
+
+        sim.Console(1, 2, 3);
+        DmxInput first = UntilFrame(box, 1);
+        Assert.True(first.Live);
+        Assert.Equal([1, 2, 3], first.Levels);
+        Assert.Null(box.GetInput(since: 1).Levels);                // asked again: the caller has it
+
+        sim.Console(new byte[512]);
+        DmxInput second = UntilFrame(box, 2);
+        Assert.Equal(512, second.Levels!.Length);
+    }
+
+    // Asks until the simulator has taken the console's frame of that number.
+    private static DmxInput UntilFrame(DmxBoxClient box, uint frame)
+    {
+        var waited = Stopwatch.StartNew();
+        while (true)
+        {
+            DmxInput input = box.GetInput();
+            if (input.Frame >= frame)
+                return input;
+            Assert.True(waited.Elapsed < TimeSpan.FromSeconds(5), $"The simulator did not take frame {frame} of the console.");
+            Thread.Sleep(5);
+        }
+    }
+
+    [Fact]
     public void Ping()
     {
         using var sim = Simulator.Start();
@@ -23,11 +55,12 @@ public sealed class EndToEndTests
 
         PingInfo info = box.Ping();
 
-        Assert.Equal("3.0", info.Firmware);
+        Assert.Equal("3.2", info.Firmware);
         Assert.Equal(512, info.Channels);
         Assert.Equal(255, info.Master);
-        Assert.Equal(BoxAbilities.Rdm | BoxAbilities.Midi | BoxAbilities.Chain, info.Abilities);
+        Assert.Equal(BoxAbilities.Rdm | BoxAbilities.Midi | BoxAbilities.Chain | BoxAbilities.DmxIn, info.Abilities);
         Assert.Equal(0, info.BoxNumber);
+        Assert.Equal(4, info.Model);
         Assert.Equal(5000, info.SupplyMillivolts);
     }
 
@@ -247,7 +280,7 @@ public sealed class EndToEndTests
             port: sim.ArtNetPort);
 
         ArtNetNode node = Assert.Single(nodes);
-        Assert.Equal("dmxbox 3", node.ShortName);
+        Assert.Equal("dmxbox 4", node.ShortName);
         Assert.Equal(0, node.Universe);
     }
 

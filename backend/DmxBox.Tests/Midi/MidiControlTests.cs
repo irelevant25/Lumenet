@@ -139,6 +139,37 @@ public sealed class MidiControlTests : IDisposable
     }
 
     [Fact]
+    public void LearnTakesAChannelOfDmxInForAFaderAndAButtonAtHalfForAKey()
+    {
+        const string DmxIn = "DMX IN (box 3)";
+        PretendMidiDevice console = _ports.Plug(DmxIn, output: false);
+        _midi.Use(DmxIn, use: true);
+
+        _midi.Learn("fader.channel.7");
+        console.Play(new MidiMessage(MidiKind.Dmx, 1, 40, 17));
+        _midi.Learn("stack.play");
+        console.Play(new MidiMessage(MidiKind.Dmx, 1, 41, 100));   // under half: a key waits
+        Assert.Equal("stack.play", _midi.State.Learning);
+        console.Play(new MidiMessage(MidiKind.Dmx, 1, 41, 255));
+
+        MidiMapping[] mappings = [.. _midi.State.Mappings.OrderBy(mapping => mapping.Number)];
+        Assert.Equal(2, mappings.Length);
+        Assert.Equal((DmxIn, 1, MidiMapping.Dmx, 40, "fader.channel.7", true), (mappings[0].Device, mappings[0].Channel, mappings[0].Message, mappings[0].Number, mappings[0].Target, mappings[0].Pickup));
+        Assert.Equal((MidiMapping.Dmx, 41, "stack.play", false), (mappings[1].Message, mappings[1].Number, mappings[1].Target, mappings[1].Feedback));
+    }
+
+    [Fact]
+    public void AChannelOfDmxInIsOneTo512AndHearsNothingBack()
+    {
+        Assert.Contains("1 to 512", Assert.Throws<DeskException>(() => _midi.SetMappings([Map(MidiMapping.Dmx, 0, "fader.master")])).Message, StringComparison.Ordinal);
+        Assert.Contains("1 to 512", Assert.Throws<DeskException>(() => _midi.SetMappings([Map(MidiMapping.Dmx, 513, "fader.master")])).Message, StringComparison.Ordinal);
+
+        _midi.SetMappings([Map(MidiMapping.Dmx, 512, "memory.5", channel: 9)]);
+        MidiMapping key = Assert.Single(_midi.Setup.Mappings);
+        Assert.Equal((1, false), (key.Channel, key.Feedback));   // DMX IN's own channel; no light to light
+    }
+
+    [Fact]
     public void LearnWaitsForAControlThatCanWorkTheTarget()
     {
         PretendMidiDevice apc = PlugAndUse();

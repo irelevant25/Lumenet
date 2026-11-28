@@ -10,9 +10,10 @@ namespace DmxBox;
 /// <param name="Uptime">Time since the box started.</param>
 /// <param name="Presets">Numbers of the preset slots that hold a look.</param>
 /// <param name="Channels">Number of DMX channels the box sends.</param>
-/// <param name="SupplyMillivolts">The supply voltage the box measures, in millivolts; null if it does not say (before dmxbox 3).</param>
-/// <param name="Abilities">What it can do beyond DMX: RDM, MIDI, a chain of boxes (dmxbox 3).</param>
+/// <param name="SupplyMillivolts">The supply voltage the box measures, in millivolts; null if it does not say (firmware before 3.0) or cannot measure it (dmxbox 2).</param>
+/// <param name="Abilities">What it can do beyond DMX: RDM, MIDI, a chain of boxes (firmware 3.0 and later).</param>
 /// <param name="BoxNumber">The number on its switch, 0 to 255; null if it does not say.</param>
+/// <param name="Model">Which dmxbox it is, 1 to 4; null if it does not say (firmware before 3.1).</param>
 public sealed record PingInfo(
     string Firmware,
     bool ArtNetLive,
@@ -25,4 +26,5 @@ public sealed record PingInfo(
     int Channels,
     int? SupplyMillivolts = null,
     BoxAbilities Abilities = BoxAbilities.None,
-    int? BoxNumber = null);
+    int? BoxNumber = null,
+    int? Model = null);

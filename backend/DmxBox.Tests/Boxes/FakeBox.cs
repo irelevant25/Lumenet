@@ -2,7 +2,7 @@ namespace DmxBox.Tests.Boxes;
 
 /// <summary>
 /// A pretend dmxbox for the tests of the server. It remembers what it was told, and a test can
-/// unplug it, restart it and press its blackout button.
+/// unplug it, restart it, press its blackout button, and play a console on its DMX IN.
 /// </summary>
 /// <remarks>Thread-safe: in some tests the box link's own thread talks to it while the test looks.</remarks>
 internal sealed class FakeBox : IBox
@@ -16,13 +16,18 @@ internal sealed class FakeBox : IBox
     private TimeSpan _uptime = TimeSpan.FromSeconds(10);
     private Exception? _failure;
     private bool _disposed;
+    private readonly int? _dmxInBox;
+    private byte[]? _console;
+    private uint _frame;
 
     /// <summary>A box that answers, with nothing set yet.</summary>
     /// <param name="outputs">Its outputs, each a universe of 512 channels.</param>
-    public FakeBox(int outputs = 1)
+    /// <param name="dmxInBox">For a box with DMX IN (firmware 3.2 and its number); null for one without.</param>
+    public FakeBox(int outputs = 1, int? dmxInBox = null)
     {
         _channels = outputs * 512;
         _levels = new byte[_channels];
+        _dmxInBox = dmxInBox;
     }
 
     /// <summary>
@@ -138,6 +143,17 @@ internal sealed class FakeBox : IBox
         }
     }
 
+    /// <summary>A console sends a frame to the box's DMX IN.</summary>
+    /// <param name="levels">Its levels, channel 1 first.</param>
+    public void Console(params byte[] levels)
+    {
+        lock (_lock)
+        {
+            _console = (byte[])levels.Clone();
+            _frame++;
+        }
+    }
+
     /// <summary>A power cycle: the box forgets everything, and its uptime starts again.</summary>
     public void Restart()
     {
@@ -157,7 +173,7 @@ internal sealed class FakeBox : IBox
         {
             Record("ping");
             return new PingInfo(
-                Firmware: "1.0",
+                Firmware: _dmxInBox is null ? "1.0" : "3.2",
                 ArtNetLive: false,
                 Blackout: _blackoutOn,
                 MergeMode: MergeMode.Htp,
@@ -165,7 +181,10 @@ internal sealed class FakeBox : IBox
                 Master: _masterLevel,
                 Uptime: _uptime,
                 Presets: [],
-                Channels: _channels);
+                Channels: _channels,
+                Abilities: _dmxInBox is null ? BoxAbilities.None : BoxAbilities.DmxIn,
+                BoxNumber: _dmxInBox,
+                Model: _dmxInBox is null ? null : 4);
         }
     }
 
@@ -196,6 +215,18 @@ internal sealed class FakeBox : IBox
         {
             Record(on ? "blackout on" : "blackout off");
             _blackoutOn = on;
+        }
+    }
+
+    /// <inheritdoc />
+    public DmxInput GetInput(uint since)
+    {
+        lock (_lock)
+        {
+            Record("input");
+            if (_dmxInBox is null)
+                throw new DmxBoxException(9);   // NOT_SUPPORTED
+            return new DmxInput(_frame > 0, _frame, _frame > 0 && _frame != since ? (byte[])_console!.Clone() : null);
         }
     }
 

@@ -20,4 +20,8 @@ internal interface IBox : IDisposable
     /// <summary>Switches the box's blackout on or off.</summary>
     /// <param name="on">True for dark.</param>
     void Blackout(bool on);
+
+    /// <summary>What a console sends to the box's DMX IN (a box with <see cref="BoxAbilities.DmxIn"/>).</summary>
+    /// <param name="since">The number of the frame the caller has; 0 for none.</param>
+    DmxInput GetInput(uint since);
 }

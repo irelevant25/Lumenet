@@ -7,7 +7,7 @@ using System.Text;
 namespace DmxBox.Server.Rdm;
 
 /// <summary>
-/// RDM for the desk: the lights with RDM on the DMX lines of the boxes (dmxbox 3), read and changed
+/// RDM for the desk: the lights with RDM on the DMX lines of the boxes, read and changed
 /// through the boxes. Each box gets a connection of its own here (its own DX session), so RDM never
 /// waits behind the levels the box link sends, nor they behind RDM.
 /// </summary>

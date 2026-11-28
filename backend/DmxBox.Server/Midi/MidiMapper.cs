@@ -79,7 +79,7 @@ internal readonly record struct MidiOutcome(string? Target, string Result, int? 
 /// presses it (<c>pressKey</c>), as its keyboard shortcut would: a locked key stays locked, and
 /// while SOLO is lit a key held down holds its fader.</item>
 /// <item>A fader: a controller's 0-127, a pair of controllers' 14 bits or the pitch bend's 14
-/// bits become 0-255. An endless encoder moves it from where it is, <see cref="RelativeStep"/> a
+/// bits become 0-255; a channel of DMX IN is 0-255 already. An endless encoder moves it from where it is, <see cref="RelativeStep"/> a
 /// tick. A fader without a motor takes over only when it reaches the desk's value, or passes it
 /// (<see cref="MidiMapping.Pickup"/>): a light never jumps to where the hand left the fader.</item>
 /// </list>
@@ -133,6 +133,9 @@ internal sealed class MidiMapper
                     break;
                 case MidiMapping.Program:
                     byMessage[(mapping.Device, mapping.Channel, MidiKind.ProgramChange, mapping.Number)] = (mapping, false);
+                    break;
+                case MidiMapping.Dmx:
+                    byMessage[(mapping.Device, 1, MidiKind.Dmx, mapping.Number)] = (mapping, false);
                     break;
             }
         }
@@ -280,6 +283,9 @@ internal sealed class MidiMapper
                 break;
             case MidiMapping.Controller:
                 position = Scale(message.Value, 127);
+                break;
+            case MidiMapping.Dmx:
+                position = Math.Clamp(message.Value, 0, FaderScale.Top);   // a level of DMX is a fader's place as it is
                 break;
             case MidiMapping.Controller14:
                 if (fine)

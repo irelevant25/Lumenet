@@ -2,7 +2,7 @@ namespace DmxBox.Tests.Client;
 
 /// <summary>
 /// RDM through the client: the simulator has three lights with RDM on its line (firmware/sim/rdm_lights.c),
-/// which the box finds by itself and asks for the client, as dmxbox 3 does on its real line.
+/// which the box finds by itself and asks for the client, as a dmxbox does on its real line.
 /// </summary>
 public sealed class RdmTests
 {

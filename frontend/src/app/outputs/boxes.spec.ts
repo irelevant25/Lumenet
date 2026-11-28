@@ -1,8 +1,24 @@
 import { plansOf, switchNumber, withBox, withOutput, withoutBox } from './boxes';
 import { BoxView } from '../desk/desk-types';
 
-const pico: BoxView = { address: '192.168.7.1', connected: true, firmware: '1.0', outputs: 1, universes: [1], kind: 'automatic' };
-const second: BoxView = { address: '10.1.3.1', connected: true, firmware: '1.0', outputs: 2, universes: [2, 3], kind: 'automatic' };
+const pico: BoxView = {
+  address: '192.168.7.1',
+  connected: true,
+  firmware: '1.0',
+  outputs: 1,
+  universes: [1],
+  kind: 'automatic',
+  model: null,
+};
+const second: BoxView = {
+  address: '10.1.3.1',
+  connected: true,
+  firmware: '1.0',
+  outputs: 2,
+  universes: [2, 3],
+  kind: 'automatic',
+  model: null,
+};
 
 describe('boxes', () => {
   it('the first change makes the boxes that answer the list, with what they play now', () => {

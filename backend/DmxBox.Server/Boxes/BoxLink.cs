@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Net.Sockets;
 
 namespace DmxBox.Server.Boxes;
@@ -22,6 +23,11 @@ namespace DmxBox.Server.Boxes;
 /// is connected its own blackout stays off: a press of the button, which the link sees at the
 /// next ping (10 a second), switches the desk's blackout over, and once the box has the desk's
 /// output with it, the link takes the box's own blackout off again.
+/// </remarks>
+/// <remarks>
+/// A box with a DMX input (dmxbox 4) is also asked what came in there, in every round, while
+/// someone listens (<see cref="ListenToInput"/>): the MIDI of the desk, for which its DMX IN is a
+/// device among the controllers.
 /// </remarks>
 /// <remarks>
 /// The link has a thread of its own, because a request to a box that does not answer blocks
@@ -51,6 +57,12 @@ internal sealed class BoxLink : IDisposable
 
     // 1 when the wiring changed: the next round sends the output again.
     private int _resend;
+
+    // Who listens to the box's DMX IN; null while nobody does. Replaced by any thread.
+    private volatile InputListener? _listener;
+
+    // The name of the box's DMX IN among the MIDI devices while the box answers and has one.
+    private volatile string? _inputName;
 
     // Everything below belongs to the link's thread alone.
     private bool _connected;
@@ -90,6 +102,35 @@ internal sealed class BoxLink : IDisposable
 
     /// <summary>Whether the box is connected right now, with its outputs.</summary>
     public BoxStatus Status => _status;
+
+    /// <summary>
+    /// The name of the box's DMX IN among the MIDI devices, "DMX IN (box 3)", while the box answers and
+    /// has one (dmxbox 4); null otherwise.
+    /// </summary>
+    public string? InputName => _inputName;
+
+    /// <summary>
+    /// Hands over what comes in at the box's DMX IN from now on: every channel whose level changed,
+    /// with its new level, on the link's thread. The listener before stops. Any thread.
+    /// </summary>
+    /// <param name="changed">Called with the channel (1-512) and its level.</param>
+    public InputListener ListenToInput(Action<int, byte> changed)
+    {
+        var listener = new InputListener(this, changed);
+        _listener?.Lose();
+        _listener = listener;
+        if (_inputName is null)
+            listener.Lose();   // the box is not there (any more): its name will be listed again when it is
+        return listener;
+    }
+
+    /// <summary>The listener stops; the box is asked no more. Any thread.</summary>
+    /// <param name="listener">The listener, if it is still the one.</param>
+    internal void StopListening(InputListener listener)
+    {
+        if (_listener == listener)
+            _listener = null;
+    }
 
     /// <summary>The wiring changed: the box gets its output again in the next round. Any thread may call this.</summary>
     public void ResendSoon()
@@ -183,9 +224,12 @@ internal sealed class BoxLink : IDisposable
         _lastUptime = info.Uptime;
         _nextPing = now + PingInterval;
         _lastFailure = null;
+        _inputName = info.Abilities.HasFlag(BoxAbilities.DmxIn) && info.BoxNumber is { } number
+            ? string.Create(CultureInfo.InvariantCulture, $"DMX IN (box {number})")
+            : null;
         _logger.LogInformation(
             "The box at {Host} is connected, firmware {Firmware}, outputs: {Outputs}.", _status.Host, info.Firmware, outputs);
-        Report(new BoxStatus(Connected: true, _status.Host, info.Firmware) { Outputs = outputs });
+        Report(new BoxStatus(Connected: true, _status.Host, info.Firmware) { Outputs = outputs, Model = info.Model });
         PushEverything();
     }
 
@@ -198,6 +242,8 @@ internal sealed class BoxLink : IDisposable
     private void Serve(TimeSpan now)
     {
         SendOutputIfChanged();
+        if (_inputName is not null && _listener is { Gone: false } listener)
+            ReadInput(listener);
 
         if (now >= _nextPing)
         {
@@ -249,6 +295,14 @@ internal sealed class BoxLink : IDisposable
         _box.Blackout(false);
     }
 
+    // What a console sent to DMX IN since the last round: the frame, if it is a new one.
+    private void ReadInput(InputListener listener)
+    {
+        DmxInput input = _box.GetInput(listener.Frame);
+        if (input.Levels is { } levels)
+            listener.Take(input.Frame, levels);
+    }
+
     private void SendOutputIfChanged()
     {
         if (_desk.OutputChanges != _sentOutput || Interlocked.Exchange(ref _resend, 0) == 1)
@@ -285,11 +339,13 @@ internal sealed class BoxLink : IDisposable
     {
         _nextPing = now + RetryInterval;
         LogFailure(reason);
+        _inputName = null;
+        _listener?.Lose();
         if (!_connected)
             return;
 
         _connected = false;
-        Report(new BoxStatus(Connected: false, _status.Host, Firmware: null) { Outputs = _status.Outputs });
+        Report(new BoxStatus(Connected: false, _status.Host, Firmware: null) { Outputs = _status.Outputs, Model = _status.Model });
     }
 
     // A missing box fails every second, each time for the same reason. The log gets a reason

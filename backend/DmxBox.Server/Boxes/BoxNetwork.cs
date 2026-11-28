@@ -97,6 +97,27 @@ internal sealed class BoxNetwork : BackgroundService
     /// </summary>
     public BoxView[] Boxes => _views;
 
+    /// <summary>The DMX inputs of the boxes that answer and have one, by their names among the MIDI devices.</summary>
+    public string[] InputNames()
+    {
+        lock (_lock)
+        {
+            return [.. _links.Values.Select(running => running.Link.InputName).OfType<string>().Distinct(StringComparer.Ordinal)];
+        }
+    }
+
+    /// <summary>Listens to the DMX IN of that name (see <see cref="BoxLink.ListenToInput"/>); null when no box that answers has it.</summary>
+    /// <param name="name">Its name, as <see cref="InputNames"/> has it.</param>
+    /// <param name="changed">Called with each channel that changed and its level, on the box link's thread.</param>
+    public InputListener? ListenToInput(string name, Action<int, byte> changed)
+    {
+        lock (_lock)
+        {
+            BoxLink? link = _links.Values.Select(running => running.Link).FirstOrDefault(found => found.InputName == name);
+            return link?.ListenToInput(changed);
+        }
+    }
+
     /// <summary>
     /// Looks at what to look for again: the PC's adapters and the project's list. Starts a link for
     /// a box that is new to it, stops the link of a box it no longer has to look for, and tells the

@@ -1,4 +1,5 @@
-// PC test of the dmxbox 3 firmware. No board and no USB cable are needed:
+// PC test of the RP2040 firmware of the dmxboxes, as the box whose box.h it is built with (build.cmd: box 4,
+// then box 3). No board and no USB cable are needed:
 // fake_pico.c plays the hardware, the USB library (TinyUSB) and the computer at
 // the other end of the cable.
 //
@@ -10,10 +11,11 @@
 //      lights that answer RDM on its DMX line
 //
 //   Windows:      build.cmd (also builds and runs test_rdm.c)
-//   Linux/macOS:  cc -std=c11 -Wall -Wextra -Ifake_pico -I../src -I../common -I../sim -I. test_net.c fake_pico.c \
-//                    firmware_main.c ../common/usb_net.c ../common/usb_descriptors.c ../common/net.c \
-//                    ../common/dhcp_server.c ../common/engine.c ../common/artnet.c ../common/ctrl.c \
-//                    ../common/presets.c ../common/rdm.c ../sim/rdm_lights.c -o test_net && ./test_net
+//   Linux/macOS:  cc -std=c11 -Wall -Wextra -Ifake_pico -I../../boxes/box4/firmware -I../rp2040/src -I../common \
+//                    -I../sim -I. test_net.c fake_pico.c firmware_main.c ../common/usb_net.c \
+//                    ../common/usb_descriptors.c ../common/net.c ../common/dhcp_server.c ../common/engine.c \
+//                    ../common/artnet.c ../common/ctrl.c ../common/presets.c ../common/rdm.c ../common/dmx_in.c \
+//                    ../sim/rdm_lights.c -o test_net && ./test_net
 #include <stdio.h>
 #include <string.h>
 
@@ -376,7 +378,7 @@ static void test_stack(void) {
 
     TEST("control protocol over UDP: ping, set, read back");
     d = ask(CTRL_PORT, req, dx_request(req, 0x01, 1, NULL, 0), &dlen);
-    CHECK(d && dlen == 29 && d[3] == 0x80 && d[12] == 0 && d[13] == FW_VERSION_MAJOR && d[16] == 255);
+    CHECK(d && dlen == 30 && d[3] == 0x80 && d[12] == 0 && d[13] == FW_VERSION_MAJOR && d[16] == 255);
     CHECK(d && d[23] == (DMX_CHANNELS >> 8) && d[24] == (DMX_CHANNELS & 0xFF) && d[25] == (5000 >> 8) && d[26] == (5000 & 0xFF));
     CHECK(d && d[8] == 0 && d[9] == 1 && memcmp(d + 4, req + 4, 4) == 0);       // same session and sequence
     uint8_t set[7] = {0, 1, 0, 3, 255, 128, 7};
@@ -870,11 +872,21 @@ enum {
 
 // The configuration as TinyUSB's macros build it: the network adapter of its network example
 // (interface 0, strings 4 and 5, endpoints 0x81 / 0x02 / 0x82 with 64 bytes, frames up to 1514
-// bytes), then its simple MIDI interface (interface 2, string 6, endpoints 0x03 / 0x83).
+// bytes), then, on a box with MIDI, its simple MIDI interface (interface 2, string 6, endpoints
+// 0x03 / 0x83).
+#if BOX_MIDI
+#define CONFIG_INTERFACES 4
+#define CONFIG_LEN (TUD_CONFIG_DESC_LEN + TUD_CDC_NCM_DESC_LEN + TUD_MIDI_DESC_LEN)
+#else
+#define CONFIG_INTERFACES 2
+#define CONFIG_LEN (TUD_CONFIG_DESC_LEN + TUD_CDC_NCM_DESC_LEN)
+#endif
 static const uint8_t tinyusb_config[] = {
-    TUD_CONFIG_DESCRIPTOR(1, 4, 0, (TUD_CONFIG_DESC_LEN + TUD_CDC_NCM_DESC_LEN + TUD_MIDI_DESC_LEN), 0, USB_MAX_POWER_MA),
+    TUD_CONFIG_DESCRIPTOR(1, CONFIG_INTERFACES, 0, CONFIG_LEN, 0, USB_MAX_POWER_MA),
     TUD_CDC_NCM_DESCRIPTOR(0, 4, 5, 0x81, 64, 0x02, 0x82, 64, 1514),
+#if BOX_MIDI
     TUD_MIDI_DESCRIPTOR(2, 6, 0x03, 0x83, 64),
+#endif
 };
 
 // TinyUSB's TUD_BOS_MS_OS_20_DESCRIPTOR(46, 1). Its first byte is 4 plus the number of bytes after the fourth.
@@ -904,10 +916,10 @@ static void test_descriptors(void) {
     CHECK(dev[8] == (USB_VID & 0xFF) && dev[9] == (USB_VID >> 8) && dev[10] == (USB_PID & 0xFF) && dev[11] == (USB_PID >> 8));
     CHECK(dev[14] == 1 && dev[15] == 2 && dev[16] == 3 && dev[17] == 1);
 
-    TEST("USB tables: network adapter and MIDI are described exactly as TinyUSB's macros do it");
+    TEST("USB tables: the network adapter (and MIDI) are described exactly as TinyUSB's macros do it");
     const uint8_t *cfg = tud_descriptor_configuration_cb(0);
     int tinyusb_size = (int)sizeof tinyusb_config;
-    CHECK(tinyusb_size == 186);
+    CHECK(tinyusb_size == (BOX_MIDI ? 186 : 94));
     CHECK(cfg && memcmp(cfg, tinyusb_config, sizeof tinyusb_config) == 0);
     CHECK(tud_descriptor_configuration_cb(1) == NULL);
     int total = cfg ? cfg[2] | (cfg[3] << 8) : 0, walked = 0, interfaces = 0, endpoints = 0;
@@ -916,9 +928,13 @@ static void test_descriptors(void) {
         if (cfg[walked + 1] == 0x05) endpoints++;
         walked += cfg[walked];
     }
-    CHECK(total == 186 && walked == total && interfaces == 5 && endpoints == 5);
-    CHECK(cfg && cfg[4] == 4 && cfg[7] == 0x80 && cfg[8] * 2 == USB_MAX_POWER_MA);
+    CHECK(total == tinyusb_size && walked == total && interfaces == (BOX_MIDI ? 5 : 3) && endpoints == (BOX_MIDI ? 5 : 3));
+    CHECK(cfg && cfg[4] == CONFIG_INTERFACES && cfg[7] == 0x80 && cfg[8] * 2 == USB_MAX_POWER_MA);
+#if BOX_CHAIN
     _Static_assert(USB_MAX_POWER_MA <= 100, "behind its own hub the box may ask for 100 mA at most");
+#else
+    _Static_assert(USB_MAX_POWER_MA <= 500, "a USB 2.0 port gives 500 mA at most");
+#endif
 
     TEST("USB tables: Windows is told to use its NCM driver");
     const uint8_t *bos = tud_descriptor_bos_cb();
@@ -1089,7 +1105,7 @@ static void test_firmware(void) {
     fake_run_firmware(3300);
 
     CHECK(fake_usb_starts() == 1 && fake_board_ready() && fake_core1_flash_ready());
-    CHECK(strstr(fake_log(), "dmxbox 3 firmware") && strstr(fake_log(), "box 7  ip 10.1.7.1  artnet universe 7"));
+    CHECK(strstr(fake_log(), BOX_NAME " firmware") && strstr(fake_log(), "box 7  ip 10.1.7.1  artnet universe 7"));
     CHECK(usb_string_is(3, "box-007") && usb_string_is(5, "02000A010702"));   // serial number, computer's address
     // Green: slow blink while nobody is there, steady once the computer has connected.
     CHECK(led_all(GREEN, 10, 490, false) && led_all(GREEN, 510, 990, true) && led_all(GREEN, 1010, 1490, false));
@@ -1108,10 +1124,11 @@ static void test_firmware(void) {
     CHECK(f && is_arp_reply(f, len));
     f = fake_host_count() > 3 ? fake_host_frame(3, &len) : NULL;
     CHECK(f && is_ping_reply(f, len, 32));
-    d = dx_answer(4, &dlen);                                             // PING: since dmxbox 3 with 4 more bytes
-    CHECK(d && dlen == 29 && d[3] == 0x80 && d[12] == 0 && d[13] == FW_VERSION_MAJOR && d[15] == 0 && d[16] == 255);
-    CHECK(d && d[25] == (5000 >> 8) && d[26] == (5000 & 0xFF) && d[28] == BOX_N &&
-          d[27] == (CTRL_CAN_RDM | CTRL_CAN_MIDI | CTRL_CAN_CHAIN));
+    d = dx_answer(4, &dlen);                                             // PING: 4 more bytes since 3.0, 1 since 3.1
+    CHECK(d && dlen == 30 && d[3] == 0x80 && d[12] == 0 && d[13] == FW_VERSION_MAJOR && d[15] == 0 && d[16] == 255);
+    CHECK(d && d[25] == (5000 >> 8) && d[26] == (5000 & 0xFF) && d[28] == BOX_N && d[29] == BOX_MODEL &&
+          d[27] == (CTRL_CAN_RDM | (BOX_MIDI ? CTRL_CAN_MIDI : 0) | (BOX_CHAIN ? CTRL_CAN_CHAIN : 0) |
+                       (BOX_DMX_IN ? CTRL_CAN_DMX_IN : 0)));
     d = host_udp_reply(5, PC_MAC, PC_IP, ARTNET_PORT, 6454, &dlen);
     CHECK(d && dlen == ARTNET_REPLY_LEN && memcmp(d + 10, BOX_IP, 4) == 0 && memcmp(d + 201, BOX_MAC, 6) == 0);
     CHECK(d && strcmp((const char *)d + 26, NODE_SHORT_NAME) == 0 && strcmp((const char *)d + 44, NODE_LONG_NAME) == 0);
@@ -1252,6 +1269,36 @@ static void test_firmware(void) {
     CHECK(!led_all(RED, 0, 100, false) && led_all(RED, 1300, 1599, false));   // red flickers while the line is busy
     CHECK(fake_violations() == 0);
 
+    TEST("firmware: DMX IN: a console's frame reaches the desk once, and the input goes quiet without one");
+    fake_reset(false);
+    uint8_t levels[512];
+    for (int k = 0; k < 512; k++) levels[k] = (uint8_t)(k * 7);
+    static const uint8_t none[4] = {0, 0, 0, 0}, first[4] = {0, 0, 0, 1};
+    fake_at(100);  fake_connect();
+    fake_at(1000); fake_frame(pk, dx_frame(0x42, 1, none, 4));          // nothing came yet
+    fake_at(1100); fake_console(levels, 512);
+    fake_at(1200); fake_frame(pk, dx_frame(0x42, 2, none, 4));          // the frame
+    fake_at(1210); fake_frame(pk, dx_frame(0x42, 3, first, 4));         // the desk has frame 1: nothing new
+    fake_at(2500); fake_frame(pk, dx_frame(0x42, 4, first, 4));         // more than a second later: quiet
+    fake_run_firmware(2600);
+#if BOX_DMX_IN
+    CHECK(fake_dmx_in_started());
+    d = dx_answer(0, &dlen);                                             // OK, not live, frame 0, no levels
+    CHECK(d && dlen == 12 + 8 && d[12] == 0 && d[13] == 0 && d[17] == 0 && d[19] == 0);
+    d = dx_answer(1, &dlen);                                             // live, frame 1, 512 levels
+    CHECK(d && dlen == 12 + 8 + 512 && d[12] == 0 && d[13] == 1 && d[17] == 1 && d[18] == 0x02 && d[19] == 0x00 &&
+          d[20] == 0 && d[20 + 100] == (700 & 0xFF) && d[20 + 511] == ((511 * 7) & 0xFF));
+    d = dx_answer(2, &dlen);                                             // the same frame: no levels again
+    CHECK(d && dlen == 12 + 8 && d[13] == 1 && d[17] == 1 && d[19] == 0);
+    d = dx_answer(3, &dlen);
+    CHECK(d && dlen == 12 + 8 && d[13] == 0 && d[17] == 1);              // not live any more
+    CHECK(count_in_log("DMX IN: a console sends") == 1 && count_in_log("DMX IN: quiet") == 1);
+#else
+    CHECK(!fake_dmx_in_started());
+    d = dx_answer(1, &dlen);
+    CHECK(d && dlen == 13 && d[12] == 9);                                // ST_NOT_SUPPORTED: no DMX IN
+#endif
+
     TEST("firmware: box 200: its own addresses, serial number and universe");
     use_box(200);
     fake_reset(false);
@@ -1269,7 +1316,7 @@ static void test_firmware(void) {
     d = host_udp_reply(1, PC_MAC, PC_IP, ARTNET_PORT, 6454, &dlen);
     CHECK(d && d[18] == 0 && d[19] == 200 / 16 && d[190] == 200 % 16);  // universe 200: sub-net 12, universe 8
     d = dx_answer(2, &dlen);
-    CHECK(d && dlen == 29 && d[28] == 200);
+    CHECK(d && dlen == 30 && d[28] == 200 && d[29] == BOX_MODEL);
     CHECK(usb_string_is(3, "box-200") && strstr(fake_log(), "ip 10.1.200.1"));
     CHECK(fake_violations() == 0);
     use_box(BOX_N);

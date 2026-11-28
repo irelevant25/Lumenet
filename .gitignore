@@ -10,7 +10,8 @@ publish/
 .vs/
 TestResults/
 # the copies of the firmware that the build.cmd files put next to them
-firmware/dmxbox.uf2
+boxes/*/firmware/*.uf2
+boxes/*/firmware/*.hex
 firmware/archive/pico/dmxbox.uf2
 firmware/archive/pic32/*.hex
 
@@ -23,7 +24,7 @@ __pycache__/
 fp-info-cache
 _autosave-*
 *.lck
-hardware/scripts/work/
+boxes/*/scripts/work/
 
 # written by the simulator
 presets.bin

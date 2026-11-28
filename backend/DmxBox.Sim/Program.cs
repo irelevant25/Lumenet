@@ -18,8 +18,8 @@ internal static class Program
           sim.cmd <device> [options]
 
         Devices:
-          dmxbox              dmxbox 3, one output, lights with RDM on its line
-          dmxbox-2-universes  dmxbox 3 with two outputs (no such box: for tests)
+          dmxbox              dmxbox 4, one output, lights with RDM on its line
+          dmxbox-2-universes  dmxbox 4 with two outputs (no such box: for tests)
           artnet              an Art-Net node
           sacn                an sACN receiver
           enttec              an Enttec DMX USB Pro
@@ -35,6 +35,8 @@ internal static class Program
           --show 16                   how many channels it writes when they change (1 to 512)
           dmxbox: --lights 3          how many lights with RDM are on its DMX line (0 to 64)
                   --box 0             the number on its switch (0 to 255): its Art-Net universe
+                  --console           a console on its DMX IN: 24 faders and 8 buttons on a page of
+                                      their own, which the browser opens (C opens it again)
           --folder <folder>           where the desk looks for simulators: "simulators" beside its LAN
                                       password, %LOCALAPPDATA%\Lumenet\simulators unless the desk was
                                       given another --Lan:PasswordFile
@@ -52,7 +54,7 @@ internal static class Program
                   --no-browser        the browser does not open its page (O opens it)
 
         Keys while it runs: U pulls it out and plugs it in again, Q ends it (Ctrl+C too); a MIDI
-        controller has O, which opens its page.
+        controller has O, which opens its page, and a box with --console C, which opens the console's.
         """;
 
     private static int Main(string[] args)
@@ -94,8 +96,11 @@ internal static class Program
         {
             int lights = options.Number("--lights", 3, 0, 64);
             int boxNumber = options.Number("--box", 0, 0, 255);
+            bool console = options.Flag("--console");
+            if (console)
+                options.Flag("--no-browser");   // taken once it runs
             options.RequireAllUsed();   // before a build that may take a while
-            return new BoxSimulator(box, folder, BoxPrograms.Find(box.Program), show, Console.Out, lights, boxNumber);
+            return new BoxSimulator(box, folder, BoxPrograms.Find(box.Program), show, Console.Out, lights, boxNumber, console);
         }
 
         if (MidiControllers.Find(device) is { } controller)
@@ -169,6 +174,8 @@ internal static class Program
             Console.WriteLine($"(For the desk whose simulators are in {folder}.)");
         if (openPage && simulator is MidiControllerSimulator controller)
             controller.OpenPage();
+        if (openPage && simulator is BoxSimulator { Console: { } console })
+            console.OpenPage();
 
         // Keys come from the keyboard; from a script, as lines ("u", "b", "q") on the input.
         var keys = new System.Collections.Concurrent.ConcurrentQueue<char>();
@@ -407,14 +414,17 @@ internal static class BoxPrograms
         throw new InvalidOperationException("firmware/sim was not found above this program: run it from the repository (sim.cmd).");
     }
 
-    // The newest of the files a box simulator is built from.
+    // The newest of the files a box simulator is built from: the firmware's shared code, its
+    // config.h, and the box.h of box 4, the box it simulates.
     private static DateTime NewestSource(string simFolder)
     {
         string firmware = Path.GetDirectoryName(simFolder)!;
+        string repository = Path.GetDirectoryName(firmware)!;
         IEnumerable<string> sources = Directory.GetFiles(Path.Combine(firmware, "common"))
             .Concat(Directory.GetFiles(simFolder, "*.c"))
             .Concat(Directory.GetFiles(simFolder, "*.h"))
-            .Append(Path.Combine(firmware, "src", "config.h"))
+            .Append(Path.Combine(firmware, "common", "config.h"))
+            .Append(Path.Combine(repository, "boxes", "box4", "firmware", "box.h"))
             .Where(File.Exists);
         return sources.Max(File.GetLastWriteTimeUtc);
     }

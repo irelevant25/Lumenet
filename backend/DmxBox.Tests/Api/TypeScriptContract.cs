@@ -52,7 +52,7 @@ internal static class TypeScriptContract
         [(typeof(ListenView), nameof(ListenView.State))] = ListenStates,
         [(typeof(MixerView), nameof(MixerView.State))] = MixerStates,
         [(typeof(MidiDeviceView), nameof(MidiDeviceView.State))] = [MidiDeviceView.Open, MidiDeviceView.Missing, MidiDeviceView.Failed, MidiDeviceView.Unused],
-        [(typeof(MidiMapping), nameof(MidiMapping.Message))] = [MidiMapping.Note, MidiMapping.Controller, MidiMapping.Controller14, MidiMapping.PitchBend, MidiMapping.Program],
+        [(typeof(MidiMapping), nameof(MidiMapping.Message))] = MidiMapping.Messages,
         [(typeof(MidiMapping), nameof(MidiMapping.Mode))] = [MidiMapping.Absolute, MidiMapping.RelativeTwos, MidiMapping.RelativeOffset, MidiMapping.RelativeSign],
         [(typeof(OscView), nameof(OscView.State))] = [OscView.Off, OscView.Listening, OscView.Failed],
     };

@@ -636,7 +636,7 @@ public sealed class HubTests
     {
         await using TestServer server = await TestServer.StartAsync();
         await using HubClient ui = await server.ConnectAsync();
-        string connected = """[{"address":"pretend-box","connected":true,"firmware":"1.0","outputs":1,"universes":[1],"kind":"automatic"}]""";
+        string connected = """[{"address":"pretend-box","connected":true,"firmware":"1.0","outputs":1,"universes":[1],"kind":"automatic","model":null}]""";
         Assert.Equal("[]", (await ui.InvokeAsync("Hello")).GetProperty("boxes").GetRawText());
 
         server.Box.PlugIn();
@@ -662,8 +662,8 @@ public sealed class HubTests
         // A box added by hand, which does not answer (nothing listens on that port).
         await ui.InvokeAsync("SetBoxes", (object)new[] { new { address = "127.0.0.1:9", universes = new[] { 2, 1 } } });
 
-        string planned = """{"address":"127.0.0.1:9","connected":false,"firmware":null,"outputs":2,"universes":[2,1],"kind":"listed"}""";
-        string unlisted = """{"address":"pretend-box","connected":true,"firmware":"1.0","outputs":1,"universes":[0],"kind":"new"}""";
+        string planned = """{"address":"127.0.0.1:9","connected":false,"firmware":null,"outputs":2,"universes":[2,1],"kind":"listed","model":null}""";
+        string unlisted = """{"address":"pretend-box","connected":true,"firmware":"1.0","outputs":1,"universes":[0],"kind":"new","model":null}""";
         Assert.Equal($"[{planned},{unlisted}]", (await ui.InvokeAsync("GetBoxes")).GetRawText());
         await Wait.UntilAsync(() => server.Box.Levels[0] == 0, "A box that the project does not list still plays.");
         Assert.Contains("\"127.0.0.1:9\"", (await ui.InvokeAsync("ExportProject")).GetString(), StringComparison.Ordinal);
@@ -672,7 +672,7 @@ public sealed class HubTests
         Assert.Equal("the boxes", (await ui.InvokeAsync("Undo")).GetString());
         await Wait.UntilAsync(() => server.Box.Levels[0] == 255, "The box did not play U1 again after Undo.");
         Assert.Equal(
-            """[{"address":"pretend-box","connected":true,"firmware":"1.0","outputs":1,"universes":[1],"kind":"automatic"}]""",
+            """[{"address":"pretend-box","connected":true,"firmware":"1.0","outputs":1,"universes":[1],"kind":"automatic","model":null}]""",
             (await ui.InvokeAsync("GetBoxes")).GetRawText());
     }
 

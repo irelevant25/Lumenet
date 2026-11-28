@@ -73,7 +73,7 @@ internal static class BoxWiring
                     int[] plays = new int[link.Outputs];
                     for (int output = 0; output < plays.Length; output++)
                         plays[output] = next <= universes ? next++ : 0;
-                    return new BoxView(link.Host, true, link.Firmware, link.Outputs, plays, Automatic);
+                    return new BoxView(link.Host, true, link.Firmware, link.Outputs, plays, Automatic, link.Model);
                 })];
         }
 
@@ -85,13 +85,13 @@ internal static class BoxWiring
             int outputs = connected ? link!.Outputs : plan.Universes.Length;
             int[] plays = new int[outputs];
             Array.Copy(plan.Universes, plays, Math.Min(outputs, plan.Universes.Length));
-            views.Add(new BoxView(plan.Address, connected, connected ? link!.Firmware : null, outputs, plays, Listed));
+            views.Add(new BoxView(plan.Address, connected, connected ? link!.Firmware : null, outputs, plays, Listed, link?.Model));
         }
 
         views.AddRange(links
             .Where(link => link.Connected && !listed.Any(plan => plan.Address == link.Host))
             .OrderBy(link => link.Host, Comparer<string>.Create(Compare))
-            .Select(link => new BoxView(link.Host, true, link.Firmware, link.Outputs, new int[link.Outputs], New)));
+            .Select(link => new BoxView(link.Host, true, link.Firmware, link.Outputs, new int[link.Outputs], New, link.Model)));
         return [.. views];
     }
 }

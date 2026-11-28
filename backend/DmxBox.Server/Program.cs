@@ -393,9 +393,10 @@ internal static class Program
         services.AddHostedService(provider => provider.GetRequiredService<OutputNetwork>());
     }
 
-    // The MIDI controllers of this PC: the system's (DryWetMIDI, on Windows and macOS) and the
-    // simulated ones of sim.cmd. Their setup belongs to the PC and is kept beside the LAN password,
-    // in midi.json: a test desk with a password file of its own has a setup of its own too.
+    // The MIDI controllers of this PC: the system's (DryWetMIDI, on Windows and macOS), the
+    // simulated ones of sim.cmd, and the DMX IN of the boxes (a console plays the desk). Their setup
+    // belongs to the PC and is kept beside the LAN password, in midi.json: a test desk with a
+    // password file of its own has a setup of its own too.
     private static void AddMidi(IServiceCollection services, string passwordFile)
     {
         string file = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(passwordFile)) ?? "", MidiSetupFile.FileName);
@@ -404,7 +405,10 @@ internal static class Program
             ILogger log = provider.GetRequiredService<ILoggerFactory>().CreateLogger<MidiControl>();
             IHubContext<DeskHub, IDeskClient> hub = provider.GetRequiredService<IHubContext<DeskHub, IDeskClient>>();
             return new MidiControl(
-                new CombinedMidiPorts(new DryWetMidiPorts(), new SimulatedMidiPorts(provider.GetRequiredService<Simulators>())),
+                new CombinedMidiPorts(
+                    new DryWetMidiPorts(),
+                    new SimulatedMidiPorts(provider.GetRequiredService<Simulators>()),
+                    new DmxInPorts(provider.GetRequiredService<BoxNetwork>())),
                 new MidiSetupFile(file, log),
                 new MidiDeskFaders(
                     provider.GetRequiredService<Desk>(),

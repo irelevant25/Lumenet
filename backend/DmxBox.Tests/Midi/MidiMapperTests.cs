@@ -68,6 +68,21 @@ public sealed class MidiMapperTests
     }
 
     [Fact]
+    public void AChannelOfDmxInMovesAFaderAsItIsAndPressesAKeyFromHalfUp()
+    {
+        _mapper.Use([Map(MidiMapping.Dmx, 12, "fader.channel.3"), Map(MidiMapping.Dmx, 13, "stack.play")]);
+
+        Assert.Equal(new MidiOutcome("fader.channel.3", "moved", 200), Play(MidiKind.Dmx, 12, 200));
+        Assert.Equal(200, _desk[FaderKind.Channel, 3]);
+        Assert.Equal("unmapped", Play(MidiKind.Dmx, 14, 255).Result);
+        Assert.Equal("up", Play(MidiKind.Dmx, 13, 127).Result);  // below half: no press
+        Assert.Equal("down", Play(MidiKind.Dmx, 13, 128).Result);
+        Assert.Equal("down", Play(MidiKind.Dmx, 13, 255).Result);   // still held: once is enough
+        Assert.Equal("up", Play(MidiKind.Dmx, 13, 0).Result);
+        Assert.Equal([("stack.play", true), ("stack.play", false)], _keys);
+    }
+
+    [Fact]
     public void ThePitchBendOfAMackieFaderIsFourteenBits()
     {
         _mapper.Use([Map(MidiMapping.PitchBend, 0, "fader.memory.3", channel: 2)]);

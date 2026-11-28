@@ -131,20 +131,22 @@
                             />
                             Takes over at the desk's value
                           </label>
-                          <label>
-                            <input
-                              type="checkbox"
-                              [checked]="mapping.feedback"
-                              (change)="setFeedback(mapping, $event)"
-                            />
-                            Motor or lights: the desk sends its value
-                          </label>
+                          @if (mapping.message !== 'dmx') {
+                            <label>
+                              <input
+                                type="checkbox"
+                                [checked]="mapping.feedback"
+                                (change)="setFeedback(mapping, $event)"
+                              />
+                              Motor or lights: the desk sends its value
+                            </label>
+                          }
                         </td>
                       </tr>
                     }
                   } @else {
                     @for (mapping of mappingsOf(target.id); track $index) {
-                      @if (mapping.message !== 'program') {
+                      @if (mapping.message !== 'program' && mapping.message !== 'dmx') {
                         <tr class="options">
                           <td colspan="3">
                             @if (mappingsOf(target.id).length > 1) {

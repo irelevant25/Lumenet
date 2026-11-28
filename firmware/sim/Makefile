@@ -1,10 +1,11 @@
-# dmxbox_sim: dmxbox 3 (one output, lights with RDM on its line); dmxbox_sim2: the same with two outputs
+# dmxbox_sim: dmxbox 4 (one output, lights with RDM on its line); dmxbox_sim2: the same with two outputs
 # (no such box: for the tests).
 COMMON = ../common
 CFLAGS ?= -O2 -g
-CFLAGS += -std=c11 -Wall -Wextra -Wno-unused-parameter -I../src -I$(COMMON)
-CORE = sim.c rdm_lights.c $(COMMON)/engine.c $(COMMON)/artnet.c $(COMMON)/ctrl.c $(COMMON)/presets.c $(COMMON)/rdm.c
-HEADERS = $(wildcard $(COMMON)/*.h) rdm_lights.h ../src/config.h
+BOX = ../../boxes/box4/firmware
+CFLAGS += -std=c11 -Wall -Wextra -Wno-unused-parameter -I$(BOX) -I$(COMMON)
+CORE = sim.c rdm_lights.c $(COMMON)/engine.c $(COMMON)/artnet.c $(COMMON)/ctrl.c $(COMMON)/presets.c $(COMMON)/rdm.c $(COMMON)/dmx_in.c
+HEADERS = $(wildcard $(COMMON)/*.h) rdm_lights.h $(BOX)/box.h
 
 all: dmxbox_sim dmxbox_sim2
 

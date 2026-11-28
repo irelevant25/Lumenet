@@ -51,6 +51,12 @@ internal sealed class RealBox : IBox
         Client().Blackout(on);
     }
 
+    /// <inheritdoc />
+    public DmxInput GetInput(uint since)
+    {
+        return Client().GetInput(since);
+    }
+
     /// <summary>Closes the socket.</summary>
     public void Dispose()
     {

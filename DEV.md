@@ -6,13 +6,15 @@ Lumenet is and how to get it; the [manual](MANUAL.md) describes the desk.
 
 ## The dmxbox in short
 
-**dmxbox 3** is a small box with three **USB-C sockets** on one side (IN to the computer, OUT to the next box,
-POWER for a charger when the computer's port gives too little) and, in its wall, a **5-pin XLR DMX output** and
-**MIDI IN and OUT**. One USB cable powers it and carries the data; boxes hang one behind the other, so several
-need only one USB port of the computer.
+There are four boxes ([boxes/](boxes/README.md)); this file describes the full one, **dmxbox 4** (box 4,
+called dmxbox 3 until 2026-11-28). It is a small box with three **USB-C sockets** on one side (IN to the
+computer, OUT to the next box, POWER for a charger when the computer's port gives too little) and, in its wall,
+a **5-pin XLR DMX output**, a **DMX input** and **MIDI IN and OUT**. One USB cable powers it and carries the data; boxes hang one
+behind the other, so several need only one USB port of the computer. Boxes 1 to 3 are simpler: one USB socket,
+DMX with RDM and the box-number switch, no MIDI, no DMX IN and no chain.
 
 When you plug it in, the computer sees a new network adapter with exactly one device behind it: the box, at
-**10.1.n.1**, where n is the number set on its switch (0 to 255). It sees a MIDI interface "dmxbox 3" too. So the
+**10.1.n.1**, where n is the number set on its switch (0 to 255). It sees a MIDI interface "dmxbox 4" too. So the
 box is controlled over UDP like a network device, but there is no network to set up:
 
 * **Art-Net** (UDP 6454) is supported, RDM included, so QLC+ and other lighting software work with it.
@@ -20,25 +22,30 @@ box is controlled over UDP like a network device, but there is no network to set
   retransmits and duplicate detection. Fades run on the box, so they stay smooth even if the PC hiccups.
 * **RDM:** the box finds the lights with RDM on its DMX line by itself and passes the desk's requests to them:
   their address, mode and name, and Identify (the RDM tab of Settings).
+* **DMX IN:** a console on the box's DMX input plays the desk as a MIDI controller does: the desk asks the
+  box what came in and maps its channels to keys and faders (see [MIDI controllers](#midi-controllers)).
 
 ```
  PC ──USB──► hub ──► RP2040 core 0: USB network adapter and MIDI, protocols, RDM, flash
               │      RP2040 core 1: fade engine ──► PIO + DMA ──► 6N137 ──► ST485 ──► XLR-5
               └──► OUT: the next box                  RDM answers ◄── 6N137 ◄──┘
+ a console ──► XLR-5 DMX IN ──► ST485 ──► 6N137 ──► PIO 1 ──► core 0 ──► the desk asks (GET_INPUT)
 ```
 
-The boxes before it, the box with the Pico (built, and still played by the desk at 192.168.7.1) and dmxbox 2
-with a PIC32 (drawn only), are in the archive: [hardware/archive](hardware/archive/README.md).
+Boxes 1 and 2 are made for soldering by hand: box 1 is a Raspberry Pi Pico, box 2 a PIC32 with its own
+firmware (`firmware/pic32`). The first box 1, on a perfboard, is still played by the desk at 192.168.7.1; see
+[boxes/](boxes/README.md).
 
 ## What is where
 
 | Folder / file | Contents |
 |---|---|
-| `firmware/` | The firmware of dmxbox 3, a Pico SDK project (C): `build.cmd` builds `dmxbox.uf2`, `flash.cmd` puts it onto a box. `src/` is the RP2040's own code (main program, DMX and RDM line, board, MIDI, flash, the board file for the SDK). |
-| `firmware/common/` | The C code without SDK calls, which the simulator and the tests run too: the network stack, the address server, Art-Net, the DX protocol, RDM, the MIDI bytes, the fade engine, the presets and the USB tables. |
-| `firmware/sim/` | The **same** C code as the firmware, running on a PC over normal sockets, with lights that answer RDM in its memory: dmxbox 3, and a box with two outputs for the tests. Use it to develop software before the hardware exists. |
-| `firmware/test/` | The firmware's tests on a PC: the network code and the whole main program on pretend hardware, RDM and MIDI. |
-| `firmware/archive/` | The firmware of the boxes before: the box with the Pico (`pico/`) and dmxbox 2 (`pic32/`). |
+| `firmware/rp2040/` | The firmware of the RP2040 boxes (1, 3 and 4), one Pico SDK project (C): `build.cmd N` builds it for box N with the settings in `boxes/boxN/firmware`, `flash.cmd` puts it onto a box. `src/` is the RP2040's own code (main program, DMX and RDM line, board, MIDI, flash). |
+| `firmware/pic32/` | The firmware of dmxbox 2 (C, MPLAB XC32): `build.cmd` builds it with the settings in `boxes/box2/firmware`, `flash.cmd` writes it into the PIC with a programmer. `src/` is the PIC32's own code (main program, DMX and RDM line, board, flash). |
+| `firmware/common/` | The C code without SDK calls, which both firmwares, the simulator and the tests run: the network stack, the address server, Art-Net, the DX protocol, RDM, the MIDI bytes, the fade engine, the presets, the USB tables and the frames of DMX IN; and `config.h`, the settings all boxes share. |
+| `firmware/sim/` | The **same** C code as the firmware, running on a PC over normal sockets, with lights that answer RDM in its memory: dmxbox 4, and a box with two outputs for the tests. Use it to develop software before the hardware exists. |
+| `firmware/test/` | The firmware's tests on a PC: the network code and the whole main program on pretend hardware, RDM and MIDI, and box 2's DMX line. |
+| `firmware/archive/` | The first firmware of the box with the Pico (`pico/`, box 1 on its perfboard) and of dmxbox 2 (`pic32/`, its perfboard design). |
 | `backend/` | .NET: the `DmxBox` library, the `dmxbox` command-line tool, the server of the Lumenet desk, `Lumenet.exe` (`backend/Lumenet`), the simulated devices of `sim.cmd` (`backend/DmxBox.Sim`), and the tests. |
 | `backend/DmxBox.Server/` | The desk program, a folder for each part, each folder a namespace of its own: `Core/` (the desk itself: `Desk.cs` and its parts `Desk.Stack.cs`, `Desk.Sounds.cs` ..., its clock and its undo), `Api/` (the hub the page talks to, and its answers), `Stack/`, `Sequences/`, `Effects/`, `Stage/` (the stage plan and the fixtures on it), `Sounds/` (with the Soundcraft Ui mixer), `Midi/`, `Boxes/` (the dmxboxes), `Rdm/` (the lights with RDM through the boxes), `Outputs/` (Art-Net, sACN and the DMX USB interfaces), `Lan/` (who may use the desk), `Projects/` (the project files and the autosave) and `Import/` (show files of other desks). `Program.cs` starts it, and `GlobalUsings.cs` makes the namespace of every folder known in every file. |
 | `backend/DmxBox.Tests/` | The tests, in the folders of what they test; `Support/` holds what many tests share (the test server, the client of the hub, a clock set by hand), and `Client/` the tests of the `DmxBox` library against the simulated box. |
@@ -49,9 +56,11 @@ with a PIC32 (drawn only), are in the archive: [hardware/archive](hardware/archi
 | `.github/` | The workflow that makes `Lumenet.exe` after every push to `main` and puts it on the Releases page. |
 | `examples/` | The example projects of the desk, which its Load window lists, and an example show file of a theatre console, to import. |
 | `docs/` | The screenshots of the README and the manual. |
-| `hardware/` | dmxbox 3: the KiCad project (`dmxbox3.*`, its own footprints in `dmxbox3.pretty`), its drawings as PDF, `jlcpcb/` (what JLCPCB needs to make and fit the board), `case_print/` (the case printed in PETG: STL for the printer), `case/` (the aluminium case with its holes, for JLCMC, instead), `3d/` (Blender model and pictures), [BOM.md](hardware/BOM.md) (ordering and putting it together), and `scripts/`, which make all of it from `circuit.py`. |
-| `hardware/datasheets/` | Datasheets of parts of the boxes. |
-| `hardware/archive/` | The boxes before: the box with the Pico, dmxbox 2 with a PIC32, the designs with an Ethernet port. |
+| `boxes/` | The four boxes, a folder each ([its README](boxes/README.md)), with `datasheets/` of their parts, `scripts/` (the code the boxes' scripts share: schematic, board, routing, checks, JLCPCB files, drawings, cases, pictures) and `archive/` (the designs with an Ethernet port). |
+| `boxes/box4/` | dmxbox 4: the KiCad project (`dmxbox4.*`, its own footprints in `dmxbox4.pretty`), its drawings as PDF, `jlcpcb/` (what JLCPCB needs to make and fit the board), `case_print/` (the case printed in PETG: STL for the printer), `case/` (the aluminium case with its holes, for JLCMC, instead), `3d/` (Blender model and pictures), [BOM.md](boxes/box4/BOM.md) (ordering and putting it together), `firmware/` (its `box.h`, the SDK's board file, `build.cmd` and `flash.cmd`), and `scripts/`, which make the board, the drawings, the pictures and the cases from `circuit.py`. |
+| `boxes/box3/` | dmxbox 3, the small box: the same kinds of files as box 4 (no aluminium case). |
+| `boxes/box1/` | dmxbox 1, the Pico on a through-hole board you solder: the same kinds of files (the Gerbers only for JLCPCB), and in `perfboard/` the first box 1. |
+| `boxes/box2/` | dmxbox 2, the PIC32 on a through-hole board you solder: the same kinds of files as box 1, and in `perfboard/` its first design. |
 
 Where things stand: [Verification status](#verification-status), at the end.
 
@@ -59,25 +68,26 @@ Where things stand: [Verification status](#verification-status), at the end.
 
 ## 1. Hardware
 
-dmxbox 3 is a board of 86 × 74.5 mm with two layers, made and fitted by JLCPCB. What to order and buy, and how to
-put it together: [hardware/BOM.md](hardware/BOM.md). Drawings: [schematic](hardware/dmxbox3_schematic.pdf),
-[assembly](hardware/dmxbox3_assembly.pdf) (where every part goes), [copper](hardware/dmxbox3_copper.pdf).
-Pictures: [from above](hardware/3d/dmxbox3_top.png), [at an angle](hardware/3d/dmxbox3_angle.png),
-[USB side](hardware/3d/dmxbox3_usb_side.png), [DMX side](hardware/3d/dmxbox3_dmx_side.png).
+dmxbox 4 is a board of 86 × 82 mm with two layers, made and fitted by JLCPCB. What to order and buy, and how to
+put it together: [boxes/box4/BOM.md](boxes/box4/BOM.md). Drawings: [schematic](boxes/box4/dmxbox4_schematic.pdf),
+[assembly](boxes/box4/dmxbox4_assembly.pdf) (where every part goes), [copper](boxes/box4/dmxbox4_copper.pdf).
+Pictures: [from above](boxes/box4/3d/dmxbox4_top.png), [at an angle](boxes/box4/3d/dmxbox4_angle.png),
+[USB side](boxes/box4/3d/dmxbox4_usb_side.png), [DMX side](boxes/box4/3d/dmxbox4_dmx_side.png).
 
 Every part is on the top side, and JLCPCB solders all of them. The DMX and MIDI sockets sit in the wall of the box,
-on cables to the pin headers J4, J5 and J6 (pin n is pin n of the socket).
+on cables to the pin headers J4, J8, J5 and J6 (pin n is pin n of the socket).
 
-The box is printed in PETG: a base and a lid, 85 × 127 × 36 mm ([case_print/](hardware/case_print), how to print
+The box is printed in PETG: a base and a lid, 123 × 127 × 36 mm (wider than the board, for four sockets in a row) ([case_print/](boxes/box4/case_print), how to print
 it in BOM.md). The board stands on four posts of the base with M3 heat-set inserts, held by 25 mm standoffs through
 its holes, on which the lid is screwed. The USB-C sockets are at the front wall, SW1's keys behind a slot in the
 side, DMX and MIDI in the back wall behind the board, and three light pipes bring the LEDs to the lid. Pictures:
-[front](hardware/3d/dmxbox3_print_front.png), [back](hardware/3d/dmxbox3_print_back.png),
-[opened](hardware/3d/dmxbox3_print_open.png). Instead, JLCMC's aluminium case K90-9848-H6-L120 fits the same
-board, with holes JLCMC machines from [case/dmxbox3_case.step](hardware/case/dmxbox3_case.step) and its
-[drawing](hardware/case/dmxbox3_case.pdf): there the board stands on 15 mm nylon spacers (above the ribs of the
-tube's walls) and the back plate's sockets are raised 4 mm so the XLR's solder cups pass over the board. The 4.5 mm
-the board has above SW1 are for that case: its spacers have to stay clear of the screw channels in its corners.
+[front](boxes/box4/3d/dmxbox4_print_front.png), [back](boxes/box4/3d/dmxbox4_print_back.png),
+[opened](boxes/box4/3d/dmxbox4_print_open.png). Instead, JLCMC's aluminium case K119-12063-H7-L130 (120 × 63 ×
+130 mm, split into a top and a bottom half) takes the same board, with holes JLCMC machines from
+[case/dmxbox4_case.step](boxes/box4/case/dmxbox4_case.step) and its [drawing](boxes/box4/case/dmxbox4_case.pdf):
+there the board stands in the bottom half on 15 mm nylon spacers, two of them where JLCMC mills away the floor's
+ribs, and the four sockets sit in one row behind the board, the XLRs upright. The 4.5 mm the board has above SW1
+keep its spacers clear of the screw channels in the case's corners.
 
 ### The parts of the circuit
 
@@ -96,6 +106,10 @@ the board has above SW1 are for that case: its spacers have to stay clear of the
   listen, high = send) and RX (GPIO 13). An ST485BDR drives the line; 470 Ω up on Data+, 470 Ω down on Data− and
   120 Ω between them keep the line at "mark" while nobody drives it, as RDM wants of a controller, and end it at
   the box. A PSM712 guards the line. No track, via or copper crosses the 2.5 mm gap between the two sides.
+* **DMX IN:** a second ST485 (U11) that only listens (its DE and /RE are low), its own line bias and end
+  (R39 to R41, so an open socket reads as a resting line) and a PSM712 (D7), on the same isolated side; a
+  fourth 6N137 (U12) carries what it hears to GPIO 16, where a state machine of PIO 1 reads it. Its socket is a
+  5-pin male XLR beside DMX OUT, on a cable to J8.
 * **MIDI:** IN through an H11L1 (MIDI senders at 3.3 V give too little current for a 6N137) to UART1 RX (GPIO 5);
   OUT from UART1 TX (GPIO 4) with 33 Ω and 10 Ω, as the 3.3 V MIDI rules (CA-033) want.
 * **SW1:** an SMD piano DIP switch (kangshen DSPV08LSGET) with 8 keys at the top edge of the board: the box
@@ -116,35 +130,59 @@ the board has above SW1 are for that case: its spacers have to stay clear of the
 | 13 | DMX_RX | UART0 RX: the answers of RDM |
 | 14 | DMX_TX | PIO: DMX and RDM out |
 | 15 | DMX_DE | low = listen (RDM), high = send; the line sends while the RP2040 is off |
+| 16 | DMX_IN | PIO: DMX IN, from U12 |
 | 18 to 25 | N1 to N128 | SW1, ON = low |
 | 26, 27 | CC1_SENSE, CC2_SENSE | ADC: a device on OUT |
 | 28 | VSENSE | ADC: half the supply voltage |
 
 ### How the files are made
 
-Nothing in KiCad is drawn by hand: `hardware/scripts/circuit.py` lists every part (with its LCSC number and who fits
-it) and every net, and the scripts make the rest from it. Each script says at its top how to run it.
+Nothing in KiCad is drawn by hand: a box's `scripts/circuit.py` lists every part (with its LCSC number and who
+fits it) and every net, and the scripts make the rest from it. Each box has the scripts below in its `scripts/`
+folder, run from there; each says at its top how to run it. Where the parts go is the box's own
+(`make_schematic.py`, `make_board.py`, `case_layout.py`, `make_3d.py`); the rest is code in `boxes/scripts` that
+every box uses (`schematic.py`, `board.py`, `routing.py`, `checks.py`, `footprintlib.py`, `jlcpcb.py`,
+`drawings.py`, `partscheck.py`, `printcase.py`, `render3d.py`), and `box.py` tells it which box it is.
 
 | Script | Makes |
 |---|---|
-| `make_schematic.py` | the schematic, a title sheet and three A3 sheets (power, RP2040, DMX and MIDI); it refuses to write when two nets would touch or texts overlap |
+| `make_schematic.py` | the schematic, a title sheet and three A3 sheets (power, RP2040, DMX and, on box 4, MIDI); it refuses to write when two nets would touch or texts overlap |
 | `check.py` | compares KiCad's net list with `circuit.py`, and reads the reports of ERC and DRC (`kicad-cli sch erc`, `kicad-cli pcb drc --schematic-parity`) |
-| `footprints.py` | the footprints KiCad does not have, in `dmxbox3.pretty`: the DC-DC module (from Mornsun's drawing), the box-number switch (from kangshen's), and the SMD pin header and socket strip with a pad on both sides of every pin, so either kind of staggered legs fits; `make_board.py` runs it |
+| `footprints.py` | the footprints KiCad does not have, in the box's own library (`dmxbox4.pretty`): the DC-DC module (from Mornsun's drawing), the box-number switch (from kangshen's), and the SMD pin header and socket strip with a pad on both sides of every pin, so either kind of staggered legs fits; `make_board.py` runs it |
 | `make_board.py` | the board: every part at its place, the outline, the isolation gap, the silkscreen texts, the design rules of JLCPCB |
-| `route.py` | the tracks, with FreeRouting, then the ground pours (GND left of the gap, GND_ISO right) and the vias that join each net's pours on the two layers |
+| `route.py` | the tracks, with FreeRouting, then the ground pours (GND left of the gap, GND_ISO right) and the vias that join each net's pours on the two layers, kept off the printed texts |
 | `make_jlcpcb.py` | `jlcpcb/`: the Gerber ZIP, the BOM and the placement file, with the rotations JLCPCB's library wants |
 | `make_drawings.py` | the three PDFs |
-| `make_3d.py` | the pictures, in Blender from the board exported as GLB (and the board in its case, from `case/`) |
-| `make_print_case.py` | `case_print/`: the printed case, base and lid as STL turned as they print (labels also as bodies of their own, for a second colour), and as STEP; from where `make_board.py` puts the parts and `case_layout.Printed`. Runs with CadQuery like `make_case.py` |
-| `make_case.py` | `case/`: JLCMC's case with every hole, as STEP with its PDF drawing (`case_drawing.py`), from where `make_board.py` puts the parts; `case_layout.py` holds where the board sits in the case. Runs with CadQuery: `uv run --no-project --python 3.13 --with cadquery --with matplotlib python make_case.py` |
+| `make_3d.py` | the pictures, in Blender from the board exported as GLB, and the board in its cases |
+| `make_print_case.py` | `case_print/`: the printed case, base and lid as STL turned as they print (labels also as bodies of their own, for a second color), and as STEP; from where `make_board.py` puts the parts and `case_layout.Printed`. Runs with CadQuery like `make_case.py` |
+| `make_case.py` | box 4 only, `case/`: JLCMC's case with every hole, as STEP with its PDF drawing (`case_drawing.py`), from where `make_board.py` puts the parts; `case_layout.py` holds where the board sits in the case. Runs with CadQuery: `uv run --no-project --python 3.13 --with cadquery --with matplotlib python make_case.py` |
 | `check_parts.py` | asks JLCPCB's library whether every part is still there and in stock, and what an order of 5 costs |
 
 KiCad 10 is installed for the user (no administrator needed); the scripts that need `pcbnew` run with KiCad's own
 Python. As it stands: ERC and DRC have nothing to report, and the board's nets are those of the schematic.
 
-The boxes before dmxbox 3 (the box with the Pico, built on a perfboard; dmxbox 2 with a PIC32, drawn) are in
-`hardware/archive/`, their firmware in `firmware/archive/`, and their documentation, as it stood in this file, in
-[hardware/archive/DEV-pico-and-dmxbox2.md](hardware/archive/DEV-pico-and-dmxbox2.md).
+**dmxbox 1** ([boxes/box1](boxes/box1/BOM.md)) is a Raspberry Pi Pico in two socket strips on a board of
+through-hole parts that you solder, 100 × 62 mm: box 4's DMX side with RDM (6N137 and MAX485 in DIP sockets, a
+Recom RKK-0505S/H as the isolated supply, two P6KE6.8CA for protection), the box-number switch (a through-hole piano
+switch), three 3 mm LEDs and the service pins GND, RUN and LOG. The Pico's micro-USB is the box's USB socket and its
+regulator makes the 3.3 V; it measures VSYS itself (GPIO 29). Its printed case is 70 × 141 × 36 mm.
+
+**dmxbox 2** ([boxes/box2](boxes/box2/BOM.md)) is box 1's board with a PIC32MX270F256B in a DIP-28 socket
+instead of the Pico: the same DMX side with RDM, part for part, the box-number switch and the three LEDs, and its
+own USB-C socket (GCT USB4085, through-hole), an MCP1700 for the 3.3 V and an 8 MHz crystal. The PIC takes its
+firmware from a programmer on J2 (MCLR, VDD, GND, PGD, PGC); all 15 of its port pins are in use, so PGD carries
+the log as well and PGC the red LED. It does not measure its supply. Its printed case is box 1's with an opening
+for the USB-C socket.
+
+**dmxbox 3** ([boxes/box3](boxes/box3/BOM.md)) is box 4 without the hub, the OUT and POWER sockets and MIDI:
+one USB-C socket, DMX with RDM, the box-number switch, the LEDs and the service pins. Its board is 86 × 66 mm, its
+parts keep box 4's names and places, and its printed case is box 4's, narrower (74 × 127 × 36 mm), with the XLR in
+the middle of the back wall.
+
+The first designs of boxes 1 and 2 are in their `perfboard/` folders: the box with the Pico, built on a
+perfboard ([boxes/box1/perfboard](boxes/box1/perfboard/README.md)), and dmxbox 2 with a PIC32, drawn for one
+([boxes/box2/perfboard](boxes/box2/perfboard/README.md)); each README there is this file's text about it as it
+stood on 2026-11-26, and their firmware is in `firmware/archive/`.
 
 ---
 
@@ -155,7 +193,9 @@ The boxes before dmxbox 3 (the box with the Pico, built on a perfboard; dmxbox 2
 You need the Pico SDK (2.1.0 or newer, with its TinyUSB submodule), an ARM toolchain (`gcc-arm-none-eabi`),
 CMake, and Ninja or Make. It is built with Pico SDK 2.3.1 and Arm GNU Toolchain 14.2.Rel1.
 
-**Windows:** `firmware\build.cmd` does it in one step. It expects the tools in the folder `.pico-sdk` in your
+**Windows:** `boxes\box4\firmware\build.cmd` does it in one step (it runs `firmware\rp2040\build.cmd 4`, which
+builds the firmware with box 4's settings); `boxes\box3\firmware\build.cmd` and `boxes\box1\firmware\build.cmd`
+the same for boxes 3 and 1. It expects the tools in the folder `.pico-sdk` in your
 user folder, laid out the way the VS Code "Raspberry Pi Pico" extension lays them out:
 
 | Folder in `.pico-sdk` | What it holds |
@@ -170,46 +210,52 @@ CMake and Ninja are taken from the PATH, or from Visual Studio if it is installe
 **Linux and macOS** (this line has not been run yet):
 
 ```bash
-cd firmware
-mkdir build && cd build
-PICO_SDK_PATH=/path/to/pico-sdk cmake ..
+cd firmware/rp2040
+mkdir -p build/box4 && cd build/box4
+PICO_SDK_PATH=/path/to/pico-sdk cmake -DBOX=4 ../..
 make -j
 ```
 
-Both produce `build/dmxbox.uf2` (about 56 KB of code); `build.cmd` also puts a copy into `firmware/`, next to
-`flash.cmd`. The board is `src/boards/dmxbox3.h`: the 16 MB flash, and the crystal given more time to start, as
-Raspberry Pi advises for the ABM8.
+Both produce `firmware/rp2040/build/box4/dmxbox.uf2` (about 56 KB of code); `build.cmd` also puts a copy into
+`boxes/box4/firmware/` as `dmxbox4.uf2`, next to `flash.cmd`. What makes it box 4's firmware is in that folder:
+`box.h` (its model number, its name, MIDI and the chain, its pins) and `dmxbox4.h`, the board file for the SDK
+(the 16 MB flash, and the crystal given more time to start, as Raspberry Pi advises for the ABM8).
 
 ### Flash
 
-**Windows:** `firmware\flash.cmd` does it. It takes the `dmxbox.uf2` in its own folder, so the two files can also
-be copied together to another computer.
+**Windows:** `boxes\box4\firmware\flash.cmd` does it with `firmware\rp2040\flash.cmd`, which every RP2040 box
+uses. That one takes the `.uf2` file named after it, or else the one in its own folder, so it and `dmxbox4.uf2`
+can also be copied together to another computer.
 
 1. A new box has an empty flash, so the RP2040 starts its USB boot loader by itself: a drive named RPI-RP2.
 2. A box that runs the firmware is asked to restart into it (DX message `BOOTLOADER`): the script finds the boxes
    by their network adapters (10.1.n.2 is the computer's end of box n) and asks which one if there are several.
+   First it asks the box which box it is (PING): another box's firmware goes on only if you say so.
 3. If neither works: unplug the box, join BOOT and GND of J7 (a male-male jumper wire), plug it in again.
 
 It writes the file, waits until the box has restarted and then until it answers, showing each step as it goes.
 
-**By hand:** copy `dmxbox.uf2` onto the RPI-RP2 drive. The RP2040 restarts by itself and the drive disappears.
+**By hand:** copy `dmxbox4.uf2` onto the RPI-RP2 drive. The RP2040 restarts by itself and the drive disappears.
 
 ### Configure
 
-Edit `firmware/src/config.h`: the first two numbers of the addresses (10.1), the Art-Net universe of box 0, the
-presets, the USB names and the pins. The box number comes from SW1: box n is 10.1.n.1, gives the computer
+Edit `firmware/common/config.h` for what all the boxes share: the first two numbers of the addresses (10.1),
+the Art-Net universe of box 0, the presets and the USB numbers. What one box has of its own (its name, MIDI, the
+chain, its pins, how the supply reading is divided) is in its `box.h`: with `BOX_MIDI 0` the firmware has no
+MIDI port, with `BOX_CHAIN 0` it leaves OUT's switch alone, with `BOX_DMX_IN 0` it has no DMX IN. The box number comes from SW1: box n is 10.1.n.1, gives the computer
 10.1.n.2, plays Art-Net universe n, and is "box-00n" as the USB serial number.
 
 ### Check that it works
 
 * **Plug it in.** A new network adapter appears on the computer and gets 10.1.n.2 from the box within a few
-  seconds; a MIDI interface "dmxbox 3" appears too.
+  seconds; a MIDI interface "dmxbox 4" appears too.
 * **Ping:** `ping 10.1.n.1` is answered by the box.
-* **Control:** `dmxbox -H 10.1.n.1 ping` shows the firmware version, the state, the supply voltage, what the box
-  can do and its number.
+* **Control:** `dmxbox -H 10.1.n.1 ping` shows the firmware version, the state, which box it is, its number, the
+  supply voltage and what the box can do.
+* **DMX IN:** `dmxbox -H 10.1.n.1 input` shows whether a console sends, and its first levels.
 * **The log:** a 3.3 V USB-serial adapter on J7 (its RX to LOG, its GND to GND) at 250000 baud shows what the
   firmware says: its address and RDM ID at the start, the computer coming and going, the lights RDM found, 5 V
-  on OUT switched on and off.
+  on OUT switched on and off, a console on DMX IN sending or quiet.
 * **LEDs:**
 
 | LED | Meaning |
@@ -231,6 +277,12 @@ presets, the USB names and the pins. The box number comes from SW1: box n is 10.
   that gets an answer the driver switched to listening (DE low), the answer read by UART0 RX, the driver back.
   The waits are those of E1.20: an answer starts within 2.8 ms; after a search question the line stays quiet
   5.8 ms; after a lost answer 3 ms. A break before an answer is left out; framing errors mark it as spoiled.
+* **`dmx_rx.pio`, `dmx_in_rx.c` and `dmx_in.c`:** DMX IN. A state machine of PIO 1 reads the line at 250 kbaud
+  (8 cycles a bit) and pushes every byte with a flag for a low stop bit (a break, or a broken byte); an
+  interrupt of core 0 hands them to `dmx_in.c` (in `common/`), which makes frames of them: a break, start code 0,
+  up to 512 levels, complete at the next break or at the 512th. Other start codes are passed over; a broken
+  byte, or bytes lost while interrupts were off (a flash write), spoil the frame. The desk asks for the last
+  frame with the number of the one it has (`GET_INPUT`); a copy taken while a new frame is stored is taken again.
 * **`rdm.c` (in `common/`, so the simulator and the tests run it too):** the box is the RDM controller of its
   line. At power-on, and when the desk or an Art-Net program asks, it searches the line: DISC_UN_MUTE to all, then
   DISC_UNIQUE_BRANCH over ranges of the 48-bit IDs, halving a range where several answer at once, DISC_MUTE for
@@ -275,21 +327,51 @@ presets, the USB names and the pins. The box number comes from SW1: box n is 10.
 > blackout in the levels it sends, on the light only (see the Fixtures view), and keeps the box's own
 > master at full.
 
+### dmxbox 2: the PIC32 firmware
+
+Box 2 has its own firmware, `firmware/pic32`, on the same shared code (`firmware/common`) and settings
+(`common/config.h`): the same network adapter, Art-Net, DX protocol, RDM, presets and LEDs; PING says model 2.
+One core does everything. The main loop serves USB and the network, works out the next frame while the last one
+goes out, and starts each packet on the line; UART1's interrupt feeds the bytes and collects the RDM answers
+(`src/dmx_line.c`, its registers in `src/uart1.h`). The break is a 0 sent at 50 000 baud: 180 µs low, then 40 µs
+of mark. As on the RP2040, a frame is followed by up to 20 ms of RDM, with E1.20's waits. The PIC has no serial
+number, so its RDM ID is 7FF0:0002 and then the box number in two bytes; and it has no USB boot loader, so new
+firmware comes through J2 (the DX message `BOOTLOADER` does nothing there).
+
+**Build:** `boxes\box2\firmware\build.cmd` runs `firmware\pic32\build.cmd`. It needs MPLAB XC32 (free; built with
+v6.00) in `C:\Program Files\Microchip\xc32`, the PIC32MX device pack (PIC32MX_DFP, built with 1.7.380) in
+`%USERPROFILE%\.mchp_packs\Microchip`, where MPLAB puts it, and TinyUSB, the copy in the Pico SDK
+(`.pico-sdk\sdk\2.3.1\lib\tinyusb`); `XC32`, `DFP` and `TINYUSB` can name other folders. It makes
+`firmware\pic32\build\dmxbox2.hex` (67 KB of the 256 KB of flash, 38 KB of the 64 KB of RAM) and a copy in
+`boxes\box2\firmware`.
+
+**Flash:** a programmer on J2 (an MPLAB Snap, or a PICkit 4 or 5) and the box on USB, which powers the PIC:
+`boxes\box2\firmware\flash.cmd` runs `ipecmd`, the command-line tool of MPLAB IPE (installed with MPLAB X IDE),
+for a Snap; `flash.cmd PK4` or `flash.cmd PK5` for a PICkit. It has not been run yet: should `ipecmd` want other
+options, `ipecmd -?` lists them, and MPLAB IPE's window does the same job. The log comes out of J2's pin 4 (PGD)
+at 250000 baud while no programmer is on it.
+
 ### Tests on a PC
 
-`firmware\test\build.cmd` (Visual Studio C compiler) builds and runs two test programs; the release workflow runs
+`firmware\test\build.cmd` (Visual Studio C compiler) builds and runs the test programs; the release workflow runs
 them too.
 
 * `test_net` runs the real network stack, the address server, the USB glue, the USB tables (network adapter and
   MIDI, compared with what TinyUSB's own macros make) and the firmware's main program on pretend hardware, with
   lights that answer RDM on the pretend line: ARP, ping, UDP, DHCP, Art-Net, the DX protocol, damaged packets,
-  the LEDs, the box number, RDM through the main program, the boot loader (224 checks).
+  the LEDs, the box number, RDM and DMX IN through the main program, the boot loader (230 checks). It is built
+  with box 4's `box.h`, and again with box 3's as `test_net3` and box 1's as `test_net1` (USB tables without
+  MIDI, no DMX IN: 226 checks each).
 * `test_rdm` checks RDM and MIDI without hardware: packets and the coded answers of the search; searches with 0
   to 64 lights, also with IDs from all over the 48 bits; requests, refusals, lights that do not answer, a line
   that never reports back; RDM over the DX protocol (answers that come later, repeats, busy) and over Art-Net; the
-  MIDI bytes both ways (222 checks).
+  MIDI bytes both ways; DMX IN: frames from the receiver's bytes, and `GET_INPUT` (235 checks).
+* `test_line` runs box 2's DMX line (`firmware/pic32/src/dmx_line.c`) on a pretend UART with the simulator's
+  lights on the line, time going by in microseconds: frames with their break and mark, the search with 0 to 30
+  lights while the frames go on, requests (an answer, a refusal, a light that is not there, a broadcast, a slow
+  light, a pulled cable) and an answer too long for the buffer while the PIC stands still (56 checks).
 
-On Linux or macOS use the `cc` lines at the top of `test_net.c` and `test_rdm.c`.
+On Linux or macOS use the `cc` lines at the top of `test_net.c`, `test_rdm.c` and `test_line.c`.
 
 ---
 
@@ -324,6 +406,7 @@ dmxbox preset go 0 -t 2
 dmxbox master 128
 dmxbox blackout on
 dmxbox get 1 12                  # what is on the DMX line right now
+dmxbox input 1 12                # what a console sends to DMX IN (dmxbox 4)
 dmxbox merge override            # or: htp
 dmxbox artnet 1 255 255          # one raw Art-Net frame
 dmxbox release-artnet
@@ -331,7 +414,7 @@ dmxbox demo cues                 # demos for 4 RGB PARs at channels 1-12 (also: 
 ```
 
 The tool talks to 192.168.7.1 (the box with the Pico) unless you name another address with `-H <address>` or in
-the environment variable `DMXBOX_HOST`: `-H 10.1.3.1` for dmxbox 3 number 3, `-H 127.0.0.1` for the simulator.
+the environment variable `DMXBOX_HOST`: `-H 10.1.3.1` for the box with the number 3, `-H 127.0.0.1` for the simulator.
 `dmxbox --help` lists everything. Without building first: `dotnet run --project backend/DmxBox.Cli -- ping`.
 In the first seconds after plugging in, `discover` can come back empty: try again. If it stays empty
 although `ping` works, let the program through the Windows firewall.
@@ -366,7 +449,7 @@ and the packets that end a universe) and `EnttecPro` (the messages of the Enttec
 ### QLC+ (or any Art-Net software)
 
 Add an Art-Net output on the network adapter with the address 10.1.n.2 (that is the box's USB link), for
-universe n and IP 10.1.n.1. `discover` (or QLC+'s own scan) should find a node called `dmxbox 3`. QLC+ also
+universe n and IP 10.1.n.1. `discover` (or QLC+'s own scan) should find a node called `dmxbox 4`. QLC+ also
 finds the lights with RDM on the box's line through Art-Net (its RDM manager).
 
 To control the lights from a tablet or phone over Wi-Fi, run the lighting program on the computer the box is
@@ -390,11 +473,12 @@ the addresses one after the other):
 
 | Program | Box | sim.cmd |
 |---|---|---|
-| `dmxbox_sim.exe` | dmxbox 3: one output, channels 1 to 512 | `dmxbox` |
+| `dmxbox_sim.exe` | dmxbox 4: one output, channels 1 to 512 | `dmxbox` |
 | `dmxbox_sim2.exe` | the same with two outputs: channels 1 to 1024, 513 on is output 2 (no such box: for the tests) | `dmxbox-2-universes` |
 
 `--rdm-lights 5` puts 5 lights with RDM on the line (3 if not given, 0 to 64), `--box 3` gives it the number 3
-on its switch (Art-Net universe 3). `--drop 0.3` loses 30 % of control packets in each direction. Use it to test the reliability layer; the test
+on its switch (Art-Net universe 3). `--console-port 7001` is its DMX IN: every UDP datagram of 1 to 512 bytes there
+is a frame from a console. `--drop 0.3` loses 30 % of control packets in each direction. Use it to test the reliability layer; the test
 suite does exactly this. `--host 127.0.0.1` binds the simulator to one address (all of them without it; on
 127.0.0.1 Windows does not ask about its firewall), and `--parent PID` ends it with that process. They are
 built with the Visual Studio C compiler; on Linux or macOS use `make -C firmware/sim`.
@@ -407,7 +491,8 @@ built the first time (and again when the firmware changed), with Visual Studio's
 
 ```powershell
 sim.cmd                        # the devices and the options
-sim.cmd dmxbox --lights 5      # dmxbox 3 with 5 lights with RDM on its line (--box 3: its number); also dmxbox-2-universes
+sim.cmd dmxbox --lights 5      # dmxbox 4 with 5 lights with RDM on its line (--box 3: its number); also dmxbox-2-universes
+sim.cmd dmxbox --console       # with a console on its DMX IN: 24 faders and 8 buttons on a page of their own
 sim.cmd artnet --ports 2       # an Art-Net node with two ports (--at 0:0:0, --name "Sim node")
 sim.cmd sacn --universes 1-4   # an sACN receiver (--multicast takes the desk's multicast too)
 sim.cmd enttec                 # an Enttec DMX USB Pro (--serial 12345678)
@@ -415,7 +500,7 @@ sim.cmd apc-mini-mk2           # an Akai APC mini mk2; also nanokontrol2, x-touc
 ```
 
 * **Keys:** U pulls the device out and plugs it in again, Q (or Ctrl+C) ends it; a MIDI controller also has O,
-  which opens its page. A script can give the keys as lines on the input instead ("u", "q").
+  which opens its page, and a box with `--console` C, which opens the console's. A script can give the keys as lines on the input instead ("u", "q").
 * **What each writes:** the levels of each output, port or universe when they change (`--show 16`), and
   what happens: a box its DMX lines, the node the frames of each port and its first poll, the receiver each
   source of a universe with its name, priority and sequence, and when it ends its stream or falls silent
@@ -426,7 +511,7 @@ sim.cmd apc-mini-mk2           # an Akai APC mini mk2; also nanokontrol2, x-touc
   `--Lan:PasswordFile` has its own; `sim.cmd ... --folder` points a simulator there). A simulated box is
   looked for like a box on a USB cable; a simulated node answers the search of the Outputs panel; a simulated USB interface is a
   serial port "SIM1" in the list. A simulator that was killed is passed over once its process is gone.
-* **Where they are:** every box at 127.0.0.1 on two free ports (its DX port is its address, "127.0.0.1:52011");
+* **Where they are:** every box at 127.0.0.1 on three free ports (its DX port is its address, "127.0.0.1:52011"; Art-Net; DMX IN);
   the node and the receiver at an address of their own, 127.0.0.2, 127.0.0.3 and on, at the usual ports
   6454 and 5568; the USB interface behind a named pipe, `lumenet-sim-SIM1` (no serial port can be made
   without a driver; `PipeDmxPort` plays it in the desk). None of them is on the network, and Windows does not
@@ -905,6 +990,12 @@ and only on localhost or HTTPS, and a controller belongs to the PC it is plugged
   `MidiDeskFaders` moves the desk's faders (`IMidiDesk`), `MidiFeedback` makes the lights and values that go
   back, `MidiSetup.cs` holds the setup, its check and `midi.json`, `MidiPresets.cs` the ready-made mappings,
   and `ControlTarget.cs` the names of the targets and the scales of the faders.
+* **DMX IN of the boxes:** `DmxInPorts` puts the DMX IN of every box that answers and has one among the
+  devices, "DMX IN (box 3)", an input only. Opened, its box link asks the box what came in, in every round of
+  its own (`GetInput`, 40 a second), and every channel that changed comes as a message of the kind `Dmx` (the
+  channel 1 to 512 as its number, the level as its value); the first frame only says where the console stands.
+  A mapping `"message": "dmx"` takes a channel 1 to 512 on MIDI channel 1: a fader takes its level as it is,
+  a key is pressed from 128 on; nothing goes back (no feedback).
 * **Keys go through a page:** the desk program does not press the desk's keys itself. It sends a key
   (`MidiKey`) to the page on the PC that was used last (`ClaimMidi` when it connects, gets the focus, a click
   or a key; at most once a second), which presses it as its shortcut would (`Keyboard.midiKey`): the locks,
@@ -940,7 +1031,7 @@ and only on localhost or HTTPS, and a controller belongs to the PC it is plugged
   lights its own key while it is held, a motor the desk did not follow). A light without a blink of its own
   is blinked by the desk, twice a second.
 * **midi.json** beside the LAN password: `{ "format": "lumenet-midi", "version": 1, "devices": [...],
-  "mappings": [...] }`, a mapping `{ "device", "channel", "message": "note|cc|cc14|pitchbend|program",
+  "mappings": [...] }`, a mapping `{ "device", "channel", "message": "note|cc|cc14|pitchbend|program|dmx",
   "number", "target", "mode", "pickup", "feedback", "lights" }`. A file that cannot be read is kept as
   `midi.json.bad`, and the desk starts without one. Export puts the devices and mappings into its file as
   `midi`.
@@ -1039,7 +1130,7 @@ publish.cmd        # builds the page, then publish\Lumenet.exe
 
 `dotnet test backend/DmxBox.sln` (928 tests: the client, also against the simulator with two outputs, RDM
 through the client (the lights the simulator finds, GET and SET, refusals, a light that is not there, answers
-that come later over a line that loses packets) and through the hub with a simulated dmxbox 3, the
+that come later over a line that loses packets) and through the hub with a simulated dmxbox 4, the
 desk, solo, sequences and the stack with a clock the tests set by hand, the rate and its tempo, undo and the autosave, the
 stage plan and its picture, fixtures, their attributes, their steps and their notes, the notes, the
 universes, project files with Export and Import, the examples, the import of show files, the links to the
@@ -1128,7 +1219,7 @@ request's session and seq, and its payload is `status u8` followed by data.
 
 | Type | Name | Request payload | ACK data |
 |---|---|---|---|
-| 0x01 | PING | none | fw major, fw minor, flags, master, uptime_ms u32, preset mask u16, channels u16; since dmxbox 3 also supply mV u16 (0 = not measured), can u8, box number u8 |
+| 0x01 | PING | none | fw major, fw minor, flags, master, uptime_ms u32, preset mask u16, channels u16; since firmware 3.0 also supply mV u16 (0 = not measured), can u8, box number u8; since 3.1 the model u8 (which box: 1 to 4) |
 | 0x10 | SET | start u16 (1-based), count u16, values[count] | none |
 | 0x11 | FADE | start u16, count u16, duration_ms u32, values[count] | none |
 | 0x20 | PRESET_SAVE | slot u8 | none |
@@ -1140,18 +1231,21 @@ request's session and seq, and its payload is `status u8` followed by data.
 | 0x33 | MERGE_MODE | 0 = HTP, 1 = override | none |
 | 0x40 | GET_OUTPUT | start u16, count u16 | values[count] |
 | 0x41 | GET_PRESET | slot u8 | values[channels]: 512 from one output, 1024 from two |
+| 0x42 | GET_INPUT | the number of the last frame the asker has, u32 (0: none) | live u8 (a frame within the last second), the last frame's number u32 (0 before the first), count u16, levels[count]: none when the asker has that frame (since 3.2, a box with DMX IN) |
 | 0x50 | RDM_DISCOVER | none | none: the box searches its line again |
 | 0x51 | RDM_TOD | none | searching u8, count u16, then the IDs, 6 bytes each |
 | 0x52 | RDM_REQUEST | light's ID (6), sub-device u16, command class u8, PID u16, pdl u8, data[pdl] | response type u8, command class u8, PID u16, pdl u8, data[pdl]: what the light answered |
 | 0x60 | BOOTLOADER | none | none: the box restarts into its USB boot loader 0.3 s later |
 
 The PING flags byte: bit 0 = Art-Net live, bit 1 = blackout, bit 2 = override mode, bit 3 = Art-Net layer holding data.
-Its "can" byte: bit 0 = RDM, bit 1 = a USB MIDI port, bit 2 = a hub with OUT for the next box. A box from before
-dmxbox 3 answers 13 bytes without the last three, and UNKNOWN_TYPE to the RDM messages.
+Its "can" byte: bit 0 = RDM, bit 1 = a USB MIDI port, bit 2 = a hub with OUT for the next box, bit 3 = DMX IN. A box with firmware
+before 3.0 answers 13 bytes without the last four, and UNKNOWN_TYPE to the RDM messages; firmware 3.0 answers 17,
+without the model. The desk names a box by its model ("dmxbox 4"), and one that does not say by its firmware and
+its address.
 
 Status codes: 0 OK, 1 BAD_LENGTH, 2 BAD_ARG, 3 UNKNOWN_TYPE, 4 STORAGE_ERROR, 5 EMPTY_SLOT, 6 RDM_TIMEOUT (the
 light did not answer), 7 RDM_BAD (its answer came spoiled), 8 BUSY (another RDM request is on its way), 9
-NOT_SUPPORTED (no RDM).
+NOT_SUPPORTED (no RDM, or no DMX IN).
 
 **An answer that comes later:** RDM_REQUEST waits for the light, a few tens of milliseconds, so its ACK comes
 when the light has answered; the box keeps the session and seq of the request for it. A retransmit meanwhile
@@ -1282,7 +1376,7 @@ receivers listen at 5568 and the desk sends from a port of its own.
 ## 7. Ideas for later
 
 * **Linux and a Raspberry Pi image** (the owner's plan): Lumenet on a Raspberry Pi, the image ready to use,
-  LAN on from the start and switched off only on the device itself. dmxbox 3 needs no driver there: Linux
+  LAN on from the start and switched off only on the device itself. The boxes need no driver there: Linux
   takes its network adapter (cdc_ncm) and its MIDI port (snd-usb-audio) as it comes. What remains is the desk:
   a Linux build of Lumenet and the image.
 * **Open DMX USB and FTDI cables without a processor:** the PC has to make the DMX frame itself (a break, a
@@ -1317,7 +1411,44 @@ receivers listen at 5568 and the desk sends from a port of its own.
 
 ## Verification status
 
-* **dmxbox 3 (2026-11-27):** drawn in KiCad 10 by scripts; ERC and DRC (with the check that the board's nets
+* **DMX IN of dmxbox 4 (2026-11-28):** a socket of its own beside DMX OUT (a male XLR on J8), its receiver on
+  the isolated side of DMX OUT. The board grew to 86 × 82 mm; ERC and DRC (with the nets of the schematic) have
+  nothing to report, FreeRouting routed it at the first attempt, and every part JLCPCB fits was in stock. The
+  printed case is 123 mm wide for the four sockets. The aluminium case moved to JLCMC's K119-12063-H7-L130 (120 ×
+  63 × 130 mm, split): its holes come from JLCMC's STEP and were checked in Blender's pictures, not in a real
+  case; the male XLR-5W-C is taken to have the female's cut-out until its drawing is at hand. Firmware 3.2: the
+  PIO receiver builds for box 4 without a warning but has not met a real line (its timing is the SDK's uart_rx
+  example's); `dmx_in.c` and `GET_INPUT` pass the PC tests (`test_rdm` 235 checks, `test_net` 230, 226 for
+  boxes 3 and 1); the simulator takes a console's frames on `--console-port` (a .NET socket closed at once after
+  sending lost its datagram on Windows: the senders keep theirs open); the desk's side (the box link,
+  `DmxInPorts`, the mapper, Learn, the MIDI view, `sim.cmd dmxbox --console`) passes the backend's 936 tests and
+  the page's 330.
+* **dmxbox 2 (2026-11-28):** box 1's board with a PIC32, made with the shared scripts: ERC, the net list and DRC
+  (with the nets of the schematic) have nothing to report, FreeRouting routed it at the first attempt. The PIC's
+  pins come from its datasheet (DS60001168L), the USB-C socket's from GCT's drawing of the USB4085. Its firmware
+  (`firmware/pic32`) builds with XC32 v6.00 without a warning, and its DMX line passes `test_line` (56 checks),
+  which noticed four of six mistakes planted in it: no listening, no quiet line after an answer, too long a time
+  for RDM between frames, and listening on after the whole answer had come; the two it let pass (how a break and
+  a framing error are told apart) change nothing with the pretend lights. `flash.cmd` has not run: neither MPLAB
+  IPE nor a programmer is at hand. Nothing of it is built.
+* **dmxbox 1 (2026-11-28):** made with the shared scripts: ERC, the net list and DRC (with the nets of the
+  schematic) have nothing to report, FreeRouting routed it at the first attempt. The RKK's footprint comes from
+  Recom's datasheet (Rev. 5-2026), the rest from KiCad's library; KiCad's 3D models show the Pico on its socket
+  strips, its micro-USB in the case's opening. Its firmware builds without a warning and `test_net1` passes.
+  Nothing of it is built.
+* **dmxbox 3 and the shared scripts (2026-11-28):** box 4's scripts split into the code all boxes share
+  (`boxes/scripts`) and what is box 4's; they make box 4's schematic, board placement, JLCPCB files and cases
+  exactly as before, and its pictures within one step of brightness. Box 3 made with them: ERC, the net list and
+  DRC (with the nets of the schematic) have nothing to report, FreeRouting routed it at the first attempt, and
+  every part JLCPCB fits was in stock (65 parts, 9 extended). Its firmware builds without a warning, and
+  `test_net3` passes. Nothing of box 3 is built.
+* **Four boxes (2026-11-28):** the folders of `boxes/`, and dmxbox 3 renamed dmxbox 4. Its board was not routed
+  again: the names in its KiCad files and on its silkscreen changed, and five ground vias moved off printed
+  letters; ERC and DRC (with the nets of the schematic) still have nothing to report, and JLCPCB's BOM and
+  placement files are the same as before. The firmware tells its model in PING (3.1): it builds for box 4 without
+  a warning, its tests pass (`test_net` 224 checks, `test_rdm` 222), and so do the backend's (928) and the
+  page's (329).
+* **dmxbox 4, then called dmxbox 3 (2026-11-27):** drawn in KiCad 10 by scripts; ERC and DRC (with the check that the board's nets
   are the schematic's) have nothing to report, and every part JLCPCB fits was in stock. All SMD since the same
   day: the footprint of the DC-DC module and its pins (1 GND, 2 Vin, 4 0V, 5 +Vo, 8 free) come from Mornsun's
   datasheet of the B05_XT-1WR3 series (2022.01.08-A/5), and EVISUN's datasheet of the part JLCPCB fits (V1.0)
@@ -1346,7 +1477,7 @@ receivers listen at 5568 and the desk sends from a port of its own.
   the `dmxbox` tool work against it: `ping`, `discover`, `set`, `get`, `fade`, `master`, `blackout`, `artnet`,
   `release-artnet`, and saving, showing and clearing a preset. Windows first refused the adapter (code 10);
   the correction in `usb_net.c` cured that.
-* **Circuit on a breadboard (2026-11-18):** built after the [breadboard plan](hardware/archive/DEV-pico-and-dmxbox2.md#building-it-on-a-breadboard).
+* **Circuit on a breadboard (2026-11-18):** built after the [breadboard plan](boxes/box1/perfboard/README.md#building-it-on-a-breadboard).
   The isolated supply reads 5 V. A multimeter at the XLR jack (pin 3 against pin 2) shows what was calculated
   for a DMX signal with the right polarity: 4.28 V on the resting line, about −2.5 V with all channels at
   zero, and a positive reading with all channels at full. Both buttons work: SW1 switches blackout on and

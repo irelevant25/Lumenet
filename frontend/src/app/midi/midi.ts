@@ -29,8 +29,8 @@ export interface OscView {
   readonly problem: string | null;
 }
 
-/** The kinds of MIDI messages a control can be. */
-export type MidiMessageKind = 'note' | 'cc' | 'cc14' | 'pitchbend' | 'program';
+/** The kinds of MIDI messages a control can be; "dmx" is a channel of a box's DMX IN (a console). */
+export type MidiMessageKind = 'note' | 'cc' | 'cc14' | 'pitchbend' | 'program' | 'dmx';
 
 /** How a controller (CC) moves a fader: where it stands, or the ticks of an endless encoder. */
 export type MidiMode = 'absolute' | 'relative-twos' | 'relative-offset' | 'relative-sign';

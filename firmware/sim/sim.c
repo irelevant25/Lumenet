@@ -2,13 +2,13 @@
 // code as the box, but on your PC over normal UDP sockets, with lights on its
 // DMX line that exist only in memory and answer RDM. Develop your PC software
 // against this before the hardware exists. There are two builds:
-//   dmxbox_sim   dmxbox 3 (one output, 512 channels)
+//   dmxbox_sim   dmxbox 4 (one output, 512 channels: the box of box.h)
 //   dmxbox_sim2  the same with two outputs, which does not exist as hardware (for tests)
 // sim.cmd at the root of the repository starts one as if the box were plugged in.
 //
 //   dmxbox_sim [--host 127.0.0.1] [--artnet-port 6454] [--ctrl-port 7000] [--drop 0.2]
 //              [--presets presets.bin] [--show 16] [--quiet] [--parent 1234]
-//              [--rdm-lights 3] [--box 0]
+//              [--rdm-lights 3] [--box 0] [--console-port 7001]
 //
 // --host binds both sockets to one address of the PC (every address without it;
 // 127.0.0.1 keeps the simulator off the network, and Windows does not ask about
@@ -17,7 +17,9 @@
 // first N channels of every output when they change. --parent PID ends the
 // simulator when that process ends (sim.cmd starts it so). --rdm-lights N puts
 // N lights with RDM on the line (3 if not given, 0 to 64). --box N is the number
-// of the box switch: the Art-Net universe is ARTNET_UNIVERSE + N.
+// of the box switch: the Art-Net universe is ARTNET_UNIVERSE + N. --console-port P
+// is the box's DMX IN: every UDP datagram that comes to port P (1 to 512 bytes)
+// is a frame of levels from a console (none without it).
 //
 // Builds on Windows (build.cmd, Visual Studio C compiler) and on Linux/macOS (make).
 #ifdef _WIN32
@@ -172,7 +174,7 @@ static bool parent_gone(void) { return g_parent != 0 && getppid() != g_parent; }
 #endif
 
 int main(int argc, char **argv) {
-    uint16_t artnet_port = ARTNET_PORT, ctrl_port = CTRL_PORT;
+    uint16_t artnet_port = ARTNET_PORT, ctrl_port = CTRL_PORT, console_port = 0;
     int show = 16;
     bool quiet = false;
     int rdm_lights = 3, box = 0;
@@ -189,6 +191,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--parent") && i + 1 < argc) watch_parent(strtoul(argv[++i], NULL, 10));
         else if (!strcmp(argv[i], "--rdm-lights") && i + 1 < argc) rdm_lights = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--box") && i + 1 < argc) box = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "--console-port") && i + 1 < argc) console_port = (uint16_t)atoi(argv[++i]);
         else { fprintf(stderr, "usage: see top of sim.c\n"); return 2; }
     }
     if (show > DMX_OUTPUT_CHANNELS) show = DMX_OUTPUT_CHANNELS;
@@ -209,8 +212,13 @@ int main(int argc, char **argv) {
     rdm_init(&g_rdm, own_uid);
     rdm_start_discovery(&g_rdm);                       // a box searches its line when it starts
     g_ctrl.rdm = &g_rdm;
-    g_ctrl.can = CTRL_CAN_RDM | CTRL_CAN_MIDI | CTRL_CAN_CHAIN;
+    g_ctrl.can = CTRL_CAN_RDM | (BOX_MIDI ? CTRL_CAN_MIDI : 0) | (BOX_CHAIN ? CTRL_CAN_CHAIN : 0) |
+                 (BOX_DMX_IN ? CTRL_CAN_DMX_IN : 0);
+    static dmx_in_t dmx_in;                            // DMX IN: what the console port brings
+    dmx_in_init(&dmx_in);
+    if (BOX_DMX_IN) g_ctrl.dmx_in = &dmx_in;
     g_ctrl.box_number = (uint8_t)box;
+    g_ctrl.model = BOX_MODEL;
     // The address the node gives in its ArtPollReply: the one it is bound to, or 127.0.0.1.
     uint32_t own = g_host == INADDR_ANY ? 0x7F000001u : g_host;
     g_artnet = (artnet_node_t){.eng = &g_engine, .universe = (uint16_t)(ARTNET_UNIVERSE + box), .rdm = &g_rdm,
@@ -218,6 +226,8 @@ int main(int argc, char **argv) {
                                .mac = {0x02, 0, 0, 0, 0, 1}};
 
     sock_t s_art = udp_bind(artnet_port), s_ctl = udp_bind(ctrl_port);
+    sock_t s_con = BOX_DMX_IN && console_port ? udp_bind(console_port) : (sock_t)-1;
+    if (s_con != (sock_t)-1) printf("DMX IN: a console sends its levels to udp/%u\n", console_port);
     printf("dmxbox sim \"%s\": %d output%s (%d channels), Art-Net on udp/%u (universe %d to %d), control on udp/%u, "
            "%d RDM light%s, drop=%.2f\n",
            NODE_SHORT_NAME, DMX_OUTPUTS, DMX_OUTPUTS == 1 ? "" : "s", DMX_CHANNELS, artnet_port, ARTNET_UNIVERSE + box,
@@ -238,10 +248,16 @@ int main(int argc, char **argv) {
         FD_ZERO(&rf);
         FD_SET(s_art, &rf);
         FD_SET(s_ctl, &rf);
+        if (s_con != (sock_t)-1) FD_SET(s_con, &rf);
         struct timeval tv = {.tv_sec = 0, .tv_usec = wait * 1000};
         int maxfd = (int)(s_art > s_ctl ? s_art : s_ctl);    // ignored by Winsock
+        if (s_con != (sock_t)-1 && (int)s_con > maxfd) maxfd = (int)s_con;
         if (select(maxfd + 1, &rf, NULL, NULL, &tv) < 0) die("select");
 
+        if (s_con != (sock_t)-1 && FD_ISSET(s_con, &rf)) {      // a frame from the console, for DMX IN
+            int n = (int)recv(s_con, (char *)buf, sizeof buf, 0);
+            if (n > 0) dmx_in_frame(&dmx_in, buf, n, now_ms());
+        }
         for (int k = 0; k < 2; k++) {
             sock_t s = k == 0 ? s_art : s_ctl;
             if (!FD_ISSET(s, &rf)) continue;

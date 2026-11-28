@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DMX console (simulator)</title>
+<!--
+  The page of the console on the DMX IN of a simulated box (DmxConsole.cs, sim.cmd dmxbox --console).
+  Its faders are channels 1 to 24, its buttons the 8 channels after them (255 while held); the
+  simulator sends the box all 512 levels 40 times a second, as a console on the socket would.
+-->
+<style>
+  :root {
+    color-scheme: dark;
+    --page: #111316;
+    --body: #1b1e23;
+    --edge: #343a43;
+    --text: #e8eaed;
+    --dim: #a0a7b1;
+    --lit: #ffb020;
+  }
+
+  body {
+    margin: 0;
+    padding: 16px;
+    background: var(--page);
+    color: var(--text);
+    font: 14px/1.4 system-ui, sans-serif;
+  }
+
+  h1 {
+    margin: 0 0 4px;
+    font-size: 18px;
+  }
+
+  p {
+    margin: 0 0 12px;
+    color: var(--dim);
+    max-width: 70ch;
+  }
+
+  .desk {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 12px;
+    background: var(--body);
+    border: 1px solid var(--edge);
+    border-radius: 8px;
+  }
+
+  .strip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 34px;
+  }
+
+  .strip input[type="range"] {
+    writing-mode: vertical-lr;
+    direction: rtl;
+    height: 160px;
+    width: 24px;
+    accent-color: var(--lit);
+  }
+
+  .number,
+  .value {
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+  }
+
+  .value {
+    color: var(--dim);
+  }
+
+  .buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  button {
+    min-width: 52px;
+    min-height: 40px;
+    border: 1px solid var(--edge);
+    border-radius: 6px;
+    background: #2a2e35;
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  button[aria-pressed="true"] {
+    background: var(--lit);
+    color: #111316;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--lit);
+    outline-offset: 2px;
+  }
+</style>
+</head>
+<body>
+<h1>DMX console (simulator)</h1>
+<p>
+  A console on the DMX IN of the simulated dmxbox: channels 1 to {{FADERS}} are its faders, the {{BUTTONS}}
+  after them its buttons, at full while held. In the desk the box's DMX IN is a device of the MIDI view:
+  Learn there takes the channel you move.
+</p>
+<div class="desk" id="faders" role="group" aria-label="Faders"></div>
+<div class="buttons" id="buttons" role="group" aria-label="Buttons"></div>
+<script>
+  const faders = Number('{{FADERS}}');
+  const buttons = Number('{{BUTTONS}}');
+
+  function send(channel, level) {
+    fetch('/level', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel, level }),
+    }).catch(() => {});
+  }
+
+  const fadersBox = document.getElementById('faders');
+  for (let channel = 1; channel <= faders; channel++) {
+    const strip = document.createElement('div');
+    strip.className = 'strip';
+    const number = document.createElement('span');
+    number.className = 'number';
+    number.textContent = String(channel);
+    const fader = document.createElement('input');
+    fader.type = 'range';
+    fader.min = '0';
+    fader.max = '255';
+    fader.value = '0';
+    fader.setAttribute('aria-label', `Channel ${channel}`);
+    const value = document.createElement('span');
+    value.className = 'value';
+    value.textContent = '0';
+    fader.addEventListener('input', () => {
+      value.textContent = fader.value;
+      send(channel, Number(fader.value));
+    });
+    strip.append(number, fader, value);
+    fadersBox.append(strip);
+  }
+
+  const buttonsBox = document.getElementById('buttons');
+  for (let k = 1; k <= buttons; k++) {
+    const channel = faders + k;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = String(channel);
+    button.setAttribute('aria-label', `Button on channel ${channel}`);
+    button.setAttribute('aria-pressed', 'false');
+    const hold = (down) => {
+      if ((button.getAttribute('aria-pressed') === 'true') === down) return;
+      button.setAttribute('aria-pressed', String(down));
+      send(channel, down ? 255 : 0);
+    };
+    button.addEventListener('pointerdown', (event) => {
+      button.setPointerCapture(event.pointerId);
+      hold(true);
+    });
+    button.addEventListener('pointerup', () => hold(false));
+    button.addEventListener('pointercancel', () => hold(false));
+    button.addEventListener('keydown', (event) => {
+      if ((event.key === ' ' || event.key === 'Enter') && !event.repeat) {
+        event.preventDefault();
+        hold(true);
+      }
+    });
+    button.addEventListener('keyup', (event) => {
+      if (event.key === ' ' || event.key === 'Enter') hold(false);
+    });
+    button.addEventListener('blur', () => hold(false));
+    buttonsBox.append(button);
+  }
+</script>
+</body>
+</html>

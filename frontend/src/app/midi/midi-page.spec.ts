@@ -219,6 +219,64 @@ describe('the desk page: MIDI controllers', () => {
     ).toEqual(['fader.slot.channel.1']);
   });
 
+  it('a console on the DMX IN of a box is a device of the MIDI view; its channels have no light or motor', async () => {
+    await show('/midi');
+    const panel = page.querySelector<HTMLElement>('lm-midi-view')!;
+    const dmxIn = 'DMX IN (box 3)';
+    await withMidi({
+      devices: [
+        ...MIDI.devices,
+        {
+          name: dmxIn,
+          input: true,
+          output: false,
+          used: true,
+          state: 'open',
+          problem: null,
+          simulated: false,
+        },
+      ],
+      mappings: [
+        {
+          device: dmxIn,
+          channel: 1,
+          message: 'dmx',
+          number: 12,
+          target: 'fader.master',
+          mode: 'absolute',
+          pickup: true,
+          feedback: false,
+        },
+        {
+          device: dmxIn,
+          channel: 1,
+          message: 'dmx',
+          number: 13,
+          target: 'stack.play',
+          mode: 'absolute',
+          pickup: false,
+          feedback: false,
+        },
+      ],
+    });
+    expect(panel.querySelector('lm-midi-devices')?.textContent).toContain(dmxIn);
+
+    const head = (name: string) =>
+      [...panel.querySelectorAll<HTMLButtonElement>('lm-midi-targets .head')].find(
+        (found) => found.querySelector('.name')?.textContent === name,
+      )!;
+    const row = (id: string) => panel.querySelector<HTMLElement>(`tr[data-row="${id}"]`)!;
+    await press(head('Stack'));
+    expect(row('stack.play').textContent).toContain('DMX IN (box 3): DMX channel 13');
+    expect(row('stack.play').nextElementSibling?.classList.contains('options')).not.toBe(true); // no light to light
+
+    await press(head('Master and rate'));
+    expect(row('fader.master').textContent).toContain('DMX IN (box 3): DMX channel 12');
+    const options = row('fader.master').nextElementSibling as HTMLElement;
+    expect(options.textContent).toContain("Takes over at the desk's value");
+    expect(options.textContent).not.toContain('Motor or lights');
+  });
+
   it('OSC: the MIDI view switches it on, on a port, and every key and fader shows its address', async () => {
     await show('/midi');
     await withMidi({ osc: { on: false, port: 8000, state: 'off', problem: null } });

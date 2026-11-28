@@ -36,7 +36,7 @@
     @if (box.error) {
       <p class="error">{{ box.error }}</p>
     } @else if (!box.rdm) {
-      <p class="hint">This box has no RDM: dmxbox 3 has it.</p>
+      <p class="hint">This box has no RDM: its firmware is older than 3.0.</p>
     } @else if (box.lights.length === 0) {
       @if (!box.searching) {
         <p class="hint">No light with RDM answers on its line.</p>

@@ -45,6 +45,7 @@ describe('the desk page: universes and outputs', () => {
         outputs: 1,
         universes: [1],
         kind: 'automatic',
+        model: null,
       },
       {
         address: '10.1.3.1',
@@ -53,6 +54,7 @@ describe('the desk page: universes and outputs', () => {
         outputs: 2,
         universes: [0, 0],
         kind: 'automatic',
+        model: null,
       },
     ];
     connection.emit('BoxesChanged', boxes);
@@ -61,7 +63,7 @@ describe('the desk page: universes and outputs', () => {
     await show('/settings#outputs');
     const rows = () => [...page.querySelectorAll('lm-outputs-panel tbody tr')];
     expect(rows().map((row) => row.querySelector('.name')?.textContent?.trim())).toEqual([
-      'dmxbox',
+      'dmxbox 1',
       'dmxbox 2',
       'dmxbox 2, output 2',
     ]);
@@ -113,6 +115,7 @@ describe('the desk page: universes and outputs', () => {
         outputs: 1,
         universes: [0],
         kind: 'listed',
+        model: null,
       },
     ]);
     await fixture.whenStable();

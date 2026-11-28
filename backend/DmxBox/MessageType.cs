@@ -8,8 +8,9 @@ public static class MessageType
 {
     /// <summary>
     /// No payload. Answer: firmware major, firmware minor, flags, master, uptime in ms (u32),
-    /// preset mask (u16), channel count (u16); since dmxbox 3 also the supply voltage in mV (u16),
-    /// what the box can do (u8, see <see cref="BoxAbilities"/>) and its number (u8).
+    /// preset mask (u16), channel count (u16); since firmware 3.0 also the supply voltage in mV (u16),
+    /// what the box can do (u8, see <see cref="BoxAbilities"/>) and its number (u8); since 3.1 which
+    /// box it is, 1 to 4 (u8).
     /// </summary>
     public const byte Ping = 0x01;
 
@@ -46,7 +47,15 @@ public static class MessageType
     /// <summary>Payload: slot (u8). Answer: the 512 stored values.</summary>
     public const byte GetPreset = 0x41;
 
-    /// <summary>No payload: the box searches its DMX line for lights with RDM again (dmxbox 3).</summary>
+    /// <summary>
+    /// Payload: the number of the last frame of DMX IN the asker has (u32; 0 for none). Answer: live
+    /// (u8: 1 while a console sends, a frame less than a second ago), the number of the last complete
+    /// frame (u32, 0 before the first), count (u16), and then its levels, none when the asker has that
+    /// frame already (firmware 3.2 and later, a box with <see cref="BoxAbilities.DmxIn"/>).
+    /// </summary>
+    public const byte GetInput = 0x42;
+
+    /// <summary>No payload: the box searches its DMX line for lights with RDM again (firmware 3.0 and later).</summary>
     public const byte RdmDiscover = 0x50;
 
     /// <summary>No payload. Answer: searching (u8), count (u16), then the IDs, 6 bytes each.</summary>

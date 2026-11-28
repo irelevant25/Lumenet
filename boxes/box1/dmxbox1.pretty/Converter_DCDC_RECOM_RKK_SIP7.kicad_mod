@@ -1,0 +1,216 @@
+(footprint "Converter_DCDC_RECOM_RKK_SIP7"
+	(version 20260206)
+	(generator "pcbnew")
+	(generator_version "10.0")
+	(layer "F.Cu")
+	(descr "Recom RKK-xxxxS/H isolated DC-DC converter, 1 W, SIP7 with pins 1, 2, 5, 7 (https://recom-power.com/pdf/Econoline/RKK.pdf)")
+	(tags "DC-DC isolated Recom RKK SIP7")
+	(property "Reference" ""
+		(at 7.62 -3.4 0)
+		(layer "F.SilkS")
+		(uuid "192c9d88-e156-4c4b-9231-b29ae7430316")
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+	)
+	(property "Value" "Converter_DCDC_RECOM_RKK_SIP7"
+		(at 7.62 2.4 0)
+		(layer "F.Fab")
+		(uuid "6f1c6dd8-283b-4a68-8c31-ec833e8c8ee0")
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "c7299269-e39e-40d5-b7fd-7bc493be963a")
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "bc64fbe0-0ff0-4b75-9b75-9880abc78857")
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+	)
+	(attr through_hole)
+	(duplicate_pad_numbers_are_jumpers no)
+	(fp_line
+		(start -2.33 -1.9)
+		(end -1 -1.9)
+		(stroke
+			(width 0.12)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "88e9ea1a-0a82-4390-8253-5e0853541c0e")
+	)
+	(fp_line
+		(start -2.33 -1.35)
+		(end 17.49 -1.35)
+		(stroke
+			(width 0.12)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "b2f657eb-5c40-40ab-b6a4-9e8f49e6eca9")
+	)
+	(fp_line
+		(start -2.33 4.87)
+		(end -2.33 -1.35)
+		(stroke
+			(width 0.12)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "2eaa0052-c1f2-41a7-b109-440debc67357")
+	)
+	(fp_line
+		(start 17.49 -1.35)
+		(end 17.49 4.87)
+		(stroke
+			(width 0.12)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "7ce1e0e7-01ef-4a12-b529-36437808985c")
+	)
+	(fp_line
+		(start 17.49 4.87)
+		(end -2.33 4.87)
+		(stroke
+			(width 0.12)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "24608758-f74a-4fb6-aec3-4c235eba3351")
+	)
+	(fp_line
+		(start -2.54 -2.54)
+		(end 17.68 -2.54)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "805773bf-fee0-4e44-90ae-2dbc2692d537")
+	)
+	(fp_line
+		(start -2.54 5.06)
+		(end -2.54 -2.54)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "9b6eef0a-e19d-4215-8fa8-b8342d91d09d")
+	)
+	(fp_line
+		(start 17.68 -2.54)
+		(end 17.68 5.06)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "962fb799-46f9-4f48-849d-a21a7eb0867a")
+	)
+	(fp_line
+		(start 17.68 5.06)
+		(end -2.54 5.06)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "a05297c5-623c-4240-b5cc-1e148d9afbd2")
+	)
+	(fp_line
+		(start -2.22 -1.24)
+		(end 17.38 -1.24)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.Fab")
+		(uuid "901ce97b-a650-43a2-a982-7c20ac09fc6f")
+	)
+	(fp_line
+		(start -2.22 4.76)
+		(end -2.22 -1.24)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.Fab")
+		(uuid "b30753e7-3c02-4334-a87a-e8d31251bba4")
+	)
+	(fp_line
+		(start 17.38 -1.24)
+		(end 17.38 4.76)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.Fab")
+		(uuid "34800566-c934-49ca-952e-6430fff0a336")
+	)
+	(fp_line
+		(start 17.38 4.76)
+		(end -2.22 4.76)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.Fab")
+		(uuid "14093981-ac5e-4171-906c-9b618cffbc7a")
+	)
+	(pad "1" thru_hole rect
+		(at 0 0)
+		(size 1.8 1.8)
+		(drill 1.1)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(thermal_bridge_angle 45)
+		(uuid "fc870439-0213-45bb-bb81-92f5d47e5f2c")
+	)
+	(pad "2" thru_hole circle
+		(at 2.54 0)
+		(size 1.8 1.8)
+		(drill 1.1)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "837bf886-e04d-4c88-9647-61cc34e3343d")
+	)
+	(pad "5" thru_hole circle
+		(at 10.16 0)
+		(size 1.8 1.8)
+		(drill 1.1)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "53b8330e-0db2-445a-ac9d-d28af4739794")
+	)
+	(pad "7" thru_hole circle
+		(at 15.24 0)
+		(size 1.8 1.8)
+		(drill 1.1)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "03a06a60-2e4d-4845-ab0e-24f4efcda088")
+	)
+	(embedded_fonts no)
+)

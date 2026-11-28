@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using System.Net.Sockets;
 using DmxBox.Sim;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -135,8 +136,8 @@ public sealed class SimulatorTests : IDisposable
     }
 
     [Theory]
-    [InlineData("dmxbox", 512, "dmxbox 3", "dmxbox 3 - RP2040 USB Art-Net node with RDM and MIDI")]
-    [InlineData("dmxbox-2-universes", 1024, "dmxbox 3", "dmxbox 3 - RP2040 USB Art-Net node with RDM and MIDI")]
+    [InlineData("dmxbox", 512, "dmxbox 4", "dmxbox 4 - RP2040 USB Art-Net node with RDM and MIDI")]
+    [InlineData("dmxbox-2-universes", 1024, "dmxbox 4", "dmxbox 4 - RP2040 USB Art-Net node with RDM and MIDI")]
     public void EachBoxSimulatorIsItsBox(string device, int channels, string shortName, string longName)
     {
         BoxModel model = BoxSimulator.Models.Single(item => item.Device == device);
@@ -165,7 +166,7 @@ public sealed class SimulatorTests : IDisposable
         Assert.Equal(9, ping.BoxNumber);
         Assert.True(ping.Abilities.HasFlag(BoxAbilities.Rdm));
         await Wait.UntilAsync(() => client.RdmLights() is { Searching: false, Lights.Count: 5 }, "The box did not find its 5 lights.");
-        Assert.Empty(box.Keys);   // dmxbox 3 has no buttons
+        Assert.Empty(box.Keys);   // the boxes have no buttons
 
         // Box 9 plays universe 9: Art-Net for another universe does not reach it.
         using var other = new ArtNetSender("127.0.0.1", universe: 0, port: box.ArtNetPort);
@@ -173,6 +174,32 @@ public sealed class SimulatorTests : IDisposable
         other.Send([77]);
         own.Send([55]);
         await Wait.UntilAsync(() => client.GetOutput(1, 1)[0] == 55, "Art-Net for universe 9 did not reach box 9.");
+    }
+
+    [Fact]
+    public async Task SimulatedBoxWithAConsolePlaysItsDmxIn()
+    {
+        BoxModel model = BoxSimulator.Models[0];
+        using var box = new BoxSimulator(model, Folder, BoxProgram(model.Program), show: 0, TextWriter.Null, console: true);
+        box.PlugIn();
+        Assert.Equal(['C'], box.Keys.Select(key => key.Key));
+        using var client = new DmxBoxClient("127.0.0.1", box.ControlPort);
+
+        box.Console!.Set(3, 200);
+        await Wait.UntilAsync(() => client.GetInput().Levels is { } levels && levels[2] == 200, "The console's fader did not reach the box's DMX IN.");
+        Assert.True(client.GetInput().Live);
+
+        // its page: a button held, as the browser sends it
+        using var http = new HttpClient();
+        string page = box.Console.Url.Replace("localhost", "127.0.0.1", StringComparison.Ordinal);
+        using HttpResponseMessage response = await http.PostAsync(page + "level", JsonContent.Create(new { channel = 25, level = 255 }));
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        await Wait.UntilAsync(() => client.GetInput().Levels is { } levels && levels[24] == 255, "The console's button did not reach the box.");
+        using HttpResponseMessage refused = await http.PostAsync(page + "level", JsonContent.Create(new { channel = 33, level = 1 }));
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);   // the console has 32 channels
+
+        box.PullOut();
+        Assert.False(box.Console.Sending);
     }
 
     [Fact]

@@ -20,6 +20,7 @@ internal static class Usage
           release-artnet                    forget the last Art-Net look
           merge htp|override                how Art-Net and the cues are combined
           get [start] [count]               print the DMX output (default: 1 16)
+          input [start] [count]             print what a console sends to DMX IN (dmxbox 4)
           demo cues|stream                  demos for 4 RGB PARs at channels 1-12
 
         options:

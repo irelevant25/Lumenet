@@ -30,7 +30,7 @@ public sealed class RealBoxTests
 
         link.Step(TimeSpan.Zero);
 
-        Assert.Equal(new BoxStatus(Connected: true, Loopback, Firmware: "3.0"), link.Status);
+        Assert.Equal(new BoxStatus(Connected: true, Loopback, Firmware: "3.2") { Model = 4 }, link.Status);
         Assert.Equal(255, observer.Ping().Master);
         Assert.Equal([100], observer.GetOutput(1, 1));     // 200 x 128 / 255 = 100.4
         Assert.Equal([4], observer.GetOutput(512, 1));     // 7 x 128 / 255 = 3.5

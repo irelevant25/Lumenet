@@ -6,9 +6,9 @@ using System.Net.Sockets;
 namespace DmxBox.Sim;
 
 /// <summary>
-/// A simulated dmxbox 3: the box simulator of firmware/sim, which runs the firmware's own engine,
+/// A simulated dmxbox 4: the box simulator of firmware/sim, which runs the firmware's own engine,
 /// protocol and RDM code, at 127.0.0.1 on ports of its own, with lights on its DMX line that exist
-/// only in its memory and answer RDM. The desk finds it as it finds a box on a USB cable; pulled
+/// only in its memory and answer RDM, and a port for its DMX IN (<see cref="ConsolePort"/>). The desk finds it as it finds a box on a USB cable; pulled
 /// out, the process ends (and loses what it was sent, as a box does), plugged in, it starts again
 /// on the same ports, with its presets kept.
 /// </summary>
@@ -27,7 +27,9 @@ internal sealed class BoxSimulator : ISimulator
     private readonly TextWriter _output;
     private readonly int _controlPort;
     private readonly int _artNetPort;
+    private readonly int _consolePort;
     private readonly SimulatorClaim _claim;
+    private readonly DmxConsole? _console;
     private Process? _process;
 
     /// <summary>Prepares the box. Nothing runs until it is plugged in.</summary>
@@ -38,7 +40,8 @@ internal sealed class BoxSimulator : ISimulator
     /// <param name="output">Where the lines go.</param>
     /// <param name="lights">How many lights with RDM are on its line, 0 to 64.</param>
     /// <param name="boxNumber">The number on its switch, 0 to 255: its Art-Net universe.</param>
-    public BoxSimulator(BoxModel model, string folder, string executable, int show, TextWriter output, int lights = 3, int boxNumber = 0)
+    /// <param name="console">True for a console on its DMX IN, with a page of its own (<see cref="DmxConsole"/>).</param>
+    public BoxSimulator(BoxModel model, string folder, string executable, int show, TextWriter output, int lights = 3, int boxNumber = 0, bool console = false)
     {
         _model = model;
         _folder = folder;
@@ -47,17 +50,24 @@ internal sealed class BoxSimulator : ISimulator
         _lights = lights;
         _boxNumber = boxNumber;
         _output = output;
-        (_controlPort, _artNetPort) = TwoFreePorts();
+        (_controlPort, _artNetPort, _consolePort) = ThreeFreePorts();
         _claim = SimulatorRegistry.Claim(
             folder, new SimulatedDevice(SimulatedDevice.Dmxbox, Address, $"{model.Title} (simulator)", Environment.ProcessId));
+        _console = console ? new DmxConsole(_consolePort, output) : null;
     }
+
+    /// <summary>The console on its DMX IN; null for a box without one.</summary>
+    public DmxConsole? Console => _console;
 
     /// <summary>The boxes there are.</summary>
     public static IReadOnlyList<BoxModel> Models { get; } =
     [
-        new("dmxbox", "dmxbox_sim", "dmxbox 3, one output, lights with RDM on its line"),
-        new("dmxbox-2-universes", "dmxbox_sim2", "dmxbox 3 with two outputs (no such box: for tests)"),
+        new("dmxbox", "dmxbox_sim", "dmxbox 4, one output, lights with RDM on its line"),
+        new("dmxbox-2-universes", "dmxbox_sim2", "dmxbox 4 with two outputs (no such box: for tests)"),
     ];
+
+    /// <summary>The UDP port of the box's DMX IN at 127.0.0.1: a datagram of 1 to 512 levels there is a frame from a console.</summary>
+    public int ConsolePort => _consolePort;
 
     /// <summary>Where the desk reaches the box: "127.0.0.1:52011".</summary>
     public string Address => string.Create(CultureInfo.InvariantCulture, $"{Host}:{_controlPort}");
@@ -77,7 +87,7 @@ internal sealed class BoxSimulator : ISimulator
         $"The desk finds it by itself, at {Address} (its DX port; Art-Net at port {_artNetPort}), as it finds a box on a USB cable.");
 
     /// <inheritdoc />
-    public IReadOnlyList<(char Key, string What)> Keys { get; } = [];
+    public IReadOnlyList<(char Key, string What)> Keys => _console is null ? [] : [('C', "opens the page of the console on its DMX IN")];
 
     /// <inheritdoc />
     public bool PluggedIn => _process is { HasExited: false };
@@ -93,6 +103,7 @@ internal sealed class BoxSimulator : ISimulator
             "--host", Host,
             "--ctrl-port", _controlPort.ToString(CultureInfo.InvariantCulture),
             "--artnet-port", _artNetPort.ToString(CultureInfo.InvariantCulture),
+            "--console-port", _consolePort.ToString(CultureInfo.InvariantCulture),
             "--presets", Path.Combine(_folder, $"presets-{_model.Device}.bin"),
             "--rdm-lights", _lights.ToString(CultureInfo.InvariantCulture),
             "--box", _boxNumber.ToString(CultureInfo.InvariantCulture),
@@ -107,12 +118,16 @@ internal sealed class BoxSimulator : ISimulator
             ?? throw new InvalidOperationException($"{_executable} did not start.");
         WaitUntilItAnswers(_process);
         _claim.PluggedIn = true;
+        if (_console is not null)
+            _console.Sending = true;
     }
 
     /// <inheritdoc />
     public void PullOut()
     {
         _claim.PluggedIn = false;
+        if (_console is not null)
+            _console.Sending = false;
         if (_process is null)
             return;
 
@@ -129,7 +144,9 @@ internal sealed class BoxSimulator : ISimulator
     /// <inheritdoc />
     public void Press(char key)
     {
-        // dmxbox 3 has no buttons: there are no keys of its own.
+        // The boxes have no buttons: the one key is the console's page.
+        if (key == 'C')
+            _console?.OpenPage();
     }
 
     /// <inheritdoc />
@@ -146,6 +163,7 @@ internal sealed class BoxSimulator : ISimulator
     public void Dispose()
     {
         PullOut();
+        _console?.Dispose();
         _claim.Dispose();
     }
 
@@ -173,13 +191,16 @@ internal sealed class BoxSimulator : ISimulator
 
     // Two free UDP ports of 127.0.0.1, the box's DX port and its Art-Net port. Both sockets stay
     // open until both ports are known, so the two are certainly different.
-    private static (int Control, int ArtNet) TwoFreePorts()
+    private static (int Control, int ArtNet, int Console) ThreeFreePorts()
     {
         using Socket first = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         using Socket second = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+        using Socket third = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         first.Bind(new IPEndPoint(IPAddress.Loopback, 0));
         second.Bind(new IPEndPoint(IPAddress.Loopback, 0));
-        return (((IPEndPoint)first.LocalEndPoint!).Port, ((IPEndPoint)second.LocalEndPoint!).Port);
+        third.Bind(new IPEndPoint(IPAddress.Loopback, 0));
+        return (((IPEndPoint)first.LocalEndPoint!).Port, ((IPEndPoint)second.LocalEndPoint!).Port,
+            ((IPEndPoint)third.LocalEndPoint!).Port);
     }
 }
 

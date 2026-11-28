@@ -1,6 +1,6 @@
 namespace DmxBox.Server.Api;
 
-// The hub's part for RDM: the lights with RDM on the DMX lines of the boxes (dmxbox 3). Each call
+// The hub's part for RDM: the lights with RDM on the DMX lines of the boxes. Each call
 // waits for the boxes and the lights, so it runs off the hub's thread.
 internal partial class DeskHub
 {

@@ -20,17 +20,9 @@ enum { STRING_LANGUAGE = 0, STRING_MANUFACTURER, STRING_PRODUCT, STRING_SERIAL, 
        STRING_MIDI };
 
 // USB endpoints = the separate "pipes" inside the cable (0x80 = towards the computer).
-// config.h can choose others: the USB port of a PIC32 cannot use one number in
-// both directions, so the PIC32 box sends its frames on 0x83.
-#ifndef NET_EP_NOTIFY
 #define NET_EP_NOTIFY 0x81        // "the link is up" messages
-#endif
-#ifndef NET_EP_OUT
 #define NET_EP_OUT    0x02        // frames from the computer
-#endif
-#ifndef NET_EP_IN
 #define NET_EP_IN     0x82        // frames to the computer
-#endif
 #define NET_EP_SIZE   64          // packet size of full-speed USB
 #define NET_MAX_FRAME 1514        // largest Ethernet frame
 #define MIDI_EP_OUT   0x03        // MIDI from the computer (to MIDI OUT)

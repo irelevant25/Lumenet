@@ -133,8 +133,8 @@ public sealed class DmxBoxClient : IDisposable
     public PingInfo Ping()
     {
         // Answer: firmware major, firmware minor, flags, master, uptime in ms (u32),
-        // preset mask (u16), channel count (u16); since dmxbox 3 also supply voltage in mV (u16),
-        // what the box can do (u8) and its number (u8).
+        // preset mask (u16), channel count (u16); since firmware 3.0 also supply voltage in mV (u16),
+        // what the box can do (u8) and its number (u8); since 3.1 which box it is (u8).
         byte[] data = Request(MessageType.Ping);
         if (data.Length < 12)
             throw new InvalidDataException($"The answer to PING has {data.Length} bytes instead of 12.");
@@ -155,12 +155,13 @@ public sealed class DmxBoxClient : IDisposable
             Presets: SlotsIn(presetMask),
             Channels: BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(10)),
             SupplyMillivolts: more && data[12] + data[13] > 0 ? BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(12)) : null,
-            Abilities: more ? (BoxAbilities)(data[14] & 7) : BoxAbilities.None,
-            BoxNumber: more ? data[15] : null);
+            Abilities: more ? (BoxAbilities)(data[14] & 0x0F) : BoxAbilities.None,
+            BoxNumber: more ? data[15] : null,
+            Model: data.Length >= 17 ? data[16] : null);
     }
 
     /// <summary>
-    /// Starts a new search for the lights with RDM on the box's DMX line (dmxbox 3). It takes a
+    /// Starts a new search for the lights with RDM on the box's DMX line (firmware 3.0 and later). It takes a
     /// moment; <see cref="RdmLights"/> says when it is over. A search that runs goes on.
     /// </summary>
     /// <exception cref="DmxBoxException">NOT_SUPPORTED: the box has no RDM.</exception>
@@ -169,7 +170,7 @@ public sealed class DmxBoxClient : IDisposable
         Request(MessageType.RdmDiscover);
     }
 
-    /// <summary>The lights with RDM the box has found on its DMX line (dmxbox 3).</summary>
+    /// <summary>The lights with RDM the box has found on its DMX line (firmware 3.0 and later).</summary>
     /// <exception cref="DmxBoxException">NOT_SUPPORTED: the box has no RDM.</exception>
     public RdmLightList RdmLights()
     {
@@ -221,7 +222,7 @@ public sealed class DmxBoxClient : IDisposable
             (RdmResponseType)answer[0], answer[1], BinaryPrimitives.ReadUInt16BigEndian(answer.AsSpan(2)), answer[5..(5 + answer[4])]);
     }
 
-    /// <summary>The box restarts into its USB boot loader, after its answer (dmxbox 3): new firmware can be copied on.</summary>
+    /// <summary>The box restarts into its USB boot loader, after its answer (firmware 3.0 and later): new firmware can be copied on.</summary>
     public void Bootloader()
     {
         Request(MessageType.Bootloader);
@@ -333,6 +334,30 @@ public sealed class DmxBoxClient : IDisposable
         byte[] payload = new byte[4];
         WriteChannelRange(payload, start, count);
         return Request(MessageType.GetOutput, payload);
+    }
+
+    /// <summary>
+    /// What a console sends to the box's DMX input (dmxbox 4, firmware 3.2 and later): the last
+    /// complete frame, unless the caller has it already.
+    /// </summary>
+    /// <param name="since">The number of the frame the caller has (<see cref="DmxInput.Frame"/>); 0 for none.</param>
+    /// <exception cref="DmxBoxException">NOT_SUPPORTED: the box has no DMX input.</exception>
+    public DmxInput GetInput(uint since = 0)
+    {
+        byte[] payload = new byte[4];
+        BinaryPrimitives.WriteUInt32BigEndian(payload, since);
+        byte[] data = Request(MessageType.GetInput, payload);
+        if (data.Length < 7)
+            throw new InvalidDataException($"The answer to GET_INPUT has {data.Length} bytes instead of at least 7.");
+
+        int count = BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(5));
+        if (data.Length != 7 + count || count > ChannelCount)
+            throw new InvalidDataException($"The answer to GET_INPUT says {count} levels, but has {data.Length - 7}.");
+
+        return new DmxInput(
+            Live: data[0] != 0,
+            Frame: BinaryPrimitives.ReadUInt32BigEndian(data.AsSpan(1)),
+            Levels: count == 0 ? null : data[7..]);
     }
 
     /// <summary>Closes the socket.</summary>

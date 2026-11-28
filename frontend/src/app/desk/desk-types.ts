@@ -528,7 +528,10 @@ export const NO_HISTORY: HistoryState = { undo: null, redo: null };
  * socket), and each output plays one universe of the project, or none.
  */
 export interface BoxView {
-  /** Where it answers: "10.1.3.1" for the box with the number 3 on its switch, "192.168.7.1" for the box with the Pico. */
+  /**
+   * Where it answers: "10.1.3.1" for the box with the number 3 on its switch, "192.168.7.1" for
+   * the box with the Pico and its first firmware.
+   */
   address: string;
   connected: boolean;
   /** Its firmware version while it answers; null otherwise. */
@@ -543,6 +546,8 @@ export interface BoxView {
    * not on the list, and so plays nothing.
    */
   kind: 'automatic' | 'listed' | 'new';
+  /** Which dmxbox it is, 1 to 4, as it said, also while it is gone; null if it never said (firmware before 3.1). */
+  model: number | null;
 }
 
 /** A box of the project's list and what its outputs play, as SetBoxes takes it. */

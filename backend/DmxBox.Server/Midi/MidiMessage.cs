@@ -19,12 +19,19 @@ internal enum MidiKind
 
     /// <summary>Program Change: a program number, 0-127.</summary>
     ProgramChange,
+
+    /// <summary>
+    /// A channel of a box's DMX IN that changed (a console plays the desk): the channel, 1-512, as
+    /// the number, and its level, 0-255, as the value. It never goes back.
+    /// </summary>
+    Dmx,
 }
 
 /// <summary>
 /// One MIDI message from a controller, or to it: its kind, the MIDI channel (1-16), the note,
 /// controller or program (0-127; 0 for a pitch bend), and its value (the velocity or the
-/// controller's value, 0-127; 0-16383 for a pitch bend; 0 for a program change).
+/// controller's value, 0-127; 0-16383 for a pitch bend; 0 for a program change). A channel of DMX IN
+/// is one too: channel 1, the DMX channel (1-512) as the number, its level (0-255) as the value.
 /// </summary>
 /// <param name="Kind">What kind of message.</param>
 /// <param name="Channel">The MIDI channel, 1-16.</param>
@@ -35,12 +42,19 @@ internal readonly record struct MidiMessage(MidiKind Kind, int Channel, int Numb
     /// <summary>The highest value of a pitch bend: 14 bits.</summary>
     public const int MaxPitchBend = 16383;
 
-    /// <summary>True for a press: Note On, a controller above zero (a button), a program change.</summary>
+    /// <summary>The level from which a channel of DMX IN presses a key: half of 255, and above.</summary>
+    public const int DmxPress = 128;
+
+    /// <summary>
+    /// True for a press: Note On, a controller above zero (a button), a program change, a channel of
+    /// DMX IN at half or more.
+    /// </summary>
     public bool IsPress => Kind switch
     {
         MidiKind.NoteOn => true,
         MidiKind.ControlChange => Value > 0,
         MidiKind.ProgramChange => true,
+        MidiKind.Dmx => Value >= DmxPress,
         _ => false,
     };
 
@@ -70,6 +84,7 @@ internal readonly record struct MidiMessage(MidiKind Kind, int Channel, int Numb
             MidiKind.ControlChange => Text($"CC {Number} = {Value}, channel {Channel}"),
             MidiKind.PitchBend => Text($"Pitch Bend {Value}, channel {Channel}"),
             MidiKind.ProgramChange => Text($"Program Change {Number}, channel {Channel}"),
+            MidiKind.Dmx => Text($"DMX {Number} = {Value}"),
             _ => "?",
         };
     }

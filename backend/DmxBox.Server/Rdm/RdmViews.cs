@@ -3,7 +3,7 @@ namespace DmxBox.Server.Rdm;
 /// <summary>A box as the RDM page shows it.</summary>
 /// <param name="Address">Where the box answers, as in <see cref="BoxPlan.Address"/>.</param>
 /// <param name="Number">The number on its switch, as it says; null for a box that does not say.</param>
-/// <param name="Rdm">True for a box that does RDM (dmxbox 3).</param>
+/// <param name="Rdm">True for a box that does RDM (firmware 3.0 and later).</param>
 /// <param name="Searching">True while it searches its line: the list may still grow.</param>
 /// <param name="Lights">The IDs of the lights it found, "7FF1:00000001", in the order found.</param>
 /// <param name="Error">Why the list is missing: the box does not answer; null when all went well.</param>

@@ -24,6 +24,7 @@ const pico: BoxView = {
   outputs: 1,
   universes: [1],
   kind: 'listed',
+  model: null,
 };
 const missingBox: BoxView = {
   address: '10.1.4.1',
@@ -32,6 +33,7 @@ const missingBox: BoxView = {
   outputs: 1,
   universes: [3],
   kind: 'listed',
+  model: null,
 };
 const node: OutputPlan = {
   kind: 'artnet',
@@ -53,11 +55,13 @@ function view(plan: OutputPlan, state: OutputView['state']): OutputView {
 }
 
 describe('outputs', () => {
-  it('names a box by its firmware and its address', () => {
-    expect(boxName(pico)).toBe('dmxbox');
-    expect(boxName({ ...missingBox, firmware: '1.0' })).toBe('dmxbox 2');
-    expect(boxName({ ...missingBox, connected: true, firmware: '3.0' })).toBe('dmxbox 3');
-    expect(boxName(missingBox)).toBe('dmxbox 2'); // not answering: its address says no more
+  it('names a box as it says, or else by its firmware and its address', () => {
+    expect(boxName({ ...missingBox, connected: true, firmware: '3.1', model: 3 })).toBe('dmxbox 3');
+    expect(boxName({ ...missingBox, model: 4 })).toBe('dmxbox 4'); // gone, but it said which box it is
+    expect(boxName({ ...missingBox, connected: true, firmware: '3.0' })).toBe('dmxbox 4');
+    expect(boxName(pico)).toBe('dmxbox 1');
+    expect(boxName({ ...missingBox, connected: true, firmware: '1.0' })).toBe('dmxbox 2');
+    expect(boxName(missingBox)).toBe('dmxbox'); // never answered: its address says no more
   });
 
   it('an output that is in the list already is not added again', () => {

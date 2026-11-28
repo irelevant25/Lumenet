@@ -162,11 +162,11 @@ public sealed record RdmDeviceInfo(
     }
 }
 
-/// <summary>What a box can do beyond DMX, as its PING says (dmxbox 3 and later).</summary>
+/// <summary>What a box can do beyond DMX, as its PING says (firmware 3.0 and later).</summary>
 [Flags]
 public enum BoxAbilities
 {
-    /// <summary>Nothing more, or a box that does not say (the boxes before dmxbox 3).</summary>
+    /// <summary>Nothing more, or a box that does not say (firmware before 3.0).</summary>
     None = 0,
 
     /// <summary>RDM on its DMX line: <see cref="DmxBoxClient.RdmLights"/> and the other RDM requests.</summary>
@@ -177,4 +177,7 @@ public enum BoxAbilities
 
     /// <summary>A USB hub with an OUT socket for the next box.</summary>
     Chain = 4,
+
+    /// <summary>A DMX input: what a console sends to it, <see cref="DmxBoxClient.GetInput"/> (dmxbox 4, firmware 3.2 and later).</summary>
+    DmxIn = 8,
 }

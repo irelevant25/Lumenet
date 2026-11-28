@@ -17,7 +17,7 @@ import {
 const SEARCH_POLL_MS = 600;
 
 /**
- * The lights with RDM on the DMX lines of the boxes (dmxbox 3), a tab of Settings: for each box
+ * The lights with RDM on the DMX lines of the boxes, a tab of Settings: for each box
  * that answers, a table of its lights, each with its DMX address, its mode and its name, which
  * change on the light itself, and a key that makes it show where it is. Search has the box look
  * for lights again. What two lights take of the same channels is said under the table.

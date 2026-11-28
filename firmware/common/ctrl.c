@@ -51,11 +51,12 @@ static int execute(ctrl_t *c, uint8_t type, const uint8_t *p, uint16_t plen,
         wr_be32(out + 5, now - c->boot_ms);
         wr_be16(out + 9, (uint16_t)c->bank->valid);
         wr_be16(out + 11, DMX_CHANNELS);
-        // since dmxbox 3: supply voltage, what the box can do, its number
+        // since firmware 3.0: supply voltage, what the box can do, its number; since 3.1: which box
         wr_be16(out + 13, plat_supply_mv());
         out[15] = c->can;
         out[16] = c->box_number;
-        return 17;
+        out[17] = c->model;
+        return 18;
     }
     case CT_SET:
     case CT_FADE: {
@@ -128,6 +129,20 @@ static int execute(ctrl_t *c, uint8_t type, const uint8_t *p, uint16_t plen,
         if (!(c->bank->valid & (1u << p[0]))) { out[0] = ST_EMPTY_SLOT; return 1; }
         memcpy(out + 1, c->bank->data[p[0]], DMX_CHANNELS);
         return 1 + DMX_CHANNELS;
+    case CT_GET_INPUT: {
+        if (!c->dmx_in) { out[0] = ST_NOT_SUPPORTED; return 1; }
+        if (plen != 4) { out[0] = ST_BAD_LENGTH; return 1; }
+        static uint8_t levels[DMX_IN_SLOTS];
+        uint16_t count;
+        uint32_t last_ms;
+        uint32_t frame = dmx_in_read(c->dmx_in, levels, &count, &last_ms);
+        if (frame == rd_be32(p)) count = 0;              // the desk has it already
+        out[1] = frame != 0 && (uint32_t)(now - last_ms) < DMX_IN_LIVE_MS ? 1 : 0;
+        wr_be32(out + 2, frame);
+        wr_be16(out + 6, count);
+        memcpy(out + 8, levels, count);
+        return 8 + count;
+    }
     case CT_RDM_DISCOVER:
         if (!c->rdm) { out[0] = ST_NOT_SUPPORTED; return 1; }
         if (!c->rdm->discovering) rdm_start_discovery(c->rdm);

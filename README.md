@@ -53,16 +53,17 @@ screen, and get in with a password.
 
 <img src="docs/screenshots/main-phone.png" alt="The Main view of Lumenet on a phone, used through LAN" width="260">
 
-**The box**, dmxbox 3, is an RP2040 on a board of 86 × 74.5 mm: an isolated DMX output on a 5-pin XLR socket with
+**The box**, dmxbox 4, is an RP2040 on a board of 86 × 74.5 mm: an isolated DMX output on a 5-pin XLR socket with
 **RDM** (the desk sets the address, mode and name of a light from its Settings), **MIDI IN and OUT**, and three
 USB-C sockets: IN, OUT to the next box, so that several boxes share one USB port of the computer, and POWER for
 a charger. A switch gives each box its own number. One USB cable powers it and carries the data; the computer
-sees a network adapter and a MIDI interface, which Windows, macOS and Linux take without a driver.
+sees a network adapter and a MIDI interface, which Windows, macOS and Linux take without a driver. It is the
+full one of [four boxes](boxes/README.md); boxes 1 to 3 have one USB socket and no MIDI.
 
-<img src="hardware/3d/dmxbox3_top.png" alt="A render of the dmxbox 3 board from above: three USB-C sockets at the left, the RP2040 and its hub in the middle, the number switch at the top, the isolated DMX side at the right, the MIDI headers at the bottom" width="560">
+<img src="boxes/box4/3d/dmxbox4_top.png" alt="A render of the dmxbox 4 board from above: three USB-C sockets at the left, the RP2040 and its hub in the middle, the number switch at the top, the isolated DMX side at the right, the MIDI headers at the bottom" width="560">
 
 This is a render of the board's design; JLCPCB makes it and solders its parts, and none has been built yet.
-The box before it, with a Raspberry Pi Pico on a perfboard, was built and works with the desk.
+Box 1, with a Raspberry Pi Pico on a perfboard, was built and works with the desk.
 
 ## Get it
 
@@ -77,9 +78,9 @@ http://localhost:4200. `sim.cmd` starts a simulated box, Art-Net node, sACN rece
 desk to play on, or a MIDI controller to play it with, without the hardware (see
 [DEV.md](DEV.md#simulated-devices-simcmd)).
 
-**The box:** what to order from JLCPCB and what to buy and fit yourself is in [BOM.md](hardware/BOM.md); the
+**The box:** what to order from JLCPCB and what to buy and fit yourself is in [BOM.md](boxes/box4/BOM.md); the
 schematic, the board and the firmware, which is built with the Pico SDK, are in [DEV.md](DEV.md#1-hardware).
-The boxes before it are in [hardware/archive](hardware/archive/README.md).
+All four boxes: [boxes/](boxes/README.md).
 
 ## More
 

@@ -86,6 +86,7 @@ describe('the targets of MIDI controls', () => {
       'Pitch Bend, channel 9',
     );
     expect(controlText({ message: 'program', number: 5, channel: 1 })).toBe('Program 5, channel 1');
+    expect(controlText({ message: 'dmx', number: 12, channel: 1 })).toBe('DMX channel 12');
 
     expect(resultText(line({}))).toBe('Not mapped');
     expect(resultText(line({ target: 'stack.play', result: 'down' }))).toBe('GO pressed');

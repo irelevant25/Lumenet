@@ -255,12 +255,16 @@ function freeUniverses(
 }
 
 /**
- * What the table of outputs calls a dmxbox: "dmxbox 3" for firmware 3 or newer, "dmxbox 2" at the
- * address of a switch (10.1.n.1), else "dmxbox" (the box with the Pico).
+ * What the table of outputs calls a dmxbox: "dmxbox 1" to "dmxbox 4", as the box says (firmware
+ * 3.1 and later). Before that, firmware 3.0 was box 4's, 192.168.7.1 is the Pico box with its
+ * first firmware, and an older firmware at the address of a switch (10.1.n.1) the PIC32 box's. A
+ * box that never said is "dmxbox".
  */
 export function boxName(box: BoxView): string {
-  if (Number.parseInt(box.firmware ?? '', 10) >= 3) return 'dmxbox 3';
-  return switchNumber(box.address) === null ? 'dmxbox' : 'dmxbox 2';
+  if (box.model !== null) return `dmxbox ${box.model}`;
+  if (Number.parseInt(box.firmware ?? '', 10) >= 3) return 'dmxbox 4';
+  if (box.address === '192.168.7.1') return 'dmxbox 1';
+  return box.firmware !== null && switchNumber(box.address) !== null ? 'dmxbox 2' : 'dmxbox';
 }
 
 /** The line under a dmxbox's name: "10.1.3.1, switch 3, firmware 1.0". */

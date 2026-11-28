@@ -1,4 +1,4 @@
-// PC test of the parts of the dmxbox 3 firmware that need no hardware at all:
+// PC test of the parts of the dmxbox firmware that need no hardware at all:
 //
 //   1. RDM packets: building, checking, the coded answers of the search (rdm.c)
 //   2. the search for the lights on the line, and requests to them (rdm.c),
@@ -6,11 +6,12 @@
 //   3. RDM over the DX protocol: answers that come later, repeats, busy (ctrl.c)
 //   4. RDM over Art-Net: ArtTodRequest, ArtTodControl, ArtRdm (artnet.c)
 //   5. MIDI bytes to USB-MIDI packets and back (midi_parse.c)
+//   6. DMX IN: frames from the receiver's bytes (dmx_in.c), and to the desk over the DX protocol
 //
 //   Windows:      build.cmd (also builds and runs test_net.c)
-//   Linux/macOS:  cc -std=c11 -Wall -Wextra -I../src -I../common -I../sim test_rdm.c ../common/rdm.c \
-//                    ../common/ctrl.c ../common/artnet.c ../common/engine.c ../common/presets.c \
-//                    ../common/midi_parse.c ../sim/rdm_lights.c -o test_rdm && ./test_rdm
+//   Linux/macOS:  cc -std=c11 -Wall -Wextra -I../../boxes/box4/firmware -I../common -I../sim test_rdm.c \
+//                    ../common/rdm.c ../common/ctrl.c ../common/artnet.c ../common/engine.c ../common/presets.c \
+//                    ../common/dmx_in.c ../common/midi_parse.c ../sim/rdm_lights.c -o test_rdm && ./test_rdm
 #include <stdio.h>
 #include <string.h>
 
@@ -261,11 +262,12 @@ static void test_ctrl(void) {
     t_ctrl.rdm = &t_rdm;
     t_ctrl.can = CTRL_CAN_RDM | CTRL_CAN_MIDI | CTRL_CAN_CHAIN;
     t_ctrl.box_number = 42;
+    t_ctrl.model = 4;
 
-    TEST("DX: PING tells the supply voltage, what the box can do and its number");
+    TEST("DX: PING tells the supply voltage, what the box can do, its number and which box it is");
     n = ctrl_handle(&t_ctrl, req, dx(req, CT_PING, 0, 1, NULL, 0), t_now, resp, sizeof resp);
-    CHECK(n == 12 + 17 && resp[12] == ST_OK && resp[25] == (4900 >> 8) && resp[26] == (4900 & 0xFF) &&
-          resp[27] == 7 && resp[28] == 42);
+    CHECK(n == 12 + 18 && resp[12] == ST_OK && resp[25] == (4900 >> 8) && resp[26] == (4900 & 0xFF) &&
+          resp[27] == 7 && resp[28] == 42 && resp[29] == 4);
 
     TEST("DX: the search: started, reported while it runs, its list afterwards");
     n = ctrl_handle(&t_ctrl, req, dx(req, CT_RDM_DISCOVER, 0, 2, NULL, 0), t_now, resp, sizeof resp);
@@ -474,12 +476,84 @@ static void test_midi(void) {
     CHECK(midi_packet_bytes(cable1, out) == 3 && out[0] == 0x91 && out[2] == 1);
 }
 
+// ================================================================ 6. DMX IN
+static void bytes_in(dmx_in_t *in, const uint8_t *bytes, int n, uint32_t now) {
+    for (int i = 0; i < n; i++) dmx_in_byte(in, bytes[i], false, now);
+}
+
+static void test_dmx_in(void) {
+    static dmx_in_t in;
+    static uint8_t  got[DMX_IN_SLOTS];
+    uint16_t count = 99;
+    uint32_t when = 99;
+    dmx_in_init(&in);
+
+    TEST("DMX IN: nothing before the first break; a frame from a break to the next");
+    static const uint8_t noise[] = {0x00, 0x55, 0x10};
+    bytes_in(&in, noise, 3, 10);
+    CHECK(dmx_in_read(&in, got, &count, &when) == 0 && count == 0 && when == 0);
+    dmx_in_byte(&in, 0, true, 20);                                       // a break
+    static const uint8_t three[] = {0x00, 10, 20, 30};                   // start code 0, three levels
+    bytes_in(&in, three, 4, 21);
+    CHECK(dmx_in_read(&in, got, &count, &when) == 0);                    // complete only at the next break
+    dmx_in_byte(&in, 0, true, 45);
+    CHECK(dmx_in_read(&in, got, &count, &when) == 1 && count == 3 && got[0] == 10 && got[2] == 30 && when == 45);
+
+    TEST("DMX IN: another start code (RDM, text) is passed over; a break right after a break is no frame");
+    static const uint8_t rdm[] = {0xCC, 0x01, 0x18, 1, 2, 3};
+    bytes_in(&in, rdm, 6, 50);
+    dmx_in_byte(&in, 0, true, 60);
+    dmx_in_byte(&in, 0, true, 61);
+    CHECK(in.frames == 1 && in.spoiled == 0);
+
+    TEST("DMX IN: 512 levels make a frame at once; what follows waits for the next break");
+    dmx_in_byte(&in, 0x00, false, 70);                                   // start code
+    for (int k = 1; k <= DMX_IN_SLOTS; k++) dmx_in_byte(&in, (uint8_t)k, false, 70);
+    CHECK(dmx_in_read(&in, got, &count, &when) == 2 && count == 512 && got[0] == 1 && got[510] == 255 && got[511] == 0);
+    dmx_in_byte(&in, 0x77, false, 80);
+    dmx_in_byte(&in, 0, true, 90);
+    CHECK(in.frames == 2);
+
+    TEST("DMX IN: a framing error inside a frame, or bytes the receiver lost, spoil it");
+    static const uint8_t two[] = {0x00, 5};
+    bytes_in(&in, two, 2, 100);
+    dmx_in_byte(&in, 0x40, true, 100);                                   // a broken byte
+    dmx_in_byte(&in, 6, false, 100);
+    dmx_in_byte(&in, 0, true, 110);
+    CHECK(in.frames == 2 && in.spoiled == 1);
+    bytes_in(&in, two, 2, 120);
+    dmx_in_lost(&in);
+    dmx_in_byte(&in, 0, true, 130);
+    CHECK(in.frames == 2 && in.spoiled == 2);
+
+    TEST("DMX IN over DX: the last frame once, live while frames come; a box without DMX IN says so");
+    static ctrl_t c;
+    uint8_t req[64];
+    static const uint8_t none[4] = {0, 0, 0, 0}, third[4] = {0, 0, 0, 3};
+    ctrl_init(&c, &t_engine, &t_bank, 0);
+    int n = ctrl_handle(&c, req, dx(req, CT_GET_INPUT, 0, 1, none, 4), 1000, resp, sizeof resp);
+    CHECK(n == 13 && resp[12] == ST_NOT_SUPPORTED);
+    c.dmx_in = &in;
+    static const uint8_t levels[2] = {200, 100};
+    dmx_in_frame(&in, levels, 2, 2000);                                  // frame 3, as the simulator's console gives it
+    n = ctrl_handle(&c, req, dx(req, CT_GET_INPUT, 0, 2, none, 4), 2500, resp, sizeof resp);
+    CHECK(n == 12 + 8 + 2 && resp[12] == ST_OK && resp[13] == 1 && resp[17] == 3 && resp[19] == 2 &&
+          resp[20] == 200 && resp[21] == 100);
+    n = ctrl_handle(&c, req, dx(req, CT_GET_INPUT, 0, 3, third, 4), 2600, resp, sizeof resp);
+    CHECK(n == 12 + 8 && resp[13] == 1 && resp[17] == 3 && resp[19] == 0);   // the desk has it
+    n = ctrl_handle(&c, req, dx(req, CT_GET_INPUT, 0, 4, third, 4), 3100, resp, sizeof resp);
+    CHECK(n == 12 + 8 && resp[13] == 0);                                 // a second without a frame: quiet
+    n = ctrl_handle(&c, req, dx(req, CT_GET_INPUT, 0, 5, third, 3), 3100, resp, sizeof resp);
+    CHECK(n == 13 && resp[12] == ST_BAD_LENGTH);
+}
+
 int main(void) {
     test_packets();
     test_search();
     test_ctrl();
     test_artnet();
     test_midi();
+    test_dmx_in();
     printf("%d checks, %d failed\n", checks, failures);
     return failures ? 1 : 0;
 }

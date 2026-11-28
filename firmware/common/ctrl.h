@@ -6,6 +6,7 @@
 // session) and retransmit on timeout. See DEV.md for the wire format.
 #pragma once
 #include <stdint.h>
+#include "dmx_in.h"
 #include "engine.h"
 #include "presets.h"
 #include "rdm.h"
@@ -29,6 +30,8 @@ enum {
     CT_MERGE_MODE     = 0x33,  // mode u8 (0 = HTP, 1 = Art-Net override)
     CT_GET_OUTPUT     = 0x40,  // start u16, count u16 -> values
     CT_GET_PRESET     = 0x41,  // slot u8 -> values[DMX_CHANNELS]
+    CT_GET_INPUT      = 0x42,  // since u32 -> live u8, frame u32, count u16, levels[count]
+                               //   (DMX IN: the last complete frame, if it is not frame `since`; else count 0)
     CT_RDM_DISCOVER   = 0x50,  // -            (starts a full search of the lights on the line)
     CT_RDM_TOD        = 0x51,  // -            -> searching u8, count u16, ids[count][6]
     CT_RDM_REQUEST    = 0x52,  // dest[6], sub-device u16, command class u8, pid u16, pdl u8, data[pdl]
@@ -43,13 +46,14 @@ enum {
     ST_RDM_TIMEOUT = 6,        // the light did not answer
     ST_RDM_BAD = 7,            // an answer came, but spoiled
     ST_BUSY = 8,               // another RDM request is on its way
-    ST_NOT_SUPPORTED = 9,      // this box has no RDM
+    ST_NOT_SUPPORTED = 9,      // this box has no RDM (or no DMX IN)
 };
 
 // What PING tells about the box (bits of its "can do" byte)
 #define CTRL_CAN_RDM   0x01
 #define CTRL_CAN_MIDI  0x02    // a USB MIDI port
 #define CTRL_CAN_CHAIN 0x04    // a USB hub with an OUT socket for the next box
+#define CTRL_CAN_DMX_IN 0x08   // a DMX input: a console's levels (CT_GET_INPUT)
 
 #define CTRL_SESSIONS 8
 
@@ -67,8 +71,10 @@ typedef struct {
     engine_t      *eng;
     preset_bank_t *bank;     // owned by the network core; never touched by the DMX core
     rdm_t         *rdm;      // NULL: no RDM
+    dmx_in_t      *dmx_in;   // NULL: no DMX IN
     uint8_t        can;      // CTRL_CAN_...
     uint8_t        box_number;
+    uint8_t        model;    // which dmxbox: 1 to 4 (BOX_MODEL of its box.h)
     uint32_t       boot_ms;
     ctrl_session_t sess[CTRL_SESSIONS];
     uint32_t       rx_packets, executed, duplicates, stale;

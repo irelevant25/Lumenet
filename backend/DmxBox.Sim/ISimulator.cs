@@ -7,7 +7,7 @@ namespace DmxBox.Sim;
 /// </summary>
 internal interface ISimulator : IDisposable
 {
-    /// <summary>What it is: "dmxbox 3, one output, lights with RDM on its line".</summary>
+    /// <summary>What it is: "dmxbox 4, one output, lights with RDM on its line".</summary>
     string Title { get; }
 
     /// <summary>How the desk finds it, a line or two.</summary>

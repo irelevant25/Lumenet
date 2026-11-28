@@ -1,0 +1,162 @@
+(kicad_sch
+	(version 20250610)
+	(generator "eeschema")
+	(generator_version "9.99")
+	(uuid "2e7d1b44-8c3f-4a6a-b025-6c9d3e8f2d02")
+	(paper "A3")
+	(title_block
+		(title "dmxbox 2: a PIC32, USB to DMX with RDM")
+		(date "2026-11-28")
+		(rev "1")
+		(company "Lumenet")
+		(comment 1 "Made by boxes/box2/scripts/make_schematic.py from circuit.py: change those, not this file.")
+	)
+	(lib_symbols)
+	(sheet
+		(at 30.48 60.96)
+		(size 76.2 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0)
+		)
+		(uuid "0eb54c04-8d60-59d0-9b92-687f1f656c06")
+		(property "Sheetname" "PIC32, USB, LEDs, box number"
+			(at 30.48 60.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "dmxbox2_pic32.kicad_sch"
+			(at 30.48 86.96 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+				(hide yes)
+			)
+		)
+		(instances
+			(project "dmxbox2"
+				(path "/2e7d1b44-8c3f-4a6a-b025-6c9d3e8f2d02"
+					(page "2")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 121.92 60.96)
+		(size 76.2 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0)
+		)
+		(uuid "a3f8b27c-d304-5026-a274-45608d2f6dbc")
+		(property "Sheetname" "DMX with RDM"
+			(at 121.92 60.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "dmxbox2_dmx.kicad_sch"
+			(at 121.92 86.96 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+				(hide yes)
+			)
+		)
+		(instances
+			(project "dmxbox2"
+				(path "/2e7d1b44-8c3f-4a6a-b025-6c9d3e8f2d02"
+					(page "3")
+				)
+			)
+		)
+	)
+	(text "dmxbox 2: a USB network adapter for the Lumenet desk (and any Art-Net program): a PIC32MX270F256B with one"
+		(exclude_from_sim no)
+		(at 30.48 116.84 0)
+		(effects
+			(font
+				(size 1.778 1.778)
+			)
+			(justify left bottom)
+		)
+		(uuid "a501b834-a346-59b0-a05b-ee1117b76d24")
+	)
+	(text "DMX output with RDM and the switch for its number. Every part is through-hole, and you solder them yourself."
+		(exclude_from_sim no)
+		(at 30.48 121.92 0)
+		(effects
+			(font
+				(size 1.778 1.778)
+			)
+			(justify left bottom)
+		)
+		(uuid "15f69943-40c5-56ab-a531-7f0fd69ce3ee")
+	)
+	(text "The PIC takes its first firmware through J2 from a programmer. You make the cable from the pin header J4 to"
+		(exclude_from_sim no)
+		(at 30.48 132.08 0)
+		(effects
+			(font
+				(size 1.778 1.778)
+			)
+			(justify left bottom)
+		)
+		(uuid "d77b1ab0-442d-556f-a006-fd8d1ae1a706")
+	)
+	(text "the XLR socket in the box wall."
+		(exclude_from_sim no)
+		(at 30.48 137.16 0)
+		(effects
+			(font
+				(size 1.778 1.778)
+			)
+			(justify left bottom)
+		)
+		(uuid "cc63b37e-8d83-539a-b215-85e9284d76fc")
+	)
+	(text "Made by boxes/box2/scripts/make_schematic.py from boxes/box2/scripts/circuit.py."
+		(exclude_from_sim no)
+		(at 30.48 147.32 0)
+		(effects
+			(font
+				(size 1.778 1.778)
+			)
+			(justify left bottom)
+		)
+		(uuid "05c32895-eee0-50dd-a708-e04cb5fdba3d")
+	)
+	(sheet_instances
+		(path "/"
+			(page "1")
+		)
+	)
+	(embedded_fonts no)
+)

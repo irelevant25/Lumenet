@@ -204,6 +204,7 @@ export interface BoxView {
   readonly outputs: number;
   readonly universes: number[];
   readonly kind: 'automatic' | 'listed' | 'new';
+  readonly model: number | null;
 }
 
 export interface DeskState {
@@ -473,7 +474,7 @@ export interface MidiLightsSent {
 export interface MidiMapping {
   readonly device: string;
   readonly channel: number;
-  readonly message: 'note' | 'cc' | 'cc14' | 'pitchbend' | 'program';
+  readonly message: 'note' | 'cc' | 'cc14' | 'pitchbend' | 'program' | 'dmx';
   readonly number: number;
   readonly target: string;
   readonly mode: 'absolute' | 'relative-twos' | 'relative-offset' | 'relative-sign';
@@ -485,7 +486,7 @@ export interface MidiMapping {
 export interface MidiMappingSent {
   readonly device?: string;
   readonly channel?: number;
-  readonly message?: 'note' | 'cc' | 'cc14' | 'pitchbend' | 'program';
+  readonly message?: 'note' | 'cc' | 'cc14' | 'pitchbend' | 'program' | 'dmx';
   readonly number?: number;
   readonly target?: string;
   readonly mode?: 'absolute' | 'relative-twos' | 'relative-offset' | 'relative-sign';

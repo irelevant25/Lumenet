@@ -6,7 +6,7 @@ using DmxBox.Tests.Boxes;
 namespace DmxBox.Tests.Api;
 
 /// <summary>
-/// RDM through the hub, as the RDM page uses it: a simulated dmxbox 3 with lights on its line,
+/// RDM through the hub, as the RDM page uses it: a simulated dmxbox 4 with lights on its line,
 /// which the desk finds as it finds a box on a USB cable (sim.cmd's way, through the simulators'
 /// folder beside the LAN password).
 /// </summary>

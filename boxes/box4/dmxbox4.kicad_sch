@@ -1,0 +1,248 @@
+(kicad_sch
+	(version 20250610)
+	(generator "eeschema")
+	(generator_version "9.99")
+	(uuid "5f1d2c40-6b7e-4f43-9a2e-2a6d1c3b0d01")
+	(paper "A3")
+	(title_block
+		(title "dmxbox 4: USB to DMX with RDM, DMX IN, MIDI and a USB hub for chaining")
+		(date "2026-11-28")
+		(rev "1")
+		(company "Lumenet")
+		(comment 1 "Made by boxes/box4/scripts/make_schematic.py from circuit.py: change those, not this file.")
+	)
+	(lib_symbols)
+	(sheet
+		(at 30.48 60.96)
+		(size 76.2 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0)
+		)
+		(uuid "8d9ffe66-d8fc-50ee-b3dc-d05492f1b172")
+		(property "Sheetname" "USB, power and hub"
+			(at 30.48 60.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "dmxbox4_power.kicad_sch"
+			(at 30.48 86.96 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+				(hide yes)
+			)
+		)
+		(instances
+			(project "dmxbox4"
+				(path "/5f1d2c40-6b7e-4f43-9a2e-2a6d1c3b0d01"
+					(page "2")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 121.92 60.96)
+		(size 76.2 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0)
+		)
+		(uuid "16719105-f8e7-58bf-abfa-ea2cafd84934")
+		(property "Sheetname" "RP2040, flash, LEDs, box number"
+			(at 121.92 60.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "dmxbox4_rp2040.kicad_sch"
+			(at 121.92 86.96 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+				(hide yes)
+			)
+		)
+		(instances
+			(project "dmxbox4"
+				(path "/5f1d2c40-6b7e-4f43-9a2e-2a6d1c3b0d01"
+					(page "3")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 213.36 60.96)
+		(size 76.2 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0)
+		)
+		(uuid "57f535d2-db88-5e86-9d70-e30cf3c1aea9")
+		(property "Sheetname" "DMX with RDM, MIDI"
+			(at 213.36 60.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "dmxbox4_dmx_midi.kicad_sch"
+			(at 213.36 86.96 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+				(hide yes)
+			)
+		)
+		(instances
+			(project "dmxbox4"
+				(path "/5f1d2c40-6b7e-4f43-9a2e-2a6d1c3b0d01"
+					(page "4")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 304.8 60.96)
+		(size 76.2 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0)
+		)
+		(uuid "eb384635-84b0-5a8d-94aa-39ca33f18bed")
+		(property "Sheetname" "DMX IN"
+			(at 304.8 60.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "dmxbox4_dmx_in.kicad_sch"
+			(at 304.8 86.96 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+				(hide yes)
+			)
+		)
+		(instances
+			(project "dmxbox4"
+				(path "/5f1d2c40-6b7e-4f43-9a2e-2a6d1c3b0d01"
+					(page "5")
+				)
+			)
+		)
+	)
+	(text "dmxbox 4: a USB network adapter for the Lumenet desk (and any Art-Net program) with one DMX output with RDM, one DMX input,"
+		(exclude_from_sim no)
+		(at 30.48 116.84 0)
+		(effects
+			(font
+				(size 1.778 1.778)
+			)
+			(justify left bottom)
+		)
+		(uuid "c2c618cf-688e-5392-a9fd-c4dbeb71530d")
+	)
+	(text "MIDI IN and OUT, and a USB hub so that boxes can be chained: computer -> box 1 -> box 2 -> ... (up to 5 on one port)."
+		(exclude_from_sim no)
+		(at 30.48 121.92 0)
+		(effects
+			(font
+				(size 1.778 1.778)
+			)
+			(justify left bottom)
+		)
+		(uuid "facd267a-ae71-5492-b48e-8c7fc3f7bed2")
+	)
+	(text "JLCPCB solders every part (LCSC numbers in the LCSC field). You make the cables from the pin headers J4, J8,"
+		(exclude_from_sim no)
+		(at 30.48 132.08 0)
+		(effects
+			(font
+				(size 1.778 1.778)
+			)
+			(justify left bottom)
+		)
+		(uuid "9b18d12e-35dc-5576-9521-5b8973953656")
+	)
+	(text "J5 and J6 to the XLR and DIN sockets in the box wall."
+		(exclude_from_sim no)
+		(at 30.48 137.16 0)
+		(effects
+			(font
+				(size 1.778 1.778)
+			)
+			(justify left bottom)
+		)
+		(uuid "db4886ce-07d9-5016-b4fc-11a78d79624c")
+	)
+	(text "Made by boxes/box4/scripts/make_schematic.py from boxes/box4/scripts/circuit.py."
+		(exclude_from_sim no)
+		(at 30.48 147.32 0)
+		(effects
+			(font
+				(size 1.778 1.778)
+			)
+			(justify left bottom)
+		)
+		(uuid "7a93270e-1fed-5ef5-8740-1ea0ef43e758")
+	)
+	(sheet_instances
+		(path "/"
+			(page "1")
+		)
+	)
+	(embedded_fonts no)
+)

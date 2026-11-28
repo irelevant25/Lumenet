@@ -174,8 +174,12 @@ export function targetGroup(target: string): string | undefined {
   );
 }
 
-/** The control of a mapping, as the panel says it: "Note 56, channel 1", "CC 7 + 39 (14 bits), channel 2". */
+/**
+ * The control of a mapping, as the panel says it: "Note 56, channel 1", "CC 7 + 39 (14 bits), channel 2",
+ * "DMX channel 12" (a channel of a box's DMX IN, which has no MIDI channel).
+ */
 export function controlText(mapping: Pick<MidiMapping, 'message' | 'number' | 'channel'>): string {
+  if (mapping.message === 'dmx') return `DMX channel ${mapping.number}`;
   const what = {
     note: `Note ${mapping.number}`,
     cc: `CC ${mapping.number}`,

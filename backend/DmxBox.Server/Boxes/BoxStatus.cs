@@ -12,6 +12,9 @@ public sealed record BoxStatus(bool Connected, string Host, string? Firmware)
     /// by 512. 1 before it ever answered.
     /// </summary>
     public int Outputs { get; init; } = 1;
+
+    /// <summary>Which dmxbox it is, 1 to 4, as it last said; null before it said (firmware before 3.1).</summary>
+    public int? Model { get; init; }
 }
 
 /// <summary>A box as the Boxes window shows it.</summary>
@@ -24,13 +27,18 @@ public sealed record BoxStatus(bool Connected, string Host, string? Firmware)
 /// "automatic" while the project lists no boxes; "listed" for a box of the project's list;
 /// "new" for a box that answers but is not on the project's list, and so plays nothing.
 /// </param>
+/// <param name="Model">
+/// Which dmxbox it is, 1 to 4, as it said, also while it is gone; null if it never said (firmware
+/// before 3.1, or a box that has not answered).
+/// </param>
 /// <remarks>Public only because <see cref="IDeskClient"/> has to be.</remarks>
-public sealed record BoxView(string Address, bool Connected, string? Firmware, int Outputs, int[] Universes, string Kind)
+public sealed record BoxView(string Address, bool Connected, string? Firmware, int Outputs, int[] Universes, string Kind, int? Model = null)
 {
     /// <summary>The same as another view in every field, the universes included.</summary>
     public bool SameAs(BoxView other)
     {
         return Address == other.Address && Connected == other.Connected && Firmware == other.Firmware
-            && Outputs == other.Outputs && Kind == other.Kind && Universes.AsSpan().SequenceEqual(other.Universes);
+            && Outputs == other.Outputs && Kind == other.Kind && Model == other.Model
+            && Universes.AsSpan().SequenceEqual(other.Universes);
     }
 }

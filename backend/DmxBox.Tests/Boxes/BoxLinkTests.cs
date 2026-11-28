@@ -483,6 +483,67 @@ public sealed class BoxLinkTests
         Assert.Equal(20, box.Levels[512]);
     }
 
+    // ---------------------------------------------------------------- DMX IN
+
+    [Fact]
+    public void ABoxWithDmxInNamesItByItsNumberWhileItAnswers()
+    {
+        var box = new FakeBox(dmxInBox: 3);
+        var link = new BoxLink(_desk, box, _clients, Host, NullLogger<BoxLink>.Instance);
+        Assert.Null(link.InputName);
+        link.Step(At(0));
+        Assert.Equal("DMX IN (box 3)", link.InputName);
+        Connect();
+        Assert.Null(_link.InputName);                            // a box without DMX IN
+
+        box.Unplug();
+        link.Step(At(100));                                      // the ping fails
+        Assert.Null(link.InputName);
+    }
+
+    [Fact]
+    public void WhatAConsoleChangesComesChannelByChannelAfterTheFirstFrame()
+    {
+        var box = new FakeBox(dmxInBox: 3);
+        var link = new BoxLink(_desk, box, _clients, Host, NullLogger<BoxLink>.Instance);
+        link.Step(At(0));
+        var changes = new List<(int Channel, byte Level)>();
+        InputListener listener = link.ListenToInput((channel, level) => changes.Add((channel, level)));
+
+        box.Console(10, 20, 30);
+        link.Step(At(25));
+        Assert.Empty(changes);                                   // the first frame shows where the console stands
+
+        box.Console(10, 99, 30, 40);
+        link.Step(At(50));
+        Assert.Equal([(2, 99), (4, 40)], changes);               // channel 4 was not there: it was 0
+        link.Step(At(75));
+        Assert.Equal(2, changes.Count);                          // no new frame
+
+        listener.Stop();
+        box.ForgetCalls();
+        box.Console(0, 0, 0);
+        link.Step(At(100));
+        Assert.DoesNotContain("input", box.Calls);               // nobody listens: the box is not asked
+        Assert.Equal(2, changes.Count);
+    }
+
+    [Fact]
+    public void AListenerHearsNothingMoreOnceTheBoxIsGone()
+    {
+        var box = new FakeBox(dmxInBox: 3);
+        var link = new BoxLink(_desk, box, _clients, Host, NullLogger<BoxLink>.Instance);
+        link.Step(At(0));
+        InputListener listener = link.ListenToInput((_, _) => { });
+        Assert.False(listener.Gone);
+
+        box.Unplug();
+        link.Step(At(25));
+        Assert.True(listener.Gone);
+        Assert.Null(link.InputName);
+        Assert.True(link.ListenToInput((_, _) => { }).Gone);     // nothing to listen to while it is gone
+    }
+
     // ---------------------------------------------------------------- the link's own thread
 
     [Fact]

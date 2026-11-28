@@ -1,0 +1,205 @@
+(kicad_sch
+	(version 20250610)
+	(generator "eeschema")
+	(generator_version "9.99")
+	(uuid "3b9e7a52-1c4d-4f0e-8a61-2d7f5c903b03")
+	(paper "A3")
+	(title_block
+		(title "dmxbox 3: USB to DMX with RDM")
+		(date "2026-11-28")
+		(rev "1")
+		(company "Lumenet")
+		(comment 1 "Made by boxes/box3/scripts/make_schematic.py from circuit.py: change those, not this file.")
+	)
+	(lib_symbols)
+	(sheet
+		(at 30.48 60.96)
+		(size 76.2 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0)
+		)
+		(uuid "2d75308f-e67b-5ab1-89eb-9b6ae13562c6")
+		(property "Sheetname" "USB and power"
+			(at 30.48 60.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "dmxbox3_power.kicad_sch"
+			(at 30.48 86.96 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+				(hide yes)
+			)
+		)
+		(instances
+			(project "dmxbox3"
+				(path "/3b9e7a52-1c4d-4f0e-8a61-2d7f5c903b03"
+					(page "2")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 121.92 60.96)
+		(size 76.2 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0)
+		)
+		(uuid "7bbaa18c-709c-5f9e-b2e4-fb1d4f536c87")
+		(property "Sheetname" "RP2040, flash, LEDs, box number"
+			(at 121.92 60.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "dmxbox3_rp2040.kicad_sch"
+			(at 121.92 86.96 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+				(hide yes)
+			)
+		)
+		(instances
+			(project "dmxbox3"
+				(path "/3b9e7a52-1c4d-4f0e-8a61-2d7f5c903b03"
+					(page "3")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 213.36 60.96)
+		(size 76.2 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0)
+		)
+		(uuid "a2f4a49a-8306-58fd-8e9c-e479e83f6332")
+		(property "Sheetname" "DMX with RDM"
+			(at 213.36 60.25 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "dmxbox3_dmx.kicad_sch"
+			(at 213.36 86.96 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+				(hide yes)
+			)
+		)
+		(instances
+			(project "dmxbox3"
+				(path "/3b9e7a52-1c4d-4f0e-8a61-2d7f5c903b03"
+					(page "4")
+				)
+			)
+		)
+	)
+	(text "dmxbox 3: a USB network adapter for the Lumenet desk (and any Art-Net program) with one DMX output with RDM"
+		(exclude_from_sim no)
+		(at 30.48 116.84 0)
+		(effects
+			(font
+				(size 1.778 1.778)
+			)
+			(justify left bottom)
+		)
+		(uuid "aa34a6cf-3882-5c25-b5c2-01fc69567b82")
+	)
+	(text "and the switch for its number: box 4 without the hub, the OUT and POWER sockets and MIDI."
+		(exclude_from_sim no)
+		(at 30.48 121.92 0)
+		(effects
+			(font
+				(size 1.778 1.778)
+			)
+			(justify left bottom)
+		)
+		(uuid "4a9bfeb1-8552-54ec-a245-806e79247029")
+	)
+	(text "JLCPCB solders every part (LCSC numbers in the LCSC field). You make the cable from the pin header J4 to the"
+		(exclude_from_sim no)
+		(at 30.48 132.08 0)
+		(effects
+			(font
+				(size 1.778 1.778)
+			)
+			(justify left bottom)
+		)
+		(uuid "32f0e661-9946-5cf0-8a24-9bc774e1bb6a")
+	)
+	(text "XLR socket in the box wall."
+		(exclude_from_sim no)
+		(at 30.48 137.16 0)
+		(effects
+			(font
+				(size 1.778 1.778)
+			)
+			(justify left bottom)
+		)
+		(uuid "15ce7d24-7125-5628-8062-6439c6d80e0f")
+	)
+	(text "Made by boxes/box3/scripts/make_schematic.py from boxes/box3/scripts/circuit.py."
+		(exclude_from_sim no)
+		(at 30.48 147.32 0)
+		(effects
+			(font
+				(size 1.778 1.778)
+			)
+			(justify left bottom)
+		)
+		(uuid "cf4fe8cb-a023-5e19-864c-b1f4bb6cbd9e")
+	)
+	(sheet_instances
+		(path "/"
+			(page "1")
+		)
+	)
+	(embedded_fonts no)
+)

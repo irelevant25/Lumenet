@@ -579,6 +579,8 @@ internal sealed class MidiControl : BackgroundService
             (true, MidiKind.ProgramChange) => MidiMapping.Program,
             (false, MidiKind.ControlChange) => MidiMapping.Controller,
             (false, MidiKind.PitchBend) => MidiMapping.PitchBend,
+            (true, MidiKind.Dmx) when message.IsPress => MidiMapping.Dmx,
+            (false, MidiKind.Dmx) => MidiMapping.Dmx,
             _ => null,
         };
         if (kind is null)
@@ -592,7 +594,7 @@ internal sealed class MidiControl : BackgroundService
             Number = kind == MidiMapping.PitchBend ? 0 : message.Number,
             Target = target,
             Pickup = !key,
-            Feedback = key,   // a key's light follows the desk's key; a fader has no motor unless the panel says so
+            Feedback = key && kind != MidiMapping.Dmx,   // a key's light follows the desk's key; a fader has no motor unless the panel says so; DMX IN hears nothing back
         };
 
         // The control does this one thing from now on: what it did before goes.

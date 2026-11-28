@@ -1,0 +1,223 @@
+(footprint "Converter_DCDC_Mornsun_B05_XT-1WR3"
+	(version 20260206)
+	(generator "pcbnew")
+	(generator_version "10.0")
+	(layer "F.Cu")
+	(descr "Mornsun B05_XT-1WR3 isolated DC-DC converter, 1 W, SMD 13.2x8.5 mm, 1.5 kV (https://www.mornsun-power.com/html/products-detail/B05_XT-1WR3.html)")
+	(tags "DC-DC isolated Mornsun B0505XT-1WR3 SMD")
+	(property "Reference" ""
+		(at 0 -7.3 0)
+		(layer "F.SilkS")
+		(uuid "39e28cb6-5326-4d81-a0e7-5a4d4a95e944")
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+	)
+	(property "Value" "Converter_DCDC_Mornsun_B05_XT-1WR3"
+		(at 0 7.3 0)
+		(layer "F.Fab")
+		(uuid "d8c32690-e2b6-4f7d-bfbf-3e03633859c0")
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "2f6942d7-5937-4954-84ac-056bac9aae2d")
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "37029a6b-6807-49e5-88e0-9a77771a9145")
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+	)
+	(attr smd)
+	(duplicate_pad_numbers_are_jumpers no)
+	(fp_line
+		(start -6.71 -4.36)
+		(end -6.71 4.36)
+		(stroke
+			(width 0.12)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "107bc9c4-6fb4-49cc-b666-aa5e39b2eb9e")
+	)
+	(fp_line
+		(start -6.71 4.36)
+		(end -4.6 4.36)
+		(stroke
+			(width 0.12)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "ba3c8e02-7935-42db-83f3-91fe7927f258")
+	)
+	(fp_line
+		(start -4.6 4.36)
+		(end -4.6 6.1)
+		(stroke
+			(width 0.12)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "2315b658-e48f-4c43-97a4-7b83c1b65beb")
+	)
+	(fp_line
+		(start 6.71 -4.36)
+		(end 6.71 4.36)
+		(stroke
+			(width 0.12)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "bec5c521-de9f-444f-8c94-882ab000b231")
+	)
+	(fp_line
+		(start -6.95 -6.4)
+		(end 6.95 -6.4)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "1a2773ce-751f-4d95-a860-f20b307f297c")
+	)
+	(fp_line
+		(start -6.95 6.4)
+		(end -6.95 -6.4)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "e1123be0-d058-421f-99df-30f8a1178789")
+	)
+	(fp_line
+		(start 6.95 -6.4)
+		(end 6.95 6.4)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "4b7dee1a-a85c-44bd-8e09-ddd311aae505")
+	)
+	(fp_line
+		(start 6.95 6.4)
+		(end -6.95 6.4)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "f4504890-1312-4dc3-9336-5dc44bc1acef")
+	)
+	(fp_line
+		(start -6.6 -4.25)
+		(end -6.6 3.25)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.Fab")
+		(uuid "6fb92268-4fd7-4da9-9b43-67debedd105b")
+	)
+	(fp_line
+		(start -6.6 3.25)
+		(end -5.6 4.25)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.Fab")
+		(uuid "8e90fc22-1787-4d5f-a088-c20ec50e9ac2")
+	)
+	(fp_line
+		(start -5.6 4.25)
+		(end 6.6 4.25)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.Fab")
+		(uuid "7d40e820-4a34-4156-903e-aa4f065832de")
+	)
+	(fp_line
+		(start 6.6 -4.25)
+		(end -6.6 -4.25)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.Fab")
+		(uuid "12f101e0-344e-4e46-8469-3091afe1a557")
+	)
+	(fp_line
+		(start 6.6 4.25)
+		(end 6.6 -4.25)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.Fab")
+		(uuid "c826d918-8394-4721-bec7-1c128ce22d98")
+	)
+	(pad "1" smd roundrect
+		(at -3.81 5.05)
+		(size 1 2.1)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(roundrect_rratio 0.25)
+		(thermal_bridge_angle 45)
+		(uuid "7d7cccaf-707a-4497-a291-b3638c4018f4")
+	)
+	(pad "2" smd roundrect
+		(at -1.27 5.05)
+		(size 1 2.1)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(roundrect_rratio 0.25)
+		(thermal_bridge_angle 45)
+		(uuid "81adf4a1-6364-418d-985e-bfa9bb1c3f21")
+	)
+	(pad "4" smd roundrect
+		(at 3.81 5.05)
+		(size 1 2.1)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(roundrect_rratio 0.25)
+		(thermal_bridge_angle 45)
+		(uuid "aa0c703e-75fe-4f0b-8c4d-a9b6003109b5")
+	)
+	(pad "5" smd roundrect
+		(at 3.81 -5.05)
+		(size 1 2.1)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(roundrect_rratio 0.25)
+		(thermal_bridge_angle 45)
+		(uuid "64438fca-958a-4e65-863f-2203085d5af9")
+	)
+	(pad "8" smd roundrect
+		(at -3.81 -5.05)
+		(size 1 2.1)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(roundrect_rratio 0.25)
+		(thermal_bridge_angle 45)
+		(uuid "33609204-c9e7-4f7e-ad85-9c442c7acb01")
+	)
+	(embedded_fonts no)
+)

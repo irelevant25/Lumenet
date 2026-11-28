@@ -31,7 +31,7 @@ VIEWS = {  # file name -> (camera location, target, orthographic scale or None)
     "dmxbox1_dmx_side": ((0.27, -0.006, 0.08), (0.07, -0.031, 0.006), None),
 }
 PRINT_VIEWS = {  # file name -> (camera location, target)
-    "dmxbox1_print_front": ((-0.125, 0.115, 0.095), (0.060, -0.034, 0.008)),
+    "dmxbox1_print_front": ((-0.132, 0.118, 0.142), (0.056, -0.033, 0.003)),
     "dmxbox1_print_back": ((0.26, -0.20, 0.095), (0.076, -0.040, 0.008)),
     "dmxbox1_print_open": ((-0.045, 0.100, 0.175), (0.062, -0.036, 0.000)),
 }

@@ -6,7 +6,7 @@ output on a 5-pin XLR socket, and the desk finds it by itself; box 4 also takes 
 | Box | Chip | Board | What it has | Where it stands |
 |---|---|---|---|---|
 | [Box 1](box1/README.md) | Raspberry Pi Pico | through hole, a JLCPCB board you solder | the Pico's micro-USB | board and case drawn, not built yet; the first box 1, on a perfboard, works |
-| [Box 2](box2/README.md) | PIC32MX270 (DIP-28) | through hole, a JLCPCB board you solder, USB-C too | one USB-C | board and case drawn, not built yet; its firmware needs a programmer once |
+| [Box 2](box2/README.md) | PIC32MX270 (DIP-28) | through hole, a JLCPCB board you solder, USB-C too | one USB-C | board and case drawn, not built yet; its firmware goes on with a programmer |
 | [Box 3](box3/README.md) | RP2040 | SMD, soldered by JLCPCB | one USB-C | board and case drawn, not built yet |
 | [Box 4](box4/README.md) | RP2040 and a USB hub | SMD, soldered by JLCPCB | IN, OUT for the next box, POWER; MIDI IN and OUT; DMX IN | board, printed case and aluminium case drawn, not built yet |
 

@@ -53,17 +53,27 @@ screen, and get in with a password.
 
 <img src="docs/screenshots/main-phone.png" alt="The Main view of Lumenet on a phone, used through LAN" width="260">
 
-**The box**, dmxbox 4, is an RP2040 on a board of 86 × 74.5 mm: an isolated DMX output on a 5-pin XLR socket with
-**RDM** (the desk sets the address, mode and name of a light from its Settings), **MIDI IN and OUT**, and three
-USB-C sockets: IN, OUT to the next box, so that several boxes share one USB port of the computer, and POWER for
-a charger. A switch gives each box its own number. One USB cable powers it and carries the data; the computer
-sees a network adapter and a MIDI interface, which Windows, macOS and Linux take without a driver. It is the
-full one of [four boxes](boxes/README.md); boxes 1 to 3 have one USB socket and no MIDI.
+**The boxes:** four dmxboxes bring the desk to DMX. Each is a USB network adapter for the computer, which
+Windows, macOS and Linux take without a driver, and the desk finds it by itself. One USB cable powers it and
+carries the data.
 
-<img src="boxes/box4/3d/dmxbox4_top.png" alt="A render of the dmxbox 4 board from above: three USB-C sockets at the left, the RP2040 and its hub in the middle, the number switch at the top, the isolated DMX side at the right, the MIDI headers at the bottom" width="560">
+| | <a href="boxes/box1/README.md"><img src="boxes/box1/3d/dmxbox1_print_front.png" alt="Box 1 in its printed case" width="120"></a><br>[**Box 1**](boxes/box1/README.md)<br>Pico | <a href="boxes/box2/README.md"><img src="boxes/box2/3d/dmxbox2_print_front.png" alt="Box 2 in its printed case" width="120"></a><br>[**Box 2**](boxes/box2/README.md)<br>PIC32 | <a href="boxes/box3/README.md"><img src="boxes/box3/3d/dmxbox3_print_front.png" alt="Box 3 in its printed case" width="120"></a><br>[**Box 3**](boxes/box3/README.md)<br>RP2040 | <a href="boxes/box4/README.md"><img src="boxes/box4/3d/dmxbox4_print_front.png" alt="Box 4 in its printed case" width="120"></a><br>[**Box 4**](boxes/box4/README.md)<br>RP2040 |
+|---|:---:|:---:|:---:|:---:|
+| Isolated DMX output | ✅ | ✅ | ✅ | ✅ |
+| RDM: sets up the lights | ✅ | ✅ | ✅ | ✅ |
+| Number switch, for several boxes | ✅ | ✅ | ✅ | ✅ |
+| USB-C | ❌ | ✅ | ✅ | ✅ |
+| DMX IN: a console plays the desk | ❌ | ❌ | ❌ | ✅ |
+| MIDI IN and OUT | ❌ | ❌ | ❌ | ✅ |
+| USB OUT to the next box | ❌ | ❌ | ❌ | ✅ |
+| POWER socket for a charger | ❌ | ❌ | ❌ | ✅ |
+| Update firmware over USB | ✅ | ❌ | ✅ | ✅ |
+| Assembly | THT | THT | SMD | SMD |
+| Soldered by external company | ❌ | ❌ | ✅ | ✅ |
+| Case | 3D printed | 3D printed | 3D printed | Aluminium or 3D printed |
 
-This is a render of the board's design; JLCPCB makes it and solders its parts, and none has been built yet.
-Box 1, with a Raspberry Pi Pico on a perfboard, was built and works with the desk.
+The pictures are renders of the designs; none of the four has been built yet. The first box 1, a
+Raspberry Pi Pico on a perfboard, was built and works with the desk.
 
 ## Get it
 
@@ -78,9 +88,9 @@ http://localhost:4200. `sim.cmd` starts a simulated box, Art-Net node, sACN rece
 desk to play on, or a MIDI controller to play it with, without the hardware (see
 [DEV.md](DEV.md#simulated-devices-simcmd)).
 
-**The box:** what to order from JLCPCB and what to buy and fit yourself is in [BOM.md](boxes/box4/BOM.md); the
-schematic, the board and the firmware, which is built with the Pico SDK, are in [DEV.md](DEV.md#1-hardware).
-All four boxes: [boxes/](boxes/README.md).
+**A box:** what to order and what to buy and fit yourself is in each box's BOM.md, for example
+[box 4's](boxes/box4/BOM.md); the schematics, the boards and the firmware are in [DEV.md](DEV.md#1-hardware), and
+all four boxes in [boxes/](boxes/README.md).
 
 ## More
 
